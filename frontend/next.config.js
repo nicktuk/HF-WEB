@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -23,6 +24,10 @@ const nextConfig = {
         protocol: 'http',
         hostname: '192.168.1.81',
         port: '8000',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.railway.app',
       },
     ],
   },
