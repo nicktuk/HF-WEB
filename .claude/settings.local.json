@@ -35,7 +35,13 @@
       "Bash(D:/Desarrollo/\"HF WEB\"/backend/.venv/Scripts/python.exe D:/Desarrollo/\"HF WEB\"/backend/test_mercadolibre.py)",
       "Bash(cmd /c:*)",
       "Bash(powershell -Command:*)",
-      "Bash(dir /b)"
+      "Bash(dir /b)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix ALLOWED_ORIGINS default to localhost for development\n\nProduction should use ALLOWED_ORIGINS_STR env var\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix CORS preflight by adding OPTIONS method and allowing all headers\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nConfigure Next.js for Railway deployment\n\n- Add output: ''standalone'' for optimized container builds\n- Allow images from railway.app domains\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
