@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting application...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"ALLOWED_ORIGINS: {settings.ALLOWED_ORIGINS}")
     logger.info(f"Registered scrapers: {list(ScraperRegistry._scrapers.keys())}")
 
     yield
