@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -56,6 +57,7 @@ export default function ProductPage() {
   }
 
   const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
+  const [selectedImage, setSelectedImage] = useState(primaryImage);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,10 +80,10 @@ export default function ProductPage() {
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="aspect-square relative rounded-lg overflow-hidden bg-white border">
-              {primaryImage ? (
+              {selectedImage ? (
                 <Image
-                  src={primaryImage.url}
-                  alt={primaryImage.alt_text || product.name}
+                  src={selectedImage.url}
+                  alt={selectedImage.alt_text || product.name}
                   fill
                   className="object-contain"
                   priority
@@ -99,10 +101,11 @@ export default function ProductPage() {
             {product.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
                 {product.images.map((image, index) => (
-                  <div
+                  <button
                     key={image.id}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      image.is_primary ? 'border-primary-500' : 'border-gray-200'
+                    onClick={() => setSelectedImage(image)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                      selectedImage?.id === image.id ? 'border-primary-500' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <Image
@@ -112,7 +115,7 @@ export default function ProductPage() {
                       height={80}
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
