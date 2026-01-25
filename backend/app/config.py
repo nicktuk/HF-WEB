@@ -2,6 +2,7 @@
 Configuración centralizada de la aplicación.
 Usa pydantic-settings para validación y carga de variables de entorno.
 """
+import json
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 from functools import lru_cache
@@ -24,8 +25,22 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change_me_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
-    # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    # CORS - stored as string, parsed via property
+    ALLOWED_ORIGINS_STR: str = "http://localhost:3000"
+
+    @property
+    def ALLOWED_ORIGINS(self) -> List[str]:
+        """Parse ALLOWED_ORIGINS from string (JSON array or comma-separated)."""
+        v = self.ALLOWED_ORIGINS_STR
+        # Try JSON first
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        # Fall back to comma-separated
+        return [origin.strip() for origin in v.split(',') if origin.strip()]
 
     # Environment
     ENVIRONMENT: str = "development"
@@ -49,7 +64,19 @@ class Settings(BaseSettings):
     # File Uploads
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
-    ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    ALLOWED_IMAGE_TYPES_STR: str = "image/jpeg,image/png,image/webp,image/gif"
+
+    @property
+    def ALLOWED_IMAGE_TYPES(self) -> List[str]:
+        """Parse ALLOWED_IMAGE_TYPES from string."""
+        v = self.ALLOWED_IMAGE_TYPES_STR
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        return [t.strip() for t in v.split(',') if t.strip()]
 
     @property
     def is_production(self) -> bool:

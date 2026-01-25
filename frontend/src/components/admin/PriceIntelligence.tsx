@@ -33,7 +33,7 @@ export function PriceIntelligence({
   const refreshMutation = useRefreshMarketPrices(apiKey);
 
   const originalPrice = Number(product.original_price) || 0;
-  const hasCustomPrice = product.custom_price && Number(product.custom_price) > 0;
+  const hasCustomPrice = !!(product.custom_price && Number(product.custom_price) > 0);
   const finalPrice = hasCustomPrice
     ? Number(product.custom_price)
     : originalPrice * (1 + markup / 100);
