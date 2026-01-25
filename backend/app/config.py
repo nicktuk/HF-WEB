@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # CORS - stored as string, parsed via property
     #ALLOWED_ORIGINS_STR: str = "http://localhost:3000"
-    ALLOWED_ORIGINS_STR: str = "http://hf-web-production.up.railway.app"
+    ALLOWED_ORIGINS_STR: str = "https://hf-web-production.up.railway.app"
 
     @property
     def ALLOWED_ORIGINS(self) -> List[str]:
