@@ -1,0 +1,533 @@
+"""Service for Product operations."""
+from typing import Optional, List, Tuple
+from datetime import datetime
+from decimal import Decimal
+from sqlalchemy.orm import Session
+import logging
+
+from app.db.repositories import ProductRepository, SourceWebsiteRepository
+from app.models.product import Product, ProductImage
+from app.models.source_website import SourceWebsite
+from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
+from app.scrapers.registry import ScraperRegistry
+from app.scrapers.base import ScrapedProduct
+from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
+from app.services.cache import cache
+
+logger = logging.getLogger(__name__)
+
+
+class ProductService:
+    """Business logic for product operations."""
+
+    def __init__(self, db: Session):
+        self.db = db
+        self.repo = ProductRepository(db)
+        self.source_repo = SourceWebsiteRepository(db)
+
+    # Public catalog methods
+
+    def get_public_catalog(
+        self,
+        page: int = 1,
+        limit: int = 20,
+        category: Optional[str] = None,
+        search: Optional[str] = None,
+        featured: Optional[bool] = None
+    ) -> Tuple[List[ProductPublicResponse], int]:
+        """
+        Get enabled products for public catalog.
+
+        Returns tuple of (products, total_count).
+        Use featured=True to get only featured products (Novedades).
+        """
+        skip = (page - 1) * limit
+
+        # Try cache first
+        cache_key = f"catalog:{page}:{limit}:{category}:{search}:{featured}"
+        cached_result = cache.get_product(cache_key)
+        if cached_result:
+            return cached_result
+
+        products = self.repo.get_enabled_products(skip, limit, category, search, featured)
+        total = self.repo.count_enabled(category, search, featured)
+
+        # Transform to public response
+        public_products = [self._to_public_response(p) for p in products]
+
+        result = (public_products, total)
+        cache.set_product(cache_key, result)
+
+        return result
+
+    def get_public_product(self, slug: str) -> ProductPublicResponse:
+        """Get a single enabled product for public view."""
+        # Note: Need to search across all source websites
+        products = self.db.query(Product).filter(
+            Product.slug == slug,
+            Product.enabled == True
+        ).all()
+
+        if not products:
+            raise NotFoundError("Product", slug)
+
+        return self._to_public_response(products[0])
+
+    def _to_public_response(self, product: Product) -> ProductPublicResponse:
+        """Convert product to public response format."""
+        images = [
+            {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary}
+            for img in sorted(product.images, key=lambda x: (not x.is_primary, x.display_order))
+        ]
+
+        return ProductPublicResponse(
+            id=product.id,
+            slug=product.slug,
+            name=product.display_name,
+            price=product.final_price,
+            currency=product.original_currency,
+            short_description=product.short_description,
+            brand=product.brand,
+            category=product.category,
+            is_featured=product.is_featured,
+            images=images,
+            source_url=product.source_url,
+        )
+
+    # Admin methods
+
+    def get_all_admin(
+        self,
+        page: int = 1,
+        limit: int = 20,
+        enabled: Optional[bool] = None,
+        source_website_id: Optional[int] = None,
+        search: Optional[str] = None
+    ) -> Tuple[List[Product], int]:
+        """Get all products for admin panel."""
+        skip = (page - 1) * limit
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search)
+        total = self.repo.count()  # TODO: Add filtered count
+        return products, total
+
+    def get_by_id(self, id: int) -> Product:
+        """Get product by ID."""
+        product = self.repo.get_with_images(id)
+        if not product:
+            raise NotFoundError("Product", str(id))
+        return product
+
+    async def create_from_slug(self, data: ProductCreate) -> Product:
+        """
+        Create a new product by scraping from source website.
+
+        Args:
+            data: ProductCreate with source_website_id and slug
+
+        Returns:
+            Created Product
+
+        Raises:
+            NotFoundError: If source website not found
+            DuplicateError: If product already exists
+            ScraperError: If scraping fails
+        """
+        # Get source website
+        source_website = self.source_repo.get(data.source_website_id)
+        if not source_website:
+            raise NotFoundError("SourceWebsite", str(data.source_website_id))
+
+        # Check for duplicate
+        existing = self.repo.get_by_slug(data.source_website_id, data.slug)
+        if existing:
+            raise DuplicateError("Product", data.slug)
+
+        # Get scraper
+        try:
+            scraper = ScraperRegistry.get_scraper(source_website.name)
+        except ValueError:
+            raise ScraperError(
+                f"No scraper available for {source_website.name}",
+                source=source_website.name
+            )
+
+        # Scrape product data
+        scraped = await scraper.scrape_product(
+            data.slug,
+            config=source_website.scraper_config
+        )
+
+        # Create product
+        product = Product(
+            source_website_id=data.source_website_id,
+            slug=data.slug,
+            source_url=scraped.source_url,
+            original_name=scraped.name,
+            original_price=Decimal(str(scraped.price)) if scraped.price else None,
+            description=scraped.description,
+            short_description=scraped.short_description,
+            brand=scraped.brand,
+            sku=scraped.sku,
+            enabled=data.enabled,
+            markup_percentage=data.markup_percentage,
+            category=data.category or (scraped.categories[0] if scraped.categories else None),
+            last_scraped_at=datetime.utcnow(),
+        )
+
+        self.db.add(product)
+        self.db.flush()  # Get product ID
+
+        # Add images
+        for i, img_url in enumerate(scraped.images):
+            image = ProductImage(
+                product_id=product.id,
+                url=img_url,
+                original_url=img_url,
+                display_order=i,
+                is_primary=(i == 0),
+            )
+            self.db.add(image)
+
+        self.db.commit()
+        self.db.refresh(product)
+
+        # Invalidate cache
+        cache.invalidate_all_products()
+
+        logger.info(f"Created product {product.slug} from {source_website.name}")
+        return product
+
+    def update(self, id: int, data: ProductUpdate) -> Product:
+        """Update a product."""
+        product = self.get_by_id(id)
+
+        # Validate: cannot enable product without setting a price
+        if data.enabled is True:
+            # Determine the effective values after this update
+            effective_custom_price = data.custom_price if data.custom_price is not None else product.custom_price
+            effective_markup = data.markup_percentage if data.markup_percentage is not None else product.markup_percentage
+
+            # Check if there will be a valid price after update
+            has_custom_price = effective_custom_price is not None and float(effective_custom_price) > 0
+            has_markup = effective_markup is not None and float(effective_markup) > 0
+
+            if not has_custom_price and not has_markup:
+                from app.core.exceptions import ValidationError
+                raise ValidationError(
+                    "No se puede habilitar un producto sin definir un precio. "
+                    "Configura un markup o un precio personalizado."
+                )
+
+        # Update fields
+        if data.enabled is not None:
+            product.enabled = data.enabled
+        if data.is_featured is not None:
+            product.is_featured = data.is_featured
+        if data.markup_percentage is not None:
+            product.markup_percentage = data.markup_percentage
+        if data.custom_name is not None:
+            product.custom_name = data.custom_name if data.custom_name else None
+        if data.custom_price is not None:
+            product.custom_price = data.custom_price if data.custom_price > 0 else None
+        if data.display_order is not None:
+            product.display_order = data.display_order
+        if data.category is not None:
+            product.category = data.category if data.category else None
+        if data.description is not None:
+            product.description = data.description if data.description else None
+        if data.short_description is not None:
+            product.short_description = data.short_description if data.short_description else None
+        if data.brand is not None:
+            product.brand = data.brand if data.brand else None
+        if data.sku is not None:
+            product.sku = data.sku if data.sku else None
+
+        # Update images if provided
+        if data.image_urls is not None:
+            # Delete existing images
+            for img in product.images:
+                self.db.delete(img)
+
+            # Add new images
+            for i, img_url in enumerate(data.image_urls):
+                if img_url:
+                    image = ProductImage(
+                        product_id=product.id,
+                        url=img_url,
+                        original_url=img_url,
+                        display_order=i,
+                        is_primary=(i == 0),
+                    )
+                    self.db.add(image)
+
+        self.db.commit()
+        self.db.refresh(product)
+
+        # Invalidate cache
+        cache.invalidate_all_products()
+
+        return product
+
+    async def rescrape(self, id: int) -> Product:
+        """Re-scrape product data from source."""
+        product = self.get_by_id(id)
+        source_website = product.source_website
+
+        try:
+            scraper = ScraperRegistry.get_scraper(source_website.name)
+            scraped = await scraper.scrape_product(
+                product.slug,
+                config=source_website.scraper_config
+            )
+
+            # Update scraped fields (preserve admin customizations)
+            product.original_name = scraped.name
+            if scraped.price:
+                product.original_price = Decimal(str(scraped.price))
+            product.description = scraped.description
+            product.short_description = scraped.short_description
+            product.brand = scraped.brand or product.brand
+            product.sku = scraped.sku or product.sku
+            product.last_scraped_at = datetime.utcnow()
+            product.scrape_error_count = 0
+            product.scrape_last_error = None
+
+            # Update images (replace all)
+            for img in product.images:
+                self.db.delete(img)
+
+            for i, img_url in enumerate(scraped.images):
+                image = ProductImage(
+                    product_id=product.id,
+                    url=img_url,
+                    original_url=img_url,
+                    display_order=i,
+                    is_primary=(i == 0),
+                )
+                self.db.add(image)
+
+            self.db.commit()
+            self.db.refresh(product)
+
+            cache.invalidate_all_products()
+
+            logger.info(f"Re-scraped product {product.slug}")
+            return product
+
+        except Exception as e:
+            product.scrape_error_count += 1
+            product.scrape_last_error = str(e)
+            self.db.commit()
+            raise
+
+    def delete(self, id: int) -> None:
+        """Delete a product."""
+        product = self.get_by_id(id)
+        self.repo.delete(product)
+        cache.invalidate_all_products()
+
+    def create_manual(self, data) -> Product:
+        """
+        Create a product manually without scraping.
+
+        Args:
+            data: ProductCreateManual with name, price, description, images, etc.
+
+        Returns:
+            Created Product
+        """
+        from app.models.source_website import SourceWebsite
+
+        # Get or create the "manual" source website
+        manual_source = self.db.query(SourceWebsite).filter(
+            SourceWebsite.name == "manual"
+        ).first()
+
+        if not manual_source:
+            # Create it if it doesn't exist
+            manual_source = SourceWebsite(
+                name="manual",
+                display_name="Producto Manual",
+                base_url="",
+                is_active=True,
+                scraper_config={},
+                notes="Productos creados manualmente sin scraping."
+            )
+            self.db.add(manual_source)
+            self.db.flush()
+
+        # Generate a unique slug from the name
+        import re
+        import uuid
+        base_slug = re.sub(r'[^a-z0-9]+', '-', data.name.lower()).strip('-')
+        slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
+
+        # Create product
+        product = Product(
+            source_website_id=manual_source.id,
+            slug=slug,
+            source_url=None,
+            original_name=data.name,
+            original_price=None,  # Manual products use custom_price
+            custom_price=data.price,
+            description=data.description,
+            short_description=data.short_description,
+            brand=data.brand,
+            sku=data.sku,
+            enabled=data.enabled,
+            is_featured=data.is_featured,
+            markup_percentage=Decimal("0"),
+            category=data.category,
+            last_scraped_at=None,
+        )
+
+        self.db.add(product)
+        self.db.flush()
+
+        # Add images
+        for i, img_url in enumerate(data.image_urls):
+            image = ProductImage(
+                product_id=product.id,
+                url=img_url,
+                original_url=img_url,
+                display_order=i,
+                is_primary=(i == 0),
+            )
+            self.db.add(image)
+
+        self.db.commit()
+        self.db.refresh(product)
+
+        cache.invalidate_all_products()
+
+        logger.info(f"Created manual product: {product.slug}")
+        return product
+
+    def bulk_enable(self, product_ids: List[int], enabled: bool) -> int:
+        """Bulk enable/disable products."""
+        count = self.repo.bulk_update_enabled(product_ids, enabled)
+        cache.invalidate_all_products()
+        return count
+
+    def bulk_set_markup(self, markup_percentage: Decimal, only_enabled: bool = True) -> int:
+        """Set markup percentage for multiple products."""
+        query = self.db.query(Product)
+        if only_enabled:
+            query = query.filter(Product.enabled == True)
+
+        count = query.update(
+            {Product.markup_percentage: markup_percentage},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        return count
+
+    def get_categories(self) -> List[str]:
+        """Get list of unique categories."""
+        return self.repo.get_categories()
+
+    def get_enabled_products(self) -> List[Product]:
+        """Get all enabled products with images for PDF export."""
+        return self.db.query(Product).filter(
+            Product.enabled == True
+        ).order_by(Product.category, Product.original_name).all()
+
+    async def scrape_all_from_source(
+        self,
+        source_website_id: int,
+        update_existing: bool = True
+    ) -> dict:
+        """
+        Scrape all products from a source website.
+
+        - Finds all products in the source catalog
+        - Creates new products (disabled by default)
+        - Optionally updates existing products
+
+        Args:
+            source_website_id: ID of the source website
+            update_existing: Whether to update existing products
+
+        Returns:
+            Dict with counts: {new: int, updated: int, errors: int, total: int}
+        """
+        source_website = self.source_repo.get(source_website_id)
+        if not source_website:
+            raise NotFoundError("SourceWebsite", str(source_website_id))
+
+        try:
+            scraper = ScraperRegistry.get_scraper(source_website.name)
+        except ValueError:
+            raise ScraperError(
+                f"No scraper available for {source_website.name}",
+                source=source_website.name
+            )
+
+        # Get all slugs from catalog
+        logger.info(f"Fetching catalog from {source_website.name}...")
+        all_slugs = await scraper.scrape_catalog(config=source_website.scraper_config)
+        logger.info(f"Found {len(all_slugs)} products in catalog")
+
+        results = {"new": 0, "updated": 0, "errors": 0, "total": len(all_slugs)}
+
+        for slug in all_slugs:
+            try:
+                existing = self.repo.get_by_slug(source_website_id, slug)
+
+                if existing:
+                    if update_existing:
+                        # Update existing product
+                        await self.rescrape(existing.id)
+                        results["updated"] += 1
+                        logger.info(f"Updated: {slug}")
+                else:
+                    # Create new product (disabled by default)
+                    scraped = await scraper.scrape_product(
+                        slug,
+                        config=source_website.scraper_config
+                    )
+
+                    product = Product(
+                        source_website_id=source_website_id,
+                        slug=slug,
+                        source_url=scraped.source_url,
+                        original_name=scraped.name,
+                        original_price=Decimal(str(scraped.price)) if scraped.price else None,
+                        description=scraped.description,
+                        short_description=scraped.short_description,
+                        brand=scraped.brand,
+                        sku=scraped.sku,
+                        enabled=False,  # Disabled by default - admin enables manually
+                        markup_percentage=Decimal("0"),
+                        category=scraped.categories[0] if scraped.categories else None,
+                        last_scraped_at=datetime.utcnow(),
+                    )
+
+                    self.db.add(product)
+                    self.db.flush()
+
+                    # Add images
+                    for i, img_url in enumerate(scraped.images):
+                        image = ProductImage(
+                            product_id=product.id,
+                            url=img_url,
+                            original_url=img_url,
+                            display_order=i,
+                            is_primary=(i == 0),
+                        )
+                        self.db.add(image)
+
+                    self.db.commit()
+                    results["new"] += 1
+                    logger.info(f"Created: {slug}")
+
+            except Exception as e:
+                results["errors"] += 1
+                logger.error(f"Error processing {slug}: {e}")
+                self.db.rollback()
+                continue
+
+        cache.invalidate_all_products()
+        logger.info(f"Scrape complete: {results}")
+        return results

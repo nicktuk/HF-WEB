@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:newredmayorista.com.ar)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(psql:*)",
+      "Bash(where:*)",
+      "Bash(dir \"C:\\\\Program Files\\\\PostgreSQL\")",
+      "Bash(python -m venv:*)",
+      "Bash(venvScriptspip install -r requirements.txt)",
+      "Bash(npm install:*)",
+      "Bash(\"venv/Scripts/pip.exe\" install -r requirements.txt)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"import secrets; print\\(secrets.token_urlsafe\\(32\\)\\)\")",
+      "Bash(\"venv/Scripts/pip.exe\" install psycopg2-binary)",
+      "Bash(\"venv/Scripts/pip.exe\" install --upgrade pip)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install --upgrade pip)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\createdb.exe\" -U postgres catalog_db)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\bin\\\\createdb.exe\" -U postgres catalog_db)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\15\\\\bin\\\\createdb.exe\" -U postgres catalog_db)",
+      "Bash(\"venv/Scripts/python.exe\" -c:*)",
+      "Bash(\"venv/Scripts/alembic.exe\" upgrade head)",
+      "Bash(\"venv/Scripts/python.exe\" -m scripts.seed_data)",
+      "Bash(\"venv/Scripts/pip.exe\" install reportlab Pillow)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"from app.main import app; print\\(''Backend OK''\\)\")",
+      "Bash(npm run build:*)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"from app.main import app; from app.services.pdf_generator import PDFGeneratorService; print\\(''Todo OK''\\)\")",
+      "Bash(start cmd /k \"venv\\\\Scripts\\\\activate && uvicorn app.main:app --reload\")",
+      "Bash(start cmd /k \"npm run dev\")",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri ''http://localhost:8000/api/v1/public/products'' -UseBasicParsing | Select-Object -ExpandProperty StatusCode\")",
+      "Bash(\"venv/Scripts/python.exe\":*)",
+      "Bash(.venvScriptspython.exe test_mercadolibre.py)",
+      "Bash(python:*)",
+      "Bash(D:/Desarrollo/\"HF WEB\"/backend/.venv/Scripts/python.exe D:/Desarrollo/\"HF WEB\"/backend/test_mercadolibre.py)",
+      "Bash(cmd /c:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(dir /b)"
+    ]
+  }
+}
