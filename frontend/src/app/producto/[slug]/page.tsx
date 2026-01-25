@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -9,11 +9,21 @@ import { ContactButton } from '@/components/public/ContactButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
+import type { ProductImage } from '@/types';
 
 export default function ProductPage() {
   const params = useParams();
   const slug = params.slug as string;
   const { data: product, isLoading, error } = usePublicProduct(slug);
+  const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
+
+  // Update selected image when product loads
+  useEffect(() => {
+    if (product?.images?.length) {
+      const primary = product.images.find((img) => img.is_primary) || product.images[0];
+      setSelectedImage(primary);
+    }
+  }, [product]);
 
   if (isLoading) {
     return (
@@ -55,9 +65,6 @@ export default function ProductPage() {
       </div>
     );
   }
-
-  const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
-  const [selectedImage, setSelectedImage] = useState(primaryImage);
 
   return (
     <div className="min-h-screen bg-gray-50">
