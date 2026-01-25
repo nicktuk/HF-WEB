@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # CORS - stored as string, parsed via property
-    ALLOWED_ORIGINS_STR: str = "http://localhost:3000"
+    #ALLOWED_ORIGINS_STR: str = "http://localhost:3000"
+    ALLOWED_ORIGINS_STR: str = "http://hf-web-production.up.railway.app"
 
     @property
     def ALLOWED_ORIGINS(self) -> List[str]:
