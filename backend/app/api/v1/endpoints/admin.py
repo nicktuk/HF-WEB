@@ -502,14 +502,17 @@ async def activate_selected(
     Activate selected products and apply markup.
 
     This will:
-    - Enable the specified products
+    - Enable the specified products (only those with valid price > 0)
     - Apply the specified markup percentage to them
     - Optionally set their category
+    - Skip products without valid price
     """
-    count = service.activate_selected_with_markup(data.product_ids, data.markup_percentage, data.category)
-    msg = f"Activados {count} productos con markup de {data.markup_percentage}%"
+    result = service.activate_selected_with_markup(data.product_ids, data.markup_percentage, data.category)
+    msg = f"Activados {result['activated']} productos con markup de {data.markup_percentage}%"
     if data.category:
         msg += f" en categoria '{data.category}'"
+    if result['skipped'] > 0:
+        msg += f". Omitidos {result['skipped']} sin precio valido"
     return MessageResponse(message=msg)
 
 

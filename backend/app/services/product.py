@@ -3,6 +3,7 @@ from typing import Optional, List, Tuple
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 import logging
 
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
@@ -449,11 +450,12 @@ class ProductService:
         product_ids: List[int],
         markup_percentage: Decimal,
         category: Optional[str] = None
-    ) -> int:
+    ) -> dict:
         """
         Activate selected products and apply markup.
+        Only activates products with valid price (not null, not 0).
 
-        Returns the number of products activated.
+        Returns dict with 'activated' count and 'skipped' count.
         """
         update_data = {
             Product.enabled: True,
@@ -462,13 +464,26 @@ class ProductService:
         if category:
             update_data[Product.category] = category
 
+        # Only activate products with valid price (not null and > 0)
         count = self.db.query(Product).filter(
-            Product.id.in_(product_ids)
+            Product.id.in_(product_ids),
+            Product.original_price.isnot(None),
+            Product.original_price > 0
         ).update(update_data, synchronize_session=False)
+
+        # Count how many were skipped (no valid price)
+        skipped = self.db.query(Product).filter(
+            Product.id.in_(product_ids),
+            or_(
+                Product.original_price.is_(None),
+                Product.original_price <= 0
+            )
+        ).count()
+
         self.db.commit()
         cache.invalidate_all_products()
-        logger.info(f"Activated {count} selected products with {markup_percentage}% markup, category: {category}")
-        return count
+        logger.info(f"Activated {count} products (skipped {skipped} without valid price), markup: {markup_percentage}%, category: {category}")
+        return {"activated": count, "skipped": skipped}
 
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
