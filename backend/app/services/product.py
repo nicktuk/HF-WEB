@@ -34,26 +34,24 @@ class ProductService:
         limit: int = 20,
         category: Optional[str] = None,
         search: Optional[str] = None,
-        featured: Optional[bool] = None,
-        immediate_delivery: Optional[bool] = None
+        featured: Optional[bool] = None
     ) -> Tuple[List[ProductPublicResponse], int]:
         """
         Get enabled products for public catalog.
 
         Returns tuple of (products, total_count).
         Use featured=True to get only featured products (Novedades).
-        Use immediate_delivery=True to get only products with immediate delivery.
         """
         skip = (page - 1) * limit
 
         # Try cache first
-        cache_key = f"catalog:{page}:{limit}:{category}:{search}:{featured}:{immediate_delivery}"
+        cache_key = f"catalog:{page}:{limit}:{category}:{search}:{featured}"
         cached_result = cache.get_product(cache_key)
         if cached_result:
             return cached_result
 
-        products = self.repo.get_enabled_products(skip, limit, category, search, featured, immediate_delivery)
-        total = self.repo.count_enabled(category, search, featured, immediate_delivery)
+        products = self.repo.get_enabled_products(skip, limit, category, search, featured)
+        total = self.repo.count_enabled(category, search, featured)
 
         # Transform to public response
         public_products = [self._to_public_response(p) for p in products]
@@ -93,7 +91,6 @@ class ProductService:
             brand=product.brand,
             category=product.category,
             is_featured=product.is_featured,
-            is_immediate_delivery=product.is_immediate_delivery,
             images=images,
             source_url=product.source_url,
         )
@@ -108,13 +105,12 @@ class ProductService:
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
-        is_featured: Optional[bool] = None,
-        is_immediate_delivery: Optional[bool] = None
+        is_featured: Optional[bool] = None
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured, is_immediate_delivery)
-        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured, is_immediate_delivery)
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured)
+        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured)
         return products, total
 
     def get_by_id(self, id: int) -> Product:
@@ -231,8 +227,6 @@ class ProductService:
             product.enabled = data.enabled
         if data.is_featured is not None:
             product.is_featured = data.is_featured
-        if data.is_immediate_delivery is not None:
-            product.is_immediate_delivery = data.is_immediate_delivery
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:

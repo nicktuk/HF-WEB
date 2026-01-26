@@ -38,7 +38,6 @@ class ProductUpdate(BaseModel):
     """Schema for updating a product - allows editing all fields."""
     enabled: Optional[bool] = None
     is_featured: Optional[bool] = None
-    is_immediate_delivery: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     custom_price: Optional[Decimal] = Field(None, ge=0)
@@ -90,7 +89,6 @@ class ProductResponse(BaseModel):
     category: Optional[str] = None
     enabled: bool
     is_featured: bool = False
-    is_immediate_delivery: bool = False
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -124,7 +122,6 @@ class ProductPublicResponse(BaseModel):
     brand: Optional[str] = None
     category: Optional[str] = None
     is_featured: bool = False
-    is_immediate_delivery: bool = False
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
 
