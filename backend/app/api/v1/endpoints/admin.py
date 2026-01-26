@@ -25,6 +25,8 @@ from app.schemas.product import (
     ProductBulkMarkup,
     ProductActivateInactive,
     ProductActivateSelected,
+    ProductChangeCategorySelected,
+    ProductDisableSelected,
 )
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
@@ -514,6 +516,38 @@ async def activate_selected(
     if result['skipped'] > 0:
         msg += f". Omitidos {result['skipped']} sin precio valido"
     return MessageResponse(message=msg)
+
+
+@router.post(
+    "/products/change-category-selected",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def change_category_selected(
+    data: ProductChangeCategorySelected,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Change category for selected products.
+    """
+    count = service.change_category_selected(data.product_ids, data.category)
+    return MessageResponse(message=f"Categoria '{data.category}' asignada a {count} productos")
+
+
+@router.post(
+    "/products/disable-selected",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def disable_selected(
+    data: ProductDisableSelected,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Disable selected products.
+    """
+    count = service.disable_selected(data.product_ids)
+    return MessageResponse(message=f"Deshabilitados {count} productos")
 
 
 # ============================================

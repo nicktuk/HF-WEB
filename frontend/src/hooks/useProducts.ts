@@ -206,6 +206,33 @@ export function useActivateSelected(apiKey: string) {
   });
 }
 
+export function useChangeCategorySelected(apiKey: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productIds, category }: { productIds: number[]; category: string }) =>
+      adminApi.changeCategorySelected(apiKey, productIds, category),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+}
+
+export function useDisableSelected(apiKey: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (productIds: number[]) =>
+      adminApi.disableSelected(apiKey, productIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-products'] });
+    },
+  });
+}
+
 // Source Websites
 
 export function useSourceWebsites(apiKey: string) {

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Star } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
@@ -8,10 +9,37 @@ import { Input } from '@/components/ui/input';
 import { usePublicProducts, useCategories } from '@/hooks/useProducts';
 
 export default function HomePage() {
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-  const [showFeatured, setShowFeatured] = useState(false);
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Read state from URL params
+  const search = searchParams.get('search') || '';
+  const selectedCategory = searchParams.get('category') || undefined;
+  const showFeatured = searchParams.get('featured') === 'true';
+  const page = parseInt(searchParams.get('page') || '1', 10);
+
+  // Helper to update URL params
+  const updateParams = useCallback((updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === '') {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+
+    const queryString = params.toString();
+    router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
+  }, [searchParams, router]);
+
+  // Helper for page change with scroll
+  const handlePageChange = useCallback((newPage: number) => {
+    updateParams({ page: newPage.toString() });
+    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [updateParams]);
 
   const { data, isLoading } = usePublicProducts({
     page,
@@ -59,8 +87,7 @@ export default function HomePage() {
               placeholder="Buscar productos..."
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
+                updateParams({ search: e.target.value || undefined, page: undefined });
               }}
               className="pl-10"
             />
@@ -71,9 +98,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
-                  setSelectedCategory(undefined);
-                  setShowFeatured(false);
-                  setPage(1);
+                  updateParams({ category: undefined, featured: undefined, page: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   !selectedCategory && !showFeatured
@@ -85,9 +110,7 @@ export default function HomePage() {
               </button>
               <button
                 onClick={() => {
-                  setShowFeatured(true);
-                  setSelectedCategory(undefined);
-                  setPage(1);
+                  updateParams({ featured: 'true', category: undefined, page: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showFeatured
@@ -102,9 +125,7 @@ export default function HomePage() {
                 <button
                   key={category}
                   onClick={() => {
-                    setSelectedCategory(category);
-                    setShowFeatured(false);
-                    setPage(1);
+                    updateParams({ category, featured: undefined, page: undefined });
                   }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     selectedCategory === category && !showFeatured
@@ -120,13 +141,15 @@ export default function HomePage() {
         </div>
 
         {/* Product Grid */}
-        <ProductGrid products={data?.items || []} isLoading={isLoading} />
+        <div ref={gridRef}>
+          <ProductGrid products={data?.items || []} isLoading={isLoading} />
+        </div>
 
         {/* Pagination */}
         {data && data.pages > 1 && (
           <div className="mt-8 flex justify-center gap-2">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, page - 1))}
               disabled={page === 1}
               className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
             >
@@ -136,7 +159,7 @@ export default function HomePage() {
               Página {page} de {data.pages}
             </span>
             <button
-              onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+              onClick={() => handlePageChange(Math.min(data.pages, page + 1))}
               disabled={page === data.pages}
               className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
             >

@@ -42,7 +42,17 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix CORS preflight by adding OPTIONS method and allowing all headers\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nConfigure Next.js for Railway deployment\n\n- Add output: ''standalone'' for optimized container builds\n- Allow images from railway.app domains\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(pg_dump:*)",
+      "Bash(dir \"C:\\\\Program Files\\\\PostgreSQL\\\\*\\\\bin\\\\pg_dump.exe\" /s /b)",
+      "Bash(dir \"C:\\\\Program Files\\\\PostgreSQL\" /b)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\pg_dump.exe\" --version)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\pg_dump.exe\" -h localhost -U postgres -d catalog_db --data-only -F c -f backup.dump)",
+      "Bash(set:*)",
+      "Bash(dir \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\uploads\" /b)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }

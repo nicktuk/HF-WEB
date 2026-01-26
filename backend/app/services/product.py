@@ -485,6 +485,40 @@ class ProductService:
         logger.info(f"Activated {count} products (skipped {skipped} without valid price), markup: {markup_percentage}%, category: {category}")
         return {"activated": count, "skipped": skipped}
 
+    def change_category_selected(self, product_ids: List[int], category: str) -> int:
+        """
+        Change category for selected products.
+
+        Returns the number of products updated.
+        """
+        count = self.db.query(Product).filter(
+            Product.id.in_(product_ids)
+        ).update(
+            {Product.category: category},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Changed category to '{category}' for {count} products")
+        return count
+
+    def disable_selected(self, product_ids: List[int]) -> int:
+        """
+        Disable selected products.
+
+        Returns the number of products disabled.
+        """
+        count = self.db.query(Product).filter(
+            Product.id.in_(product_ids)
+        ).update(
+            {Product.enabled: False},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Disabled {count} products")
+        return count
+
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()

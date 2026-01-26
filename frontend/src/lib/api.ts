@@ -244,6 +244,38 @@ export const adminApi = {
   },
 
   /**
+   * Change category for selected products
+   */
+  async changeCategorySelected(
+    apiKey: string,
+    productIds: number[],
+    category: string
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/change-category-selected', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_ids: productIds,
+        category: category,
+      }),
+    }, apiKey);
+  },
+
+  /**
+   * Disable selected products
+   */
+  async disableSelected(
+    apiKey: string,
+    productIds: number[]
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/disable-selected', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_ids: productIds,
+      }),
+    }, apiKey);
+  },
+
+  /**
    * Get market price stats
    */
   async getMarketPrices(apiKey: string, productId: number): Promise<MarketPriceStats> {

@@ -182,6 +182,17 @@ class ProductActivateSelected(BaseModel):
     category: Optional[str] = Field(None, max_length=100, description="Category to assign to products")
 
 
+class ProductChangeCategorySelected(BaseModel):
+    """Schema for changing category of selected products."""
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
+    category: str = Field(..., min_length=1, max_length=100, description="Category to assign")
+
+
+class ProductDisableSelected(BaseModel):
+    """Schema for disabling selected products."""
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs to disable")
+
+
 class ProductCreateManual(BaseModel):
     """Schema for creating a product manually (without scraping)."""
     name: str = Field(..., min_length=1, max_length=500, description="Product name")
