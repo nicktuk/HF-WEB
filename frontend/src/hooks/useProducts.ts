@@ -178,6 +178,19 @@ export function useBulkSetMarkup(apiKey: string) {
   });
 }
 
+export function useActivateAllInactive(apiKey: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (markupPercentage: number) =>
+      adminApi.activateAllInactive(apiKey, markupPercentage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-products'] });
+    },
+  });
+}
+
 // Source Websites
 
 export function useSourceWebsites(apiKey: string) {

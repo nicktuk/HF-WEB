@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
 import { AddProductModal } from '@/components/admin/ProductForm';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
+import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
@@ -22,6 +23,7 @@ export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
@@ -64,6 +66,13 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowActivateModal(true)}
+          >
+            <Power className="mr-2 h-4 w-4" />
+            Activar inactivos
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowBulkMarkupModal(true)}
@@ -222,6 +231,13 @@ export default function ProductsPage() {
       {showBulkMarkupModal && (
         <BulkMarkupModal
           onClose={() => setShowBulkMarkupModal(false)}
+        />
+      )}
+
+      {/* Activate Inactive Modal */}
+      {showActivateModal && (
+        <ActivateInactiveModal
+          onClose={() => setShowActivateModal(false)}
         />
       )}
     </div>

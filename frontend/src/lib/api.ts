@@ -208,6 +208,21 @@ export const adminApi = {
   },
 
   /**
+   * Activate all inactive products with markup
+   */
+  async activateAllInactive(
+    apiKey: string,
+    markupPercentage: number
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/activate-all-inactive', {
+      method: 'POST',
+      body: JSON.stringify({
+        markup_percentage: markupPercentage,
+      }),
+    }, apiKey);
+  },
+
+  /**
    * Get market price stats
    */
   async getMarketPrices(apiKey: string, productId: number): Promise<MarketPriceStats> {
