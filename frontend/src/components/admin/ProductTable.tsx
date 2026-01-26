@@ -70,6 +70,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mercado</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
@@ -78,7 +79,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {Array.from({ length: 5 }).map((_, i) => (
-              <TableRowSkeleton key={i} columns={5} />
+              <TableRowSkeleton key={i} columns={6} />
             ))}
           </tbody>
         </table>
@@ -112,6 +113,9 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
             )}
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Producto
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Categoría
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Precio Origen
@@ -183,6 +187,11 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                       <p className="text-xs text-gray-500">{product.slug}</p>
                     </div>
                   </div>
+                </td>
+
+                {/* Category */}
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {product.category || <span className="text-gray-400">-</span>}
                 </td>
 
                 {/* Original Price */}
