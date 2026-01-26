@@ -423,6 +423,26 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
+    def activate_all_inactive_with_markup(self, markup_percentage: Decimal) -> int:
+        """
+        Activate all inactive products and apply markup.
+
+        Returns the number of products activated.
+        """
+        count = self.db.query(Product).filter(
+            Product.enabled == False
+        ).update(
+            {
+                Product.enabled: True,
+                Product.markup_percentage: markup_percentage
+            },
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Activated {count} products with {markup_percentage}% markup")
+        return count
+
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()

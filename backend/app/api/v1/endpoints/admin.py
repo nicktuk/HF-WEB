@@ -23,6 +23,7 @@ from app.schemas.product import (
     ProductAdminResponse,
     ProductBulkAction,
     ProductBulkMarkup,
+    ProductActivateInactive,
 )
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
@@ -464,6 +465,26 @@ async def bulk_set_markup(
     count = service.bulk_set_markup(data.markup_percentage, data.only_enabled)
     scope = "habilitados" if data.only_enabled else "todos"
     return MessageResponse(message=f"Markup {data.markup_percentage}% aplicado a {count} productos {scope}")
+
+
+@router.post(
+    "/products/activate-all-inactive",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def activate_all_inactive(
+    data: ProductActivateInactive,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Activate all inactive products and apply markup.
+
+    This will:
+    - Enable all currently disabled products
+    - Apply the specified markup percentage to them
+    """
+    count = service.activate_all_inactive_with_markup(data.markup_percentage)
+    return MessageResponse(message=f"Activados {count} productos con markup de {data.markup_percentage}%")
 
 
 # ============================================

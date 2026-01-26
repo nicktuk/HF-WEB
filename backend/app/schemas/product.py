@@ -170,6 +170,11 @@ class ProductBulkMarkup(BaseModel):
     only_enabled: bool = Field(default=True, description="Only update enabled products")
 
 
+class ProductActivateInactive(BaseModel):
+    """Schema for activating all inactive products with markup."""
+    markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply to activated products")
+
+
 class ProductCreateManual(BaseModel):
     """Schema for creating a product manually (without scraping)."""
     name: str = Field(..., min_length=1, max_length=500, description="Product name")
