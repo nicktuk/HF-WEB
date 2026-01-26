@@ -1,14 +1,53 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { Suspense, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Star } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Input } from '@/components/ui/input';
 import { usePublicProducts, useCategories } from '@/hooks/useProducts';
+import { ProductCardSkeleton } from '@/components/ui/skeleton';
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={<HomePageSkeleton />}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageSkeleton() {
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">{siteName}</h1>
+          </div>
+        </div>
+      </header>
+      <main className="container mx-auto px-4 py-6">
+        <div className="mb-6 space-y-4">
+          <div className="h-10 w-full max-w-md bg-gray-200 rounded-lg animate-pulse" />
+          <div className="flex gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const gridRef = useRef<HTMLDivElement>(null);
