@@ -196,11 +196,12 @@ export function useActivateSelected(apiKey: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ productIds, markupPercentage }: { productIds: number[]; markupPercentage: number }) =>
-      adminApi.activateSelected(apiKey, productIds, markupPercentage),
+    mutationFn: ({ productIds, markupPercentage, category }: { productIds: number[]; markupPercentage: number; category?: string }) =>
+      adminApi.activateSelected(apiKey, productIds, markupPercentage, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
   });
 }

@@ -444,24 +444,30 @@ class ProductService:
         logger.info(f"Activated {count} products with {markup_percentage}% markup")
         return count
 
-    def activate_selected_with_markup(self, product_ids: List[int], markup_percentage: Decimal) -> int:
+    def activate_selected_with_markup(
+        self,
+        product_ids: List[int],
+        markup_percentage: Decimal,
+        category: Optional[str] = None
+    ) -> int:
         """
         Activate selected products and apply markup.
 
         Returns the number of products activated.
         """
+        update_data = {
+            Product.enabled: True,
+            Product.markup_percentage: markup_percentage
+        }
+        if category:
+            update_data[Product.category] = category
+
         count = self.db.query(Product).filter(
             Product.id.in_(product_ids)
-        ).update(
-            {
-                Product.enabled: True,
-                Product.markup_percentage: markup_percentage
-            },
-            synchronize_session=False
-        )
+        ).update(update_data, synchronize_session=False)
         self.db.commit()
         cache.invalidate_all_products()
-        logger.info(f"Activated {count} selected products with {markup_percentage}% markup")
+        logger.info(f"Activated {count} selected products with {markup_percentage}% markup, category: {category}")
         return count
 
     def get_categories(self) -> List[str]:

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { X, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useActivateSelected } from '@/hooks/useProducts';
+import { useActivateSelected, useCategories } from '@/hooks/useProducts';
 import { useApiKey } from '@/hooks/useAuth';
 
 interface ActivateInactiveModalProps {
@@ -16,9 +16,14 @@ interface ActivateInactiveModalProps {
 export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: ActivateInactiveModalProps) {
   const apiKey = useApiKey() || '';
   const activateMutation = useActivateSelected(apiKey);
+  const { data: existingCategories } = useCategories();
 
   const [markup, setMarkup] = useState('');
+  const [category, setCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+
+  const finalCategory = category === '__custom__' ? customCategory : category;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +34,7 @@ export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: Activ
       await activateMutation.mutateAsync({
         productIds: selectedIds,
         markupPercentage: parseFloat(markup),
+        category: finalCategory || undefined,
       });
       onSuccess?.();
       onClose();
@@ -55,7 +61,7 @@ export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: Activ
             <Power className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-green-800">
               <p className="font-medium">{selectedIds.length} producto(s) seleccionado(s)</p>
-              <p>Se activaran y se les aplicara el markup especificado.</p>
+              <p>Se activaran y se les aplicara el markup y categoria especificados.</p>
             </div>
           </div>
 
@@ -71,6 +77,37 @@ export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: Activ
             helperText="Se aplicara este markup a los productos seleccionados"
           />
 
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Categoria
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Sin cambio de categoria</option>
+              {existingCategories?.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+              <option value="__custom__">+ Nueva categoria...</option>
+            </select>
+            {category === '__custom__' && (
+              <Input
+                type="text"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder="Nombre de la nueva categoria"
+                maxLength={100}
+              />
+            )}
+            <p className="text-xs text-gray-500">
+              Opcional: asignar una categoria a los productos activados
+            </p>
+          </div>
+
           <label className="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg cursor-pointer">
             <input
               type="checkbox"
@@ -79,7 +116,9 @@ export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: Activ
               className="h-4 w-4 rounded border-gray-300 text-primary-600"
             />
             <span className="text-sm">
-              Confirmo que quiero activar <strong>{selectedIds.length}</strong> producto(s) con <strong>{markup || '0'}%</strong> de markup
+              Confirmo que quiero activar <strong>{selectedIds.length}</strong> producto(s)
+              con <strong>{markup || '0'}%</strong> de markup
+              {finalCategory && <> en categoria <strong>{finalCategory}</strong></>}
             </span>
           </label>
 

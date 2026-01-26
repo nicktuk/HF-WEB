@@ -504,9 +504,13 @@ async def activate_selected(
     This will:
     - Enable the specified products
     - Apply the specified markup percentage to them
+    - Optionally set their category
     """
-    count = service.activate_selected_with_markup(data.product_ids, data.markup_percentage)
-    return MessageResponse(message=f"Activados {count} productos con markup de {data.markup_percentage}%")
+    count = service.activate_selected_with_markup(data.product_ids, data.markup_percentage, data.category)
+    msg = f"Activados {count} productos con markup de {data.markup_percentage}%"
+    if data.category:
+        msg += f" en categoria '{data.category}'"
+    return MessageResponse(message=msg)
 
 
 # ============================================

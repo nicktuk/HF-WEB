@@ -230,13 +230,15 @@ export const adminApi = {
   async activateSelected(
     apiKey: string,
     productIds: number[],
-    markupPercentage: number
+    markupPercentage: number,
+    category?: string
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/activate-selected', {
       method: 'POST',
       body: JSON.stringify({
         product_ids: productIds,
         markup_percentage: markupPercentage,
+        category: category || null,
       }),
     }, apiKey);
   },
