@@ -162,8 +162,18 @@ export default function ProductPage() {
 
             {/* Contact Buttons */}
             <div className="hidden md:flex flex-col gap-3">
-              <ContactButton productName={product.name} variant="whatsapp" size="lg" />
-              <ContactButton productName={product.name} variant="email" size="lg" />
+              <ContactButton
+                productName={product.name}
+                productSlug={slug}
+                variant="whatsapp"
+                size="lg"
+              />
+              <ContactButton
+                productName={product.name}
+                productSlug={slug}
+                variant="email"
+                size="lg"
+              />
             </div>
           </div>
         </div>
@@ -173,6 +183,7 @@ export default function ProductPage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t md:hidden">
         <ContactButton
           productName={product.name}
+          productSlug={slug}
           variant="whatsapp"
           size="lg"
           className="w-full"

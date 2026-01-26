@@ -5,6 +5,7 @@ import { getWhatsAppUrl, cn } from '@/lib/utils';
 
 interface ContactButtonProps {
   productName: string;
+  productSlug?: string;
   variant?: 'whatsapp' | 'email';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -20,15 +21,20 @@ const sizes = {
 
 export function ContactButton({
   productName,
+  productSlug,
   variant = 'whatsapp',
   size = 'md',
   className,
 }: ContactButtonProps) {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
   const email = process.env.NEXT_PUBLIC_EMAIL || '';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const productUrl = productSlug ? `${siteUrl}/producto/${productSlug}` : undefined;
 
   if (variant === 'whatsapp') {
-    const message = `Hola! Me interesa el producto: ${productName}`;
+    const message = productUrl
+      ? `Hola! Me interesa el producto: ${productName}\n${productUrl}`
+      : `Hola! Me interesa el producto: ${productName}`;
     const url = getWhatsAppUrl(whatsappNumber, message);
 
     return (
@@ -50,7 +56,10 @@ export function ContactButton({
   }
 
   const subject = encodeURIComponent(`Consulta: ${productName}`);
-  const body = encodeURIComponent(`Hola, me interesa el producto: ${productName}`);
+  const bodyText = productUrl
+    ? `Hola, me interesa el producto: ${productName}\n\n${productUrl}`
+    : `Hola, me interesa el producto: ${productName}`;
+  const body = encodeURIComponent(bodyText);
   const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
 
   return (
