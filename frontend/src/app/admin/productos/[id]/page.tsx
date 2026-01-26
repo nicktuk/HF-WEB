@@ -49,6 +49,7 @@ export default function ProductEditPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize form when product loads
@@ -95,6 +96,14 @@ export default function ProductEditPage() {
     setImageUrls(prev => prev.filter((_, i) => i !== index));
     if (selectedImageIndex >= index && selectedImageIndex > 0) {
       setSelectedImageIndex(selectedImageIndex - 1);
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    const url = newImageUrl.trim();
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      setImageUrls(prev => [...prev, url]);
+      setNewImageUrl('');
     }
   };
 
@@ -283,8 +292,34 @@ export default function ProductEditPage() {
                   className="hidden"
                 />
               </div>
+
+              {/* Add image by URL */}
+              <div className="flex gap-2">
+                <Input
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddImageUrl();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddImageUrl}
+                  disabled={!newImageUrl.trim()}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  URL
+                </Button>
+              </div>
+
               <p className="text-xs text-gray-500">
-                La primera imagen es la principal. Arrastra para reordenar.
+                La primera imagen es la principal. Podes subir archivos o agregar URLs.
               </p>
             </CardContent>
           </Card>

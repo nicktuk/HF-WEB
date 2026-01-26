@@ -109,6 +109,7 @@ export const adminApi = {
       source_website_id?: number;
       search?: string;
       category?: string;
+      is_featured?: boolean;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
     const searchParams = new URLSearchParams();
@@ -118,6 +119,7 @@ export const adminApi = {
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
     if (params.category) searchParams.set('category', params.category);
+    if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/products${query ? `?${query}` : ''}`, {}, apiKey);

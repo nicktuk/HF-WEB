@@ -60,6 +60,7 @@ async def get_products_admin(
     source_website_id: Optional[int] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     category: Optional[str] = Query(default=None, max_length=100),
+    is_featured: Optional[bool] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
     """
@@ -67,7 +68,7 @@ async def get_products_admin(
 
     Includes disabled products, market price stats, and source info.
     """
-    products, total = service.get_all_admin(page, limit, enabled, source_website_id, search, category)
+    products, total = service.get_all_admin(page, limit, enabled, source_website_id, search, category, is_featured)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     # Transform to admin response with market stats

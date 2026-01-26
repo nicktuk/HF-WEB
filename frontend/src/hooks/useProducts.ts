@@ -52,6 +52,7 @@ export function useAdminProducts(
     source_website_id?: number;
     search?: string;
     category?: string;
+    is_featured?: boolean;
   } = {}
 ) {
   return useQuery({

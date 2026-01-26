@@ -108,7 +108,8 @@ class ProductRepository(BaseRepository[Product]):
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
+        is_featured: Optional[bool] = None
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -128,6 +129,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             query = query.filter(Product.category == category)
+
+        if is_featured is not None:
+            query = query.filter(Product.is_featured == is_featured)
 
         if search:
             search_term = f"%{search}%"
@@ -197,7 +201,8 @@ class ProductRepository(BaseRepository[Product]):
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
+        is_featured: Optional[bool] = None
     ) -> int:
         """Count products with filters for admin panel."""
         query = self.db.query(Product)
@@ -210,6 +215,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             query = query.filter(Product.category == category)
+
+        if is_featured is not None:
+            query = query.filter(Product.is_featured == is_featured)
 
         if search:
             search_term = f"%{search}%"

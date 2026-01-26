@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -20,6 +20,7 @@ export default function ProductsPage() {
   const [enabledFilter, setEnabledFilter] = useState<boolean | undefined>();
   const [sourceFilter, setSourceFilter] = useState<number | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
+  const [featuredFilter, setFeaturedFilter] = useState<boolean | undefined>();
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
@@ -54,6 +55,7 @@ export default function ProductsPage() {
     source_website_id: sourceFilter,
     search: search || undefined,
     category: categoryFilter,
+    is_featured: featuredFilter,
   });
 
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
@@ -137,7 +139,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -152,6 +154,23 @@ export default function ProductsPage() {
             className="pl-10"
           />
         </div>
+
+        {/* Featured (Nuevos) Filter */}
+        <button
+          onClick={() => {
+            setFeaturedFilter(featuredFilter === true ? undefined : true);
+            setPage(1);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            featuredFilter === true
+              ? 'bg-amber-500 text-white'
+              : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+          }`}
+        >
+          <Star className="h-4 w-4" />
+          Nuevos
+        </button>
 
         {/* Status Filter */}
         <select

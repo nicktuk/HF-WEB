@@ -104,12 +104,13 @@ class ProductService:
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
+        is_featured: Optional[bool] = None
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category)
-        total = self.repo.count_admin(enabled, source_website_id, search, category)
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured)
+        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured)
         return products, total
 
     def get_by_id(self, id: int) -> Product:
@@ -171,6 +172,7 @@ class ProductService:
             brand=scraped.brand,
             sku=scraped.sku,
             enabled=data.enabled,
+            is_featured=True,  # Mark new scraped products as "Nuevo"
             markup_percentage=data.markup_percentage,
             category=data.category or (scraped.categories[0] if scraped.categories else None),
             last_scraped_at=datetime.utcnow(),
@@ -595,6 +597,7 @@ class ProductService:
                         brand=scraped.brand,
                         sku=scraped.sku,
                         enabled=False,  # Disabled by default - admin enables manually
+                        is_featured=True,  # Mark new scraped products as "Nuevo"
                         markup_percentage=Decimal("0"),
                         category=scraped.categories[0] if scraped.categories else None,
                         last_scraped_at=datetime.utcnow(),
