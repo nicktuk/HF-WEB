@@ -42,7 +42,8 @@ class ProductRepository(BaseRepository[Product]):
         limit: int = 100,
         category: Optional[str] = None,
         search: Optional[str] = None,
-        featured: Optional[bool] = None
+        featured: Optional[bool] = None,
+        immediate_delivery: Optional[bool] = None
     ) -> List[Product]:
         """Get enabled products for public catalog."""
         query = (
@@ -67,6 +68,9 @@ class ProductRepository(BaseRepository[Product]):
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
 
+        if immediate_delivery is not None:
+            query = query.filter(Product.is_immediate_delivery == immediate_delivery)
+
         return (
             query
             .order_by(Product.display_order, Product.created_at.desc())
@@ -79,7 +83,8 @@ class ProductRepository(BaseRepository[Product]):
         self,
         category: Optional[str] = None,
         search: Optional[str] = None,
-        featured: Optional[bool] = None
+        featured: Optional[bool] = None,
+        immediate_delivery: Optional[bool] = None
     ) -> int:
         """Count enabled products."""
         query = self.db.query(Product).filter(Product.enabled == True)
@@ -99,6 +104,9 @@ class ProductRepository(BaseRepository[Product]):
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
 
+        if immediate_delivery is not None:
+            query = query.filter(Product.is_immediate_delivery == immediate_delivery)
+
         return query.count()
 
     def get_all_admin(
@@ -109,7 +117,8 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
-        is_featured: Optional[bool] = None
+        is_featured: Optional[bool] = None,
+        is_immediate_delivery: Optional[bool] = None
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -132,6 +141,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
+
+        if is_immediate_delivery is not None:
+            query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
 
         if search:
             search_term = f"%{search}%"
@@ -202,7 +214,8 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
-        is_featured: Optional[bool] = None
+        is_featured: Optional[bool] = None,
+        is_immediate_delivery: Optional[bool] = None
     ) -> int:
         """Count products with filters for admin panel."""
         query = self.db.query(Product)
@@ -218,6 +231,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
+
+        if is_immediate_delivery is not None:
+            query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
 
         if search:
             search_term = f"%{search}%"
