@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { ContactButton } from '@/components/public/ContactButton';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import type { ProductImage } from '@/types';
 
 export default function ProductPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const { data: product, isLoading, error } = usePublicProduct(slug);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
@@ -71,13 +72,13 @@ export default function ProductPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link
-            href="/"
+          <button
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <ChevronLeft className="h-5 w-5" />
             Volver al catálogo
-          </Link>
+          </button>
         </div>
       </header>
 
