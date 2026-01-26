@@ -3,19 +3,24 @@
 import Link from 'next/link';
 import { Package, Eye, EyeOff, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
 
 export default function AdminDashboard() {
   const apiKey = useApiKey();
-  const { data: products } = useAdminProducts(apiKey || '', { limit: 100 });
+  // Get recent products (last 20 by created_at)
+  const { data: recentProducts } = useAdminProducts(apiKey || '', { limit: 20 });
+  // Get counts for enabled/disabled
+  const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
+  const { data: disabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: false });
   const { data: sourceWebsites } = useSourceWebsites(apiKey || '');
 
-  const totalProducts = products?.total || 0;
-  const enabledProducts = products?.items.filter((p) => p.enabled).length || 0;
-  const disabledProducts = totalProducts - enabledProducts;
+  const enabledCount = enabledData?.total || 0;
+  const disabledCount = disabledData?.total || 0;
+  const totalProducts = enabledCount + disabledCount;
 
-  const productsWithMarketData = products?.items.filter(
+  const productsWithMarketData = recentProducts?.items.filter(
     (p) => p.market_avg_price
   ).length || 0;
 
@@ -50,7 +55,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Habilitados</p>
-                <p className="text-2xl font-bold text-gray-900">{enabledProducts}</p>
+                <p className="text-2xl font-bold text-gray-900">{enabledCount}</p>
               </div>
             </div>
           </CardContent>
@@ -64,7 +69,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Deshabilitados</p>
-                <p className="text-2xl font-bold text-gray-900">{disabledProducts}</p>
+                <p className="text-2xl font-bold text-gray-900">{disabledCount}</p>
               </div>
             </div>
           </CardContent>
@@ -140,35 +145,44 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold text-gray-900">
-              Productos Recientes
+              Últimos 20 Productos del Scraping
             </h2>
           </CardHeader>
           <CardContent>
-            {products?.items && products.items.length > 0 ? (
-              <ul className="space-y-2">
-                {products.items.slice(0, 5).map((product) => (
-                  <li
-                    key={product.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 truncate">
-                        {product.custom_name || product.original_name}
-                      </p>
-                      <p className="text-sm text-gray-500">{product.slug}</p>
-                    </div>
-                    <span
-                      className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        product.enabled
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {product.enabled ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            {recentProducts?.items && recentProducts.items.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 font-medium text-gray-600">Producto</th>
+                      <th className="text-left py-2 font-medium text-gray-600">Categoría</th>
+                      <th className="text-right py-2 font-medium text-gray-600">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentProducts.items.map((product) => (
+                      <tr key={product.id} className="border-b last:border-0 hover:bg-gray-50">
+                        <td className="py-2">
+                          <Link
+                            href={`/admin/productos/${product.id}`}
+                            className="font-medium text-gray-900 hover:text-primary-600 line-clamp-1"
+                          >
+                            {product.custom_name || product.original_name}
+                          </Link>
+                        </td>
+                        <td className="py-2 text-gray-600">
+                          {product.category || <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="py-2 text-right">
+                          <Badge variant={product.enabled ? 'success' : 'default'}>
+                            {product.enabled ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="text-gray-500 text-center py-4">
                 No hay productos

@@ -191,3 +191,34 @@ class ProductRepository(BaseRepository[Product]):
         )
         self.db.commit()
         return count
+
+    def count_admin(
+        self,
+        enabled: Optional[bool] = None,
+        source_website_id: Optional[int] = None,
+        search: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> int:
+        """Count products with filters for admin panel."""
+        query = self.db.query(Product)
+
+        if enabled is not None:
+            query = query.filter(Product.enabled == enabled)
+
+        if source_website_id:
+            query = query.filter(Product.source_website_id == source_website_id)
+
+        if category:
+            query = query.filter(Product.category == category)
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Product.original_name.ilike(search_term),
+                    Product.custom_name.ilike(search_term),
+                    Product.slug.ilike(search_term)
+                )
+            )
+
+        return query.count()

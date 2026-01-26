@@ -109,7 +109,7 @@ class ProductService:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
         products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category)
-        total = self.repo.count()  # TODO: Add filtered count
+        total = self.repo.count_admin(enabled, source_website_id, search, category)
         return products, total
 
     def get_by_id(self, id: int) -> Product:
