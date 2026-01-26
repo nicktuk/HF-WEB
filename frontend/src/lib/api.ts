@@ -108,6 +108,7 @@ export const adminApi = {
       enabled?: boolean;
       source_website_id?: number;
       search?: string;
+      category?: string;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
     const searchParams = new URLSearchParams();
@@ -116,6 +117,7 @@ export const adminApi = {
     if (params.enabled !== undefined) searchParams.set('enabled', params.enabled.toString());
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
+    if (params.category) searchParams.set('category', params.category);
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/products${query ? `?${query}` : ''}`, {}, apiKey);
@@ -217,6 +219,23 @@ export const adminApi = {
     return fetchAPI('/admin/products/activate-all-inactive', {
       method: 'POST',
       body: JSON.stringify({
+        markup_percentage: markupPercentage,
+      }),
+    }, apiKey);
+  },
+
+  /**
+   * Activate selected products with markup
+   */
+  async activateSelected(
+    apiKey: string,
+    productIds: number[],
+    markupPercentage: number
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/activate-selected', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_ids: productIds,
         markup_percentage: markupPercentage,
       }),
     }, apiKey);

@@ -107,7 +107,8 @@ class ProductRepository(BaseRepository[Product]):
         limit: int = 100,
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        category: Optional[str] = None
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -124,6 +125,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if source_website_id:
             query = query.filter(Product.source_website_id == source_website_id)
+
+        if category:
+            query = query.filter(Product.category == category)
 
         if search:
             search_term = f"%{search}%"

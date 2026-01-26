@@ -175,6 +175,12 @@ class ProductActivateInactive(BaseModel):
     markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply to activated products")
 
 
+class ProductActivateSelected(BaseModel):
+    """Schema for activating selected products with markup."""
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs to activate")
+    markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply")
+
+
 class ProductCreateManual(BaseModel):
     """Schema for creating a product manually (without scraping)."""
     name: str = Field(..., min_length=1, max_length=500, description="Product name")

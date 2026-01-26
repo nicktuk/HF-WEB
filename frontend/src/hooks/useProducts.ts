@@ -51,6 +51,7 @@ export function useAdminProducts(
     enabled?: boolean;
     source_website_id?: number;
     search?: string;
+    category?: string;
   } = {}
 ) {
   return useQuery({
@@ -184,6 +185,19 @@ export function useActivateAllInactive(apiKey: string) {
   return useMutation({
     mutationFn: (markupPercentage: number) =>
       adminApi.activateAllInactive(apiKey, markupPercentage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-products'] });
+    },
+  });
+}
+
+export function useActivateSelected(apiKey: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productIds, markupPercentage }: { productIds: number[]; markupPercentage: number }) =>
+      adminApi.activateSelected(apiKey, productIds, markupPercentage),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });

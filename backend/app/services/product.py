@@ -102,11 +102,12 @@ class ProductService:
         limit: int = 20,
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        category: Optional[str] = None
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search)
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category)
         total = self.repo.count()  # TODO: Add filtered count
         return products, total
 
@@ -441,6 +442,26 @@ class ProductService:
         self.db.commit()
         cache.invalidate_all_products()
         logger.info(f"Activated {count} products with {markup_percentage}% markup")
+        return count
+
+    def activate_selected_with_markup(self, product_ids: List[int], markup_percentage: Decimal) -> int:
+        """
+        Activate selected products and apply markup.
+
+        Returns the number of products activated.
+        """
+        count = self.db.query(Product).filter(
+            Product.id.in_(product_ids)
+        ).update(
+            {
+                Product.enabled: True,
+                Product.markup_percentage: markup_percentage
+            },
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Activated {count} selected products with {markup_percentage}% markup")
         return count
 
     def get_categories(self) -> List[str]:

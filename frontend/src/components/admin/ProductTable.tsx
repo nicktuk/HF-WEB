@@ -15,14 +15,35 @@ interface ProductTableProps {
   products: ProductAdmin[];
   isLoading?: boolean;
   apiKey: string;
+  selectedIds?: number[];
+  onSelectionChange?: (ids: number[]) => void;
 }
 
-export function ProductTable({ products, isLoading, apiKey }: ProductTableProps) {
+export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange }: ProductTableProps) {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
 
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (onSelectionChange) {
+      onSelectionChange(checked ? products.map(p => p.id) : []);
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (onSelectionChange) {
+      if (checked) {
+        onSelectionChange([...selectedIds, id]);
+      } else {
+        onSelectionChange(selectedIds.filter(i => i !== id));
+      }
+    }
+  };
+
+  const allSelected = products.length > 0 && products.every(p => selectedIds.includes(p.id));
+  const someSelected = products.some(p => selectedIds.includes(p.id)) && !allSelected;
 
   const handleToggleEnabled = async (product: ProductAdmin) => {
     await updateMutation.mutateAsync({
@@ -78,6 +99,17 @@ export function ProductTable({ products, isLoading, apiKey }: ProductTableProps)
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
+            {onSelectionChange && (
+              <th className="px-4 py-3 w-12">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+              </th>
+            )}
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Producto
             </th>
@@ -110,6 +142,17 @@ export function ProductTable({ products, isLoading, apiKey }: ProductTableProps)
 
             return (
               <tr key={product.id} className="hover:bg-gray-50">
+                {/* Checkbox */}
+                {onSelectionChange && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(product.id)}
+                      onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                )}
                 {/* Product */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

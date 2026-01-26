@@ -24,6 +24,7 @@ from app.schemas.product import (
     ProductBulkAction,
     ProductBulkMarkup,
     ProductActivateInactive,
+    ProductActivateSelected,
 )
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
@@ -56,6 +57,7 @@ async def get_products_admin(
     enabled: Optional[bool] = Query(default=None),
     source_website_id: Optional[int] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
+    category: Optional[str] = Query(default=None, max_length=100),
     service: ProductService = Depends(get_product_service),
 ):
     """
@@ -63,7 +65,7 @@ async def get_products_admin(
 
     Includes disabled products, market price stats, and source info.
     """
-    products, total = service.get_all_admin(page, limit, enabled, source_website_id, search)
+    products, total = service.get_all_admin(page, limit, enabled, source_website_id, search, category)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     # Transform to admin response with market stats
@@ -484,6 +486,26 @@ async def activate_all_inactive(
     - Apply the specified markup percentage to them
     """
     count = service.activate_all_inactive_with_markup(data.markup_percentage)
+    return MessageResponse(message=f"Activados {count} productos con markup de {data.markup_percentage}%")
+
+
+@router.post(
+    "/products/activate-selected",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def activate_selected(
+    data: ProductActivateSelected,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Activate selected products and apply markup.
+
+    This will:
+    - Enable the specified products
+    - Apply the specified markup percentage to them
+    """
+    count = service.activate_selected_with_markup(data.product_ids, data.markup_percentage)
     return MessageResponse(message=f"Activados {count} productos con markup de {data.markup_percentage}%")
 
 

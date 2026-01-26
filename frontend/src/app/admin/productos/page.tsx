@@ -10,7 +10,7 @@ import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useCategories } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 
 export default function ProductsPage() {
@@ -19,12 +19,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [enabledFilter, setEnabledFilter] = useState<boolean | undefined>();
   const [sourceFilter, setSourceFilter] = useState<number | undefined>();
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -51,9 +53,11 @@ export default function ProductsPage() {
     enabled: enabledFilter,
     source_website_id: sourceFilter,
     search: search || undefined,
+    category: categoryFilter,
   });
 
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
+  const { data: categories } = useCategories();
 
   return (
     <div className="space-y-6">
@@ -66,13 +70,15 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowActivateModal(true)}
-          >
-            <Power className="mr-2 h-4 w-4" />
-            Activar inactivos
-          </Button>
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={() => setShowActivateModal(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Power className="mr-2 h-4 w-4" />
+              Activar {selectedIds.length} seleccionado(s)
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowBulkMarkupModal(true)}
@@ -162,6 +168,26 @@ export default function ProductsPage() {
           <option value="false">Deshabilitados</option>
         </select>
 
+        {/* Category Filter */}
+        {categories && categories.length > 0 && (
+          <select
+            value={categoryFilter || ''}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value || undefined);
+              setPage(1);
+              setSelectedIds([]);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Todas las categorias</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        )}
+
         {/* Source Filter */}
         {sourceWebsites && sourceWebsites.items.length > 1 && (
           <select
@@ -169,6 +195,7 @@ export default function ProductsPage() {
             onChange={(e) => {
               setSourceFilter(e.target.value ? Number(e.target.value) : undefined);
               setPage(1);
+              setSelectedIds([]);
             }}
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
           >
@@ -187,6 +214,8 @@ export default function ProductsPage() {
         products={data?.items || []}
         isLoading={isLoading}
         apiKey={apiKey}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
 
       {/* Pagination */}
@@ -237,7 +266,9 @@ export default function ProductsPage() {
       {/* Activate Inactive Modal */}
       {showActivateModal && (
         <ActivateInactiveModal
+          selectedIds={selectedIds}
           onClose={() => setShowActivateModal(false)}
+          onSuccess={() => setSelectedIds([])}
         />
       )}
     </div>

@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Power, AlertTriangle } from 'lucide-react';
+import { X, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useActivateAllInactive } from '@/hooks/useProducts';
+import { useActivateSelected } from '@/hooks/useProducts';
 import { useApiKey } from '@/hooks/useAuth';
 
 interface ActivateInactiveModalProps {
+  selectedIds: number[];
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
+export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: ActivateInactiveModalProps) {
   const apiKey = useApiKey() || '';
-  const activateMutation = useActivateAllInactive(apiKey);
+  const activateMutation = useActivateSelected(apiKey);
 
   const [markup, setMarkup] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -21,10 +23,14 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!markup || !confirmed) return;
+    if (!markup || !confirmed || selectedIds.length === 0) return;
 
     try {
-      await activateMutation.mutateAsync(parseFloat(markup));
+      await activateMutation.mutateAsync({
+        productIds: selectedIds,
+        markupPercentage: parseFloat(markup),
+      });
+      onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Error activating products:', error);
@@ -37,7 +43,7 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <Power className="h-5 w-5 text-green-600" />
-            <h2 className="text-lg font-semibold">Activar Productos Inactivos</h2>
+            <h2 className="text-lg font-semibold">Activar Productos Seleccionados</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
             <X className="h-5 w-5" />
@@ -48,8 +54,8 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex gap-3">
             <Power className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-green-800">
-              <p className="font-medium">Activacion masiva</p>
-              <p>Esta accion activara todos los productos deshabilitados y les aplicara el markup especificado.</p>
+              <p className="font-medium">{selectedIds.length} producto(s) seleccionado(s)</p>
+              <p>Se activaran y se les aplicara el markup especificado.</p>
             </div>
           </div>
 
@@ -62,7 +68,7 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
             min="0"
             step="0.1"
             required
-            helperText="Se aplicara este markup a todos los productos activados"
+            helperText="Se aplicara este markup a los productos seleccionados"
           />
 
           <label className="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg cursor-pointer">
@@ -73,7 +79,7 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
               className="h-4 w-4 rounded border-gray-300 text-primary-600"
             />
             <span className="text-sm">
-              Confirmo que quiero activar todos los productos inactivos con <strong>{markup || '0'}%</strong> de markup
+              Confirmo que quiero activar <strong>{selectedIds.length}</strong> producto(s) con <strong>{markup || '0'}%</strong> de markup
             </span>
           </label>
 
@@ -96,9 +102,9 @@ export function ActivateInactiveModal({ onClose }: ActivateInactiveModalProps) {
             <Button
               type="submit"
               isLoading={activateMutation.isPending}
-              disabled={!markup || !confirmed}
+              disabled={!markup || !confirmed || selectedIds.length === 0}
             >
-              Activar Productos
+              Activar {selectedIds.length} Producto(s)
             </Button>
           </div>
         </form>
