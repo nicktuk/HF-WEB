@@ -10,6 +10,18 @@ import { usePublicProducts, useCategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 
 export default function HomePage() {
+  const sortedProducts = (() => {
+    const items = data?.items || [];
+    if (!selectedCategory || showFeatured || showImmediate) {
+      return items;
+    }
+    return [...items].sort((a, b) => {
+      const aImmediate = a.is_immediate_delivery ? 1 : 0;
+      const bImmediate = b.is_immediate_delivery ? 1 : 0;
+      return bImmediate - aImmediate;
+    });
+  })();
+
   return (
     <Suspense fallback={<HomePageSkeleton />}>
       <HomePageContent />
@@ -213,7 +225,7 @@ function HomePageContent() {
               </div>
             </div>
           )}
-          <ProductGrid products={data?.items || []} isLoading={isLoading} />
+          <ProductGrid products={sortedProducts} isLoading={isLoading} />
         </div>
 
         {/* Pagination */}

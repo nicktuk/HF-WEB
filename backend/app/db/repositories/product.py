@@ -2,7 +2,7 @@
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, case
 
 from app.db.repositories.base import BaseRepository
 from app.models.product import Product, ProductImage
@@ -67,13 +67,20 @@ class ProductRepository(BaseRepository[Product]):
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
 
-        return (
-            query
-            .order_by(Product.display_order, Product.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        if category:
+            immediate_first = case(
+                (Product.is_immediate_delivery == True, 1),
+                else_=0
+            )
+            query = query.order_by(
+                immediate_first.desc(),
+                Product.display_order,
+                Product.created_at.desc()
+            )
+        else:
+            query = query.order_by(Product.display_order, Product.created_at.desc())
+
+        return query.offset(skip).limit(limit).all()
 
     def count_enabled(
         self,
