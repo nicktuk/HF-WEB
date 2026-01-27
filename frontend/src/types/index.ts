@@ -17,6 +17,7 @@ export interface ProductPublic {
   brand?: string;
   category?: string;
   is_featured: boolean;
+  is_immediate_delivery: boolean;
   images: ProductImage[];
   source_url?: string;
 }
@@ -133,6 +134,7 @@ export interface ProductCreateForm {
 export interface ProductUpdateForm {
   enabled?: boolean;
   is_featured?: boolean;
+  is_immediate_delivery?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   custom_price?: number;
@@ -164,4 +166,5 @@ export interface ProductCreateManualForm {
   image_urls: string[];
   enabled: boolean;
   is_featured: boolean;
+  is_immediate_delivery: boolean;
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff } from 'lucide-react';
+import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableRowSkeleton } from '@/components/ui/skeleton';
@@ -49,6 +49,20 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
     await updateMutation.mutateAsync({
       id: product.id,
       data: { enabled: !product.enabled },
+    });
+  };
+
+  const handleToggleFeatured = async (product: ProductAdmin) => {
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: { is_featured: !product.is_featured },
+    });
+  };
+
+  const handleToggleImmediate = async (product: ProductAdmin) => {
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: { is_immediate_delivery: !product.is_immediate_delivery },
     });
   };
 
@@ -246,6 +260,26 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                       ) : (
                         <Eye className="h-4 w-4" />
                       )}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleFeatured(product)}
+                      title={product.is_featured ? 'Quitar de Nuevo' : 'Marcar como Nuevo'}
+                      className={product.is_featured ? 'text-amber-600' : undefined}
+                    >
+                      <Star className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleImmediate(product)}
+                      title={product.is_immediate_delivery ? 'Quitar Entrega inmediata' : 'Marcar Entrega inmediata'}
+                      className={product.is_immediate_delivery ? 'text-emerald-600' : undefined}
+                    >
+                      <Zap className="h-4 w-4" />
                     </Button>
 
                     <Link href={`/admin/productos/${product.id}`}>

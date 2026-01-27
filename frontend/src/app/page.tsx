@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Star } from 'lucide-react';
+import { Search, Star, Zap } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Input } from '@/components/ui/input';
@@ -56,6 +56,7 @@ function HomePageContent() {
   const search = searchParams.get('search') || '';
   const selectedCategory = searchParams.get('category') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
+  const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
   // Helper to update URL params
@@ -83,9 +84,10 @@ function HomePageContent() {
   const { data, isLoading } = usePublicProducts({
     page,
     limit: 20,
-    category: showFeatured ? undefined : selectedCategory,
+    category: showFeatured || showImmediate ? undefined : selectedCategory,
     search: search || undefined,
     featured: showFeatured ? true : undefined,
+    immediate_delivery: showImmediate ? true : undefined,
   });
 
   const { data: categories } = useCategories();
@@ -137,10 +139,10 @@ function HomePageContent() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
-                  updateParams({ category: undefined, featured: undefined, page: undefined });
+                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined, page: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  !selectedCategory && !showFeatured
+                  !selectedCategory && !showFeatured && !showImmediate
                     ? 'bg-primary-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -149,7 +151,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ featured: 'true', category: undefined, page: undefined });
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, page: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showFeatured
@@ -160,14 +162,27 @@ function HomePageContent() {
                 <Star className="h-3.5 w-3.5" />
                 Nuevo
               </button>
+              <button
+                onClick={() => {
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, page: undefined });
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  showImmediate
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Entrega inmediata
+              </button>
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => {
-                    updateParams({ category, featured: undefined, page: undefined });
+                    updateParams({ category, featured: undefined, immediate_delivery: undefined, page: undefined });
                   }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category && !showFeatured
+                    selectedCategory === category && !showFeatured && !showImmediate
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -181,6 +196,23 @@ function HomePageContent() {
 
         {/* Product Grid */}
         <div ref={gridRef}>
+          {showImmediate && (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">
+                    Entrega inmediata
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    Productos listos para retirar o enviar sin demoras.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <ProductGrid products={data?.items || []} isLoading={isLoading} />
         </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Zap } from 'lucide-react';
 import { ContactButton } from '@/components/public/ContactButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
@@ -137,6 +137,14 @@ export default function ProductPage() {
               {product.category && product.brand && <span>•</span>}
               {product.brand && <span>{product.brand}</span>}
             </div>
+
+            {product.is_immediate_delivery && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 mb-3">
+                <Zap className="h-3.5 w-3.5" />
+                Entrega inmediata
+              </div>
+            )}
+
 
             {/* Name */}
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">

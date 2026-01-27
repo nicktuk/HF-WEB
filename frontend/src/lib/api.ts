@@ -65,6 +65,7 @@ export const publicApi = {
     category?: string;
     search?: string;
     featured?: boolean;
+    immediate_delivery?: boolean;
   } = {}): Promise<PaginatedResponse<ProductPublic>> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', params.page.toString());
@@ -72,6 +73,9 @@ export const publicApi = {
     if (params.category) searchParams.set('category', params.category);
     if (params.search) searchParams.set('search', params.search);
     if (params.featured !== undefined) searchParams.set('featured', params.featured.toString());
+    if (params.immediate_delivery !== undefined) {
+      searchParams.set('immediate_delivery', params.immediate_delivery.toString());
+    }
 
     const query = searchParams.toString();
     return fetchAPI(`/public/products${query ? `?${query}` : ''}`);
@@ -110,6 +114,7 @@ export const adminApi = {
       search?: string;
       category?: string;
       is_featured?: boolean;
+      is_immediate_delivery?: boolean;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
     const searchParams = new URLSearchParams();
@@ -120,6 +125,9 @@ export const adminApi = {
     if (params.search) searchParams.set('search', params.search);
     if (params.category) searchParams.set('category', params.category);
     if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
+    if (params.is_immediate_delivery !== undefined) {
+      searchParams.set('is_immediate_delivery', params.is_immediate_delivery.toString());
+    }
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/products${query ? `?${query}` : ''}`, {}, apiKey);

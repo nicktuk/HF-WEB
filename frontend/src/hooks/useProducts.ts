@@ -14,6 +14,7 @@ export function usePublicProducts(params: {
   category?: string;
   search?: string;
   featured?: boolean;
+  immediate_delivery?: boolean;
 } = {}) {
   return useQuery({
     queryKey: ['public-products', params],
@@ -53,6 +54,7 @@ export function useAdminProducts(
     search?: string;
     category?: string;
     is_featured?: boolean;
+    is_immediate_delivery?: boolean;
   } = {}
 ) {
   return useQuery({

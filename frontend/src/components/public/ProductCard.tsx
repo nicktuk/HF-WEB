@@ -29,6 +29,18 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       )}
 
+      {/* Entrega inmediata badge */}
+      {product.is_immediate_delivery && (
+        <div className="absolute top-0 left-0 z-10">
+          <div className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1 shadow-md"
+               style={{
+                 clipPath: 'polygon(0 0, 100% 0, 90% 100%, 0 100%)',
+               }}>
+            Entrega inmediata
+          </div>
+        </div>
+      )}
+
       {/* Image */}
       <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
         {primaryImage ? (

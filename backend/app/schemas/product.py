@@ -208,6 +208,7 @@ class ProductCreateManual(BaseModel):
     image_urls: List[str] = Field(default_factory=list, max_length=10)
     enabled: bool = Field(default=True)
     is_featured: bool = Field(default=False, description="Marcar como novedad")
+    is_immediate_delivery: bool = Field(default=False, description="Entrega inmediata")
 
     @field_validator("name")
     @classmethod

@@ -386,6 +386,7 @@ class ProductService:
             sku=data.sku,
             enabled=data.enabled,
             is_featured=data.is_featured,
+            is_immediate_delivery=data.is_immediate_delivery,
             markup_percentage=Decimal("0"),
             category=data.category,
             last_scraped_at=None,

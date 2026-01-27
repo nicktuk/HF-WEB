@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, RefreshCw, Trash2, Star, Upload, X, Plus } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Trash2, Star, Upload, X, Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -36,6 +36,7 @@ export default function ProductEditPage() {
   // Form state
   const [enabled, setEnabled] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [customPrice, setCustomPrice] = useState('');
@@ -57,6 +58,7 @@ export default function ProductEditPage() {
     if (product) {
       setEnabled(product.enabled);
       setIsFeatured(product.is_featured || false);
+      setIsImmediateDelivery(product.is_immediate_delivery || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
       setCustomPrice(product.custom_price ? String(product.custom_price) : '');
@@ -113,6 +115,7 @@ export default function ProductEditPage() {
       data: {
         enabled,
         is_featured: isFeatured,
+        is_immediate_delivery: isImmediateDelivery,
         markup_percentage: markup,
         custom_name: customName || '',
         custom_price: customPrice ? parseFloat(customPrice) : 0,
@@ -186,6 +189,11 @@ export default function ProductEditPage() {
               {product.is_featured && (
                 <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">
                   Nuevo
+                </span>
+              )}
+              {product.is_immediate_delivery && (
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
+                  Entrega inmediata
                 </span>
               )}
             </div>
@@ -471,6 +479,31 @@ export default function ProductEditPage() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       isFeatured ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Immediate delivery toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-emerald-600" />
+                    Entrega inmediata
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Destacar en la seccion Entrega inmediata
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsImmediateDelivery(!isImmediateDelivery)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isImmediateDelivery ? 'bg-emerald-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isImmediateDelivery ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>

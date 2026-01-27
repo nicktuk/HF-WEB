@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Star } from 'lucide-react';
+import { X, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Star, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
   const [imageUrls, setImageUrls] = useState<string[]>(['']);
   const [enabled, setEnabled] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
 
   // Image upload state
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('upload');
@@ -112,6 +113,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
         image_urls: finalImageUrls,
         enabled,
         is_featured: isFeatured,
+        is_immediate_delivery: isImmediateDelivery,
       });
       onSuccess();
       onClose();
@@ -351,6 +353,20 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
               <label htmlFor="is_featured" className="text-sm text-gray-700 flex items-center gap-2">
                 <Star className="h-4 w-4 text-amber-500" />
                 Marcar como Nuevo
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="is_immediate_delivery"
+                checked={isImmediateDelivery}
+                onChange={(e) => setIsImmediateDelivery(e.target.checked)}
+                className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <label htmlFor="is_immediate_delivery" className="text-sm text-gray-700 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-emerald-600" />
+                Entrega inmediata
               </label>
             </div>
           </div>
