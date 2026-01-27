@@ -25,6 +25,7 @@ async def get_products(
     category: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     featured: Optional[bool] = Query(default=None),
+    immediate_delivery: Optional[bool] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
     """
@@ -32,8 +33,9 @@ async def get_products(
 
     Returns only enabled products with calculated final prices.
     Use featured=true to get only featured products (Novedades).
+    Use immediate_delivery=true to get only products with immediate delivery.
     """
-    products, total = service.get_public_catalog(page, limit, category, search, featured)
+    products, total = service.get_public_catalog(page, limit, category, search, featured, immediate_delivery)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     return PaginatedResponse(
