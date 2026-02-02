@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useRef, useCallback, useState, useEffect } from 'react';
+import { Suspense, useCallback, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Star, Zap } from 'lucide-react';
+import { Search, Star, Zap, Menu, X } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Input } from '@/components/ui/input';
@@ -50,17 +50,18 @@ function HomePageSkeleton() {
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const gridRef = useRef<HTMLDivElement>(null);
 
   // Read state from URL params
   const searchFromUrl = searchParams.get('search') || '';
   const selectedCategory = searchParams.get('category') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
-  const page = parseInt(searchParams.get('page') || '1', 10);
 
   // Local state for search input (for debouncing)
   const [searchInput, setSearchInput] = useState(searchFromUrl);
+
+  // Mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Sync local state when URL changes externally
   useEffect(() => {
@@ -77,7 +78,6 @@ function HomePageContent() {
         } else {
           params.delete('search');
         }
-        params.delete('page'); // Reset to page 1 on new search
         const queryString = params.toString();
         router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
       }
@@ -85,6 +85,11 @@ function HomePageContent() {
 
     return () => clearTimeout(timeoutId);
   }, [searchInput, searchFromUrl, searchParams, router]);
+
+  // Close mobile menu when filter changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [selectedCategory, showFeatured, showImmediate]);
 
   // Helper to update URL params
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -102,15 +107,9 @@ function HomePageContent() {
     router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
   }, [searchParams, router]);
 
-  // Helper for page change with scroll
-  const handlePageChange = useCallback((newPage: number) => {
-    updateParams({ page: newPage.toString() });
-    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [updateParams]);
-
   const { data, isLoading } = usePublicProducts({
-    page,
-    limit: 20,
+    page: 1,
+    limit: 1000, // Load all products without pagination
     category: showFeatured || showImmediate ? undefined : selectedCategory,
     search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
@@ -158,24 +157,140 @@ function HomePageContent() {
       <main className="container mx-auto px-4 py-6">
         {/* Search and Filters */}
         <div className="mb-6 space-y-4">
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Buscar productos..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
-            />
+          {/* Search and Mobile Menu Button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Buscar productos..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50"
+              aria-label="Abrir menú de categorías"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
 
-          {/* Categories */}
-          {categories && categories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+          {/* Active Filters Pills (Mobile) */}
+          <div className="flex flex-wrap gap-2 md:hidden">
+            {selectedCategory && !showFeatured && !showImmediate && (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white flex items-center gap-1.5">
+                {selectedCategory}
+                <button
+                  onClick={() => updateParams({ category: undefined })}
+                  className="hover:bg-blue-700 rounded-full p-0.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {showFeatured && (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-orange-500 text-white flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5" />
+                Nuevo
+                <button
+                  onClick={() => updateParams({ featured: undefined })}
+                  className="hover:bg-orange-600 rounded-full p-0.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {showImmediate && (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-600 text-white flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5" />
+                Entrega inmediata
+                <button
+                  onClick={() => updateParams({ immediate_delivery: undefined })}
+                  className="hover:bg-green-700 rounded-full p-0.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {!selectedCategory && !showFeatured && !showImmediate && (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-600 text-white">
+                Todos
+              </span>
+            )}
+          </div>
+
+          {/* Mobile Dropdown Menu */}
+          {mobileMenuOpen && categories && categories.length > 0 && (
+            <div className="md:hidden bg-white border rounded-lg shadow-lg p-4 space-y-2">
               <button
                 onClick={() => {
-                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined, page: undefined });
+                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined });
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  !selectedCategory && !showFeatured && !showImmediate
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => {
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  showFeatured
+                    ? 'bg-orange-100 text-orange-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Star className="h-4 w-4" />
+                Nuevo
+              </button>
+              <button
+                onClick={() => {
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  showImmediate
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Zap className="h-4 w-4" />
+                Entrega inmediata
+              </button>
+              <div className="border-t pt-2 mt-2">
+                <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => {
+                      updateParams({ category, featured: undefined, immediate_delivery: undefined });
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedCategory === category && !showFeatured && !showImmediate
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Desktop Categories */}
+          {categories && categories.length > 0 && (
+            <div className="hidden md:flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   !selectedCategory && !showFeatured && !showImmediate
@@ -187,12 +302,12 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, page: undefined });
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showFeatured
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
                 }`}
               >
                 <Star className="h-3.5 w-3.5" />
@@ -200,12 +315,12 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, page: undefined });
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showImmediate
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
                 }`}
               >
                 <Zap className="h-3.5 w-3.5" />
@@ -215,11 +330,11 @@ function HomePageContent() {
                 <button
                   key={category}
                   onClick={() => {
-                    updateParams({ category, featured: undefined, immediate_delivery: undefined, page: undefined });
+                    updateParams({ category, featured: undefined, immediate_delivery: undefined });
                   }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     selectedCategory === category && !showFeatured && !showImmediate
-                      ? 'bg-primary-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -231,7 +346,7 @@ function HomePageContent() {
         </div>
 
         {/* Product Grid */}
-        <div ref={gridRef}>
+        <div>
           {showImmediate && (
             <div className="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-3 shadow-sm">
               <div className="flex items-center gap-3">
@@ -251,29 +366,6 @@ function HomePageContent() {
           )}
           <ProductGrid products={sortedProducts} isLoading={isLoading} />
         </div>
-
-        {/* Pagination */}
-        {data && data.pages > 1 && (
-          <div className="mt-8 flex justify-center gap-2">
-            <button
-              onClick={() => handlePageChange(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
-            >
-              Anterior
-            </button>
-            <span className="px-4 py-2 text-gray-600">
-              Página {page} de {data.pages}
-            </span>
-            <button
-              onClick={() => handlePageChange(Math.min(data.pages, page + 1))}
-              disabled={page === data.pages}
-              className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
       </main>
 
       {/* Footer */}
