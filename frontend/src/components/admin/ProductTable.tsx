@@ -31,7 +31,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
     if (newCategory === (product.category || '')) return;
     await updateMutation.mutateAsync({
       id: product.id,
-      data: { category: newCategory || null },
+      data: { category: newCategory || undefined },
     });
   };
 
