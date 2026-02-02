@@ -206,8 +206,11 @@ class RedlenicScraper(BaseScraper):
         # Clean up name (remove trailing dashes and extra spaces)
         name = self._clean_name(name)
 
-        # Generate slug from name
-        slug = self._generate_slug(name, idx)
+        # Extract SKU/code from p.datos1 FIRST (needed for slug)
+        sku = self._extract_sku_from_container(container)
+
+        # Generate slug using SKU (unique identifier) instead of index
+        slug = self._generate_slug(name, idx, sku)
 
         # Extract price from p.datos
         price = self._extract_price_from_container(container)
@@ -217,9 +220,6 @@ class RedlenicScraper(BaseScraper):
 
         # Extract category from p.rubro_centrado
         category = self._extract_category_from_container(container)
-
-        # Extract SKU/code from p.datos1
-        sku = self._extract_sku_from_container(container)
 
         # Try to extract brand from name
         brand = self._extract_brand(name)
@@ -248,17 +248,17 @@ class RedlenicScraper(BaseScraper):
         name = re.sub(r'\s+', ' ', name)
         return name.strip()
 
-    def _generate_slug(self, name: str, idx: int) -> str:
-        """Generate a URL-friendly slug from product name."""
-        # Remove special characters and convert to lowercase
+    def _generate_slug(self, name: str, idx: int, sku: Optional[str] = None) -> str:
+        """Generate a URL-friendly slug from product name and SKU."""
+        # Use SKU as unique identifier if available
+        if sku:
+            return f"redlenic-{sku}"
+
+        # Fallback: use name + index
         slug = re.sub(r'[^\w\s-]', '', name.lower())
-        # Replace spaces with hyphens
         slug = re.sub(r'[\s_]+', '-', slug)
-        # Remove multiple consecutive hyphens
         slug = re.sub(r'-+', '-', slug)
-        # Strip leading/trailing hyphens
         slug = slug.strip('-')
-        # Add index to ensure uniqueness
         return f"{slug}-{idx}" if slug else f"producto-{idx}"
 
     def _extract_price_from_container(self, container: BeautifulSoup) -> Optional[float]:

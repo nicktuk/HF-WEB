@@ -43,6 +43,7 @@ class ScrapeJobProgress:
     new_products: int = 0
     updated: int = 0
     errors: int = 0
+    obsolete: int = 0  # Products no longer in source
     current_product: str = ""
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
@@ -64,6 +65,7 @@ class ScrapeJobProgress:
             "new_products": self.new_products,
             "updated": self.updated,
             "errors": self.errors,
+            "obsolete": self.obsolete,
             "progress_percent": self.progress_percent,
             "current_product": self.current_product,
             "started_at": self.started_at.isoformat() if self.started_at else None,
@@ -197,9 +199,17 @@ class ScrapeJobManager:
 
                     job.processed = idx + 1
 
+            # Mark obsolete products (not updated during this scrape)
+            job.obsolete = self._mark_obsolete_products(
+                db, source_website_id, job.started_at
+            )
+
             job.status = JobStatus.COMPLETED
             cache.invalidate_all_products()
-            logger.info(f"Job {job.job_id} completed: {job.new_products} new, {job.errors} errors")
+            logger.info(
+                f"Job {job.job_id} completed: {job.new_products} new, "
+                f"{job.updated} updated, {job.obsolete} obsolete, {job.errors} errors"
+            )
 
         except asyncio.CancelledError:
             job.status = JobStatus.CANCELLED
@@ -226,7 +236,15 @@ class ScrapeJobManager:
             existing.original_name = scraped.name
             if scraped.price:
                 existing.original_price = Decimal(str(scraped.price))
+            if scraped.sku:
+                existing.sku = scraped.sku
+            if scraped.categories:
+                existing.category = scraped.categories[0]
+            if scraped.brand:
+                existing.brand = scraped.brand
             existing.last_scraped_at = datetime.utcnow()
+            existing.scrape_last_error = None  # Clear any previous error
+            existing.scrape_error_count = 0
             db.commit()
             raise ValueError("duplicate")  # Signal to caller this was an update
 
@@ -263,6 +281,44 @@ class ScrapeJobManager:
             db.add(image)
 
         db.commit()
+
+    def _mark_obsolete_products(
+        self,
+        db: Session,
+        source_website_id: int,
+        scrape_started_at: datetime
+    ) -> int:
+        """
+        Mark products as obsolete if they weren't updated during the scrape.
+
+        Products that existed before but weren't in the current scrape
+        are disabled and marked with an error message.
+
+        Returns the count of obsolete products.
+        """
+        from sqlalchemy import or_
+
+        # Find products that weren't updated during this scrape
+        # (last_scraped_at is before the job started, or is NULL)
+        obsolete_products = db.query(Product).filter(
+            Product.source_website_id == source_website_id,
+            or_(
+                Product.last_scraped_at < scrape_started_at,
+                Product.last_scraped_at.is_(None)
+            )
+        ).all()
+
+        count = 0
+        for product in obsolete_products:
+            product.enabled = False
+            product.scrape_last_error = "No encontrado en catálogo origen"
+            count += 1
+
+        if count > 0:
+            db.commit()
+            logger.info(f"Marked {count} products as obsolete for source {source_website_id}")
+
+        return count
 
     def start_job(
         self,

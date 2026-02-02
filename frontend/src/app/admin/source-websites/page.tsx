@@ -22,6 +22,7 @@ interface ScrapeJob {
   new_products: number;
   updated: number;
   errors: number;
+  obsolete: number;
   progress_percent: number;
   current_product: string;
   started_at: string | null;
@@ -470,17 +471,21 @@ export default function SourceWebsitesPage() {
               )}
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{currentJob.new_products}</p>
+              <div className="grid grid-cols-4 gap-3 pt-2">
+                <div className="text-center p-2 bg-green-50 rounded-lg">
+                  <p className="text-xl font-bold text-green-600">{currentJob.new_products}</p>
                   <p className="text-xs text-green-700">Nuevos</p>
                 </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{currentJob.updated}</p>
+                <div className="text-center p-2 bg-blue-50 rounded-lg">
+                  <p className="text-xl font-bold text-blue-600">{currentJob.updated}</p>
                   <p className="text-xs text-blue-700">Actualizados</p>
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{currentJob.errors}</p>
+                <div className="text-center p-2 bg-orange-50 rounded-lg">
+                  <p className="text-xl font-bold text-orange-600">{currentJob.obsolete}</p>
+                  <p className="text-xs text-orange-700">Obsoletos</p>
+                </div>
+                <div className="text-center p-2 bg-red-50 rounded-lg">
+                  <p className="text-xl font-bold text-red-600">{currentJob.errors}</p>
                   <p className="text-xs text-red-700">Errores</p>
                 </div>
               </div>
