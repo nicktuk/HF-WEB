@@ -3,13 +3,17 @@ Scraper for decomoda-mayorista.com.ar
 
 Este scraper está diseñado para el catálogo de DecoModa Mayorista.
 No requiere autenticación.
-Los productos se listan en la página principal y los detalles se obtienen
-de las páginas individuales (/store/ID).
+Los productos se listan en la página de categoría "TODOS NUESTROS PRODUCTOS"
+y los detalles se obtienen de las páginas individuales (/store/ID).
+
+NOTA: La página de categoría usa JavaScript para renderizar productos,
+por lo que usamos Playwright para obtener el HTML completo.
 """
 from typing import Optional, Dict, List, Callable, Any
 import re
 import json
 import logging
+import asyncio
 from bs4 import BeautifulSoup
 
 from app.scrapers.base import BaseScraper, ScrapedProduct
@@ -17,13 +21,26 @@ from app.core.exceptions import ScraperError
 
 logger = logging.getLogger(__name__)
 
+# Playwright is optional - only used for catalog scraping
+try:
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    logger.warning("Playwright not installed. DecoModa scraper will use sitemap fallback.")
+
 
 class DecoModaScraper(BaseScraper):
-    """Scraper for decomoda-mayorista.com.ar catalog."""
+    """Scraper for decomoda-mayorista.com.ar catalog.
+
+    Usa Playwright para renderizar JavaScript y obtener todos los productos
+    de la página de categoría "TODOS NUESTROS PRODUCTOS".
+    Fallback a sitemap.xml si Playwright no está disponible.
+    """
 
     BASE_URL = "https://decomoda-mayorista.com.ar"
-    # Category page "TODOS NUESTROS PRODUCTOS" - contains all active products
     ALL_PRODUCTS_URL = f"{BASE_URL}/categoria/66137823529174453"
+    SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
 
     @property
     def source_name(self) -> str:
@@ -45,23 +62,85 @@ class DecoModaScraper(BaseScraper):
 
     async def _get_product_ids(self) -> List[str]:
         """
-        Get all product IDs from the "TODOS NUESTROS PRODUCTOS" category page.
+        Get all product IDs from the catalog.
+
+        Uses Playwright to render JavaScript if available, otherwise falls back to sitemap.
 
         Returns:
             List of product IDs
         """
-        soup = await self.fetch_html(self.ALL_PRODUCTS_URL)
+        if PLAYWRIGHT_AVAILABLE:
+            return await self._get_product_ids_playwright()
+        else:
+            return await self._get_product_ids_sitemap()
 
-        # Find all product links matching /store/XXXX pattern
+    async def _get_product_ids_playwright(self) -> List[str]:
+        """
+        Get product IDs using Playwright to render JavaScript.
+
+        Returns:
+            List of product IDs
+        """
+        logger.info(f"Usando Playwright para {self.ALL_PRODUCTS_URL}")
+        print(f"[DecoModa] Usando Playwright para renderizar JavaScript...")
+
         product_ids = set()
 
-        for link in soup.select('a[href*="/store/"]'):
-            href = link.get('href', '')
-            match = re.search(r'/store/(\d+)', href)
-            if match:
-                product_ids.add(match.group(1))
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
 
-        logger.info(f"Found {len(product_ids)} product IDs in catalog")
+                # Navigate and wait for products to load
+                await page.goto(self.ALL_PRODUCTS_URL, wait_until='networkidle')
+
+                # Wait a bit more for dynamic content
+                await asyncio.sleep(2)
+
+                # Get all links
+                content = await page.content()
+                await browser.close()
+
+                # Parse HTML and extract product IDs
+                for match in re.finditer(r'/store/(\d+)', content):
+                    product_ids.add(match.group(1))
+
+                logger.info(f"Playwright encontró {len(product_ids)} productos")
+                print(f"[DecoModa] Encontrados {len(product_ids)} productos con Playwright")
+
+        except Exception as e:
+            logger.error(f"Error con Playwright: {e}")
+            print(f"[DecoModa] Error con Playwright: {e}, usando sitemap como fallback...")
+            return await self._get_product_ids_sitemap()
+
+        return list(product_ids)
+
+    async def _get_product_ids_sitemap(self) -> List[str]:
+        """
+        Fallback: Get product IDs from sitemap (many will be 404).
+
+        Returns:
+            List of product IDs
+        """
+        logger.info(f"Usando sitemap fallback: {self.SITEMAP_URL}")
+        print(f"[DecoModa] Usando sitemap (algunos productos pueden ser 404)...")
+
+        client = await self.get_client()
+
+        try:
+            response = await client.get(self.SITEMAP_URL, headers=self.default_headers)
+            response.raise_for_status()
+            content = response.text
+        except Exception as e:
+            logger.error(f"Error fetching sitemap: {e}")
+            raise ScraperError(f"Could not fetch sitemap: {e}", source=self.source_name)
+
+        product_ids = set()
+
+        for match in re.finditer(r'/store/(\d+)', content):
+            product_ids.add(match.group(1))
+
+        logger.info(f"Sitemap tiene {len(product_ids)} URLs (algunas pueden ser 404)")
         return list(product_ids)
 
     async def scrape_all_products(
@@ -81,8 +160,8 @@ class DecoModaScraper(BaseScraper):
         Returns:
             List of ScrapedProduct objects
         """
-        logger.info(f"Conectando a {self.ALL_PRODUCTS_URL}...")
-        print(f"[DecoModa] Conectando a {self.ALL_PRODUCTS_URL}...")
+        logger.info(f"Iniciando scraping de {self.BASE_URL}...")
+        print(f"[DecoModa] Iniciando scraping...")
 
         product_ids = await self._get_product_ids()
 
