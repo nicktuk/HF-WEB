@@ -85,8 +85,8 @@ class DecoModaScraper(BaseScraper):
         Returns:
             List of ScrapedProduct objects
         """
-        logger.info(f"Conectando a {self.CATALOG_URL}...")
-        print(f"[DecoModa] Conectando a {self.CATALOG_URL}...")
+        logger.info(f"Conectando a {self.SITEMAP_URL}...")
+        print(f"[DecoModa] Conectando a {self.SITEMAP_URL}...")
 
         product_ids = await self._get_product_ids()
 
