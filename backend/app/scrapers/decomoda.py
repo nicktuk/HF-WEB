@@ -204,7 +204,7 @@ class DecoModaScraper(BaseScraper):
                         on_progress(idx + 1, total)
 
                 # Rate limiting
-                await self._rate_limit()
+                await asyncio.sleep(self.rate_limit_delay)
 
             except Exception as e:
                 logger.warning(f"Error procesando producto {product_id}: {e}")
