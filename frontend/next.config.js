@@ -8,6 +8,14 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'www.redlenic.uno',
+      },
+      {
+        protocol: 'https',
+        hostname: 'redlenic.uno',
+      },
+      {
+        protocol: 'https',
         hostname: '**.mercadolibre.com',
       },
       {
