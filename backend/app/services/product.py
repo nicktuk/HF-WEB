@@ -546,6 +546,20 @@ class ProductService:
         logger.info(f"Disabled {count} products from source {source_website_id}")
         return count
 
+    def delete_all_from_source(self, source_website_id: int) -> int:
+        """
+        DELETE ALL products from a source website.
+
+        Returns the number of products deleted.
+        """
+        count = self.db.query(Product).filter(
+            Product.source_website_id == source_website_id
+        ).delete(synchronize_session=False)
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Deleted {count} products from source {source_website_id}")
+        return count
+
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()

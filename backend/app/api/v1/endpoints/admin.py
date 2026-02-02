@@ -583,6 +583,24 @@ async def disable_all_from_source(
     return MessageResponse(message=f"Deshabilitados {count} productos de esta fuente")
 
 
+@router.delete(
+    "/source-websites/{source_id}/products",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def delete_all_products_from_source(
+    request: Request,
+    source_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    DELETE ALL products from a source website.
+    Use with caution - this permanently removes all products.
+    """
+    count = service.delete_all_from_source(source_id)
+    return MessageResponse(message=f"Eliminados {count} productos de esta fuente")
+
+
 # ============================================
 # Market Intelligence
 # ============================================

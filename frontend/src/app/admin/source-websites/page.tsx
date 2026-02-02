@@ -38,6 +38,7 @@ export default function SourceWebsitesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scrapingId, setScrapingId] = useState<number | null>(null);
   const [disablingId, setDisablingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [currentJob, setCurrentJob] = useState<ScrapeJob | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -203,6 +204,40 @@ export default function SourceWebsitesPage() {
     }
   };
 
+  const handleDeleteAllProducts = async (id: number, displayName: string) => {
+    if (!confirm(`⚠️ ATENCIÓN: Esto ELIMINARÁ PERMANENTEMENTE todos los productos de "${displayName}". Esta acción no se puede deshacer. ¿Continuar?`)) {
+      return;
+    }
+
+    // Double confirmation for dangerous action
+    if (!confirm(`¿Estás SEGURO? Se eliminarán todos los productos de "${displayName}" de forma permanente.`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/source-websites/${id}/products`,
+        {
+          method: 'DELETE',
+          headers: { 'X-Admin-API-Key': apiKey },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar');
+      }
+
+      const data = await response.json();
+      alert(data.message);
+      refetch();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al eliminar');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm('¿Estás seguro de eliminar esta web de origen? Los productos asociados también serán eliminados.')) {
       try {
@@ -269,32 +304,44 @@ export default function SourceWebsitesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleScrapeAll(website.id)}
                       isLoading={scrapingId === website.id}
-                      disabled={scrapingId !== null || disablingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
                     >
                       <RefreshCw className="h-4 w-4 mr-1" />
-                      Scrapear Todo
+                      Scrapear
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDisableAll(website.id, website.display_name)}
                       isLoading={disablingId === website.id}
-                      disabled={scrapingId !== null || disablingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
                       className="text-orange-600 hover:bg-orange-50"
                     >
                       <PowerOff className="h-4 w-4 mr-1" />
-                      Deshabilitar Todo
+                      Deshabilitar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteAllProducts(website.id, website.display_name)}
+                      isLoading={deletingId === website.id}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Eliminar Productos
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(website.id)}
+                      title="Eliminar fuente"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
