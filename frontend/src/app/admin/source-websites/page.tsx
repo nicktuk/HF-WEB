@@ -60,7 +60,7 @@ export default function SourceWebsitesPage() {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/admin/scrape-jobs/${jobId}`,
-        { headers: { 'X-API-Key': apiKey } }
+        { headers: { 'X-Admin-API-Key': apiKey } }
       );
       if (response.ok) {
         const data = await response.json();
@@ -94,7 +94,7 @@ export default function SourceWebsitesPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/admin/source-websites/${id}/scrape-job`,
         {
           method: 'POST',
-          headers: { 'X-API-Key': apiKey },
+          headers: { 'X-Admin-API-Key': apiKey },
         }
       );
 
@@ -125,7 +125,7 @@ export default function SourceWebsitesPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/admin/scrape-jobs/${currentJob.job_id}`,
         {
           method: 'DELETE',
-          headers: { 'X-API-Key': apiKey },
+          headers: { 'X-Admin-API-Key': apiKey },
         }
       );
 
