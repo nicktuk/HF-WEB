@@ -269,8 +269,8 @@ class DecoModaScraper(BaseScraper):
         if not name:
             return None
 
-        # Generate slug using SKU or product_id
-        slug = f"decomoda-{sku}" if sku else f"decomoda-{product_id}"
+        # Generate neutral slug (no source name!)
+        slug = f"prod-{sku}" if sku else f"prod-dm-{product_id}"
 
         return ScrapedProduct(
             slug=slug,

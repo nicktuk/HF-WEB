@@ -160,6 +160,16 @@ class DecoModaScraper(BaseScraper):
 - **Logo mezclado con imágenes:** Filtrado con `'logo' not in img.lower()`
 - **Descripción genérica del sitio:** Filtrada si contiene "DISTRIBUIDORA MAYORISTA DECOMODA"
 
+### IMPORTANTE: Slugs sin nombre de mayorista
+Los slugs de productos NO deben revelar el origen mayorista:
+- ❌ `decomoda-12748` → ✅ `prod-12748`
+- ❌ `redlenic-ABC123` → ✅ `prod-ABC123`
+- newredmayorista usa slugs de nombre de producto (OK)
+
+**Archivos corregidos:**
+- `backend/app/scrapers/decomoda.py`: `prod-{sku}` o `prod-dm-{id}`
+- `backend/app/scrapers/redlenic.py`: `prod-{sku}` o `{nombre}-{idx}`
+
 ### Archivos Modificados Hoy
 
 | Archivo | Cambio |

@@ -250,9 +250,9 @@ class RedlenicScraper(BaseScraper):
 
     def _generate_slug(self, name: str, idx: int, sku: Optional[str] = None) -> str:
         """Generate a URL-friendly slug from product name and SKU."""
-        # Use SKU as unique identifier if available
+        # Use SKU as unique identifier if available (neutral prefix, no source name!)
         if sku:
-            return f"redlenic-{sku}"
+            return f"prod-{sku}"
 
         # Fallback: use name + index
         slug = re.sub(r'[^\w\s-]', '', name.lower())
