@@ -611,6 +611,24 @@ async def delete_all_products_from_source(
     return MessageResponse(message=f"Eliminados {count} productos de esta fuente")
 
 
+@router.post(
+    "/source-websites/{source_id}/check-stock-all",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def check_stock_all_from_source(
+    request: Request,
+    source_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Set is_check_stock=True for ALL enabled products from a source website.
+    This also removes is_featured and is_immediate_delivery flags.
+    """
+    count = service.check_stock_all_from_source(source_id)
+    return MessageResponse(message=f"Marcados {count} productos como 'Consultar stock'")
+
+
 # ============================================
 # Market Intelligence
 # ============================================

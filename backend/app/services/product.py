@@ -580,6 +580,29 @@ class ProductService:
         logger.info(f"Deleted {count} products from source {source_website_id}")
         return count
 
+    def check_stock_all_from_source(self, source_website_id: int) -> int:
+        """
+        Set is_check_stock=True for ALL enabled products from a source website.
+        Also removes is_featured and is_immediate_delivery flags.
+
+        Returns the number of products updated.
+        """
+        count = self.db.query(Product).filter(
+            Product.source_website_id == source_website_id,
+            Product.enabled == True
+        ).update(
+            {
+                Product.is_check_stock: True,
+                Product.is_featured: False,
+                Product.is_immediate_delivery: False
+            },
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Set check_stock for {count} products from source {source_website_id}")
+        return count
+
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()

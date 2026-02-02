@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Globe, Trash2, RefreshCw, X, CheckCircle, AlertCircle, Loader2, PowerOff } from 'lucide-react';
+import { Plus, Globe, Trash2, RefreshCw, X, CheckCircle, AlertCircle, Loader2, PowerOff, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,7 @@ export default function SourceWebsitesPage() {
   const [scrapingId, setScrapingId] = useState<number | null>(null);
   const [disablingId, setDisablingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [checkStockId, setCheckStockId] = useState<number | null>(null);
   const [currentJob, setCurrentJob] = useState<ScrapeJob | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -238,6 +239,35 @@ export default function SourceWebsitesPage() {
     }
   };
 
+  const handleCheckStockAll = async (id: number, displayName: string) => {
+    if (!confirm(`¿Marcar TODOS los productos activos de "${displayName}" como "Consultar stock"? Esto quitará los badges de "Nuevo" y "Entrega Inmediata".`)) {
+      return;
+    }
+
+    setCheckStockId(id);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/source-websites/${id}/check-stock-all`,
+        {
+          method: 'POST',
+          headers: { 'X-Admin-API-Key': apiKey },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al marcar productos');
+      }
+
+      const data = await response.json();
+      alert(data.message);
+      refetch();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al marcar productos');
+    } finally {
+      setCheckStockId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm('¿Estás seguro de eliminar esta web de origen? Los productos asociados también serán eliminados.')) {
       try {
@@ -310,7 +340,7 @@ export default function SourceWebsitesPage() {
                       size="sm"
                       onClick={() => handleScrapeAll(website.id)}
                       isLoading={scrapingId === website.id}
-                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null || checkStockId !== null}
                     >
                       <RefreshCw className="h-4 w-4 mr-1" />
                       Scrapear
@@ -320,7 +350,7 @@ export default function SourceWebsitesPage() {
                       size="sm"
                       onClick={() => handleDisableAll(website.id, website.display_name)}
                       isLoading={disablingId === website.id}
-                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null || checkStockId !== null}
                       className="text-orange-600 hover:bg-orange-50"
                     >
                       <PowerOff className="h-4 w-4 mr-1" />
@@ -329,9 +359,20 @@ export default function SourceWebsitesPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleCheckStockAll(website.id, website.display_name)}
+                      isLoading={checkStockId === website.id}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null || checkStockId !== null}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <HelpCircle className="h-4 w-4 mr-1" />
+                      Consultar Stock
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDeleteAllProducts(website.id, website.display_name)}
                       isLoading={deletingId === website.id}
-                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null || deletingId !== null || checkStockId !== null}
                       className="text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
