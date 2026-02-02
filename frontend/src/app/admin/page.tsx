@@ -112,7 +112,7 @@ export default function AdminDashboard() {
                         {website.display_name}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {website.product_count} productos
+                        {website.enabled_product_count} activos / {website.product_count} total
                       </p>
                     </div>
                     <span

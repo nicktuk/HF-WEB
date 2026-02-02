@@ -145,6 +145,11 @@ export default function ProductPage() {
               </div>
             )}
 
+            {product.is_check_stock && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 mb-3">
+                Consultar stock
+              </div>
+            )}
 
             {/* Name */}
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">

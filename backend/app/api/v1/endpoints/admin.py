@@ -101,6 +101,7 @@ async def get_products_admin(
             enabled=p.enabled,
             is_featured=p.is_featured,
             is_immediate_delivery=p.is_immediate_delivery,
+            is_check_stock=p.is_check_stock,
             images=[{
                 "id": img.id,
                 "url": img.url,
@@ -218,6 +219,7 @@ async def create_product(
         enabled=product.enabled,
         is_featured=product.is_featured,
         is_immediate_delivery=product.is_immediate_delivery,
+        is_check_stock=product.is_check_stock,
         images=[{
             "id": img.id,
             "url": img.url,
@@ -276,6 +278,7 @@ async def create_product_manual(
         enabled=product.enabled,
         is_featured=product.is_featured,
         is_immediate_delivery=product.is_immediate_delivery,
+        is_check_stock=product.is_check_stock,
         images=[{
             "id": img.id,
             "url": img.url,
@@ -390,6 +393,7 @@ async def update_product(
         enabled=product.enabled,
         is_featured=product.is_featured,
         is_immediate_delivery=product.is_immediate_delivery,
+        is_check_stock=product.is_check_stock,
         images=[{
             "id": img.id,
             "url": img.url,

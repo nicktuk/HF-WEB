@@ -231,8 +231,20 @@ class ProductService:
             product.enabled = data.enabled
         if data.is_featured is not None:
             product.is_featured = data.is_featured
+            # When setting featured, remove check_stock
+            if data.is_featured:
+                product.is_check_stock = False
         if data.is_immediate_delivery is not None:
             product.is_immediate_delivery = data.is_immediate_delivery
+            # When setting immediate delivery, remove check_stock
+            if data.is_immediate_delivery:
+                product.is_check_stock = False
+        if data.is_check_stock is not None:
+            product.is_check_stock = data.is_check_stock
+            # When setting check_stock, remove featured and immediate delivery
+            if data.is_check_stock:
+                product.is_featured = False
+                product.is_immediate_delivery = False
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:

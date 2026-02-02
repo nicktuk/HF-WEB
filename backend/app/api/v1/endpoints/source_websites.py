@@ -29,6 +29,8 @@ async def get_source_websites(
 
     items = []
     for w in websites:
+        products = w.products if w.products else []
+        enabled_count = sum(1 for p in products if p.enabled)
         items.append(SourceWebsiteResponse(
             id=w.id,
             name=w.name,
@@ -37,7 +39,8 @@ async def get_source_websites(
             is_active=w.is_active,
             scraper_config=w.scraper_config,
             notes=w.notes,
-            product_count=len(w.products) if w.products else 0,
+            product_count=len(products),
+            enabled_product_count=enabled_count,
             created_at=w.created_at,
             updated_at=w.updated_at,
         ))
@@ -56,6 +59,8 @@ async def get_source_website(
 ):
     """Get a single source website."""
     w = service.get_by_id(website_id)
+    products = w.products if w.products else []
+    enabled_count = sum(1 for p in products if p.enabled)
     return SourceWebsiteResponse(
         id=w.id,
         name=w.name,
@@ -64,7 +69,8 @@ async def get_source_website(
         is_active=w.is_active,
         scraper_config=w.scraper_config,
         notes=w.notes,
-        product_count=len(w.products) if w.products else 0,
+        product_count=len(products),
+        enabled_product_count=enabled_count,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )
@@ -91,6 +97,7 @@ async def create_source_website(
         scraper_config=w.scraper_config,
         notes=w.notes,
         product_count=0,
+        enabled_product_count=0,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )
@@ -108,6 +115,8 @@ async def update_source_website(
 ):
     """Update a source website."""
     w = service.update(website_id, data)
+    products = w.products if w.products else []
+    enabled_count = sum(1 for p in products if p.enabled)
     return SourceWebsiteResponse(
         id=w.id,
         name=w.name,
@@ -116,7 +125,8 @@ async def update_source_website(
         is_active=w.is_active,
         scraper_config=w.scraper_config,
         notes=w.notes,
-        product_count=len(w.products) if w.products else 0,
+        product_count=len(products),
+        enabled_product_count=enabled_count,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )

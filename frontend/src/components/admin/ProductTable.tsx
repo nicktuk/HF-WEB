@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap, CheckCircle, XCircle } from 'lucide-react';
+import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableRowSkeleton } from '@/components/ui/skeleton';
@@ -72,6 +72,13 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
     await updateMutation.mutateAsync({
       id: product.id,
       data: { is_immediate_delivery: !product.is_immediate_delivery },
+    });
+  };
+
+  const handleToggleCheckStock = async (product: ProductAdmin) => {
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: { is_check_stock: !product.is_check_stock },
     });
   };
 
@@ -233,6 +240,13 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                             className="hover:scale-110 transition-transform"
                           >
                             <Zap className={`h-4 w-4 ${product.is_immediate_delivery ? 'text-emerald-600 fill-emerald-600' : 'text-gray-400'}`} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleCheckStock(product)}
+                            title={product.is_check_stock ? 'Quitar Consultar stock' : 'Marcar Consultar stock'}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <HelpCircle className={`h-4 w-4 ${product.is_check_stock ? 'text-orange-500 fill-orange-500' : 'text-gray-400'}`} />
                           </button>
                         </div>
                       </div>

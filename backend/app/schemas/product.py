@@ -39,6 +39,7 @@ class ProductUpdate(BaseModel):
     enabled: Optional[bool] = None
     is_featured: Optional[bool] = None
     is_immediate_delivery: Optional[bool] = None
+    is_check_stock: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     custom_price: Optional[Decimal] = Field(None, ge=0)
@@ -91,6 +92,7 @@ class ProductResponse(BaseModel):
     enabled: bool
     is_featured: bool = False
     is_immediate_delivery: bool = False
+    is_check_stock: bool = False
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -125,6 +127,7 @@ class ProductPublicResponse(BaseModel):
     category: Optional[str] = None
     is_featured: bool = False
     is_immediate_delivery: bool = False
+    is_check_stock: bool = False
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
 
@@ -210,6 +213,7 @@ class ProductCreateManual(BaseModel):
     enabled: bool = Field(default=True)
     is_featured: bool = Field(default=False, description="Marcar como novedad")
     is_immediate_delivery: bool = Field(default=False, description="Entrega inmediata")
+    is_check_stock: bool = Field(default=False, description="Consultar stock")
 
     @field_validator("name")
     @classmethod

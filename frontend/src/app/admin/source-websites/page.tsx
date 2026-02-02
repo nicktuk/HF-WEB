@@ -295,7 +295,7 @@ export default function SourceWebsitesPage() {
                         {website.base_url}
                       </p>
                       <p className="text-sm text-gray-600 mt-2">
-                        <span className="font-medium">{website.product_count}</span> productos
+                        <span className="font-medium text-green-600">{website.enabled_product_count}</span> activos / <span className="font-medium">{website.product_count}</span> total
                       </p>
                       {website.notes && (
                         <p className="text-sm text-gray-500 mt-2">

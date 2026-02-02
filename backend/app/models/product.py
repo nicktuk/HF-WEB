@@ -42,6 +42,7 @@ class Product(Base):
     enabled = Column(Boolean, default=False, nullable=False, index=True)
     is_featured = Column(Boolean, default=False, nullable=False, index=True, comment="Marcado como novedad")
     is_immediate_delivery = Column(Boolean, default=False, nullable=False, index=True, comment="Entrega inmediata")
+    is_check_stock = Column(Boolean, default=False, nullable=False, index=True, comment="Consultar stock (excluye nuevo e inmediata)")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si está definido)")

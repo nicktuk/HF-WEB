@@ -18,6 +18,7 @@ export interface ProductPublic {
   category?: string;
   is_featured: boolean;
   is_immediate_delivery: boolean;
+  is_check_stock: boolean;
   images: ProductImage[];
   source_url?: string;
 }
@@ -58,6 +59,7 @@ export interface SourceWebsite {
   scraper_config?: Record<string, unknown>;
   notes?: string;
   product_count: number;
+  enabled_product_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -135,6 +137,7 @@ export interface ProductUpdateForm {
   enabled?: boolean;
   is_featured?: boolean;
   is_immediate_delivery?: boolean;
+  is_check_stock?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   custom_price?: number;
@@ -167,4 +170,5 @@ export interface ProductCreateManualForm {
   enabled: boolean;
   is_featured: boolean;
   is_immediate_delivery: boolean;
+  is_check_stock: boolean;
 }

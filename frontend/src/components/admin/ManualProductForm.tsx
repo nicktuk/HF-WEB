@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Star, Zap } from 'lucide-react';
+import { X, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Star, Zap, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
   const [enabled, setEnabled] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
+  const [isCheckStock, setIsCheckStock] = useState(false);
 
   // Image upload state
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('upload');
@@ -114,6 +115,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
         enabled,
         is_featured: isFeatured,
         is_immediate_delivery: isImmediateDelivery,
+        is_check_stock: isCheckStock,
       });
       onSuccess();
       onClose();
@@ -367,6 +369,20 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
               <label htmlFor="is_immediate_delivery" className="text-sm text-gray-700 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-emerald-600" />
                 Entrega inmediata
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="is_check_stock"
+                checked={isCheckStock}
+                onChange={(e) => setIsCheckStock(e.target.checked)}
+                className="h-4 w-4 rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+              />
+              <label htmlFor="is_check_stock" className="text-sm text-gray-700 flex items-center gap-2">
+                <HelpCircle className="h-4 w-4 text-orange-500" />
+                Consultar stock
               </label>
             </div>
           </div>

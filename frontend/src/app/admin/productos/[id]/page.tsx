@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, RefreshCw, Trash2, Star, Upload, X, Plus, Zap } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -37,6 +37,7 @@ export default function ProductEditPage() {
   const [enabled, setEnabled] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
+  const [isCheckStock, setIsCheckStock] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [customPrice, setCustomPrice] = useState('');
@@ -59,6 +60,7 @@ export default function ProductEditPage() {
       setEnabled(product.enabled);
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
+      setIsCheckStock(product.is_check_stock || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
       setCustomPrice(product.custom_price ? String(product.custom_price) : '');
@@ -116,6 +118,7 @@ export default function ProductEditPage() {
         enabled,
         is_featured: isFeatured,
         is_immediate_delivery: isImmediateDelivery,
+        is_check_stock: isCheckStock,
         markup_percentage: markup,
         custom_name: customName || '',
         custom_price: customPrice ? parseFloat(customPrice) : 0,
@@ -504,6 +507,31 @@ export default function ProductEditPage() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       isImmediateDelivery ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Check Stock toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4 text-orange-500" />
+                    Consultar stock
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Muestra indicador y quita Nuevo e Inmediata
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsCheckStock(!isCheckStock)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isCheckStock ? 'bg-orange-500' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isCheckStock ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
