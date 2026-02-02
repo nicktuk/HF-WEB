@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useRef, useCallback } from 'react';
+import { Suspense, useRef, useCallback, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Star, Zap } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
@@ -53,11 +53,38 @@ function HomePageContent() {
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Read state from URL params
-  const search = searchParams.get('search') || '';
+  const searchFromUrl = searchParams.get('search') || '';
   const selectedCategory = searchParams.get('category') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const page = parseInt(searchParams.get('page') || '1', 10);
+
+  // Local state for search input (for debouncing)
+  const [searchInput, setSearchInput] = useState(searchFromUrl);
+
+  // Sync local state when URL changes externally
+  useEffect(() => {
+    setSearchInput(searchFromUrl);
+  }, [searchFromUrl]);
+
+  // Debounce search - only update URL after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchInput !== searchFromUrl) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchInput) {
+          params.set('search', searchInput);
+        } else {
+          params.delete('search');
+        }
+        params.delete('page'); // Reset to page 1 on new search
+        const queryString = params.toString();
+        router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
+      }
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchFromUrl, searchParams, router]);
 
   // Helper to update URL params
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -85,7 +112,7 @@ function HomePageContent() {
     page,
     limit: 20,
     category: showFeatured || showImmediate ? undefined : selectedCategory,
-    search: search || undefined,
+    search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
     immediate_delivery: showImmediate ? true : undefined,
   });
@@ -137,10 +164,8 @@ function HomePageContent() {
             <Input
               type="search"
               placeholder="Buscar productos..."
-              value={search}
-              onChange={(e) => {
-                updateParams({ search: e.target.value || undefined, page: undefined });
-              }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10"
             />
           </div>

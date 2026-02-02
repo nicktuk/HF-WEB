@@ -105,7 +105,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Origen</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Final</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mercado</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
@@ -159,7 +159,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
               Precio Final
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Mercado
+              Origen
             </th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Acciones
@@ -289,18 +289,9 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                   </span>
                 </td>
 
-                {/* Market */}
-                <td className="px-4 py-3 text-sm">
-                  {product.market_avg_price ? (
-                    <div>
-                      <span className="text-gray-900">{formatPrice(product.market_avg_price)}</span>
-                      <span className="text-xs text-gray-500 block">
-                        {product.market_sample_count} muestras
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+                {/* Source Website */}
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {product.source_website_name || <span className="text-gray-400">-</span>}
                 </td>
 
                 {/* Actions */}
