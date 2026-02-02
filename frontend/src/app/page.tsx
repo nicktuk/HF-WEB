@@ -179,9 +179,10 @@ function HomePageContent() {
             </button>
           </div>
 
-          {/* Active Filters Pills (Mobile) */}
+          {/* Filters Pills (Mobile) */}
           <div className="flex flex-wrap gap-2 md:hidden">
-            {selectedCategory && !showFeatured && !showImmediate && (
+            {/* Category pill - shows selected category or "Todos" */}
+            {selectedCategory ? (
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white flex items-center gap-1.5">
                 {selectedCategory}
                 <button
@@ -191,36 +192,47 @@ function HomePageContent() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               </span>
-            )}
-            {showFeatured && (
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-orange-500 text-white flex items-center gap-1.5">
-                <Star className="h-3.5 w-3.5" />
-                Nuevo
-                <button
-                  onClick={() => updateParams({ featured: undefined })}
-                  className="hover:bg-orange-600 rounded-full p-0.5"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            )}
-            {showImmediate && (
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-600 text-white flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5" />
-                Entrega inmediata
-                <button
-                  onClick={() => updateParams({ immediate_delivery: undefined })}
-                  className="hover:bg-green-700 rounded-full p-0.5"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            )}
-            {!selectedCategory && !showFeatured && !showImmediate && (
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-600 text-white">
+            ) : (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
                 Todos
               </span>
             )}
+            {/* Nuevo filter pill */}
+            <button
+              onClick={() => {
+                if (showFeatured) {
+                  updateParams({ featured: undefined });
+                } else {
+                  updateParams({ featured: 'true', immediate_delivery: undefined });
+                }
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                showFeatured
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-orange-100 text-orange-700 border border-orange-300'
+              }`}
+            >
+              <Star className="h-3.5 w-3.5" />
+              Nuevo
+            </button>
+            {/* Entrega inmediata filter pill */}
+            <button
+              onClick={() => {
+                if (showImmediate) {
+                  updateParams({ immediate_delivery: undefined });
+                } else {
+                  updateParams({ immediate_delivery: 'true', featured: undefined });
+                }
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                showImmediate
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-100 text-green-700 border border-green-300'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Inmediata
+            </button>
           </div>
 
           {/* Mobile Dropdown Menu */}
