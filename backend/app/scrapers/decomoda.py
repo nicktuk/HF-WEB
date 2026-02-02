@@ -48,7 +48,7 @@ class DecoModaScraper(BaseScraper):
 
     @property
     def rate_limit_delay(self) -> float:
-        return 0.5  # 500ms between requests
+        return 2.0  # 2 seconds between requests to avoid 429 errors
 
     async def scrape_catalog(self, config: Optional[Dict] = None) -> List[str]:
         """
