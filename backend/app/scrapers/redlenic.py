@@ -5,12 +5,15 @@ Este scraper está diseñado para el catálogo de Redlenic.
 Requiere autenticación con password para acceder al catálogo.
 Todos los productos están en una sola página (catalogo2024.php).
 """
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Callable, Any
 import re
+import logging
 from bs4 import BeautifulSoup
 
 from app.scrapers.base import BaseScraper, ScrapedProduct
 from app.core.exceptions import ScraperError
+
+logger = logging.getLogger(__name__)
 
 
 class RedlenicScraper(BaseScraper):
@@ -84,14 +87,27 @@ class RedlenicScraper(BaseScraper):
         products = await self.scrape_all_products(config)
         return [str(i) for i in range(len(products))]
 
-    async def scrape_all_products(self, config: Optional[Dict] = None) -> List[ScrapedProduct]:
+    async def scrape_all_products(
+        self,
+        config: Optional[Dict] = None,
+        on_product: Optional[Callable[[ScrapedProduct, int, int], Any]] = None,
+        on_progress: Optional[Callable[[int, int], None]] = None
+    ) -> List[ScrapedProduct]:
         """
         Scrape all products from the catalog page.
         This is the main method since all products are on a single page.
 
+        Args:
+            config: Optional scraper configuration
+            on_product: Callback called for each product (product, index, total)
+            on_progress: Callback for progress updates (current, total)
+
         Returns:
             List of ScrapedProduct objects
         """
+        logger.info(f"Conectando a {self.CATALOG_URL}...")
+        print(f"[Redlenic] Conectando a {self.CATALOG_URL}...")
+
         soup = await self.fetch_authenticated(self.CATALOG_URL)
 
         products = []
@@ -103,14 +119,35 @@ class RedlenicScraper(BaseScraper):
                 source=self.source_name
             )
 
+        total = len(product_containers)
+        logger.info(f"Encontrados {total} productos en el catálogo")
+        print(f"[Redlenic] Encontrados {total} productos en el catálogo")
+
         for idx, container in enumerate(product_containers):
             try:
                 product = self._parse_product(container, idx)
                 if product:
                     products.append(product)
+
+                    # Call product callback if provided
+                    if on_product:
+                        on_product(product, idx, total)
+
+                    # Show progress every 10 products or at the end
+                    if (idx + 1) % 10 == 0 or idx == total - 1:
+                        progress_msg = f"[Redlenic] Procesados {idx + 1}/{total} productos..."
+                        logger.info(progress_msg)
+                        print(progress_msg)
+
+                        if on_progress:
+                            on_progress(idx + 1, total)
+
             except Exception as e:
-                # Log error but continue with other products
+                logger.warning(f"Error procesando producto {idx}: {e}")
                 continue
+
+        logger.info(f"Scraping completado: {len(products)} productos extraídos")
+        print(f"[Redlenic] Completado: {len(products)} productos extraídos")
 
         return products
 

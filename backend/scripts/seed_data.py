@@ -41,6 +41,24 @@ def seed_source_websites(db):
                 "rate_limit_per_minute": 30
             },
             "notes": "Catálogo mayorista. Los precios no están visibles públicamente."
+        },
+        {
+            "name": "redlenic",
+            "display_name": "Redlenic",
+            "base_url": "https://www.redlenic.uno",
+            "is_active": True,
+            "scraper_config": {
+                "catalog_url": "/catalogo2024.php",
+                "requires_auth": True,
+                "auth_type": "password_only",
+                "selectors": {
+                    "product_container": "div.contenedor_producto",
+                    "name": "h1",
+                    "price": "p.datos",
+                    "image": "img"
+                }
+            },
+            "notes": "Catálogo Redlenic. Requiere password para acceder. Todos los productos en una página."
         }
     ]
 

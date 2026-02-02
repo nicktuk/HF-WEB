@@ -28,6 +28,7 @@ export default function ProductsPage() {
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [limit, setLimit] = useState(50);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -50,7 +51,7 @@ export default function ProductsPage() {
 
   const { data, isLoading } = useAdminProducts(apiKey, {
     page,
-    limit: 20,
+    limit,
     enabled: enabledFilter,
     source_website_id: sourceFilter,
     search: search || undefined,
@@ -226,6 +227,35 @@ export default function ProductsPage() {
             ))}
           </select>
         )}
+      </div>
+
+      {/* Results count and per-page selector */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          {data && (
+            <>
+              Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || featuredFilter) && (
+                <span className="text-primary-600 ml-1">(filtrado)</span>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Por página:</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}

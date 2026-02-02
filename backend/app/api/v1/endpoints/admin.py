@@ -646,7 +646,7 @@ async def scrape_all_products(
     service: ProductService = Depends(get_product_service),
 ):
     """
-    Scrape all products from a source website.
+    Scrape all products from a source website (synchronous).
 
     This operation:
     - Fetches all product slugs from the source catalog
@@ -655,12 +655,101 @@ async def scrape_all_products(
 
     New products are created disabled - you must enable them manually.
     This can take several minutes depending on catalog size.
+
+    NOTE: Use /scrape-job for background scraping with progress tracking.
     """
     results = await service.scrape_all_from_source(source_id, update_existing)
 
     return MessageResponse(
         message=f"Scrape complete: {results['new']} new, {results['updated']} updated, {results['errors']} errors (total: {results['total']})"
     )
+
+
+# ============================================
+# Background Scrape Jobs
+# ============================================
+
+@router.post(
+    "/source-websites/{source_id}/scrape-job",
+    dependencies=[Depends(verify_admin)]
+)
+async def start_scrape_job(
+    request: Request,
+    source_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Start a background scrape job.
+
+    Products are saved to the database as they're processed.
+    Use GET /scrape-jobs/{job_id} to check progress.
+    """
+    from app.services.scrape_job import scrape_job_manager
+    from app.db.session import SessionLocal
+
+    # Verify source exists
+    source = service.source_repo.get(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source website not found")
+
+    # Check if already running
+    active = scrape_job_manager.get_active_job_for_source(source.name)
+    if active:
+        return {
+            "message": "Job already running",
+            "job": active.to_dict()
+        }
+
+    # Start new job
+    job = scrape_job_manager.start_job(
+        source_name=source.name,
+        source_website_id=source_id,
+        db_session_factory=SessionLocal,
+    )
+
+    return {
+        "message": "Scrape job started",
+        "job": job.to_dict()
+    }
+
+
+@router.get(
+    "/scrape-jobs",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_all_scrape_jobs(request: Request):
+    """Get all scrape jobs (active and completed)."""
+    from app.services.scrape_job import scrape_job_manager
+    return {"jobs": scrape_job_manager.get_all_jobs()}
+
+
+@router.get(
+    "/scrape-jobs/{job_id}",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_scrape_job(request: Request, job_id: str):
+    """Get scrape job progress by ID."""
+    from app.services.scrape_job import scrape_job_manager
+
+    job = scrape_job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return {"job": job.to_dict()}
+
+
+@router.delete(
+    "/scrape-jobs/{job_id}",
+    dependencies=[Depends(verify_admin)]
+)
+async def cancel_scrape_job(request: Request, job_id: str):
+    """Cancel a running scrape job."""
+    from app.services.scrape_job import scrape_job_manager
+
+    if scrape_job_manager.cancel_job(job_id):
+        return {"message": "Job cancelled"}
+    else:
+        raise HTTPException(status_code=404, detail="Job not found or not running")
 
 
 # ============================================
