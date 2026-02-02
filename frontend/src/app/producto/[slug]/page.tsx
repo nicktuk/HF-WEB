@@ -146,7 +146,7 @@ export default function ProductPage() {
             )}
 
             {product.is_check_stock && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 mb-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white mb-3">
                 Consultar stock
               </div>
             )}

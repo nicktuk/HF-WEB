@@ -44,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Consultar stock badge */}
       {product.is_check_stock && (
         <div className="absolute top-0 left-0 z-10">
-          <div className="bg-orange-500 text-white text-[11px] font-bold px-3 py-1 shadow-md"
+          <div className="bg-red-600 text-white text-[11px] font-bold px-3 py-1 shadow-md"
                style={{
                  clipPath: 'polygon(0 0, 100% 0, 90% 100%, 0 100%)',
                }}>
