@@ -21,7 +21,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def get_products(
     request: Request,
     page: int = Query(default=1, ge=1),
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     category: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     featured: Optional[bool] = Query(default=None),
