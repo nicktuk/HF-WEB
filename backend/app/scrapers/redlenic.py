@@ -215,6 +215,12 @@ class RedlenicScraper(BaseScraper):
         # Extract image
         images = self._extract_images_from_container(container)
 
+        # Extract category from p.rubro_centrado
+        category = self._extract_category_from_container(container)
+
+        # Extract SKU/code from p.datos1
+        sku = self._extract_sku_from_container(container)
+
         # Try to extract brand from name
         brand = self._extract_brand(name)
 
@@ -226,9 +232,9 @@ class RedlenicScraper(BaseScraper):
             description=None,
             short_description=None,
             brand=brand,
-            sku=None,
+            sku=sku,
             images=images,
-            categories=[],
+            categories=[category] if category else [],
             source_url=self.CATALOG_URL,
         )
 
@@ -264,11 +270,44 @@ class RedlenicScraper(BaseScraper):
         price_text = price_elem.text.strip()
         return self.extract_price(price_text)
 
+    def _extract_category_from_container(self, container: BeautifulSoup) -> Optional[str]:
+        """Extract category from p.rubro_centrado element."""
+        cat_elem = container.select_one("p.rubro_centrado")
+        if not cat_elem:
+            return None
+
+        category = cat_elem.text.strip()
+        # Clean up encoding issues (e.g., "IluminaciÃ³n" -> "Iluminación")
+        try:
+            category = category.encode('latin-1').decode('utf-8')
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            pass
+
+        return category if category else None
+
+    def _extract_sku_from_container(self, container: BeautifulSoup) -> Optional[str]:
+        """Extract product code from p.datos1 element."""
+        datos_elems = container.select("p.datos1")
+        for elem in datos_elems:
+            text = elem.text.strip()
+            if "Cód.:" in text or "Cod.:" in text:
+                # Extract number after "Cód.:"
+                match = re.search(r'C[oó]d\.?:\s*(\d+)', text, re.IGNORECASE)
+                if match:
+                    return match.group(1)
+        return None
+
     def _extract_images_from_container(self, container: BeautifulSoup) -> List[str]:
         """Extract product images from container."""
         images = []
 
-        img_elems = container.select("img")
+        # Images are inside the carousel: .carousel-inner .item img
+        img_elems = container.select(".carousel-inner .item img")
+
+        # Fallback to any img if carousel not found
+        if not img_elems:
+            img_elems = container.select("img")
+
         for img in img_elems:
             src = img.get("src") or img.get("data-src")
             if src and self._is_valid_image(src):
