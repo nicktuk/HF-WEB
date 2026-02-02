@@ -155,6 +155,11 @@ class DecoModaScraper(BaseScraper):
     # JSON-LD schema para datos de cada producto
 ```
 
+#### Problemas resueltos en extracción de datos
+- **Dos schemas JSON-LD:** Organization (genérico) y Product (correcto). El código busca `@type == 'Product'`
+- **Logo mezclado con imágenes:** Filtrado con `'logo' not in img.lower()`
+- **Descripción genérica del sitio:** Filtrada si contiene "DISTRIBUIDORA MAYORISTA DECOMODA"
+
 ### Archivos Modificados Hoy
 
 | Archivo | Cambio |

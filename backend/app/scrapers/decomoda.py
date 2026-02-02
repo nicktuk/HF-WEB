@@ -292,7 +292,11 @@ class DecoModaScraper(BaseScraper):
 
         for script in schema_scripts:
             try:
-                data = json.loads(script.string)
+                script_content = script.string
+                if not script_content:
+                    continue
+
+                data = json.loads(script_content)
 
                 # Handle both direct Product and @graph structures
                 if data.get('@type') == 'Product':
@@ -303,7 +307,8 @@ class DecoModaScraper(BaseScraper):
                         if item.get('@type') == 'Product':
                             return self._parse_schema_product(item)
 
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.debug(f"Error parsing JSON-LD: {e}")
                 continue
 
         return None
@@ -329,13 +334,20 @@ class DecoModaScraper(BaseScraper):
             except (ValueError, TypeError):
                 result['price'] = None
 
-        # Extract images
+        # Extract images (exclude logo)
         image = data.get('image')
         if image:
+            images = []
             if isinstance(image, str):
-                result['images'] = [image]
+                images = [image]
             elif isinstance(image, list):
-                result['images'] = [img if isinstance(img, str) else img.get('url', '') for img in image]
+                images = [img if isinstance(img, str) else img.get('url', '') for img in image]
+
+            # Filter out logo images
+            result['images'] = [
+                img for img in images
+                if img and 'logo' not in img.lower()
+            ]
 
         return result
 
@@ -383,15 +395,23 @@ class DecoModaScraper(BaseScraper):
 
     def _extract_description(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract description from HTML."""
+        # Site-wide description to ignore
+        site_description = "DISTRIBUIDORA MAYORISTA DECOMODA"
+
         # Try meta description
         meta_desc = soup.select_one('meta[name="description"]')
         if meta_desc:
-            return meta_desc.get('content', '').strip()
+            content = meta_desc.get('content', '').strip()
+            # Skip if it's the generic site description
+            if content and site_description not in content:
+                return content
 
         # Try og:description
         og_desc = soup.select_one('meta[property="og:description"]')
         if og_desc:
-            return og_desc.get('content', '').strip()
+            content = og_desc.get('content', '').strip()
+            if content and site_description not in content:
+                return content
 
         return None
 
@@ -402,7 +422,8 @@ class DecoModaScraper(BaseScraper):
         # Look for images from bunny CDN (the product image CDN)
         for img in soup.select('img[src*="bunny-cdn"]'):
             src = img.get('src')
-            if src and src not in images:
+            # Filter out logos and common non-product images
+            if src and src not in images and 'logo' not in src.lower():
                 images.append(src)
 
         # Also try og:image
