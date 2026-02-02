@@ -56,7 +56,8 @@
       "WebFetch(domain:redlic.uno)",
       "WebFetch(domain:redlenic.uno)",
       "Bash(del \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\test_redlenic.py\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:decomoda-mayorista.com.ar)"
     ]
   }
 }

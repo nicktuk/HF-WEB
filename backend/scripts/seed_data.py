@@ -59,6 +59,23 @@ def seed_source_websites(db):
                 }
             },
             "notes": "Catálogo Redlenic. Requiere password para acceder. Todos los productos en una página."
+        },
+        {
+            "name": "decomoda",
+            "display_name": "DecoModa Mayorista",
+            "base_url": "https://decomoda-mayorista.com.ar",
+            "is_active": True,
+            "scraper_config": {
+                "catalog_url": "/",
+                "requires_auth": False,
+                "selectors": {
+                    "product_link": "a[href*='/store/']",
+                    "name": "h1",
+                    "price": "schema.org/offers/price",
+                    "image": "img[src*='bunny-cdn']"
+                }
+            },
+            "notes": "Catálogo DecoModa Mayorista. Sin autenticación. Precios sin IVA."
         }
     ]
 

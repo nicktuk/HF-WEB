@@ -36,6 +36,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.railway.app',
       },
+      {
+        protocol: 'https',
+        hostname: 'bunny-cdn.ventasxmayor.com',
+      },
     ],
   },
   // Revalidate pages every hour
