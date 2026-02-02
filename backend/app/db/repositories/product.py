@@ -68,6 +68,9 @@ class ProductRepository(BaseRepository[Product]):
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
 
+        if immediate_delivery is not None:
+            query = query.filter(Product.is_immediate_delivery == immediate_delivery)
+
         if category:
             immediate_first = case(
                 (Product.is_immediate_delivery == True, 1),
