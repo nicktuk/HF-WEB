@@ -17,14 +17,23 @@ interface ProductTableProps {
   apiKey: string;
   selectedIds?: number[];
   onSelectionChange?: (ids: number[]) => void;
+  categories?: string[];
 }
 
-export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange }: ProductTableProps) {
+export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange, categories = [] }: ProductTableProps) {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
 
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+
+  const handleCategoryChange = async (product: ProductAdmin, newCategory: string) => {
+    if (newCategory === (product.category || '')) return;
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: { category: newCategory || null },
+    });
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (onSelectionChange) {
@@ -204,8 +213,20 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                 </td>
 
                 {/* Category */}
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {product.category || <span className="text-gray-400">-</span>}
+                <td className="px-4 py-3 text-sm">
+                  <select
+                    value={product.category || ''}
+                    onChange={(e) => handleCategoryChange(product, e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded hover:border-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 bg-transparent cursor-pointer"
+                    disabled={updateMutation.isPending}
+                  >
+                    <option value="">Sin categoría</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </td>
 
                 {/* Original Price */}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -10,7 +10,7 @@ import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useCategories } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useCategories, useChangeCategorySelected } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 
 export default function ProductsPage() {
@@ -26,9 +26,13 @@ export default function ProductsPage() {
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [limit, setLimit] = useState(50);
+
+  const changeCategoryMutation = useChangeCategorySelected(apiKey);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -74,13 +78,22 @@ export default function ProductsPage() {
         </div>
         <div className="flex gap-2">
           {selectedIds.length > 0 && (
-            <Button
-              onClick={() => setShowActivateModal(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Power className="mr-2 h-4 w-4" />
-              Activar {selectedIds.length} seleccionado(s)
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setShowCategoryModal(true)}
+              >
+                <FolderInput className="mr-2 h-4 w-4" />
+                Cambiar categoría ({selectedIds.length})
+              </Button>
+              <Button
+                onClick={() => setShowActivateModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Power className="mr-2 h-4 w-4" />
+                Activar {selectedIds.length}
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
@@ -265,6 +278,7 @@ export default function ProductsPage() {
         apiKey={apiKey}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
+        categories={categories || []}
       />
 
       {/* Pagination */}
@@ -319,6 +333,59 @@ export default function ProductsPage() {
           onClose={() => setShowActivateModal(false)}
           onSuccess={() => setSelectedIds([])}
         />
+      )}
+
+      {/* Bulk Category Change Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold mb-4">Cambiar categoría</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Cambiar la categoría de {selectedIds.length} producto(s) seleccionado(s)
+            </p>
+            <select
+              value={bulkCategory}
+              onChange={(e) => setBulkCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Seleccionar categoría</option>
+              {categories?.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            {changeCategoryMutation.isError && (
+              <p className="text-sm text-red-600 mb-4">Error al cambiar categoría</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setBulkCategory('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                disabled={!bulkCategory}
+                isLoading={changeCategoryMutation.isPending}
+                onClick={async () => {
+                  await changeCategoryMutation.mutateAsync({
+                    productIds: selectedIds,
+                    category: bulkCategory,
+                  });
+                  setShowCategoryModal(false);
+                  setBulkCategory('');
+                  setSelectedIds([]);
+                }}
+              >
+                Aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
