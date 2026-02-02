@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { X, Percent, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useBulkSetMarkup } from '@/hooks/useProducts';
+import { useBulkSetMarkup, useSourceWebsites } from '@/hooks/useProducts';
 import { useApiKey } from '@/hooks/useAuth';
 
 interface BulkMarkupModalProps {
@@ -14,9 +14,11 @@ interface BulkMarkupModalProps {
 export function BulkMarkupModal({ onClose }: BulkMarkupModalProps) {
   const apiKey = useApiKey() || '';
   const bulkMarkupMutation = useBulkSetMarkup(apiKey);
+  const { data: sourceWebsites } = useSourceWebsites(apiKey);
 
   const [markup, setMarkup] = useState('');
   const [onlyEnabled, setOnlyEnabled] = useState(true);
+  const [sourceWebsiteId, setSourceWebsiteId] = useState<number | undefined>();
   const [confirmed, setConfirmed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,12 +30,17 @@ export function BulkMarkupModal({ onClose }: BulkMarkupModalProps) {
       await bulkMarkupMutation.mutateAsync({
         markupPercentage: parseFloat(markup),
         onlyEnabled,
+        sourceWebsiteId,
       });
       onClose();
     } catch (error) {
       console.error('Error applying bulk markup:', error);
     }
   };
+
+  const selectedSourceName = sourceWebsiteId
+    ? sourceWebsites?.items.find(s => s.id === sourceWebsiteId)?.display_name
+    : 'todas las fuentes';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -68,6 +75,27 @@ export function BulkMarkupModal({ onClose }: BulkMarkupModalProps) {
             required
             helperText="El precio final sera: precio origen + X%"
           />
+
+          {/* Source Website Filter */}
+          {sourceWebsites && sourceWebsites.items.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Web de origen
+              </label>
+              <select
+                value={sourceWebsiteId || ''}
+                onChange={(e) => setSourceWebsiteId(e.target.value ? Number(e.target.value) : undefined)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Todas las fuentes</option>
+                {sourceWebsites.items.map((website) => (
+                  <option key={website.id} value={website.id}>
+                    {website.display_name} ({website.product_count} productos)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
@@ -107,7 +135,7 @@ export function BulkMarkupModal({ onClose }: BulkMarkupModalProps) {
               className="h-4 w-4 rounded border-gray-300 text-primary-600"
             />
             <span className="text-sm">
-              Confirmo que quiero aplicar <strong>{markup || '0'}%</strong> de markup a {onlyEnabled ? 'los productos habilitados' : 'todos los productos'}
+              Confirmo que quiero aplicar <strong>{markup || '0'}%</strong> de markup a {onlyEnabled ? 'los productos habilitados' : 'todos los productos'} de <strong>{selectedSourceName}</strong>
             </span>
           </label>
 

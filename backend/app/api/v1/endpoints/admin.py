@@ -477,14 +477,20 @@ async def bulk_set_markup(
     service: ProductService = Depends(get_product_service),
 ):
     """
-    Set markup percentage for all products.
+    Set markup percentage for products.
 
     By default only updates enabled products.
     Set only_enabled=false to update all products.
+    Set source_website_id to filter by source.
     """
-    count = service.bulk_set_markup(data.markup_percentage, data.only_enabled)
+    count = service.bulk_set_markup(
+        data.markup_percentage,
+        data.only_enabled,
+        data.source_website_id
+    )
     scope = "habilitados" if data.only_enabled else "todos"
-    return MessageResponse(message=f"Markup {data.markup_percentage}% aplicado a {count} productos {scope}")
+    source_msg = f" de fuente {data.source_website_id}" if data.source_website_id else ""
+    return MessageResponse(message=f"Markup {data.markup_percentage}% aplicado a {count} productos {scope}{source_msg}")
 
 
 @router.post(

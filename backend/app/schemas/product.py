@@ -171,6 +171,7 @@ class ProductBulkMarkup(BaseModel):
     """Schema for bulk markup update."""
     markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply")
     only_enabled: bool = Field(default=True, description="Only update enabled products")
+    source_website_id: Optional[int] = Field(None, description="Filter by source website")
 
 
 class ProductActivateInactive(BaseModel):

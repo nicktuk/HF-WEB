@@ -420,11 +420,18 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
-    def bulk_set_markup(self, markup_percentage: Decimal, only_enabled: bool = True) -> int:
+    def bulk_set_markup(
+        self,
+        markup_percentage: Decimal,
+        only_enabled: bool = True,
+        source_website_id: Optional[int] = None
+    ) -> int:
         """Set markup percentage for multiple products."""
         query = self.db.query(Product)
         if only_enabled:
             query = query.filter(Product.enabled == True)
+        if source_website_id:
+            query = query.filter(Product.source_website_id == source_website_id)
 
         count = query.update(
             {Product.markup_percentage: markup_percentage},

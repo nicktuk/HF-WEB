@@ -171,10 +171,11 @@ export function useBulkSetMarkup(apiKey: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ markupPercentage, onlyEnabled }: {
+    mutationFn: ({ markupPercentage, onlyEnabled, sourceWebsiteId }: {
       markupPercentage: number;
       onlyEnabled?: boolean;
-    }) => adminApi.bulkSetMarkup(apiKey, markupPercentage, onlyEnabled),
+      sourceWebsiteId?: number;
+    }) => adminApi.bulkSetMarkup(apiKey, markupPercentage, onlyEnabled, sourceWebsiteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });

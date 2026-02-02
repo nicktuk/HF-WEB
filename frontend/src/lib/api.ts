@@ -208,13 +208,15 @@ export const adminApi = {
   async bulkSetMarkup(
     apiKey: string,
     markupPercentage: number,
-    onlyEnabled: boolean = true
+    onlyEnabled: boolean = true,
+    sourceWebsiteId?: number
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/bulk-markup', {
       method: 'POST',
       body: JSON.stringify({
         markup_percentage: markupPercentage,
         only_enabled: onlyEnabled,
+        source_website_id: sourceWebsiteId,
       }),
     }, apiKey);
   },
