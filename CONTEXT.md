@@ -170,6 +170,16 @@ Los slugs de productos NO deben revelar el origen mayorista:
 - `backend/app/scrapers/decomoda.py`: `prod-{sku}` o `prod-dm-{id}`
 - `backend/app/scrapers/redlenic.py`: `prod-{sku}` o `{nombre}-{idx}`
 
+### Debugging DecoModa Scraper
+
+Si el scraper trae pocos productos, revisar logs para ver:
+- `[DecoModa] Playwright disponible...` o `Playwright NO disponible...`
+- Si usa sitemap fallback, muchos productos serán 404
+
+Si no trae imágenes, revisar:
+- El schema JSON-LD debe tener `"image": ["url..."]`
+- Las imágenes se filtran si contienen "logo" en la URL
+
 ### Archivos Modificados Hoy
 
 | Archivo | Cambio |

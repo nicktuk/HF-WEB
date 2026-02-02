@@ -70,8 +70,15 @@ class DecoModaScraper(BaseScraper):
             List of product IDs
         """
         if PLAYWRIGHT_AVAILABLE:
-            return await self._get_product_ids_playwright()
+            print(f"[DecoModa] Playwright disponible, intentando renderizar JS...")
+            try:
+                return await self._get_product_ids_playwright()
+            except Exception as e:
+                print(f"[DecoModa] Error con Playwright: {e}")
+                print(f"[DecoModa] Usando sitemap como fallback...")
+                return await self._get_product_ids_sitemap()
         else:
+            print(f"[DecoModa] Playwright NO disponible, usando sitemap...")
             return await self._get_product_ids_sitemap()
 
     async def _get_product_ids_playwright(self) -> List[str]:
@@ -252,14 +259,16 @@ class DecoModaScraper(BaseScraper):
         # Try to extract from JSON-LD schema first (most reliable)
         product_data = self._extract_from_schema(soup)
 
-        if product_data:
+        if product_data and product_data.get('name'):
             name = product_data.get('name')
             price = product_data.get('price')
             sku = product_data.get('sku')
             description = product_data.get('description')
             images = product_data.get('images', [])
+            logger.debug(f"Product {product_id}: schema OK, {len(images)} images")
         else:
             # Fallback to HTML parsing
+            logger.debug(f"Product {product_id}: using HTML fallback")
             name = self._extract_name(soup)
             price = self._extract_price(soup)
             sku = self._extract_sku(soup)
@@ -267,7 +276,13 @@ class DecoModaScraper(BaseScraper):
             images = self._extract_images(soup)
 
         if not name:
+            logger.warning(f"Product {product_id}: no name found, skipping")
             return None
+
+        # If no images from schema, try fallback
+        if not images:
+            images = self._extract_images(soup)
+            logger.debug(f"Product {product_id}: fallback images: {len(images)}")
 
         # Generate neutral slug (no source name!)
         slug = f"prod-{sku}" if sku else f"prod-dm-{product_id}"
@@ -292,25 +307,31 @@ class DecoModaScraper(BaseScraper):
 
         for script in schema_scripts:
             try:
-                script_content = script.string
-                if not script_content:
+                # Try multiple ways to get script content
+                script_content = script.string or script.get_text() or ''
+                if not script_content.strip():
                     continue
 
                 data = json.loads(script_content)
 
                 # Handle both direct Product and @graph structures
                 if data.get('@type') == 'Product':
-                    return self._parse_schema_product(data)
+                    result = self._parse_schema_product(data)
+                    logger.debug(f"Found Product schema: {result.get('name')}, images: {len(result.get('images', []))}")
+                    return result
 
                 if '@graph' in data:
                     for item in data['@graph']:
                         if item.get('@type') == 'Product':
-                            return self._parse_schema_product(item)
+                            result = self._parse_schema_product(item)
+                            logger.debug(f"Found Product in @graph: {result.get('name')}")
+                            return result
 
             except (json.JSONDecodeError, TypeError) as e:
                 logger.debug(f"Error parsing JSON-LD: {e}")
                 continue
 
+        logger.debug("No Product schema found")
         return None
 
     def _parse_schema_product(self, data: Dict) -> Dict:
@@ -336,6 +357,7 @@ class DecoModaScraper(BaseScraper):
 
         # Extract images (exclude logo)
         image = data.get('image')
+        logger.debug(f"Schema image field: {image}")
         if image:
             images = []
             if isinstance(image, str):
@@ -348,6 +370,7 @@ class DecoModaScraper(BaseScraper):
                 img for img in images
                 if img and 'logo' not in img.lower()
             ]
+            logger.debug(f"Filtered images: {result['images']}")
 
         return result
 
@@ -419,19 +442,19 @@ class DecoModaScraper(BaseScraper):
         """Extract product images from HTML."""
         images = []
 
+        # Try og:image first (most reliable for product image)
+        og_image = soup.select_one('meta[property="og:image"]')
+        if og_image:
+            content = og_image.get('content', '')
+            if content and 'logo' not in content.lower():
+                images.append(content)
+
         # Look for images from bunny CDN (the product image CDN)
         for img in soup.select('img[src*="bunny-cdn"]'):
-            src = img.get('src')
+            src = img.get('src', '')
             # Filter out logos and common non-product images
             if src and src not in images and 'logo' not in src.lower():
                 images.append(src)
-
-        # Also try og:image
-        og_image = soup.select_one('meta[property="og:image"]')
-        if og_image:
-            content = og_image.get('content')
-            if content and content not in images:
-                images.insert(0, content)
 
         return images
 
