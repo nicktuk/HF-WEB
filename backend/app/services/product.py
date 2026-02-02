@@ -94,6 +94,7 @@ class ProductService:
             category=product.category,
             is_featured=product.is_featured,
             is_immediate_delivery=product.is_immediate_delivery,
+            is_check_stock=product.is_check_stock,
             images=images,
             source_url=product.source_url,
         )
