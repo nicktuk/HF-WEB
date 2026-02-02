@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -77,55 +77,49 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {selectedIds.length > 0 && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => setShowCategoryModal(true)}
-              >
-                <FolderInput className="mr-2 h-4 w-4" />
-                Cambiar categoría ({selectedIds.length})
-              </Button>
-              <Button
-                onClick={() => setShowActivateModal(true)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Power className="mr-2 h-4 w-4" />
-                Activar {selectedIds.length}
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => setShowBulkMarkupModal(true)}
-          >
-            <Percent className="mr-2 h-4 w-4" />
-            Markup masivo
-          </Button>
+          {/* Dropdown Acciones */}
           <div className="relative group">
-            <Button
-              variant="outline"
-              isLoading={isExporting}
-              onClick={() => handleExportPdf('catalog')}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              Exportar PDF
+            <Button variant="outline">
+              Acciones
+              <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
-            <div className="absolute right-0 mt-1 w-48 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <button
+                onClick={() => setShowBulkMarkupModal(true)}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
+              >
+                <Percent className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">Markup masivo</p>
+                  <p className="text-xs text-gray-500">Aplicar markup a múltiples productos</p>
+                </div>
+              </button>
               <button
                 onClick={() => handleExportPdf('catalog')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-t-lg"
+                disabled={isExporting}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
               >
-                Catalogo con imagenes
+                <FileDown className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">Exportar PDF (catálogo)</p>
+                  <p className="text-xs text-gray-500">Catálogo con imágenes</p>
+                </div>
               </button>
               <button
                 onClick={() => handleExportPdf('list')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
+                disabled={isExporting}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
               >
-                Lista de precios simple
+                <FileDown className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">Exportar PDF (lista)</p>
+                  <p className="text-xs text-gray-500">Lista de precios simple</p>
+                </div>
               </button>
             </div>
           </div>
+
+          {/* Dropdown Agregar Producto */}
           <div className="relative group">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -151,6 +145,45 @@ export default function ProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Barra contextual de selección */}
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-blue-900">
+              <Check className="h-5 w-5" />
+              <span className="font-medium">{selectedIds.length} seleccionados</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setShowActivateModal(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Power className="mr-2 h-4 w-4" />
+              Activar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCategoryModal(true)}
+            >
+              <FolderInput className="mr-2 h-4 w-4" />
+              Cambiar categoría
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds([])}
+              className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+            >
+              <X className="h-4 w-4" />
+              Deseleccionar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 flex-wrap">

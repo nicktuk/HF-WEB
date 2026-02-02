@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap } from 'lucide-react';
+import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableRowSkeleton } from '@/components/ui/skeleton';
@@ -88,21 +88,23 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
 
   if (isLoading) {
     return (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-lg border">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              {onSelectionChange && <th className="px-4 py-3 w-12"></th>}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Origen</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Final</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mercado</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {Array.from({ length: 5 }).map((_, i) => (
-              <TableRowSkeleton key={i} columns={6} />
+              <TableRowSkeleton key={i} columns={onSelectionChange ? 8 : 7} />
             ))}
           </tbody>
         </table>
@@ -152,9 +154,6 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Mercado
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Estado
-            </th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Acciones
             </th>
@@ -201,12 +200,42 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                       )}
                     </div>
                     <div className="min-w-0">
-                      <Link
-                        href={`/admin/productos/${product.id}`}
-                        className="font-medium text-gray-900 hover:text-primary-600 line-clamp-1"
-                      >
-                        {product.custom_name || product.original_name}
-                      </Link>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link
+                          href={`/admin/productos/${product.id}`}
+                          className="font-medium text-gray-900 hover:text-primary-600 line-clamp-1"
+                        >
+                          {product.custom_name || product.original_name}
+                        </Link>
+                        {/* Status badges */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleToggleEnabled(product)}
+                            title={product.enabled ? 'Desactivar' : 'Activar'}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            {product.enabled ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-gray-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleToggleFeatured(product)}
+                            title={product.is_featured ? 'Quitar de Nuevo' : 'Marcar como Nuevo'}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <Star className={`h-4 w-4 ${product.is_featured ? 'text-amber-500 fill-amber-500' : 'text-gray-400'}`} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleImmediate(product)}
+                            title={product.is_immediate_delivery ? 'Quitar Entrega inmediata' : 'Marcar Entrega inmediata'}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <Zap className={`h-4 w-4 ${product.is_immediate_delivery ? 'text-emerald-600 fill-emerald-600' : 'text-gray-400'}`} />
+                          </button>
+                        </div>
+                      </div>
                       <p className="text-xs text-gray-500">{product.slug}</p>
                     </div>
                   </div>
@@ -260,58 +289,21 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                   )}
                 </td>
 
-                {/* Status */}
-                <td className="px-4 py-3">
-                  <Badge variant={product.enabled ? 'success' : 'default'}>
-                    {product.enabled ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </td>
-
                 {/* Actions */}
                 <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleEnabled(product)}
-                      title={product.enabled ? 'Desactivar' : 'Activar'}
-                    >
-                      {product.enabled ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleFeatured(product)}
-                      title={product.is_featured ? 'Quitar de Nuevo' : 'Marcar como Nuevo'}
-                      className={product.is_featured ? 'text-amber-600' : undefined}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleImmediate(product)}
-                      title={product.is_immediate_delivery ? 'Quitar Entrega inmediata' : 'Marcar Entrega inmediata'}
-                      className={product.is_immediate_delivery ? 'text-emerald-600' : undefined}
-                    >
-                      <Zap className="h-4 w-4" />
-                    </Button>
-
+                  <div className="flex items-center justify-end gap-2">
+                    {/* Botón Editar */}
                     <Link href={`/admin/productos/${product.id}`}>
-                      <Button variant="ghost" size="sm" title="Editar">
-                        <Edit className="h-4 w-4" />
+                      <Button variant="outline" size="sm">
+                        <Edit className="mr-1.5 h-4 w-4" />
+                        Editar
                       </Button>
                     </Link>
 
+                    {/* Dropdown Más */}
                     <div className="relative">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => setOpenMenu(openMenu === product.id ? null : product.id)}
                       >
@@ -322,7 +314,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                         <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border z-10">
                           <button
                             onClick={() => handleRescrape(product.id)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
                             disabled={rescrapeMutation.isPending}
                           >
                             <RefreshCw className="h-4 w-4" />
@@ -330,7 +322,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg border-t"
                           >
                             <Trash2 className="h-4 w-4" />
                             Eliminar
