@@ -20,7 +20,7 @@ class RedlenicScraper(BaseScraper):
     """Scraper for redlenic.uno catalog."""
 
     BASE_URL = "https://www.redlenic.uno"
-    CATALOG_URL = f"{BASE_URL}/catalogo2024.php"
+    CATALOG_URL = f"{BASE_URL}/catalogo2024.php?rub=99999"  # rub=99999 = TODAS las categorías
     LOGIN_URL = BASE_URL  # Login form is on the main page
     PASSWORD = "catan"
 
