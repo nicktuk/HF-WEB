@@ -22,7 +22,7 @@ class DecoModaScraper(BaseScraper):
     """Scraper for decomoda-mayorista.com.ar catalog."""
 
     BASE_URL = "https://decomoda-mayorista.com.ar"
-    CATALOG_URL = BASE_URL
+    SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
 
     @property
     def source_name(self) -> str:
@@ -44,22 +44,28 @@ class DecoModaScraper(BaseScraper):
 
     async def _get_product_ids(self) -> List[str]:
         """
-        Get all product IDs from the main catalog page.
+        Get all product IDs from the sitemap.
 
         Returns:
             List of product IDs
         """
-        soup = await self.fetch_html(self.CATALOG_URL)
+        client = await self.get_client()
 
-        # Find all product links matching /store/XXXX pattern
+        try:
+            response = await client.get(self.SITEMAP_URL, headers=self.default_headers)
+            response.raise_for_status()
+            content = response.text
+        except Exception as e:
+            logger.error(f"Error fetching sitemap: {e}")
+            raise ScraperError(f"Could not fetch sitemap: {e}", source=self.source_name)
+
+        # Parse sitemap XML and extract /store/ID URLs
         product_ids = set()
 
-        for link in soup.select('a[href*="/store/"]'):
-            href = link.get('href', '')
-            match = re.search(r'/store/(\d+)', href)
-            if match:
-                product_ids.add(match.group(1))
+        for match in re.finditer(r'/store/(\d+)', content):
+            product_ids.add(match.group(1))
 
+        logger.info(f"Found {len(product_ids)} product IDs in sitemap")
         return list(product_ids)
 
     async def scrape_all_products(
