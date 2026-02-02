@@ -528,6 +528,24 @@ class ProductService:
         logger.info(f"Disabled {count} products")
         return count
 
+    def disable_all_from_source(self, source_website_id: int) -> int:
+        """
+        Disable ALL products from a source website.
+
+        Returns the number of products disabled.
+        """
+        count = self.db.query(Product).filter(
+            Product.source_website_id == source_website_id,
+            Product.enabled == True
+        ).update(
+            {Product.enabled: False},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Disabled {count} products from source {source_website_id}")
+        return count
+
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()

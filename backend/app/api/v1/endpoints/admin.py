@@ -566,6 +566,23 @@ async def disable_selected(
     return MessageResponse(message=f"Deshabilitados {count} productos")
 
 
+@router.post(
+    "/source-websites/{source_id}/disable-all",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def disable_all_from_source(
+    request: Request,
+    source_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Disable ALL products from a source website.
+    """
+    count = service.disable_all_from_source(source_id)
+    return MessageResponse(message=f"Deshabilitados {count} productos de esta fuente")
+
+
 # ============================================
 # Market Intelligence
 # ============================================

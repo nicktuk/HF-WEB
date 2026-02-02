@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Globe, Trash2, RefreshCw, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Globe, Trash2, RefreshCw, X, CheckCircle, AlertCircle, Loader2, PowerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ export default function SourceWebsitesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scrapingId, setScrapingId] = useState<number | null>(null);
+  const [disablingId, setDisablingId] = useState<number | null>(null);
   const [currentJob, setCurrentJob] = useState<ScrapeJob | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -172,6 +173,35 @@ export default function SourceWebsitesPage() {
     }
   };
 
+  const handleDisableAll = async (id: number, displayName: string) => {
+    if (!confirm(`¿Deshabilitar TODOS los productos de "${displayName}"? Los productos seguirán existiendo pero no se mostrarán en el catálogo público.`)) {
+      return;
+    }
+
+    setDisablingId(id);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/source-websites/${id}/disable-all`,
+        {
+          method: 'POST',
+          headers: { 'X-Admin-API-Key': apiKey },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al deshabilitar');
+      }
+
+      const data = await response.json();
+      alert(data.message);
+      refetch();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al deshabilitar');
+    } finally {
+      setDisablingId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm('¿Estás seguro de eliminar esta web de origen? Los productos asociados también serán eliminados.')) {
       try {
@@ -244,10 +274,21 @@ export default function SourceWebsitesPage() {
                       size="sm"
                       onClick={() => handleScrapeAll(website.id)}
                       isLoading={scrapingId === website.id}
-                      disabled={scrapingId !== null}
+                      disabled={scrapingId !== null || disablingId !== null}
                     >
                       <RefreshCw className="h-4 w-4 mr-1" />
                       Scrapear Todo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisableAll(website.id, website.display_name)}
+                      isLoading={disablingId === website.id}
+                      disabled={scrapingId !== null || disablingId !== null}
+                      className="text-orange-600 hover:bg-orange-50"
+                    >
+                      <PowerOff className="h-4 w-4 mr-1" />
+                      Deshabilitar Todo
                     </Button>
                     <Button
                       variant="ghost"
