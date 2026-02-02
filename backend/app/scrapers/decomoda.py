@@ -22,7 +22,8 @@ class DecoModaScraper(BaseScraper):
     """Scraper for decomoda-mayorista.com.ar catalog."""
 
     BASE_URL = "https://decomoda-mayorista.com.ar"
-    SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
+    # Category page "TODOS NUESTROS PRODUCTOS" - contains all active products
+    ALL_PRODUCTS_URL = f"{BASE_URL}/categoria/66137823529174453"
 
     @property
     def source_name(self) -> str:
@@ -44,28 +45,23 @@ class DecoModaScraper(BaseScraper):
 
     async def _get_product_ids(self) -> List[str]:
         """
-        Get all product IDs from the sitemap.
+        Get all product IDs from the "TODOS NUESTROS PRODUCTOS" category page.
 
         Returns:
             List of product IDs
         """
-        client = await self.get_client()
+        soup = await self.fetch_html(self.ALL_PRODUCTS_URL)
 
-        try:
-            response = await client.get(self.SITEMAP_URL, headers=self.default_headers)
-            response.raise_for_status()
-            content = response.text
-        except Exception as e:
-            logger.error(f"Error fetching sitemap: {e}")
-            raise ScraperError(f"Could not fetch sitemap: {e}", source=self.source_name)
-
-        # Parse sitemap XML and extract /store/ID URLs
+        # Find all product links matching /store/XXXX pattern
         product_ids = set()
 
-        for match in re.finditer(r'/store/(\d+)', content):
-            product_ids.add(match.group(1))
+        for link in soup.select('a[href*="/store/"]'):
+            href = link.get('href', '')
+            match = re.search(r'/store/(\d+)', href)
+            if match:
+                product_ids.add(match.group(1))
 
-        logger.info(f"Found {len(product_ids)} product IDs in sitemap")
+        logger.info(f"Found {len(product_ids)} product IDs in catalog")
         return list(product_ids)
 
     async def scrape_all_products(
@@ -85,8 +81,8 @@ class DecoModaScraper(BaseScraper):
         Returns:
             List of ScrapedProduct objects
         """
-        logger.info(f"Conectando a {self.SITEMAP_URL}...")
-        print(f"[DecoModa] Conectando a {self.SITEMAP_URL}...")
+        logger.info(f"Conectando a {self.ALL_PRODUCTS_URL}...")
+        print(f"[DecoModa] Conectando a {self.ALL_PRODUCTS_URL}...")
 
         product_ids = await self._get_product_ids()
 
