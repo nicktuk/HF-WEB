@@ -52,7 +52,10 @@
       "Bash(dir \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\uploads\" /b)",
       "Bash(findstr:*)",
       "Bash(dir:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "WebFetch(domain:redlic.uno)",
+      "WebFetch(domain:redlenic.uno)",
+      "Bash(del \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\test_redlenic.py\")"
     ]
   }
 }
