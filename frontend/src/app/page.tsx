@@ -181,21 +181,26 @@ function HomePageContent() {
 
           {/* Filters Pills (Mobile) */}
           <div className="flex flex-wrap gap-2 md:hidden">
-            {/* Category pill - shows selected category or "Todos" */}
-            {selectedCategory ? (
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white flex items-center gap-1.5">
-                {selectedCategory}
-                <button
-                  onClick={() => updateParams({ category: undefined })}
-                  className="hover:bg-blue-700 rounded-full p-0.5"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            ) : (
-              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
-                Todos
-              </span>
+            {/* Category pill - only show when neither "Nuevo" nor "Inmediata" are active */}
+            {!showFeatured && !showImmediate && (
+              <>
+                {selectedCategory ? (
+                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white shadow-sm flex items-center gap-1.5">
+                    {selectedCategory}
+                    <button
+                      onClick={() => updateParams({ category: undefined })}
+                      className="hover:bg-blue-700 rounded-full p-0.5 transition-colors"
+                      aria-label="Quitar filtro de categoría"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
+                    Todos
+                  </span>
+                )}
+              </>
             )}
             {/* Nuevo filter pill */}
             <button
@@ -206,13 +211,15 @@ function HomePageContent() {
                   updateParams({ featured: 'true', immediate_delivery: undefined });
                 }
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
                 showFeatured
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-orange-100 text-orange-700 border border-orange-300'
+                  ? 'bg-orange-500 text-white shadow-md border-2 border-orange-600 hover:bg-orange-600'
+                  : 'bg-white text-orange-700 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50'
               }`}
+              aria-pressed={showFeatured}
+              aria-label={showFeatured ? 'Desactivar filtro Nuevo' : 'Activar filtro Nuevo'}
             >
-              <Star className="h-3.5 w-3.5" />
+              <Star className={`h-3.5 w-3.5 ${showFeatured ? 'fill-current' : ''}`} />
               Nuevo
             </button>
             {/* Entrega inmediata filter pill */}
@@ -224,13 +231,15 @@ function HomePageContent() {
                   updateParams({ immediate_delivery: 'true', featured: undefined });
                 }
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
                 showImmediate
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-100 text-green-700 border border-green-300'
+                  ? 'bg-green-600 text-white shadow-md border-2 border-green-700 hover:bg-green-700'
+                  : 'bg-white text-green-700 border-2 border-green-200 hover:border-green-300 hover:bg-green-50'
               }`}
+              aria-pressed={showImmediate}
+              aria-label={showImmediate ? 'Desactivar filtro Entrega inmediata' : 'Activar filtro Entrega inmediata'}
             >
-              <Zap className="h-3.5 w-3.5" />
+              <Zap className={`h-3.5 w-3.5 ${showImmediate ? 'fill-current' : ''}`} />
               Inmediata
             </button>
           </div>
