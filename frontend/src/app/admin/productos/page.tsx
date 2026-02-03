@@ -11,18 +11,31 @@ import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected } from '@/hooks/useProducts';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 import type { Category } from '@/types';
 import { adminApi } from '@/lib/api';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
 
-  const [search, setSearch] = useState('');
-  const [enabledFilter, setEnabledFilter] = useState<boolean | undefined>();
-  const [sourceFilter, setSourceFilter] = useState<number | undefined>();
-  const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
-  const [featuredFilter, setFeaturedFilter] = useState<boolean | undefined>();
-  const [page, setPage] = useState(1);
+  // Use persistent filters from store
+  const {
+    search,
+    enabledFilter,
+    sourceFilter,
+    categoryFilter,
+    featuredFilter,
+    page,
+    limit,
+    setSearch,
+    setEnabledFilter,
+    setSourceFilter,
+    setCategoryFilter,
+    setFeaturedFilter,
+    setPage,
+    setLimit,
+  } = useAdminFilters();
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
@@ -31,7 +44,6 @@ export default function ProductsPage() {
   const [bulkCategory, setBulkCategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [limit, setLimit] = useState(50);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
 
@@ -196,10 +208,7 @@ export default function ProductsPage() {
             type="search"
             placeholder="Buscar productos..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -208,7 +217,6 @@ export default function ProductsPage() {
         <button
           onClick={() => {
             setFeaturedFilter(featuredFilter === true ? undefined : true);
-            setPage(1);
             setSelectedIds([]);
           }}
           className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
@@ -227,7 +235,6 @@ export default function ProductsPage() {
           onChange={(e) => {
             const value = e.target.value;
             setEnabledFilter(value === '' ? undefined : value === 'true');
-            setPage(1);
           }}
           className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
         >
@@ -242,7 +249,6 @@ export default function ProductsPage() {
             value={categoryFilter || ''}
             onChange={(e) => {
               setCategoryFilter(e.target.value || undefined);
-              setPage(1);
               setSelectedIds([]);
             }}
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
@@ -263,7 +269,6 @@ export default function ProductsPage() {
             value={sourceFilter || ''}
             onChange={(e) => {
               setSourceFilter(e.target.value ? Number(e.target.value) : undefined);
-              setPage(1);
               setSelectedIds([]);
             }}
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
@@ -294,10 +299,7 @@ export default function ProductsPage() {
           <span className="text-sm text-gray-600">Por página:</span>
           <select
             value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
+            onChange={(e) => setLimit(Number(e.target.value))}
             className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
           >
             <option value={20}>20</option>

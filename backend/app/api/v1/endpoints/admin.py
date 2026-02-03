@@ -887,3 +887,24 @@ async def compare_prices(
     """
     results = service.compare_prices(search)
     return results
+
+
+# ============================================
+# Dashboard Stats
+# ============================================
+
+@router.get(
+    "/stats/by-source-category",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_stats_by_source_and_category(
+    request: Request,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Get product stats grouped by source website and category.
+
+    Returns counts of enabled/total products for each source-category combination.
+    Used for dashboard overview and charts.
+    """
+    return service.get_stats_by_source_and_category()

@@ -840,3 +840,71 @@ class ProductService:
             "groups": groups,
             "total": len(products)
         }
+
+    def get_stats_by_source_and_category(self) -> dict:
+        """
+        Get product stats grouped by source website and category.
+
+        Returns:
+            dict with:
+            - sources: list of source websites
+            - categories: list of unique categories
+            - stats: list of {source_id, source_name, category, enabled_count, total_count}
+            - chart_data: data formatted for stacked bar chart
+        """
+        from sqlalchemy import func, case
+
+        # Get all source websites
+        sources = self.source_repo.get_all()
+        source_map = {s.id: s.display_name or s.name for s in sources}
+
+        # Query stats grouped by source and category
+        stats_query = (
+            self.db.query(
+                Product.source_website_id,
+                Product.category,
+                func.count(Product.id).label('total'),
+                func.sum(case((Product.enabled == True, 1), else_=0)).label('enabled')
+            )
+            .group_by(Product.source_website_id, Product.category)
+            .all()
+        )
+
+        # Build stats list
+        stats = []
+        categories_set = set()
+
+        for row in stats_query:
+            source_id = row.source_website_id
+            category = row.category or "Sin categoría"
+            categories_set.add(category)
+
+            stats.append({
+                "source_id": source_id,
+                "source_name": source_map.get(source_id, "Desconocido"),
+                "category": category,
+                "enabled_count": int(row.enabled or 0),
+                "total_count": int(row.total or 0),
+            })
+
+        # Sort categories alphabetically, but "Sin categoría" at the end
+        categories = sorted([c for c in categories_set if c != "Sin categoría"])
+        if "Sin categoría" in categories_set:
+            categories.append("Sin categoría")
+
+        # Build chart data (for stacked bar chart)
+        # Format: [{source: "RedLenic", "Bazar": 10, "Audio": 5, ...}, ...]
+        chart_data = []
+        for source in sources:
+            source_stats = {"source": source.display_name or source.name}
+            for stat in stats:
+                if stat["source_id"] == source.id:
+                    source_stats[stat["category"]] = stat["enabled_count"]
+            chart_data.append(source_stats)
+
+        return {
+            "sources": [{"id": s.id, "name": s.display_name or s.name} for s in sources],
+            "categories": categories,
+            "stats": stats,
+            "chart_data": chart_data,
+        }
