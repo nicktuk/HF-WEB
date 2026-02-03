@@ -248,6 +248,7 @@ export default function ProductsPage() {
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Todas las categorias</option>
+            <option value="__none__">Sin categoría</option>
             {categories.map((category) => (
               <option key={category.name} value={category.name}>
                 {category.name} ({category.enabled_product_count}/{category.product_count})

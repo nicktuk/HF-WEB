@@ -144,7 +144,10 @@ class ProductRepository(BaseRepository[Product]):
             query = query.filter(Product.source_website_id == source_website_id)
 
         if category:
-            query = query.filter(Product.category == category)
+            if category == "__none__":
+                query = query.filter(Product.category == None)
+            else:
+                query = query.filter(Product.category == category)
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
@@ -234,7 +237,10 @@ class ProductRepository(BaseRepository[Product]):
             query = query.filter(Product.source_website_id == source_website_id)
 
         if category:
-            query = query.filter(Product.category == category)
+            if category == "__none__":
+                query = query.filter(Product.category == None)
+            else:
+                query = query.filter(Product.category == category)
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
