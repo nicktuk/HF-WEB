@@ -324,7 +324,7 @@ export default function ProductsPage() {
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
           >
             Anterior
@@ -334,7 +334,7 @@ export default function ProductsPage() {
           </span>
           <Button
             variant="outline"
-            onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+            onClick={() => setPage(Math.min(data.pages, page + 1))}
             disabled={page === data.pages}
           >
             Siguiente
