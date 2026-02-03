@@ -12,6 +12,7 @@ import {
   Tags,
   ChevronDown,
   ChevronRight,
+  Scale,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos', href: '/admin/productos', icon: Package },
+  { name: 'Comparador', href: '/admin/comparador', icon: Scale },
 ];
 
 const configSubmenu = [

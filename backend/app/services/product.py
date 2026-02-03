@@ -712,3 +712,131 @@ class ProductService:
         cache.invalidate_all_products()
         logger.info(f"Scrape complete: {results}")
         return results
+
+    def compare_prices(self, search: str, similarity_threshold: int = 70) -> dict:
+        """
+        Compare prices across source websites for products matching search term.
+        Groups similar products using fuzzy matching.
+
+        Args:
+            search: Search keyword
+            similarity_threshold: Minimum similarity score (0-100) to group products
+
+        Returns:
+            dict with:
+            - sources: list of source websites with products matching search
+            - groups: list of product groups (similar products grouped together)
+        """
+        from rapidfuzz import fuzz
+        import re
+
+        search_term = f"%{search}%"
+
+        # Get all products matching the search
+        products = (
+            self.db.query(Product)
+            .filter(
+                or_(
+                    Product.original_name.ilike(search_term),
+                    Product.custom_name.ilike(search_term),
+                    Product.sku.ilike(search_term),
+                    Product.slug.ilike(search_term)
+                )
+            )
+            .all()
+        )
+
+        if not products:
+            return {"sources": [], "groups": [], "total": 0}
+
+        # Get all source websites that have matching products
+        source_ids = set(p.source_website_id for p in products if p.source_website_id)
+        sources = self.source_repo.get_by_ids(list(source_ids))
+
+        # Build source map
+        source_map = {s.id: {"id": s.id, "name": s.display_name or s.name} for s in sources}
+
+        def normalize_name(name: str) -> str:
+            """Normalize product name for better comparison."""
+            if not name:
+                return ""
+            # Lowercase
+            name = name.lower()
+            # Remove common words that don't help comparison
+            stopwords = ['de', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'por']
+            words = name.split()
+            words = [w for w in words if w not in stopwords]
+            # Remove special characters
+            name = ' '.join(words)
+            name = re.sub(r'[^\w\s]', '', name)
+            return name.strip()
+
+        def build_product_data(p: Product) -> dict:
+            """Build product dict for response."""
+            primary_image = None
+            for img in p.images:
+                if img.is_primary:
+                    primary_image = img.url
+                    break
+            if not primary_image and p.images:
+                primary_image = p.images[0].url
+
+            return {
+                "id": p.id,
+                "name": p.display_name,
+                "original_name": p.original_name,
+                "sku": p.sku,
+                "slug": p.slug,
+                "source_website_id": p.source_website_id,
+                "source_name": source_map.get(p.source_website_id, {}).get("name", "Desconocido"),
+                "original_price": float(p.original_price) if p.original_price else None,
+                "final_price": float(p.final_price) if p.final_price else None,
+                "markup_percentage": float(p.markup_percentage) if p.markup_percentage else 0,
+                "enabled": p.enabled,
+                "image": primary_image,
+            }
+
+        # Group products by similarity
+        groups = []
+        used_ids = set()
+
+        for product in products:
+            if product.id in used_ids:
+                continue
+
+            # Start a new group with this product
+            group = {
+                "name": product.display_name,
+                "products": [build_product_data(product)]
+            }
+            used_ids.add(product.id)
+
+            normalized_name = normalize_name(product.original_name)
+
+            # Find similar products from other sources
+            for other in products:
+                if other.id in used_ids:
+                    continue
+                # Skip products from the same source
+                if other.source_website_id == product.source_website_id:
+                    continue
+
+                other_normalized = normalize_name(other.original_name)
+
+                # Calculate similarity
+                similarity = fuzz.token_sort_ratio(normalized_name, other_normalized)
+
+                if similarity >= similarity_threshold:
+                    group["products"].append(build_product_data(other))
+                    used_ids.add(other.id)
+
+            groups.append(group)
+
+        # Sort groups by number of sources (more sources = more interesting comparison)
+        groups.sort(key=lambda g: len(g["products"]), reverse=True)
+
+        return {
+            "sources": list(source_map.values()),
+            "groups": groups,
+            "total": len(products)
+        }

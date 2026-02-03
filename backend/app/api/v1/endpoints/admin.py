@@ -864,3 +864,26 @@ async def export_products_pdf(
             "Content-Disposition": f"attachment; filename={filename}"
         }
     )
+
+
+# ============================================
+# Price Comparator
+# ============================================
+
+@router.get(
+    "/price-comparator",
+    dependencies=[Depends(verify_admin)]
+)
+async def compare_prices(
+    request: Request,
+    search: str = Query(..., min_length=2, max_length=100, description="Search keyword"),
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Compare prices across source websites.
+
+    Searches for products matching the keyword and returns
+    prices from each source website for comparison.
+    """
+    results = service.compare_prices(search)
+    return results

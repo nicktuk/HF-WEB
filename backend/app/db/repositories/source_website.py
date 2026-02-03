@@ -35,3 +35,13 @@ class SourceWebsiteRepository(BaseRepository[SourceWebsite]):
             .filter(SourceWebsite.base_url == base_url)
             .first()
         )
+
+    def get_by_ids(self, ids: List[int]) -> List[SourceWebsite]:
+        """Get source websites by list of IDs."""
+        if not ids:
+            return []
+        return (
+            self.db.query(SourceWebsite)
+            .filter(SourceWebsite.id.in_(ids))
+            .all()
+        )
