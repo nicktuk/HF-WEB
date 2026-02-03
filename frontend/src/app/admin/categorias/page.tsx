@@ -184,7 +184,7 @@ export default function CategoriasPage() {
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
                         <Package className="h-3.5 w-3.5" />
-                        {category.product_count} productos
+                        {category.enabled_product_count} habilitados / {category.product_count} total
                       </div>
                     </div>
                   </div>

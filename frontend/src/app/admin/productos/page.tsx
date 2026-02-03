@@ -10,7 +10,8 @@ import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useCategories, useChangeCategorySelected } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected } from '@/hooks/useProducts';
+import type { Category } from '@/types';
 import { adminApi } from '@/lib/api';
 
 export default function ProductsPage() {
@@ -64,7 +65,8 @@ export default function ProductsPage() {
   });
 
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
-  const { data: categories } = useCategories();
+  const { data: adminCategories } = useAdminCategories();
+  const categories = adminCategories as Category[] | undefined;
 
   return (
     <div className="space-y-6">
@@ -247,8 +249,8 @@ export default function ProductsPage() {
           >
             <option value="">Todas las categorias</option>
             {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
+              <option key={category.name} value={category.name}>
+                {category.name} ({category.enabled_product_count}/{category.product_count})
               </option>
             ))}
           </select>
@@ -311,7 +313,7 @@ export default function ProductsPage() {
         apiKey={apiKey}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        categories={categories || []}
+        categories={categories?.map(c => c.name) || []}
       />
 
       {/* Pagination */}
@@ -383,8 +385,8 @@ export default function ProductsPage() {
             >
               <option value="">Seleccionar categoría</option>
               {categories?.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.name} value={cat.name}>
+                  {cat.name}
                 </option>
               ))}
             </select>

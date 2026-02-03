@@ -12,9 +12,14 @@ from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryRespons
 router = APIRouter()
 
 
-def get_product_count(db: Session, category_name: str) -> int:
-    """Get count of products in a category."""
-    return db.query(Product).filter(Product.category == category_name).count()
+def get_product_counts(db: Session, category_name: str) -> tuple[int, int]:
+    """Get count of products in a category (total, enabled)."""
+    total = db.query(Product).filter(Product.category == category_name).count()
+    enabled = db.query(Product).filter(
+        Product.category == category_name,
+        Product.enabled == True
+    ).count()
+    return total, enabled
 
 
 @router.get("", response_model=List[CategoryResponse])
@@ -37,6 +42,7 @@ async def list_categories(
     # Add product counts
     result = []
     for cat in categories:
+        total, enabled = get_product_counts(db, cat.name)
         cat_dict = {
             "id": cat.id,
             "name": cat.name,
@@ -44,7 +50,8 @@ async def list_categories(
             "display_order": cat.display_order,
             "created_at": cat.created_at,
             "updated_at": cat.updated_at,
-            "product_count": get_product_count(db, cat.name)
+            "product_count": total,
+            "enabled_product_count": enabled
         }
         result.append(CategoryResponse(**cat_dict))
 
@@ -77,7 +84,8 @@ async def create_category(
         display_order=category.display_order,
         created_at=category.created_at,
         updated_at=category.updated_at,
-        product_count=0
+        product_count=0,
+        enabled_product_count=0
     )
 
 
@@ -121,6 +129,7 @@ async def update_category(
     db.commit()
     db.refresh(category)
 
+    total, enabled = get_product_counts(db, category.name)
     return CategoryResponse(
         id=category.id,
         name=category.name,
@@ -128,7 +137,8 @@ async def update_category(
         display_order=category.display_order,
         created_at=category.created_at,
         updated_at=category.updated_at,
-        product_count=get_product_count(db, category.name)
+        product_count=total,
+        enabled_product_count=enabled
     )
 
 

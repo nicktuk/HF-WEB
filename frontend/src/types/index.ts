@@ -56,6 +56,7 @@ export interface Category {
   is_active: boolean;
   display_order: number;
   product_count: number;
+  enabled_product_count: number;
   created_at?: string;
   updated_at?: string;
 }

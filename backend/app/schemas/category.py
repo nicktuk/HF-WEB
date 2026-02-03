@@ -27,6 +27,7 @@ class CategoryResponse(CategoryBase):
     """Schema for category response."""
     id: int
     product_count: int = 0
+    enabled_product_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
