@@ -251,7 +251,20 @@ class DecoModaScraper(BaseScraper):
         url = f"{self.BASE_URL}/store/{product_id}"
 
         try:
-            soup = await self.fetch_html(url)
+            # Fetch without following redirects to detect 302
+            client = await self.get_client()
+            response = await client.get(url, headers=self.default_headers, follow_redirects=False)
+
+            # If redirected (302), product doesn't exist
+            if response.status_code == 302:
+                logger.debug(f"Product {product_id}: 302 redirect, skipping")
+                return None
+
+            if response.status_code != 200:
+                logger.debug(f"Product {product_id}: status {response.status_code}, skipping")
+                return None
+
+            soup = BeautifulSoup(response.content, "lxml")
         except Exception as e:
             logger.warning(f"Error fetching product {product_id}: {e}")
             return None
