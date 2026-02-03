@@ -170,6 +170,25 @@ Los slugs de productos NO deben revelar el origen mayorista:
 - `backend/app/scrapers/decomoda.py`: `prod-{sku}` o `prod-dm-{id}`
 - `backend/app/scrapers/redlenic.py`: `prod-{sku}` o `{nombre}-{idx}`
 
+### ABM de Categorías (2026-02-02)
+
+**Backend:**
+- `backend/app/models/category.py` - Modelo Category
+- `backend/app/schemas/category.py` - Schemas
+- `backend/app/api/v1/endpoints/categories.py` - CRUD endpoints
+- `backend/alembic/versions/006_add_categories_table.py` - Migración (crea tabla + popula con categorías existentes)
+
+**Frontend:**
+- `frontend/src/app/admin/categorias/page.tsx` - ABM UI
+- `frontend/src/types/index.ts` - Category type
+- `frontend/src/app/admin/layout.tsx` - Link en navegación
+
+**Endpoints:**
+- `GET /categories` - Listar (público)
+- `POST /categories` - Crear (admin)
+- `PATCH /categories/{id}` - Actualizar (admin) - también actualiza productos
+- `DELETE /categories/{id}` - Eliminar (admin) - productos quedan sin categoría
+
 ### Debugging DecoModa Scraper
 
 Si el scraper trae pocos productos, revisar logs para ver:
@@ -180,12 +199,28 @@ Si no trae imágenes, revisar:
 - El schema JSON-LD debe tener `"image": ["url..."]`
 - Las imágenes se filtran si contienen "logo" en la URL
 
+### Navegación Admin Reorganizada
+
+El menú lateral del admin ahora tiene estructura jerárquica:
+- **Dashboard** - `/admin`
+- **Productos** - `/admin/productos`
+- **Configuración** (collapsible)
+  - Categorías - `/admin/categorias`
+  - Webs Origen - `/admin/source-websites`
+
+**Archivo:** `frontend/src/app/admin/layout.tsx`
+- Estado `configOpen` para expandir/colapsar
+- Auto-expande si el usuario está en una página de configuración
+- Iconos ChevronDown/ChevronRight para indicar estado
+- Mobile: todas las opciones visibles como píldoras horizontales
+
 ### Archivos Modificados Hoy
 
 | Archivo | Cambio |
 |---------|--------|
 | `frontend/src/app/page.tsx` | Menú hamburguesa móvil, píldoras de filtros, quitar paginación |
 | `frontend/src/app/admin/source-websites/page.tsx` | Botón "Consultar Stock" masivo |
+| `frontend/src/app/admin/layout.tsx` | Navegación con submenú "Configuración" colapsable |
 | `backend/app/api/v1/endpoints/public.py` | Límite de productos 100→1000 |
 | `backend/app/scrapers/decomoda.py` | Scraper con Playwright + fallback sitemap |
 | `backend/requirements.txt` | Agregado playwright>=1.40.0 |

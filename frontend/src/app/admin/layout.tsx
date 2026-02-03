@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -9,6 +9,9 @@ import {
   Globe,
   Settings,
   LogOut,
+  Tags,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -16,8 +19,11 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos', href: '/admin/productos', icon: Package },
+];
+
+const configSubmenu = [
+  { name: 'Categorías', href: '/admin/categorias', icon: Tags },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
-  { name: 'Configuración', href: '/admin/configuracion', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -25,6 +31,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
   const logout = useAuth((state) => state.logout);
+  const [configOpen, setConfigOpen] = useState(false);
+
+  // Auto-expand config menu if on a config page
+  useEffect(() => {
+    const isConfigPage = configSubmenu.some(item => pathname.startsWith(item.href));
+    if (isConfigPage) {
+      setConfigOpen(true);
+    }
+  }, [pathname]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -75,6 +90,51 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
+
+            {/* Configuración submenu */}
+            <div>
+              <button
+                onClick={() => setConfigOpen(!configOpen)}
+                className={cn(
+                  'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  configSubmenu.some(item => pathname.startsWith(item.href))
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <Settings className="h-5 w-5" />
+                  Configuración
+                </span>
+                {configOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              {configOpen && (
+                <div className="mt-1 ml-4 space-y-1">
+                  {configSubmenu.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-gray-700 text-white'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Logout */}
@@ -107,6 +167,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             const isActive = pathname === item.href ||
               (item.href !== '/admin' && pathname.startsWith(item.href));
 
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                  isActive
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+          {/* Config submenu items for mobile */}
+          {configSubmenu.map((item) => {
+            const isActive = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.name}

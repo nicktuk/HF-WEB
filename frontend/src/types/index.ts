@@ -48,6 +48,24 @@ export interface ProductAdmin extends ProductPublic {
   market_sample_count: number;
 }
 
+// Category Types
+
+export interface Category {
+  id: number;
+  name: string;
+  is_active: boolean;
+  display_order: number;
+  product_count: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CategoryCreateForm {
+  name: string;
+  is_active: boolean;
+  display_order: number;
+}
+
 // Source Website Types
 
 export interface SourceWebsite {
