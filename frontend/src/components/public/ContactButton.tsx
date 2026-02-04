@@ -6,6 +6,7 @@ import { getWhatsAppUrl, cn } from '@/lib/utils';
 interface ContactButtonProps {
   productName: string;
   productSlug?: string;
+  productPrice?: number;
   variant?: 'whatsapp' | 'email';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -22,6 +23,7 @@ const sizes = {
 export function ContactButton({
   productName,
   productSlug,
+  productPrice,
   variant = 'whatsapp',
   size = 'md',
   className,
@@ -31,10 +33,22 @@ export function ContactButton({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
   const productUrl = productSlug ? `${siteUrl}/producto/${productSlug}` : undefined;
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
   if (variant === 'whatsapp') {
-    const message = productUrl
-      ? `Hola! Me interesa el producto: ${productName}\n${productUrl}`
-      : `Hola! Me interesa el producto: ${productName}`;
+    let message = `Hola! Me interesa el producto: ${productName}`;
+    if (productPrice) {
+      message += `\nPrecio: ${formatPrice(productPrice)}`;
+    }
+    if (productUrl) {
+      message += `\n${productUrl}`;
+    }
     const url = getWhatsAppUrl(whatsappNumber, message);
 
     return (
@@ -55,10 +69,14 @@ export function ContactButton({
     );
   }
 
+  let bodyText = `Hola, me interesa el producto: ${productName}`;
+  if (productPrice) {
+    bodyText += `\nPrecio: ${formatPrice(productPrice)}`;
+  }
+  if (productUrl) {
+    bodyText += `\n\n${productUrl}`;
+  }
   const subject = encodeURIComponent(`Consulta: ${productName}`);
-  const bodyText = productUrl
-    ? `Hola, me interesa el producto: ${productName}\n\n${productUrl}`
-    : `Hola, me interesa el producto: ${productName}`;
   const body = encodeURIComponent(bodyText);
   const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
 

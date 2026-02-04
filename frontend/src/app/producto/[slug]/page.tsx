@@ -178,12 +178,14 @@ export default function ProductPage() {
               <ContactButton
                 productName={product.name}
                 productSlug={slug}
+                productPrice={product.price}
                 variant="whatsapp"
                 size="lg"
               />
               <ContactButton
                 productName={product.name}
                 productSlug={slug}
+                productPrice={product.price}
                 variant="email"
                 size="lg"
               />
@@ -197,6 +199,7 @@ export default function ProductPage() {
         <ContactButton
           productName={product.name}
           productSlug={slug}
+          productPrice={product.price}
           variant="whatsapp"
           size="lg"
           className="w-full"
