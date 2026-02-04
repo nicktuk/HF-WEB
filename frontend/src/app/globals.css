@@ -33,4 +33,40 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+
+  /* Attention-grabbing animation for featured category pills */
+  .animate-attention-pulse {
+    animation: attention-pulse 2s ease-in-out;
+  }
+
+  @keyframes attention-pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 currentColor;
+    }
+    10% {
+      transform: scale(1.15);
+      box-shadow: 0 0 20px 4px currentColor;
+    }
+    20% {
+      transform: scale(1);
+      box-shadow: 0 0 10px 2px currentColor;
+    }
+    30% {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px 3px currentColor;
+    }
+    40% {
+      transform: scale(1);
+      box-shadow: 0 0 8px 2px currentColor;
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px 2px currentColor;
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
 }

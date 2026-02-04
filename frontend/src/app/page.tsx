@@ -248,7 +248,7 @@ function HomePageContent() {
               Inmediata
             </button>
             {/* Category pills for show_in_menu categories */}
-            {categories?.filter(c => c.show_in_menu).map((category) => (
+            {categories?.filter(c => c.show_in_menu).map((category, index) => (
               <button
                 key={category.name}
                 onClick={() => {
@@ -258,10 +258,10 @@ function HomePageContent() {
                     updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
                   }
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                className={`relative px-3 py-1.5 rounded-full text-sm font-medium transition-all animate-attention-pulse ${
                   selectedCategory === category.name && !showFeatured && !showImmediate
-                    ? 'text-white shadow-md'
-                    : 'bg-white border-2 hover:opacity-80'
+                    ? 'text-white shadow-lg'
+                    : 'border-2 hover:scale-105'
                 }`}
                 style={{
                   backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
@@ -271,6 +271,7 @@ function HomePageContent() {
                   color: selectedCategory === category.name && !showFeatured && !showImmediate
                     ? 'white'
                     : category.color,
+                  animationDelay: `${index * 150}ms`,
                 }}
                 aria-pressed={selectedCategory === category.name}
               >
