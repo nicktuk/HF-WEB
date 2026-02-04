@@ -75,8 +75,8 @@ export function ChangeCategoryModal({ selectedIds, onClose, onSuccess }: ChangeC
             >
               <option value="">Seleccionar categoria...</option>
               {existingCategories?.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.name} value={cat.name}>
+                  {cat.name}
                 </option>
               ))}
               <option value="__custom__">+ Nueva categoria...</option>
