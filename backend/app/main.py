@@ -24,6 +24,7 @@ from app.scrapers import newredmayorista  # noqa: F401
 from app.scrapers import redlenic  # noqa: F401
 from app.scrapers import decomoda  # noqa: F401
 from app.scrapers import sina  # noqa: F401
+from app.scrapers import protrade  # noqa: F401
 from app.scrapers.market import mercadolibre  # noqa: F401
 
 # Configure logging

@@ -89,6 +89,16 @@ def seed_source_websites(db):
                 "auth_type": "login_form"
             },
             "notes": "Catálogo Sina. Requiere login. Tiene cantidad mínima y contenido de kit."
+        },
+        {
+            "name": "protrade",
+            "display_name": "Protrade",
+            "base_url": "https://www.protrade.com.ar",
+            "is_active": True,
+            "scraper_config": {
+                "requires_auth": False
+            },
+            "notes": "Catálogo Protrade. Estructura idéntica a Redlenic."
         }
     ]
 

@@ -58,7 +58,8 @@
       "Bash(del \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\test_redlenic.py\")",
       "Bash(npx tsc:*)",
       "WebFetch(domain:decomoda-mayorista.com.ar)",
-      "WebFetch(domain:www.sina.com.ar)"
+      "WebFetch(domain:www.sina.com.ar)",
+      "WebFetch(domain:www.protrade.com.ar)"
     ]
   }
 }
