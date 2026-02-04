@@ -203,10 +203,10 @@ export default function CategoriasPage() {
                           <Badge variant="default">Inactiva</Badge>
                         )}
                         {category.show_in_menu && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border border-gray-300 text-gray-600">
                             <Eye className="h-3 w-3 mr-1" />
                             Menu
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
