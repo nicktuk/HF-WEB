@@ -1,6 +1,6 @@
 [phases.setup]
 # Dependencies for Playwright/Chromium
-nixPkgs = ["chromium", "ffmpeg", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig"]
+nixPkgs = ["chromium", "ffmpeg", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig", "python311"]
 
 [phases.install]
 cmds = [
@@ -12,4 +12,5 @@ cmds = [
 cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 [variables]
+NIXPACKS_PYTHON_VERSION = "3.11"
 PLAYWRIGHT_BROWSERS_PATH = "/app/.cache/ms-playwright"
