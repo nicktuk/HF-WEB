@@ -31,6 +31,8 @@ export interface ProductAdmin extends ProductPublic {
   custom_price?: number;
   description?: string;
   sku?: string;
+  min_purchase_qty?: number;
+  kit_content?: string;
   enabled: boolean;
   is_featured: boolean;
   source_website_id: number;

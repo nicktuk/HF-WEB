@@ -230,3 +230,203 @@ El menú lateral del admin ahora tiene estructura jerárquica:
 
 - **Crear fuente decomoda:** Desde admin → Webs de Origen → Agregar Web con identificador `decomoda`
 - **Re-scrapear:** Después del deploy, borrar productos existentes de decomoda y volver a scrapear para obtener los 462 productos
+
+---
+
+## Sesión 2026-02-03
+
+### Features Implementados
+
+#### 1. Comparador de Precios (Nueva página)
+- **Archivo:** `frontend/src/app/admin/comparador/page.tsx`
+- **Endpoint:** `GET /admin/price-comparator?search=...`
+- **Backend:** `backend/app/api/v1/endpoints/admin.py`
+- Busca productos por palabra clave y agrupa por nombre similar
+- Muestra precio mínimo (verde) y máximo (rojo) entre fuentes
+- Calcula diferencia porcentual entre precios
+- Grupos expandibles con detalle de cada fuente
+- Separa productos "comparables" (varias fuentes) de "solo una fuente"
+
+#### 2. Dashboard Mejorado con Estadísticas
+- **Archivo:** `frontend/src/app/admin/page.tsx`
+- **Endpoint:** `GET /admin/stats/by-source-category`
+- **Backend:** `backend/app/services/product.py`
+
+**Cards de métricas:**
+- Total productos
+- Habilitados
+- Deshabilitados
+- Con datos de mercado
+
+**Tabla de estadísticas:**
+- Filas: Webs de origen
+- Columnas: Categorías
+- Celdas: habilitados/total
+
+**Gráfico de barras apiladas:**
+- Usa **Recharts** (`recharts` en package.json)
+- Muestra productos activos por fuente, coloreados por categoría
+
+#### 3. Filtros Persistentes en Admin (Zustand)
+- **Hook:** `frontend/src/hooks/useAdminFilters.ts`
+- **Librería:** Zustand con middleware `persist`
+- Guarda en localStorage: búsqueda, enabled, source, categoría, featured, página, límite
+- Los filtros persisten al navegar entre páginas
+
+```typescript
+// Uso en componentes
+const { search, setSearch, enabledFilter, setEnabledFilter } = useAdminFilters();
+```
+
+#### 4. Categorías: Campos Color y Show In Menu
+- **Migración:** `backend/alembic/versions/007_add_category_color_and_menu.py`
+- **Campos nuevos:**
+  - `color` (VARCHAR 7) - Hex color, default `#6b7280`
+  - `show_in_menu` (BOOLEAN) - Default `false`
+
+**ABM actualizado:**
+- Selector de colores predefinidos (9 colores)
+- Color picker personalizado
+- Checkbox "Mostrar en menú mobile"
+
+**Colores predefinidos:**
+```javascript
+['#6b7280', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899']
+```
+
+#### 5. Efecto Llamativo para Categorías Destacadas
+- **Archivo:** `frontend/src/app/globals.css`
+- **Clase:** `animate-attention-pulse`
+- Animación CSS que pulsa escala + sombra al cargar
+- Se aplica a categorías con `show_in_menu: true` en el menú móvil
+
+```css
+@keyframes attention-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+  10% { transform: scale(1.15); box-shadow: 0 0 20px 4px currentColor; }
+  /* ... pulsos decrecientes ... */
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+```
+
+#### 6. Precio en Mensaje de WhatsApp
+- **Archivos:**
+  - `frontend/src/components/public/ContactButton.tsx`
+  - `frontend/src/app/producto/[slug]/page.tsx`
+- El botón de contacto ahora incluye el precio formateado en el mensaje
+
+### Navegación Admin Actualizada
+
+```
+/admin
+├── Dashboard (con stats y gráficos)
+├── Productos
+├── Comparador (NUEVO)
+└── Configuración
+    ├── Categorías (con color y show_in_menu)
+    └── Webs Origen
+```
+
+**Archivo:** `frontend/src/app/admin/layout.tsx` - Agregado link a Comparador
+
+### Archivos Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/src/app/admin/page.tsx` | Dashboard con stats, tabla y gráfico Recharts |
+| `frontend/src/app/admin/comparador/page.tsx` | **NUEVO** - Comparador de precios |
+| `frontend/src/app/admin/categorias/page.tsx` | Color picker y show_in_menu |
+| `frontend/src/app/admin/productos/page.tsx` | Usa hook useAdminFilters |
+| `frontend/src/app/admin/layout.tsx` | Link a comparador |
+| `frontend/src/hooks/useAdminFilters.ts` | **NUEVO** - Zustand persist para filtros |
+| `frontend/src/app/globals.css` | Animación attention-pulse |
+| `frontend/src/app/page.tsx` | Categorías con color y animación |
+| `frontend/src/components/public/ContactButton.tsx` | Precio en mensaje WA |
+| `frontend/src/types/index.ts` | Category con color y show_in_menu |
+| `backend/alembic/versions/007_...` | **NUEVO** - Migración color y show_in_menu |
+| `backend/app/api/v1/endpoints/admin.py` | Endpoints stats y comparador |
+| `backend/app/api/v1/endpoints/categories.py` | Soporta nuevos campos |
+| `backend/app/schemas/category.py` | color y show_in_menu |
+| `backend/app/models/category.py` | Columnas color y show_in_menu |
+| `backend/app/services/product.py` | Lógica stats by source/category |
+| `backend/app/db/repositories/product.py` | Filtro "Sin categoría" corregido |
+| `backend/requirements.txt` | (sin cambios nuevos) |
+
+### Correcciones de Compilación
+
+- `frontend/src/components/admin/ActivateInactiveModal.tsx` - Fix tipos
+- `frontend/src/components/admin/ChangeCategoryModal.tsx` - Fix tipos
+- `backend/.python-version` - Ajuste versión Python
+- `backend/nixpacks.toml` - Config para Railway
+
+---
+
+## Sesión 2026-02-04
+
+### Scraper Sina (Nuevo)
+
+#### Ubicación
+- **Scraper:** `backend/app/scrapers/sina.py`
+- **Registro:** Importado en `backend/app/main.py`
+
+#### Configuración
+- **Identificador fuente:** `sina`
+- **URL Base:** `https://www.sina.com.ar`
+- **Requiere autenticación:** Sí
+
+#### Credenciales (guardar en scraper_config)
+```json
+{
+  "username": "diezjuarez22@gmail.com",
+  "password": "Hermanos1997!"
+}
+```
+
+#### Características
+- Usa **Playwright** para renderizar JavaScript y manejar login
+- Extrae campos adicionales:
+  - `min_purchase_qty` - Cantidad mínima de compra
+  - `kit_content` - Contenido del kit/combo
+  - `sku` - Código de producto
+- Intenta usar API interna primero, fallback a parsing de página
+- URL de producto: `https://www.sina.com.ar/{cat}/{subcat}/{nombre}/{id}`
+
+#### Nuevos Campos en Modelo Product
+- **Migración:** `backend/alembic/versions/008_add_min_purchase_qty_and_kit_content.py`
+- **Campos:**
+  - `min_purchase_qty` (Integer, nullable) - Cantidad mínima de compra
+  - `kit_content` (Text, nullable) - Contenido del kit/combo
+
+#### Archivos Modificados/Creados
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/alembic/versions/008_...` | **NUEVO** - Migración campos nuevos |
+| `backend/app/scrapers/sina.py` | **NUEVO** - Scraper Sina con Playwright |
+| `backend/app/scrapers/base.py` | Agregados min_purchase_qty y kit_content a ScrapedProduct |
+| `backend/app/models/product.py` | Agregadas columnas min_purchase_qty y kit_content |
+| `backend/app/schemas/product.py` | Agregados campos en schemas de respuesta |
+| `backend/app/services/product.py` | Guardar campos nuevos al scrapear |
+| `backend/app/main.py` | Import scraper sina |
+| `frontend/src/types/index.ts` | Agregados min_purchase_qty y kit_content a ProductAdmin |
+
+#### Pasos para usar el scraper
+
+1. **Correr migración:**
+   ```bash
+   cd backend
+   alembic upgrade head
+   ```
+
+2. **Crear fuente en admin:**
+   - Ir a Admin → Webs de Origen → Nueva Web
+   - Nombre identificador: `sina`
+   - Nombre display: `Sina`
+   - URL base: `https://www.sina.com.ar`
+   - Scraper config (JSON):
+     ```json
+     {"username": "diezjuarez22@gmail.com", "password": "Hermanos1997!"}
+     ```
+
+3. **Ejecutar scraping:**
+   - Desde admin o vía API: `POST /admin/source-websites/{id}/scrape-all`

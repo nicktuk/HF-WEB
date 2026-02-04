@@ -37,6 +37,8 @@ class Product(Base):
     short_description = Column(String(1000), nullable=True)
     brand = Column(String(100), nullable=True)
     sku = Column(String(100), nullable=True)
+    min_purchase_qty = Column(Integer, nullable=True, comment="Cantidad minima de compra")
+    kit_content = Column(Text, nullable=True, comment="Contenido del kit/combo")
 
     # Configuración del revendedor
     enabled = Column(Boolean, default=False, nullable=False, index=True)

@@ -76,6 +76,19 @@ def seed_source_websites(db):
                 }
             },
             "notes": "Catálogo DecoModa Mayorista. Sin autenticación. Precios sin IVA."
+        },
+        {
+            "name": "sina",
+            "display_name": "Sina",
+            "base_url": "https://www.sina.com.ar",
+            "is_active": True,
+            "scraper_config": {
+                "username": "diezjuarez22@gmail.com",
+                "password": "Hermanos1997!",
+                "requires_auth": True,
+                "auth_type": "login_form"
+            },
+            "notes": "Catálogo Sina. Requiere login. Tiene cantidad mínima y contenido de kit."
         }
     ]
 

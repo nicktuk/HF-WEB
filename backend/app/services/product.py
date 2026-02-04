@@ -176,6 +176,8 @@ class ProductService:
             short_description=scraped.short_description,
             brand=scraped.brand,
             sku=scraped.sku,
+            min_purchase_qty=scraped.min_purchase_qty,
+            kit_content=scraped.kit_content,
             enabled=data.enabled,
             is_featured=True,  # Mark new scraped products as "Nuevo"
             markup_percentage=data.markup_percentage,
@@ -311,6 +313,8 @@ class ProductService:
             product.short_description = scraped.short_description
             product.brand = scraped.brand or product.brand
             product.sku = scraped.sku or product.sku
+            product.min_purchase_qty = scraped.min_purchase_qty or product.min_purchase_qty
+            product.kit_content = scraped.kit_content or product.kit_content
             product.last_scraped_at = datetime.utcnow()
             product.scrape_error_count = 0
             product.scrape_last_error = None
@@ -698,6 +702,8 @@ class ProductService:
                         short_description=scraped.short_description,
                         brand=scraped.brand,
                         sku=scraped.sku,
+                        min_purchase_qty=scraped.min_purchase_qty,
+                        kit_content=scraped.kit_content,
                         enabled=False,  # Disabled by default - admin enables manually
                         is_featured=True,  # Mark new scraped products as "Nuevo"
                         markup_percentage=Decimal("0"),

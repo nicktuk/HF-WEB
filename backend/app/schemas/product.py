@@ -88,6 +88,8 @@ class ProductResponse(BaseModel):
     short_description: Optional[str] = None
     brand: Optional[str] = None
     sku: Optional[str] = None
+    min_purchase_qty: Optional[int] = None
+    kit_content: Optional[str] = None
     category: Optional[str] = None
     enabled: bool
     is_featured: bool = False
@@ -124,6 +126,8 @@ class ProductPublicResponse(BaseModel):
     currency: str = "ARS"
     short_description: Optional[str] = None
     brand: Optional[str] = None
+    min_purchase_qty: Optional[int] = None
+    kit_content: Optional[str] = None
     category: Optional[str] = None
     is_featured: bool = False
     is_immediate_delivery: bool = False

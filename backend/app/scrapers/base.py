@@ -25,6 +25,8 @@ class ScrapedProduct:
     short_description: Optional[str] = None
     brand: Optional[str] = None
     sku: Optional[str] = None
+    min_purchase_qty: Optional[int] = None
+    kit_content: Optional[str] = None
     images: List[str] = field(default_factory=list)
     categories: List[str] = field(default_factory=list)
     source_url: Optional[str] = None
