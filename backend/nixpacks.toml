@@ -1,10 +1,11 @@
 [phases.setup]
 # Dependencies for Playwright/Chromium
-nixPkgs = ["chromium", "ffmpeg", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig", "python311"]
+nixPkgs = ["ffmpeg", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig", "python311"]
 
 [phases.install]
 cmds = [
-    "pip install -r requirements.txt"
+    "pip install -r requirements.txt",
+    "playwright install chromium"
 ]
 
 [phases.build]
@@ -18,6 +19,3 @@ cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.11"
-# Use system chromium instead of Playwright's bundled browser
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "/nix/store/chromium/bin/chromium"
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"

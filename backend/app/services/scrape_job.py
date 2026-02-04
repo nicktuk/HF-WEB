@@ -242,6 +242,10 @@ class ScrapeJobManager:
                 existing.category = scraped.categories[0]
             if scraped.brand:
                 existing.brand = scraped.brand
+            if scraped.min_purchase_qty:
+                existing.min_purchase_qty = scraped.min_purchase_qty
+            if scraped.kit_content:
+                existing.kit_content = scraped.kit_content
             existing.last_scraped_at = datetime.utcnow()
             existing.scrape_last_error = None  # Clear any previous error
             existing.scrape_error_count = 0
@@ -259,6 +263,8 @@ class ScrapeJobManager:
             short_description=scraped.short_description,
             brand=scraped.brand,
             sku=scraped.sku,
+            min_purchase_qty=scraped.min_purchase_qty,
+            kit_content=scraped.kit_content,
             enabled=False,
             is_featured=True,
             markup_percentage=Decimal("0"),

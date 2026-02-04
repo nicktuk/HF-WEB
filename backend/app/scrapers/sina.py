@@ -64,27 +64,22 @@ class SinaScraper(BaseScraper):
             )
 
         if self._page is None:
-            import os
-            import shutil
-            playwright = await async_playwright().start()
-
-            # Try to find system chromium
-            chromium_path = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
-            if not chromium_path:
-                # Search in PATH
-                chromium_path = shutil.which('chromium') or shutil.which('chromium-browser') or shutil.which('google-chrome')
+            playwright_instance = await async_playwright().start()
 
             launch_options = {
                 'headless': True,
-                'args': ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                'args': [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                ]
             }
 
-            if chromium_path:
-                launch_options['executable_path'] = chromium_path
-                logger.info(f"[Sina] Using system chromium: {chromium_path}")
-                print(f"[Sina] Using system chromium: {chromium_path}")
+            logger.info("[Sina] Launching Playwright chromium...")
+            print("[Sina] Launching Playwright chromium...")
 
-            self._browser = await playwright.chromium.launch(**launch_options)
+            self._browser = await playwright_instance.chromium.launch(**launch_options)
             self._page = await self._browser.new_page()
             await self._page.set_viewport_size({"width": 1920, "height": 1080})
 

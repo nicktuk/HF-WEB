@@ -88,8 +88,6 @@ class DecoModaScraper(BaseScraper):
         Returns:
             List of product IDs
         """
-        import os
-        import shutil
         logger.info(f"Usando Playwright para {self.ALL_PRODUCTS_URL}")
         print(f"[DecoModa] Usando Playwright para renderizar JavaScript...")
 
@@ -97,20 +95,18 @@ class DecoModaScraper(BaseScraper):
 
         try:
             async with async_playwright() as p:
-                # Try to find system chromium
-                chromium_path = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
-                if not chromium_path:
-                    chromium_path = shutil.which('chromium') or shutil.which('chromium-browser') or shutil.which('google-chrome')
-
                 launch_options = {
                     'headless': True,
-                    'args': ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                    'args': [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
+                    ]
                 }
 
-                if chromium_path:
-                    launch_options['executable_path'] = chromium_path
-                    logger.info(f"[DecoModa] Using system chromium: {chromium_path}")
-                    print(f"[DecoModa] Using system chromium: {chromium_path}")
+                logger.info("[DecoModa] Launching Playwright chromium...")
+                print("[DecoModa] Launching Playwright chromium...")
 
                 browser = await p.chromium.launch(**launch_options)
                 page = await browser.new_page()

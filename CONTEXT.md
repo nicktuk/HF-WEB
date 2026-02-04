@@ -363,18 +363,45 @@ const { search, setSearch, enabledFilter, setEnabledFilter } = useAdminFilters()
 
 ## Sesión 2026-02-04
 
-### Scraper Sina (Nuevo)
+### IMPORTANTE: Configuración Automática de Scrapers
 
-#### Ubicación
-- **Scraper:** `backend/app/scrapers/sina.py`
-- **Registro:** Importado en `backend/app/main.py`
+Los nuevos scrapers se configuran **automáticamente** en el deploy:
 
-#### Configuración
-- **Identificador fuente:** `sina`
-- **URL Base:** `https://www.sina.com.ar`
-- **Requiere autenticación:** Sí
+1. **Migraciones**: Se corren automáticamente (`alembic upgrade head`) en la fase build de nixpacks
+2. **Fuentes (Source Websites)**: Se crean automáticamente via `seed_data.py`
 
-#### Credenciales (guardar en scraper_config)
+**Archivo clave:** `backend/scripts/seed_data.py`
+- Contiene todas las fuentes con sus credenciales y configuración
+- Se ejecuta en cada deploy, crea las fuentes si no existen
+- **Para agregar un nuevo scraper**: agregar entrada en `seed_data.py` + crear el scraper + importar en `main.py`
+
+**Archivo:** `backend/nixpacks.toml` (fase build)
+```toml
+[phases.build]
+cmds = [
+    "alembic upgrade head",
+    "python -m scripts.seed_data"
+]
+```
+
+### Nuevos Campos en Modelo Product
+
+- **Migración:** `backend/alembic/versions/008_add_min_purchase_qty_and_kit_content.py`
+- **Campos:**
+  - `min_purchase_qty` (Integer, nullable) - Cantidad mínima de compra
+  - `kit_content` (Text, nullable) - Contenido del kit/combo
+
+### Scraper Sina
+
+| Campo | Valor |
+|-------|-------|
+| **Identificador** | `sina` |
+| **URL Base** | `https://www.sina.com.ar` |
+| **Requiere auth** | Sí (login con email/password) |
+| **Usa Playwright** | Sí (web Angular) |
+| **Archivo** | `backend/app/scrapers/sina.py` |
+
+**Credenciales (en seed_data.py):**
 ```json
 {
   "username": "diezjuarez22@gmail.com",
@@ -382,51 +409,65 @@ const { search, setSearch, enabledFilter, setEnabledFilter } = useAdminFilters()
 }
 ```
 
-#### Características
-- Usa **Playwright** para renderizar JavaScript y manejar login
-- Extrae campos adicionales:
-  - `min_purchase_qty` - Cantidad mínima de compra
-  - `kit_content` - Contenido del kit/combo
-  - `sku` - Código de producto
+**Características:**
+- Extrae campos adicionales: `min_purchase_qty`, `kit_content`, `sku`
 - Intenta usar API interna primero, fallback a parsing de página
 - URL de producto: `https://www.sina.com.ar/{cat}/{subcat}/{nombre}/{id}`
 
-#### Nuevos Campos en Modelo Product
-- **Migración:** `backend/alembic/versions/008_add_min_purchase_qty_and_kit_content.py`
-- **Campos:**
-  - `min_purchase_qty` (Integer, nullable) - Cantidad mínima de compra
-  - `kit_content` (Text, nullable) - Contenido del kit/combo
+### Scraper Protrade
 
-#### Archivos Modificados/Creados
+| Campo | Valor |
+|-------|-------|
+| **Identificador** | `protrade` |
+| **URL Base** | `https://www.protrade.com.ar` |
+| **Requiere auth** | No (o password si es necesario) |
+| **Estructura** | Idéntica a Redlenic |
+| **Archivo** | `backend/app/scrapers/protrade.py` |
+
+**Características:**
+- Catálogo en `catalogo2024.php?rub=99999`
+- Productos en `div.contenedor_producto`
+- Nombre en `h1`, precio en `p.datos`, código en `p.datos1`
+- Si necesita password, agregar `"password": "xxx"` al scraper_config
+
+### Fix Playwright para Railway
+
+Los scrapers que usan Playwright (Sina, DecoModa) ahora usan el **Chromium del sistema** instalado via Nix en lugar de descargar el browser de Playwright.
+
+**Cambios en `nixpacks.toml`:**
+```toml
+[variables]
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+```
+
+**Cambios en scrapers:**
+- Usan `shutil.which('chromium')` para encontrar el ejecutable en PATH
+- Args adicionales: `--no-sandbox`, `--disable-setuid-sandbox`, `--disable-dev-shm-usage`
+
+### Archivos Modificados/Creados
 
 | Archivo | Cambio |
 |---------|--------|
 | `backend/alembic/versions/008_...` | **NUEVO** - Migración campos nuevos |
-| `backend/app/scrapers/sina.py` | **NUEVO** - Scraper Sina con Playwright |
-| `backend/app/scrapers/base.py` | Agregados min_purchase_qty y kit_content a ScrapedProduct |
-| `backend/app/models/product.py` | Agregadas columnas min_purchase_qty y kit_content |
-| `backend/app/schemas/product.py` | Agregados campos en schemas de respuesta |
+| `backend/app/scrapers/sina.py` | **NUEVO** - Scraper Sina |
+| `backend/app/scrapers/protrade.py` | **NUEVO** - Scraper Protrade |
+| `backend/app/scrapers/decomoda.py` | Fix para usar chromium del sistema |
+| `backend/app/scrapers/base.py` | Agregados min_purchase_qty y kit_content |
+| `backend/app/models/product.py` | Columnas min_purchase_qty y kit_content |
+| `backend/app/schemas/product.py` | Campos en schemas de respuesta |
 | `backend/app/services/product.py` | Guardar campos nuevos al scrapear |
-| `backend/app/main.py` | Import scraper sina |
-| `frontend/src/types/index.ts` | Agregados min_purchase_qty y kit_content a ProductAdmin |
+| `backend/app/main.py` | Import scrapers sina y protrade |
+| `backend/scripts/seed_data.py` | Fuentes sina y protrade |
+| `backend/nixpacks.toml` | Build con migrations + seed, fix Playwright |
+| `frontend/src/types/index.ts` | Campos min_purchase_qty y kit_content |
 
-#### Pasos para usar el scraper
+### Lista de Scrapers Registrados
 
-1. **Correr migración:**
-   ```bash
-   cd backend
-   alembic upgrade head
-   ```
-
-2. **Crear fuente en admin:**
-   - Ir a Admin → Webs de Origen → Nueva Web
-   - Nombre identificador: `sina`
-   - Nombre display: `Sina`
-   - URL base: `https://www.sina.com.ar`
-   - Scraper config (JSON):
-     ```json
-     {"username": "diezjuarez22@gmail.com", "password": "Hermanos1997!"}
-     ```
-
-3. **Ejecutar scraping:**
-   - Desde admin o vía API: `POST /admin/source-websites/{id}/scrape-all`
+| Scraper | Fuente | Auth | Notas |
+|---------|--------|------|-------|
+| `newredmayorista` | New Red Mayorista | No | Precios no visibles públicamente |
+| `redlenic` | Redlenic | Password: `catan` | Todos productos en una página |
+| `decomoda` | DecoModa Mayorista | No | Usa Playwright, fallback sitemap |
+| `sina` | Sina | Email + Password | Usa Playwright, campos extra |
+| `protrade` | Protrade | No (o password) | Estructura = Redlenic |
+| `manual` | Producto Manual | - | Productos creados a mano |
