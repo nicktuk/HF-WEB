@@ -55,6 +55,8 @@ export interface Category {
   name: string;
   is_active: boolean;
   display_order: number;
+  color: string;
+  show_in_menu: boolean;
   product_count: number;
   enabled_product_count: number;
   created_at?: string;
@@ -65,6 +67,8 @@ export interface CategoryCreateForm {
   name: string;
   is_active: boolean;
   display_order: number;
+  color: string;
+  show_in_menu: boolean;
 }
 
 // Source Website Types

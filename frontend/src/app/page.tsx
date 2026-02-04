@@ -185,11 +185,16 @@ function HomePageContent() {
             {!showFeatured && !showImmediate && (
               <>
                 {selectedCategory ? (
-                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white shadow-sm flex items-center gap-1.5">
+                  <span
+                    className="px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5"
+                    style={{
+                      backgroundColor: categories?.find(c => c.name === selectedCategory)?.color || '#3b82f6'
+                    }}
+                  >
                     {selectedCategory}
                     <button
                       onClick={() => updateParams({ category: undefined })}
-                      className="hover:bg-blue-700 rounded-full p-0.5 transition-colors"
+                      className="hover:opacity-80 rounded-full p-0.5 transition-colors"
                       aria-label="Quitar filtro de categoría"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -208,7 +213,7 @@ function HomePageContent() {
                 if (showFeatured) {
                   updateParams({ featured: undefined });
                 } else {
-                  updateParams({ featured: 'true', immediate_delivery: undefined });
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
                 }
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
@@ -228,7 +233,7 @@ function HomePageContent() {
                 if (showImmediate) {
                   updateParams({ immediate_delivery: undefined });
                 } else {
-                  updateParams({ immediate_delivery: 'true', featured: undefined });
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
                 }
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
@@ -242,6 +247,36 @@ function HomePageContent() {
               <Zap className={`h-3.5 w-3.5 ${showImmediate ? 'fill-current' : ''}`} />
               Inmediata
             </button>
+            {/* Category pills for show_in_menu categories */}
+            {categories?.filter(c => c.show_in_menu).map((category) => (
+              <button
+                key={category.name}
+                onClick={() => {
+                  if (selectedCategory === category.name) {
+                    updateParams({ category: undefined });
+                  } else {
+                    updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === category.name && !showFeatured && !showImmediate
+                    ? 'text-white shadow-md'
+                    : 'bg-white border-2 hover:opacity-80'
+                }`}
+                style={{
+                  backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
+                    ? category.color
+                    : 'white',
+                  borderColor: category.color,
+                  color: selectedCategory === category.name && !showFeatured && !showImmediate
+                    ? 'white'
+                    : category.color,
+                }}
+                aria-pressed={selectedCategory === category.name}
+              >
+                {category.name}
+              </button>
+            ))}
           </div>
 
           {/* Mobile Dropdown Menu */}
@@ -289,17 +324,26 @@ function HomePageContent() {
                 <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
                 {categories.map((category) => (
                   <button
-                    key={category}
+                    key={category.name}
                     onClick={() => {
-                      updateParams({ category, featured: undefined, immediate_delivery: undefined });
+                      updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedCategory === category && !showFeatured && !showImmediate
-                        ? 'bg-blue-100 text-blue-700'
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      selectedCategory === category.name && !showFeatured && !showImmediate
+                        ? 'text-white'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
+                    style={{
+                      backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
+                        ? category.color
+                        : undefined,
+                    }}
                   >
-                    {category}
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    {category.name}
                   </button>
                 ))}
               </div>
@@ -349,17 +393,25 @@ function HomePageContent() {
               </button>
               {categories.map((category) => (
                 <button
-                  key={category}
+                  key={category.name}
                   onClick={() => {
-                    updateParams({ category, featured: undefined, immediate_delivery: undefined });
+                    updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
                   }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category && !showFeatured && !showImmediate
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    selectedCategory === category.name && !showFeatured && !showImmediate
+                      ? 'text-white'
+                      : 'hover:opacity-80'
                   }`}
+                  style={{
+                    backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
+                      ? category.color
+                      : `${category.color}20`,
+                    color: selectedCategory === category.name && !showFeatured && !showImmediate
+                      ? 'white'
+                      : category.color,
+                  }}
                 >
-                  {category}
+                  {category.name}
                 </button>
               ))}
             </div>

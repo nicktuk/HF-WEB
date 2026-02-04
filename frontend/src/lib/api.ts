@@ -91,7 +91,7 @@ export const publicApi = {
   /**
    * Get list of categories
    */
-  async getCategories(): Promise<string[]> {
+  async getCategories(): Promise<{ name: string; color: string; show_in_menu: boolean }[]> {
     return fetchAPI('/public/categories');
   },
 };

@@ -9,6 +9,8 @@ class CategoryBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     is_active: bool = True
     display_order: int = 0
+    color: str = Field(default="#6b7280", pattern=r'^#[0-9a-fA-F]{6}$')
+    show_in_menu: bool = False
 
 
 class CategoryCreate(CategoryBase):
@@ -21,6 +23,8 @@ class CategoryUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
+    color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
+    show_in_menu: Optional[bool] = None
 
 
 class CategoryResponse(CategoryBase):

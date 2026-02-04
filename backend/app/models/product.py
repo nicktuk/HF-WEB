@@ -71,12 +71,14 @@ class Product(Base):
         return f"<Product(slug={self.slug}, enabled={self.enabled})>"
 
     @property
-    def final_price(self) -> float | None:
-        """Calcula el precio final con markup o precio custom."""
+    def final_price(self) -> int | None:
+        """Calcula el precio final con markup o precio custom, redondeado hacia arriba."""
+        import math
         if self.custom_price is not None:
-            return float(self.custom_price)
+            return math.ceil(float(self.custom_price))
         if self.original_price is not None:
-            return float(self.original_price) * (1 + float(self.markup_percentage) / 100)
+            price = float(self.original_price) * (1 + float(self.markup_percentage) / 100)
+            return math.ceil(price)
         return None
 
     @property

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,19 @@ import { useApiKey } from '@/hooks/useAuth';
 import type { Category, CategoryCreateForm } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Colores predefinidos para elegir
+const PRESET_COLORS = [
+  { name: 'Gris', value: '#6b7280' },
+  { name: 'Rojo', value: '#ef4444' },
+  { name: 'Naranja', value: '#f97316' },
+  { name: 'Amarillo', value: '#eab308' },
+  { name: 'Verde', value: '#22c55e' },
+  { name: 'Celeste', value: '#06b6d4' },
+  { name: 'Azul', value: '#3b82f6' },
+  { name: 'Violeta', value: '#8b5cf6' },
+  { name: 'Rosa', value: '#ec4899' },
+];
 
 async function fetchCategories(apiKey: string): Promise<Category[]> {
   const res = await fetch(`${API_URL}/categories?include_inactive=true`, {
@@ -32,6 +45,8 @@ export default function CategoriasPage() {
     name: '',
     is_active: true,
     display_order: 0,
+    color: '#6b7280',
+    show_in_menu: false,
   });
 
   const { data: categories, isLoading } = useQuery({
@@ -100,7 +115,7 @@ export default function CategoriasPage() {
 
   const openCreateModal = () => {
     setEditingCategory(null);
-    setFormData({ name: '', is_active: true, display_order: 0 });
+    setFormData({ name: '', is_active: true, display_order: 0, color: '#6b7280', show_in_menu: false });
     setShowModal(true);
   };
 
@@ -110,6 +125,8 @@ export default function CategoriasPage() {
       name: category.name,
       is_active: category.is_active,
       display_order: category.display_order,
+      color: category.color || '#6b7280',
+      show_in_menu: category.show_in_menu || false,
     });
     setShowModal(true);
   };
@@ -117,7 +134,7 @@ export default function CategoriasPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingCategory(null);
-    setFormData({ name: '', is_active: true, display_order: 0 });
+    setFormData({ name: '', is_active: true, display_order: 0, color: '#6b7280', show_in_menu: false });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -173,6 +190,10 @@ export default function CategoriasPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <GripVertical className="h-5 w-5 text-gray-400" />
+                    <div
+                      className="w-4 h-4 rounded-full border border-gray-200"
+                      style={{ backgroundColor: category.color || '#6b7280' }}
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">
@@ -180,6 +201,12 @@ export default function CategoriasPage() {
                         </span>
                         {!category.is_active && (
                           <Badge variant="default">Inactiva</Badge>
+                        )}
+                        {category.show_in_menu && (
+                          <Badge variant="outline" className="text-xs">
+                            <Eye className="h-3 w-3 mr-1" />
+                            Menu
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -260,17 +287,62 @@ export default function CategoriasPage() {
               helperText="Las categorías se ordenan de menor a mayor"
             />
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                className="h-4 w-4 text-primary-600 rounded border-gray-300"
-              />
-              <label htmlFor="is_active" className="text-sm text-gray-700">
-                Categoría activa
+            {/* Color Picker */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Color
               </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: color.value })}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      formData.color === color.value
+                        ? 'border-gray-900 scale-110'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                  title="Color personalizado"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 rounded border-gray-300"
+                />
+                <label htmlFor="is_active" className="text-sm text-gray-700">
+                  Categoría activa
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show_in_menu"
+                  checked={formData.show_in_menu}
+                  onChange={(e) => setFormData({ ...formData, show_in_menu: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 rounded border-gray-300"
+                />
+                <label htmlFor="show_in_menu" className="text-sm text-gray-700">
+                  Mostrar en menu mobile (junto a Nuevo y Entrega Inmediata)
+                </label>
+              </div>
             </div>
           </ModalContent>
 

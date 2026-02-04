@@ -607,6 +607,26 @@ class ProductService:
         """Get list of unique categories."""
         return self.repo.get_categories()
 
+    def get_public_categories(self) -> List[dict]:
+        """Get list of categories with their properties for public display."""
+        from app.models.category import Category as CategoryModel
+
+        categories = (
+            self.db.query(CategoryModel)
+            .filter(CategoryModel.is_active == True)
+            .order_by(CategoryModel.display_order, CategoryModel.name)
+            .all()
+        )
+
+        return [
+            {
+                "name": cat.name,
+                "color": cat.color or "#6b7280",
+                "show_in_menu": cat.show_in_menu or False,
+            }
+            for cat in categories
+        ]
+
     def get_enabled_products(self) -> List[Product]:
         """Get all enabled products with images for PDF export."""
         return self.db.query(Product).filter(

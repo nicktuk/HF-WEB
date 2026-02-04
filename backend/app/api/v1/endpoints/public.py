@@ -62,11 +62,11 @@ async def get_product(
     return service.get_public_product(slug)
 
 
-@router.get("/categories", response_model=list[str])
+@router.get("/categories")
 @limiter.limit(settings.RATE_LIMIT_PUBLIC)
 async def get_categories(
     request: Request,
     service: ProductService = Depends(get_product_service),
 ):
-    """Get list of available categories."""
-    return service.get_categories()
+    """Get list of available categories with their properties."""
+    return service.get_public_categories()

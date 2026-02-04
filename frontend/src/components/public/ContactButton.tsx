@@ -6,7 +6,7 @@ import { getWhatsAppUrl, cn } from '@/lib/utils';
 interface ContactButtonProps {
   productName: string;
   productSlug?: string;
-  productPrice?: number;
+  productPrice?: number | null;
   variant?: 'whatsapp' | 'email';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
