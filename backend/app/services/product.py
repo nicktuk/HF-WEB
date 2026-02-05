@@ -934,3 +934,83 @@ class ProductService:
             "stats": stats,
             "chart_data": chart_data,
         }
+
+    def get_stats_by_price_range(self) -> dict:
+        """
+        Get product stats grouped by price ranges.
+
+        Ranges:
+        - 0 to 5000
+        - 5001 to 20000
+        - 20001 to 80000
+        - greater than 80000
+
+        Returns:
+            dict with ranges containing count and products list
+        """
+        from sqlalchemy import func, case, and_
+
+        # Define price ranges
+        ranges = [
+            {"key": "0-5000", "label": "$0 - $5.000", "min": 0, "max": 5000},
+            {"key": "5001-20000", "label": "$5.001 - $20.000", "min": 5001, "max": 20000},
+            {"key": "20001-80000", "label": "$20.001 - $80.000", "min": 20001, "max": 80000},
+            {"key": "80001+", "label": "Mayor a $80.000", "min": 80001, "max": None},
+        ]
+
+        result = []
+
+        for price_range in ranges:
+            # Build query conditions
+            conditions = [Product.enabled == True]
+
+            if price_range["max"] is not None:
+                conditions.append(Product.original_price >= price_range["min"])
+                conditions.append(Product.original_price <= price_range["max"])
+            else:
+                conditions.append(Product.original_price > price_range["min"])
+
+            # Get products in this range
+            products = (
+                self.db.query(Product)
+                .filter(and_(*conditions))
+                .order_by(Product.original_price.asc())
+                .limit(50)  # Limit to 50 products per range for performance
+                .all()
+            )
+
+            # Get total count
+            total_count = (
+                self.db.query(func.count(Product.id))
+                .filter(and_(*conditions))
+                .scalar()
+            )
+
+            # Build products list with essential info
+            products_list = []
+            for p in products:
+                # Get first image
+                first_image = None
+                if p.images:
+                    first_image = p.images[0].url if p.images[0].url else p.images[0].original_url
+
+                products_list.append({
+                    "id": p.id,
+                    "name": p.custom_name or p.original_name,
+                    "original_name": p.original_name,
+                    "price": float(p.original_price) if p.original_price else None,
+                    "sku": p.sku,
+                    "source_name": p.source_website.display_name if p.source_website else None,
+                    "image": first_image,
+                })
+
+            result.append({
+                "key": price_range["key"],
+                "label": price_range["label"],
+                "min": price_range["min"],
+                "max": price_range["max"],
+                "count": total_count or 0,
+                "products": products_list,
+            })
+
+        return {"ranges": result}

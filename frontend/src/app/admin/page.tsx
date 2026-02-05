@@ -1,74 +1,56 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight } from 'lucide-react';
+import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
 import { useQuery } from '@tanstack/react-query';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 
-interface SourceCategoryStat {
-  source_id: number;
-  source_name: string;
-  category: string;
-  enabled_count: number;
-  total_count: number;
+interface PriceRangeProduct {
+  id: number;
+  name: string;
+  original_name: string;
+  price: number | null;
+  sku: string | null;
+  source_name: string | null;
+  image: string | null;
 }
 
-interface StatsResponse {
-  sources: { id: number; name: string }[];
-  categories: string[];
-  stats: SourceCategoryStat[];
-  chart_data: Record<string, string | number>[];
+interface PriceRange {
+  key: string;
+  label: string;
+  min: number;
+  max: number | null;
+  count: number;
+  products: PriceRangeProduct[];
 }
 
-// Colors for categories in chart
-const CATEGORY_COLORS = [
-  '#3b82f6', // blue
-  '#22c55e', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#84cc16', // lime
-  '#6366f1', // indigo
-];
+interface PriceRangeResponse {
+  ranges: PriceRange[];
+}
 
 export default function AdminDashboard() {
   const apiKey = useApiKey();
+  const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
 
-  // Get recent products (last 20 by created_at)
-  const { data: recentProducts } = useAdminProducts(apiKey || '', { limit: 20 });
   // Get counts for enabled/disabled
   const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
   const { data: disabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: false });
   const { data: sourceWebsites } = useSourceWebsites(apiKey || '');
 
-  // Get stats by source and category
-  const { data: statsData } = useQuery<StatsResponse>({
-    queryKey: ['admin-stats-by-source-category'],
+  // Get price range stats
+  const { data: priceRangeData } = useQuery<PriceRangeResponse>({
+    queryKey: ['admin-stats-by-price-range'],
     queryFn: async () => {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/stats/by-source-category`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/stats/by-price-range`,
         {
           headers: { 'X-Admin-API-Key': apiKey || '' },
         }
       );
-      if (!response.ok) throw new Error('Error fetching stats');
+      if (!response.ok) throw new Error('Error fetching price range stats');
       return response.json();
     },
     enabled: !!apiKey,
@@ -78,28 +60,32 @@ export default function AdminDashboard() {
   const disabledCount = disabledData?.total || 0;
   const totalProducts = enabledCount + disabledCount;
 
-  const productsWithMarketData = recentProducts?.items.filter(
-    (p) => p.market_avg_price
-  ).length || 0;
-
-  // Group stats by source for the table
-  const statsBySource = useMemo(() => {
-    if (!statsData) return [];
-
-    const grouped: Record<string, { name: string; categories: Record<string, { enabled: number; total: number }> }> = {};
-
-    for (const stat of statsData.stats) {
-      if (!grouped[stat.source_name]) {
-        grouped[stat.source_name] = { name: stat.source_name, categories: {} };
-      }
-      grouped[stat.source_name].categories[stat.category] = {
-        enabled: stat.enabled_count,
-        total: stat.total_count,
-      };
+  const toggleRange = (key: string) => {
+    const newExpanded = new Set(expandedRanges);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
     }
+    setExpandedRanges(newExpanded);
+  };
 
-    return Object.values(grouped);
-  }, [statsData]);
+  const formatPrice = (price: number | null) => {
+    if (price === null) return '-';
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Colors for price ranges
+  const rangeColors: Record<string, { bg: string; text: string; border: string }> = {
+    '0-5000': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+    '5001-20000': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    '20001-80000': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+    '80001+': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  };
 
   return (
     <div className="space-y-6">
@@ -159,220 +145,176 @@ export default function AdminDashboard() {
                 <TrendingUp className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Con datos de mercado</p>
-                <p className="text-2xl font-bold text-gray-900">{productsWithMarketData}</p>
+                <p className="text-sm text-gray-600">Webs de Origen</p>
+                <p className="text-2xl font-bold text-gray-900">{sourceWebsites?.items.length || 0}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Stats by Source and Category */}
-      {statsData && statsData.categories.length > 0 && (
+      {/* Price Range Stats */}
+      {priceRangeData && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Productos por Web de Origen y Categoria
-            </h2>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 px-3 font-medium text-gray-600 sticky left-0 bg-white">
-                      Web Origen
-                    </th>
-                    {statsData.categories.map((cat) => (
-                      <th key={cat} className="text-center py-2 px-3 font-medium text-gray-600 min-w-[100px]">
-                        {cat}
-                      </th>
-                    ))}
-                    <th className="text-center py-2 px-3 font-medium text-gray-600">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statsBySource.map((source) => {
-                    const totalEnabled = Object.values(source.categories).reduce((sum, c) => sum + c.enabled, 0);
-                    const totalAll = Object.values(source.categories).reduce((sum, c) => sum + c.total, 0);
-
-                    return (
-                      <tr key={source.name} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="py-2 px-3 font-medium text-gray-900 sticky left-0 bg-white">
-                          {source.name}
-                        </td>
-                        {statsData.categories.map((cat) => {
-                          const catStats = source.categories[cat];
-                          return (
-                            <td key={cat} className="py-2 px-3 text-center">
-                              {catStats ? (
-                                <span className={catStats.enabled > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                                  {catStats.enabled}/{catStats.total}
-                                </span>
-                              ) : (
-                                <span className="text-gray-300">-</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="py-2 px-3 text-center font-semibold text-gray-900">
-                          {totalEnabled}/{totalAll}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Productos por Rango de Precio
+              </h2>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Stacked Bar Chart */}
-      {statsData && statsData.chart_data.length > 0 && (
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Productos Activados por Web de Origen
-            </h2>
+            <p className="text-sm text-gray-500">
+              Solo productos habilitados. Click para ver detalle.
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={statsData.chart_data}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="source" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {statsData.categories.map((category, index) => (
-                    <Bar
-                      key={category}
-                      dataKey={category}
-                      stackId="a"
-                      fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                      name={category}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="space-y-3">
+              {priceRangeData.ranges.map((range) => {
+                const isExpanded = expandedRanges.has(range.key);
+                const colors = rangeColors[range.key] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Source Websites */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Webs de Origen
-            </h2>
-          </CardHeader>
-          <CardContent>
-            {sourceWebsites?.items && sourceWebsites.items.length > 0 ? (
-              <ul className="space-y-2">
-                {sourceWebsites.items.map((website) => (
-                  <li
-                    key={website.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {website.display_name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {website.enabled_product_count} activos / {website.product_count} total
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        website.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
+                return (
+                  <div key={range.key} className={`border rounded-lg overflow-hidden ${colors.border}`}>
+                    {/* Range header - clickable */}
+                    <button
+                      onClick={() => toggleRange(range.key)}
+                      className={`w-full px-4 py-3 flex items-center justify-between hover:opacity-80 transition-opacity ${colors.bg}`}
                     >
-                      {website.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 text-center py-4">
-                No hay webs de origen configuradas
-              </p>
-            )}
-            <Link
-              href="/admin/source-websites"
-              className="block mt-4 text-center text-sm text-primary-600 hover:text-primary-700"
-            >
-              Gestionar webs de origen <ChevronRight className="inline h-4 w-4" />
-            </Link>
-          </CardContent>
-        </Card>
+                      <div className="flex items-center gap-3">
+                        {isExpanded ? (
+                          <ChevronDown className={`h-5 w-5 ${colors.text}`} />
+                        ) : (
+                          <ChevronRight className={`h-5 w-5 ${colors.text}`} />
+                        )}
+                        <span className={`font-medium ${colors.text}`}>
+                          {range.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-bold ${colors.text}`}>
+                          {range.count}
+                        </span>
+                        <span className="text-sm text-gray-500">productos</span>
+                      </div>
+                    </button>
 
-        {/* Recent Products */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Ultimos 20 Productos del Scraping
-            </h2>
-          </CardHeader>
-          <CardContent>
-            {recentProducts?.items && recentProducts.items.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 font-medium text-gray-600">Producto</th>
-                      <th className="text-left py-2 font-medium text-gray-600">Categoria</th>
-                      <th className="text-right py-2 font-medium text-gray-600">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentProducts.items.map((product) => (
-                      <tr key={product.id} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="py-2">
-                          <Link
-                            href={`/admin/productos/${product.id}`}
-                            className="font-medium text-gray-900 hover:text-primary-600 line-clamp-1"
-                          >
-                            {product.custom_name || product.original_name}
-                          </Link>
-                        </td>
-                        <td className="py-2 text-gray-600">
-                          {product.category || <span className="text-gray-400">-</span>}
-                        </td>
-                        <td className="py-2 text-right">
-                          <Badge variant={product.enabled ? 'success' : 'default'}>
-                            {product.enabled ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">
-                No hay productos
-              </p>
-            )}
-            <Link
-              href="/admin/productos"
-              className="block mt-4 text-center text-sm text-primary-600 hover:text-primary-700"
-            >
-              Ver todos los productos <ChevronRight className="inline h-4 w-4" />
-            </Link>
+                    {/* Expanded content - products list */}
+                    {isExpanded && range.products.length > 0 && (
+                      <div className="border-t bg-white">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                Producto
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                Fuente
+                              </th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                Precio
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {range.products.map((product) => (
+                              <tr key={product.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-2">
+                                  <div className="flex items-center gap-2">
+                                    {product.image && (
+                                      <img
+                                        src={product.image}
+                                        alt=""
+                                        className="w-8 h-8 object-cover rounded"
+                                      />
+                                    )}
+                                    <Link
+                                      href={`/admin/productos/${product.id}`}
+                                      className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                    >
+                                      <span className="line-clamp-1">{product.name}</span>
+                                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                    </Link>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2 text-gray-600">
+                                  {product.source_name || '-'}
+                                </td>
+                                <td className="px-4 py-2 text-right font-medium text-gray-900">
+                                  {formatPrice(product.price)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {range.count > range.products.length && (
+                          <div className="px-4 py-2 text-center text-sm text-gray-500 border-t">
+                            Mostrando {range.products.length} de {range.count} productos
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {isExpanded && range.products.length === 0 && (
+                      <div className="border-t bg-white px-4 py-4 text-center text-gray-500">
+                        No hay productos en este rango
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Source Websites */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Webs de Origen
+          </h2>
+        </CardHeader>
+        <CardContent>
+          {sourceWebsites?.items && sourceWebsites.items.length > 0 ? (
+            <ul className="space-y-2">
+              {sourceWebsites.items.map((website) => (
+                <li
+                  key={website.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {website.display_name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {website.enabled_product_count} activos / {website.product_count} total
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      website.is_active
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {website.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 text-center py-4">
+              No hay webs de origen configuradas
+            </p>
+          )}
+          <Link
+            href="/admin/source-websites"
+            className="block mt-4 text-center text-sm text-primary-600 hover:text-primary-700"
+          >
+            Gestionar webs de origen <ChevronRight className="inline h-4 w-4" />
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

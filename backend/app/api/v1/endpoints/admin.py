@@ -908,3 +908,20 @@ async def get_stats_by_source_and_category(
     Used for dashboard overview and charts.
     """
     return service.get_stats_by_source_and_category()
+
+
+@router.get(
+    "/stats/by-price-range",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_stats_by_price_range(
+    request: Request,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Get product stats grouped by price ranges.
+
+    Ranges: 0-5000, 5001-20000, 20001-80000, 80001+
+    Returns count and sample products for each range.
+    """
+    return service.get_stats_by_price_range()
