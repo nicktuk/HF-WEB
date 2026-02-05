@@ -112,25 +112,33 @@ class SinaScraper(BaseScraper):
             logger.info(f"[Sina] Navegando a login...")
             print(f"[Sina] Navegando a login...")
 
-            await page.goto(self.BASE_URL, wait_until='networkidle')
-            await asyncio.sleep(2)
+            await page.goto(self.BASE_URL, wait_until='domcontentloaded', timeout=60000)
+            await asyncio.sleep(3)
 
             # Click on login button to open modal
             login_btn = page.locator('text=Iniciar sesión').first
-            if await login_btn.is_visible():
+            try:
+                await login_btn.wait_for(state='visible', timeout=10000)
                 await login_btn.click()
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
+            except:
+                logger.info("[Sina] No login button found, trying direct form...")
 
             # Fill login form
-            await page.fill('input[type="email"], input[name="email"], input[placeholder*="mail"]', username)
-            await page.fill('input[type="password"], input[name="password"]', password)
+            email_input = page.locator('input[type="email"], input[name="email"], input[placeholder*="mail"]').first
+            await email_input.wait_for(state='visible', timeout=10000)
+            await email_input.fill(username)
+
+            password_input = page.locator('input[type="password"], input[name="password"]').first
+            await password_input.fill(password)
 
             # Submit
-            await page.click('button[type="submit"], button:has-text("Ingresar")')
-            await asyncio.sleep(3)
+            submit_btn = page.locator('button[type="submit"], button:has-text("Ingresar"), button:has-text("Iniciar")').first
+            await submit_btn.click()
+            await asyncio.sleep(5)
 
-            # Check if logged in (look for user menu or cart)
-            await page.wait_for_load_state('networkidle')
+            # Wait for navigation
+            await page.wait_for_load_state('domcontentloaded', timeout=30000)
 
             # Verify login success
             content = await page.content()
