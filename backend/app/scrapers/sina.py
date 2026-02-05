@@ -43,6 +43,7 @@ class SinaScraper(BaseScraper):
 
     def __init__(self, http_client=None):
         super().__init__(http_client)
+        self._playwright = None
         self._browser: Optional[Browser] = None
         self._page: Optional[Page] = None
         self._logged_in = False
@@ -64,22 +65,26 @@ class SinaScraper(BaseScraper):
             )
 
         if self._page is None:
-            playwright_instance = await async_playwright().start()
+            import os
+            self._playwright = await async_playwright().start()
 
-            launch_options = {
-                'headless': True,
-                'args': [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                ]
-            }
+            # Use Browserless.io cloud browser
+            browserless_token = os.environ.get('BROWSERLESS_TOKEN', '')
 
-            logger.info("[Sina] Launching Playwright chromium...")
-            print("[Sina] Launching Playwright chromium...")
+            if browserless_token:
+                browserless_url = f"wss://chrome.browserless.io?token={browserless_token}"
+                logger.info("[Sina] Connecting to Browserless.io...")
+                print("[Sina] Connecting to Browserless.io...")
+                self._browser = await self._playwright.chromium.connect_over_cdp(browserless_url)
+            else:
+                # Fallback to local browser (for development)
+                logger.info("[Sina] No BROWSERLESS_TOKEN, using local browser...")
+                print("[Sina] No BROWSERLESS_TOKEN, using local browser...")
+                self._browser = await self._playwright.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-setuid-sandbox']
+                )
 
-            self._browser = await playwright_instance.chromium.launch(**launch_options)
             self._page = await self._browser.new_page()
             await self._page.set_viewport_size({"width": 1920, "height": 1080})
 
@@ -536,8 +541,11 @@ class SinaScraper(BaseScraper):
         if self._browser:
             await self._browser.close()
             self._browser = None
-            self._page = None
-            self._logged_in = False
+        if self._playwright:
+            await self._playwright.stop()
+            self._playwright = None
+        self._page = None
+        self._logged_in = False
         await super().close()
 
 

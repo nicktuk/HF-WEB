@@ -1,12 +1,8 @@
 [phases.setup]
-# Dependencies for Playwright/Chromium
-nixPkgs = ["ffmpeg", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig", "python311"]
+nixPkgs = ["python311"]
 
 [phases.install]
-cmds = [
-    "pip install -r requirements.txt",
-    "playwright install --with-deps chromium || true"
-]
+cmds = ["pip install -r requirements.txt"]
 
 [phases.build]
 cmds = [
@@ -15,7 +11,7 @@ cmds = [
 ]
 
 [start]
-cmd = "playwright install chromium 2>/dev/null || true; uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.11"

@@ -88,7 +88,7 @@ def seed_source_websites(db):
                 "requires_auth": True,
                 "auth_type": "login_form"
             },
-            "notes": "Catálogo Sina. Requiere login. Tiene cantidad mínima y contenido de kit."
+            "notes": "Catálogo Sina. Usa Browserless.io para el browser."
         },
         {
             "name": "protrade",
