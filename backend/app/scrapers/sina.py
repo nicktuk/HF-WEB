@@ -132,9 +132,20 @@ class SinaScraper(BaseScraper):
             password_input = page.locator('input[type="password"], input[name="password"]').first
             await password_input.fill(password)
 
-            # Submit
+            # Close any modals/overlays that might block the click
+            try:
+                close_btns = page.locator('[class*="close"], [class*="dismiss"], button:has-text("×"), button:has-text("Cerrar"), .modal__close')
+                for i in range(await close_btns.count()):
+                    btn = close_btns.nth(i)
+                    if await btn.is_visible():
+                        await btn.click(timeout=2000)
+                        await asyncio.sleep(0.5)
+            except:
+                pass
+
+            # Submit with force to bypass any remaining overlays
             submit_btn = page.locator('button[type="submit"], button:has-text("Ingresar"), button:has-text("Iniciar")').first
-            await submit_btn.click()
+            await submit_btn.click(force=True)
             await asyncio.sleep(5)
 
             # Wait for navigation
