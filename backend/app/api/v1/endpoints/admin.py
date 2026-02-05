@@ -62,6 +62,7 @@ async def get_products_admin(
     category: Optional[str] = Query(default=None, max_length=100),
     is_featured: Optional[bool] = Query(default=None),
     is_immediate_delivery: Optional[bool] = Query(default=None),
+    price_range: Optional[str] = Query(default=None, max_length=20),
     service: ProductService = Depends(get_product_service),
 ):
     """
@@ -77,7 +78,8 @@ async def get_products_admin(
         search,
         category,
         is_featured,
-        is_immediate_delivery
+        is_immediate_delivery,
+        price_range
     )
     pages = (total + limit - 1) // limit if limit > 0 else 0
 

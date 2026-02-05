@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,18 @@ import { useApiKey } from '@/hooks/useAuth';
 
 interface ActivateInactiveModalProps {
   selectedIds: number[];
+  existingMarkup?: number; // Pass the highest existing markup from selected products
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function ActivateInactiveModal({ selectedIds, onClose, onSuccess }: ActivateInactiveModalProps) {
+export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, onSuccess }: ActivateInactiveModalProps) {
   const apiKey = useApiKey() || '';
   const activateMutation = useActivateSelected(apiKey);
   const { data: existingCategories } = useCategories();
 
-  const [markup, setMarkup] = useState('');
+  // Initialize markup with existing value if > 0
+  const [markup, setMarkup] = useState(existingMarkup && existingMarkup > 0 ? existingMarkup.toString() : '');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [confirmed, setConfirmed] = useState(false);

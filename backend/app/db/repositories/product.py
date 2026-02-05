@@ -125,7 +125,8 @@ class ProductRepository(BaseRepository[Product]):
         search: Optional[str] = None,
         category: Optional[str] = None,
         is_featured: Optional[bool] = None,
-        is_immediate_delivery: Optional[bool] = None
+        is_immediate_delivery: Optional[bool] = None,
+        price_range: Optional[str] = None
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -164,6 +165,10 @@ class ProductRepository(BaseRepository[Product]):
                     Product.slug.ilike(search_term)
                 )
             )
+
+        # Price range filter
+        if price_range:
+            query = self._apply_price_range_filter(query, price_range)
 
         return (
             query
@@ -225,7 +230,8 @@ class ProductRepository(BaseRepository[Product]):
         search: Optional[str] = None,
         category: Optional[str] = None,
         is_featured: Optional[bool] = None,
-        is_immediate_delivery: Optional[bool] = None
+        is_immediate_delivery: Optional[bool] = None,
+        price_range: Optional[str] = None
     ) -> int:
         """Count products with filters for admin panel."""
         query = self.db.query(Product)
@@ -258,4 +264,43 @@ class ProductRepository(BaseRepository[Product]):
                 )
             )
 
+        # Price range filter
+        if price_range:
+            query = self._apply_price_range_filter(query, price_range)
+
         return query.count()
+
+    def _apply_price_range_filter(self, query, price_range: str):
+        """Apply price range filter to query.
+
+        Ranges:
+        - 0-5000: $0 to $5,000
+        - 5001-20000: $5,001 to $20,000
+        - 20001-80000: $20,001 to $80,000
+        - 80001+: greater than $80,000
+        """
+        if price_range == "0-5000":
+            query = query.filter(
+                and_(
+                    Product.original_price >= 0,
+                    Product.original_price <= 5000
+                )
+            )
+        elif price_range == "5001-20000":
+            query = query.filter(
+                and_(
+                    Product.original_price >= 5001,
+                    Product.original_price <= 20000
+                )
+            )
+        elif price_range == "20001-80000":
+            query = query.filter(
+                and_(
+                    Product.original_price >= 20001,
+                    Product.original_price <= 80000
+                )
+            )
+        elif price_range == "80001+":
+            query = query.filter(Product.original_price > 80000)
+
+        return query

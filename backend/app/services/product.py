@@ -110,12 +110,13 @@ class ProductService:
         search: Optional[str] = None,
         category: Optional[str] = None,
         is_featured: Optional[bool] = None,
-        is_immediate_delivery: Optional[bool] = None
+        is_immediate_delivery: Optional[bool] = None,
+        price_range: Optional[str] = None
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured, is_immediate_delivery)
-        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured, is_immediate_delivery)
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured, is_immediate_delivery, price_range)
+        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured, is_immediate_delivery, price_range)
         return products, total
 
     def get_by_id(self, id: int) -> Product:

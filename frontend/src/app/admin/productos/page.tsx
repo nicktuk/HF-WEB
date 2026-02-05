@@ -25,6 +25,7 @@ export default function ProductsPage() {
     sourceFilter,
     categoryFilter,
     featuredFilter,
+    priceRangeFilter,
     page,
     limit,
     setSearch,
@@ -32,6 +33,7 @@ export default function ProductsPage() {
     setSourceFilter,
     setCategoryFilter,
     setFeaturedFilter,
+    setPriceRangeFilter,
     setPage,
     setLimit,
   } = useAdminFilters();
@@ -74,6 +76,7 @@ export default function ProductsPage() {
     search: search || undefined,
     category: categoryFilter,
     is_featured: featuredFilter,
+    price_range: priceRangeFilter,
   });
 
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
@@ -281,6 +284,22 @@ export default function ProductsPage() {
             ))}
           </select>
         )}
+
+        {/* Price Range Filter */}
+        <select
+          value={priceRangeFilter || ''}
+          onChange={(e) => {
+            setPriceRangeFilter(e.target.value || undefined);
+            setSelectedIds([]);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+        >
+          <option value="">Todos los precios</option>
+          <option value="0-5000">$0 - $5.000</option>
+          <option value="5001-20000">$5.001 - $20.000</option>
+          <option value="20001-80000">$20.001 - $80.000</option>
+          <option value="80001+">Mayor a $80.000</option>
+        </select>
       </div>
 
       {/* Results count and per-page selector */}
@@ -289,7 +308,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || featuredFilter) && (
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || featuredFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>
@@ -368,6 +387,12 @@ export default function ProductsPage() {
       {showActivateModal && (
         <ActivateInactiveModal
           selectedIds={selectedIds}
+          existingMarkup={
+            // Find highest markup from selected products
+            data?.items
+              .filter(p => selectedIds.includes(p.id))
+              .reduce((max, p) => Math.max(max, Number(p.markup_percentage) || 0), 0)
+          }
           onClose={() => setShowActivateModal(false)}
           onSuccess={() => setSelectedIds([])}
         />

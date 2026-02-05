@@ -279,7 +279,7 @@ export default function ComparadorPage() {
                                                 <img
                                                   src={product.image}
                                                   alt=""
-                                                  className="w-10 h-10 object-cover rounded"
+                                                  className="w-14 h-14 object-cover rounded"
                                                 />
                                               )}
                                               <span className="font-medium text-gray-900">
@@ -367,7 +367,7 @@ export default function ComparadorPage() {
                                     <img
                                       src={product.image}
                                       alt=""
-                                      className="w-8 h-8 object-cover rounded"
+                                      className="w-12 h-12 object-cover rounded"
                                     />
                                   )}
                                   <Link

@@ -115,6 +115,7 @@ export const adminApi = {
       category?: string;
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
+      price_range?: string;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
     const searchParams = new URLSearchParams();
@@ -128,6 +129,7 @@ export const adminApi = {
     if (params.is_immediate_delivery !== undefined) {
       searchParams.set('is_immediate_delivery', params.is_immediate_delivery.toString());
     }
+    if (params.price_range) searchParams.set('price_range', params.price_range);
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/products${query ? `?${query}` : ''}`, {}, apiKey);

@@ -189,13 +189,13 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                 {/* Product */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
+                    <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
                       {primaryImage ? (
                         <Image
                           src={primaryImage.url}
                           alt={product.name}
-                          width={48}
-                          height={48}
+                          width={64}
+                          height={64}
                           className="h-full w-full object-cover"
                         />
                       ) : (

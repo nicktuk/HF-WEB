@@ -67,6 +67,7 @@ export function useAdminProducts(
     category?: string;
     is_featured?: boolean;
     is_immediate_delivery?: boolean;
+    price_range?: string;
   } = {}
 ) {
   return useQuery({

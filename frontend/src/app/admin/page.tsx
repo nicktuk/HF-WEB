@@ -224,7 +224,7 @@ export default function AdminDashboard() {
                                       <img
                                         src={product.image}
                                         alt=""
-                                        className="w-8 h-8 object-cover rounded"
+                                        className="w-12 h-12 object-cover rounded"
                                       />
                                     )}
                                     <Link
