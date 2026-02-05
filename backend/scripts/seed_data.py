@@ -109,7 +109,13 @@ def seed_source_websites(db):
             db.add(website)
             print(f"Created source website: {data['name']}")
         else:
-            print(f"Source website already exists: {data['name']}")
+            # Update existing source with new config
+            existing.display_name = data["display_name"]
+            existing.base_url = data["base_url"]
+            existing.is_active = data["is_active"]
+            existing.scraper_config = data["scraper_config"]
+            existing.notes = data.get("notes")
+            print(f"Updated source website: {data['name']}")
 
     db.commit()
 
