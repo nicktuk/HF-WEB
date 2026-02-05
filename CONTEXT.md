@@ -391,28 +391,52 @@ cmds = [
   - `min_purchase_qty` (Integer, nullable) - Cantidad mínima de compra
   - `kit_content` (Text, nullable) - Contenido del kit/combo
 
-### Scraper Sina
+### Scraper Sina (API REST)
 
 | Campo | Valor |
 |-------|-------|
 | **Identificador** | `sina` |
 | **URL Base** | `https://www.sina.com.ar` |
-| **Requiere auth** | Sí (login con email/password) |
-| **Usa Playwright** | Sí (web Angular) |
+| **API Base** | `https://apisina-v1.leren.com.ar` |
+| **Requiere auth** | Sí (JWT token) |
+| **Usa Playwright** | **NO** (usa API REST directamente) |
 | **Archivo** | `backend/app/scrapers/sina.py` |
 
-**Credenciales (en seed_data.py):**
-```json
-{
-  "username": "diezjuarez22@gmail.com",
-  "password": "Hermanos1997!"
+**Credenciales (variables de entorno):**
+```
+SINA_USERNAME=diezjuarez22@gmail.com
+SINA_PASSWORD=Hermanos1997!
+```
+
+**API Endpoints:**
+- `POST /auth/login` - Login con email/password, devuelve JWT token
+- `GET /producto/categoriapadre/{categoria}` - Productos por categoría
+
+**Categorías conocidas:**
+```python
+CATEGORIES = [
+    "Limpieza", "Descartables", "Bazar", "Perfumeria", "Alimentos",
+    "Ferreteria", "Indumentaria", "Libreria", "Jugueteria", "Electronica",
+    "Hogar", "Jardin", "Mascotas", "Automotor", "Textil",
+]
+```
+
+**Headers requeridos:**
+```python
+headers = {
+    "x-api-token": token,  # JWT token del login
+    "Origin": "https://www.sina.com.ar",
+    "Referer": "https://www.sina.com.ar/",
 }
 ```
 
 **Características:**
 - Extrae campos adicionales: `min_purchase_qty`, `kit_content`, `sku`
-- Intenta usar API interna primero, fallback a parsing de página
-- URL de producto: `https://www.sina.com.ar/{cat}/{subcat}/{nombre}/{id}`
+- No usa browser, todo via httpx/requests
+- Itera por categorías para obtener todos los productos
+- Rate limit: 0.5s entre requests (API es rápida)
+
+**Historia:** Inicialmente se intentó usar Playwright para el Angular SPA, pero hubo problemas con Railway (chromium no disponible, timeouts con Browserless.io). Se descubrió la API REST inspeccionando las llamadas de red del frontend.
 
 ### Scraper Protrade
 
@@ -430,35 +454,32 @@ cmds = [
 - Nombre en `h1`, precio en `p.datos`, código en `p.datos1`
 - Si necesita password, agregar `"password": "xxx"` al scraper_config
 
-### Fix Playwright para Railway
+### Playwright en Railway (solo DecoModa)
 
-Los scrapers que usan Playwright (Sina, DecoModa) ahora usan el **Chromium del sistema** instalado via Nix en lugar de descargar el browser de Playwright.
+**Nota:** El scraper Sina ya **NO usa Playwright** (usa API REST directamente).
 
-**Cambios en `nixpacks.toml`:**
-```toml
-[variables]
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
-```
+DecoModa usa Playwright con fallback a sitemap.xml:
+- Localmente: instala chromium via `playwright install chromium`
+- En Railway: puede fallar, usa sitemap como fallback (~113 productos vs 462 con JS)
 
-**Cambios en scrapers:**
-- Usan `shutil.which('chromium')` para encontrar el ejecutable en PATH
-- Args adicionales: `--no-sandbox`, `--disable-setuid-sandbox`, `--disable-dev-shm-usage`
+**Problema persistente:** Playwright en Railway es problemático. Si un scraper necesita browser, considerar:
+1. Usar API REST del sitio si existe (como Sina)
+2. Usar Browserless.io (requiere cuenta de pago para evitar timeouts)
+3. Aceptar fallback sin JavaScript
 
 ### Archivos Modificados/Creados
 
 | Archivo | Cambio |
 |---------|--------|
 | `backend/alembic/versions/008_...` | **NUEVO** - Migración campos nuevos |
-| `backend/app/scrapers/sina.py` | **NUEVO** - Scraper Sina |
+| `backend/app/scrapers/sina.py` | **NUEVO** - Scraper Sina (API REST, sin browser) |
 | `backend/app/scrapers/protrade.py` | **NUEVO** - Scraper Protrade |
-| `backend/app/scrapers/decomoda.py` | Fix para usar chromium del sistema |
 | `backend/app/scrapers/base.py` | Agregados min_purchase_qty y kit_content |
 | `backend/app/models/product.py` | Columnas min_purchase_qty y kit_content |
-| `backend/app/schemas/product.py` | Campos en schemas de respuesta |
-| `backend/app/services/product.py` | Guardar campos nuevos al scrapear |
+| `backend/app/services/scrape_job.py` | Guardar campos nuevos al scrapear |
 | `backend/app/main.py` | Import scrapers sina y protrade |
-| `backend/scripts/seed_data.py` | Fuentes sina y protrade |
-| `backend/nixpacks.toml` | Build con migrations + seed, fix Playwright |
+| `backend/scripts/seed_data.py` | Fuentes sina y protrade (actualiza existentes) |
+| `backend/nixpacks.toml` | Simplificado: migrations + seed en build |
 | `frontend/src/types/index.ts` | Campos min_purchase_qty y kit_content |
 
 ### Lista de Scrapers Registrados
@@ -468,6 +489,14 @@ PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
 | `newredmayorista` | New Red Mayorista | No | Precios no visibles públicamente |
 | `redlenic` | Redlenic | Password: `catan` | Todos productos en una página |
 | `decomoda` | DecoModa Mayorista | No | Usa Playwright, fallback sitemap |
-| `sina` | Sina | Email + Password | Usa Playwright, campos extra |
+| `sina` | Sina | JWT (env vars) | **API REST**, campos extra |
 | `protrade` | Protrade | No (o password) | Estructura = Redlenic |
 | `manual` | Producto Manual | - | Productos creados a mano |
+
+### Variables de Entorno para Scrapers
+
+```
+# Sina (requeridas para scraper sina)
+SINA_USERNAME=email@ejemplo.com
+SINA_PASSWORD=contraseña
+```

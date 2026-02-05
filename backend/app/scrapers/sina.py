@@ -1,52 +1,53 @@
 """
 Scraper for sina.com.ar
 
-Este scraper está diseñado para el catálogo de Sina.
-Requiere autenticación con usuario y contraseña.
-La página usa Angular y carga productos dinámicamente.
+Este scraper usa la API REST de Sina directamente.
+No requiere browser/Playwright.
 
-NOTA: Usa Playwright para renderizar JavaScript y manejar el login.
+API Base: https://apisina-v1.leren.com.ar
+Auth: JWT token en header x-api-token
 """
 from typing import Optional, Dict, List, Callable, Any
 import re
 import json
 import logging
 import asyncio
-from bs4 import BeautifulSoup
+import os
 
 from app.scrapers.base import BaseScraper, ScrapedProduct
 from app.core.exceptions import ScraperError
 
 logger = logging.getLogger(__name__)
 
-# Playwright is required for this scraper
-try:
-    from playwright.async_api import async_playwright, Page, Browser
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
-    logger.warning("Playwright not installed. Sina scraper will not work.")
-
 
 class SinaScraper(BaseScraper):
-    """Scraper for sina.com.ar catalog.
+    """Scraper for sina.com.ar using REST API."""
 
-    Usa Playwright para:
-    1. Hacer login con usuario y contraseña
-    2. Navegar por el catálogo
-    3. Extraer datos de productos incluyendo cantidad mínima y contenido del kit
-    """
+    API_BASE = "https://apisina-v1.leren.com.ar"
+    LOGIN_URL = f"{API_BASE}/auth/login"
 
-    BASE_URL = "https://www.sina.com.ar"
-    LOGIN_URL = f"{BASE_URL}/login"
-    CATALOG_URL = f"{BASE_URL}/categorias"
+    # Known categories to scrape
+    CATEGORIES = [
+        "Limpieza",
+        "Descartables",
+        "Bazar",
+        "Perfumeria",
+        "Alimentos",
+        "Ferreteria",
+        "Indumentaria",
+        "Libreria",
+        "Jugueteria",
+        "Electronica",
+        "Hogar",
+        "Jardin",
+        "Mascotas",
+        "Automotor",
+        "Textil",
+    ]
 
     def __init__(self, http_client=None):
         super().__init__(http_client)
-        self._playwright = None
-        self._browser: Optional[Browser] = None
-        self._page: Optional[Page] = None
-        self._logged_in = False
+        self._token: Optional[str] = None
 
     @property
     def source_name(self) -> str:
@@ -54,184 +55,116 @@ class SinaScraper(BaseScraper):
 
     @property
     def rate_limit_delay(self) -> float:
-        return 2.0  # 2 seconds between requests
+        return 0.5  # API is fast, can go quicker
 
-    async def _ensure_browser(self) -> Page:
-        """Ensure browser is launched and return a page."""
-        if not PLAYWRIGHT_AVAILABLE:
-            raise ScraperError(
-                "Playwright is required for Sina scraper",
-                source=self.source_name
-            )
+    @property
+    def default_headers(self) -> Dict[str, str]:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "es-AR,es;q=0.9",
+            "Content-Type": "application/json",
+            "Origin": "https://www.sina.com.ar",
+            "Referer": "https://www.sina.com.ar/",
+        }
+        if self._token:
+            headers["x-api-token"] = self._token
+        return headers
 
-        if self._page is None:
-            import os
-            self._playwright = await async_playwright().start()
+    async def _login(self, config: Optional[Dict] = None) -> str:
+        """Login and get JWT token."""
+        if self._token:
+            return self._token
 
-            # Use Browserless.io cloud browser
-            browserless_token = os.environ.get('BROWSERLESS_TOKEN', '')
-
-            if browserless_token:
-                browserless_url = f"wss://chrome.browserless.io?token={browserless_token}"
-                logger.info("[Sina] Connecting to Browserless.io...")
-                print("[Sina] Connecting to Browserless.io...")
-                self._browser = await self._playwright.chromium.connect_over_cdp(browserless_url)
-            else:
-                # Fallback to local browser (for development)
-                logger.info("[Sina] No BROWSERLESS_TOKEN, using local browser...")
-                print("[Sina] No BROWSERLESS_TOKEN, using local browser...")
-                self._browser = await self._playwright.chromium.launch(
-                    headless=True,
-                    args=['--no-sandbox', '--disable-setuid-sandbox']
-                )
-
-            self._page = await self._browser.new_page()
-            await self._page.set_viewport_size({"width": 1920, "height": 1080})
-
-        return self._page
-
-    async def _login(self, config: Optional[Dict] = None) -> bool:
-        """Login to sina.com.ar using credentials from config."""
-        if self._logged_in:
-            return True
-
-        page = await self._ensure_browser()
-
-        # Get credentials from config or environment variables
-        import os
+        # Get credentials
         username = (config.get("username") if config else None) or os.environ.get('SINA_USERNAME')
         password = (config.get("password") if config else None) or os.environ.get('SINA_PASSWORD')
 
         if not username or not password:
             raise ScraperError(
-                "Sina scraper requires username and password in config or SINA_USERNAME/SINA_PASSWORD env vars",
+                "Sina requires SINA_USERNAME and SINA_PASSWORD env vars",
                 source=self.source_name
             )
 
+        client = await self.get_client()
+
         try:
-            logger.info(f"[Sina] Navegando a login...")
-            print(f"[Sina] Navegando a login...")
+            logger.info("[Sina] Logging in via API...")
+            print("[Sina] Logging in via API...")
 
-            await page.goto(self.BASE_URL, wait_until='domcontentloaded', timeout=60000)
-            await asyncio.sleep(3)
+            response = await client.post(
+                self.LOGIN_URL,
+                json={"email": username, "password": password},
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Origin": "https://www.sina.com.ar",
+                    "Referer": "https://www.sina.com.ar/",
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
 
-            # Click on login button to open modal
-            login_btn = page.locator('text=Iniciar sesión').first
-            try:
-                await login_btn.wait_for(state='visible', timeout=10000)
-                await login_btn.click()
-                await asyncio.sleep(2)
-            except:
-                logger.info("[Sina] No login button found, trying direct form...")
+            # Extract token from response
+            token = data.get("token") or data.get("access_token") or data.get("data", {}).get("token")
 
-            # Fill login form
-            email_input = page.locator('input[type="email"], input[name="email"], input[placeholder*="mail"]').first
-            await email_input.wait_for(state='visible', timeout=10000)
-            await email_input.fill(username)
+            if not token:
+                # Try to find token in response
+                if isinstance(data, dict):
+                    for key, value in data.items():
+                        if isinstance(value, str) and len(value) > 50 and "." in value:
+                            token = value
+                            break
 
-            password_input = page.locator('input[type="password"], input[name="password"]').first
-            await password_input.fill(password)
+            if not token:
+                logger.error(f"[Sina] Login response: {data}")
+                raise ScraperError("Could not extract token from login response", source=self.source_name)
 
-            # Close any modals/overlays that might block the click
-            try:
-                close_btns = page.locator('[class*="close"], [class*="dismiss"], button:has-text("×"), button:has-text("Cerrar"), .modal__close')
-                for i in range(await close_btns.count()):
-                    btn = close_btns.nth(i)
-                    if await btn.is_visible():
-                        await btn.click(timeout=2000)
-                        await asyncio.sleep(0.5)
-            except:
-                pass
-
-            # Submit with force to bypass any remaining overlays
-            submit_btn = page.locator('button[type="submit"], button:has-text("Ingresar"), button:has-text("Iniciar")').first
-            await submit_btn.click(force=True)
-            await asyncio.sleep(5)
-
-            # Wait for navigation
-            await page.wait_for_load_state('domcontentloaded', timeout=30000)
-
-            # Verify login success
-            content = await page.content()
-            if 'cerrar sesión' in content.lower() or 'mi cuenta' in content.lower():
-                self._logged_in = True
-                logger.info(f"[Sina] Login exitoso!")
-                print(f"[Sina] Login exitoso!")
-                return True
-            else:
-                logger.warning(f"[Sina] Login posiblemente fallido, continuando...")
-                print(f"[Sina] Login posiblemente fallido, continuando...")
-                self._logged_in = True  # Try anyway
-                return True
+            self._token = token
+            logger.info("[Sina] Login successful!")
+            print("[Sina] Login successful!")
+            return token
 
         except Exception as e:
-            logger.error(f"[Sina] Error en login: {e}")
-            print(f"[Sina] Error en login: {e}")
+            logger.error(f"[Sina] Login failed: {e}")
             raise ScraperError(f"Login failed: {e}", source=self.source_name)
 
-    async def scrape_catalog(self, config: Optional[Dict] = None) -> List[str]:
-        """
-        Scrape all product identifiers from the catalog.
-
-        Returns:
-            List of product IDs/URLs
-        """
+    async def _get_category_products(self, category: str, config: Optional[Dict] = None) -> List[Dict]:
+        """Get all products from a category."""
         await self._login(config)
-        page = await self._ensure_browser()
+        client = await self.get_client()
 
-        logger.info(f"[Sina] Obteniendo catálogo...")
-        print(f"[Sina] Obteniendo catálogo...")
-
-        product_ids = set()
+        url = f"{self.API_BASE}/producto/categoriapadre/{category}"
 
         try:
-            # Navigate to catalog
-            await page.goto(self.CATALOG_URL, wait_until='networkidle')
-            await asyncio.sleep(2)
+            response = await client.get(url, headers=self.default_headers)
+            response.raise_for_status()
+            data = response.json()
 
-            # Scroll to load all products (infinite scroll handling)
-            last_count = 0
-            scroll_attempts = 0
-            max_scroll_attempts = 50
-
-            while scroll_attempts < max_scroll_attempts:
-                # Get current content and extract product links
-                content = await page.content()
-
-                # Extract product IDs from URLs like /categoria/subcategoria/nombre/ID
-                for match in re.finditer(r'/[^/]+/[^/]+/[^/]+/(\d+)(?:\?|$|")', content):
-                    product_ids.add(match.group(1))
-
-                current_count = len(product_ids)
-
-                if current_count == last_count:
-                    scroll_attempts += 1
-                else:
-                    scroll_attempts = 0
-                    last_count = current_count
-
-                # Scroll down
-                await page.evaluate('window.scrollBy(0, window.innerHeight)')
-                await asyncio.sleep(0.5)
-
-                if scroll_attempts >= 3:
-                    # Try clicking "ver más" if exists
-                    ver_mas = page.locator('text=Ver más').first
-                    if await ver_mas.is_visible():
-                        await ver_mas.click()
-                        await asyncio.sleep(2)
-                        scroll_attempts = 0
-                    else:
-                        break
-
-            logger.info(f"[Sina] Encontrados {len(product_ids)} productos")
-            print(f"[Sina] Encontrados {len(product_ids)} productos")
+            # Handle different response structures
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict):
+                return data.get("data", []) or data.get("productos", []) or data.get("items", []) or []
+            return []
 
         except Exception as e:
-            logger.error(f"[Sina] Error obteniendo catálogo: {e}")
-            print(f"[Sina] Error obteniendo catálogo: {e}")
+            logger.warning(f"[Sina] Error getting category {category}: {e}")
+            return []
 
-        return list(product_ids)
+    async def scrape_catalog(self, config: Optional[Dict] = None) -> List[str]:
+        """Get all product IDs from catalog."""
+        all_ids = set()
+
+        for category in self.CATEGORIES:
+            products = await self._get_category_products(category, config)
+            for p in products:
+                pid = p.get("id") or p.get("producto_id") or p.get("cod")
+                if pid:
+                    all_ids.add(str(pid))
+            await asyncio.sleep(self.rate_limit_delay)
+
+        return list(all_ids)
 
     async def scrape_all_products(
         self,
@@ -239,302 +172,133 @@ class SinaScraper(BaseScraper):
         on_product: Optional[Callable[[ScrapedProduct, int, int], Any]] = None,
         on_progress: Optional[Callable[[int, int], None]] = None
     ) -> List[ScrapedProduct]:
-        """
-        Scrape all products from the catalog.
-
-        Args:
-            config: Scraper configuration (must include username and password)
-            on_product: Callback for each product
-            on_progress: Callback for progress updates
-
-        Returns:
-            List of ScrapedProduct objects
-        """
+        """Scrape all products from all categories."""
         await self._login(config)
 
-        product_ids = await self.scrape_catalog(config)
+        logger.info("[Sina] Fetching products from all categories...")
+        print("[Sina] Fetching products from all categories...")
 
-        if not product_ids:
-            raise ScraperError(
-                "No products found in catalog",
-                source=self.source_name
-            )
+        all_products = []
+        seen_ids = set()
 
-        total = len(product_ids)
-        products = []
+        for cat_idx, category in enumerate(self.CATEGORIES):
+            logger.info(f"[Sina] Fetching category: {category}")
+            print(f"[Sina] Fetching category {cat_idx + 1}/{len(self.CATEGORIES)}: {category}")
 
-        for idx, product_id in enumerate(product_ids):
-            try:
-                product = await self._scrape_product_detail(product_id, config)
+            products_data = await self._get_category_products(category, config)
+
+            for p in products_data:
+                pid = str(p.get("id") or p.get("producto_id") or p.get("cod") or "")
+                if not pid or pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+
+                product = self._parse_product(p, category)
                 if product:
-                    products.append(product)
+                    all_products.append(product)
                     if on_product:
-                        on_product(product, idx, total)
+                        on_product(product, len(all_products), 0)
 
-                if (idx + 1) % 10 == 0 or idx == total - 1:
-                    logger.info(f"[Sina] Procesados {idx + 1}/{total}")
-                    print(f"[Sina] Procesados {idx + 1}/{total}")
-                    if on_progress:
-                        on_progress(idx + 1, total)
+            if on_progress:
+                on_progress(cat_idx + 1, len(self.CATEGORIES))
 
-                await asyncio.sleep(self.rate_limit_delay)
+            await asyncio.sleep(self.rate_limit_delay)
 
-            except Exception as e:
-                logger.warning(f"[Sina] Error procesando producto {product_id}: {e}")
-                continue
+        logger.info(f"[Sina] Total products found: {len(all_products)}")
+        print(f"[Sina] Total products found: {len(all_products)}")
 
-        logger.info(f"[Sina] Completado: {len(products)} productos extraídos")
-        print(f"[Sina] Completado: {len(products)} productos extraídos")
+        return all_products
 
-        return products
-
-    async def scrape_product(
-        self,
-        identifier: str,
-        config: Optional[Dict] = None
-    ) -> ScrapedProduct:
-        """
-        Scrape a single product.
-
-        Args:
-            identifier: Product ID or full URL
-            config: Scraper configuration
-
-        Returns:
-            ScrapedProduct with extracted data
-        """
+    async def scrape_product(self, identifier: str, config: Optional[Dict] = None) -> ScrapedProduct:
+        """Scrape a single product by ID."""
         await self._login(config)
-        product = await self._scrape_product_detail(identifier, config)
-        if not product:
-            raise ScraperError(
-                f"Failed to scrape product {identifier}",
-                source=self.source_name
-            )
-        return product
+        client = await self.get_client()
 
-    async def _scrape_product_detail(
-        self,
-        product_id: str,
-        config: Optional[Dict] = None
-    ) -> Optional[ScrapedProduct]:
-        """
-        Scrape product details from its page.
-
-        Args:
-            product_id: Product ID (numeric)
-            config: Scraper configuration
-
-        Returns:
-            ScrapedProduct or None if failed
-        """
-        page = await self._ensure_browser()
-
-        # If product_id is a full URL, use it; otherwise construct URL
-        if product_id.startswith('http'):
-            url = product_id
-        else:
-            # We need to find the product URL - try API first
-            url = f"{self.BASE_URL}/api/articulos/{product_id}"
+        # Try to get product detail
+        url = f"{self.API_BASE}/producto/{identifier}"
 
         try:
-            # Try to get product data from API
-            api_data = await self._try_api(product_id, config)
-            if api_data:
-                return self._parse_api_response(api_data, product_id)
+            response = await client.get(url, headers=self.default_headers)
+            response.raise_for_status()
+            data = response.json()
 
-            # Fallback: navigate to product page
-            # First, search for the product
-            await page.goto(f"{self.BASE_URL}/?q={product_id}", wait_until='networkidle')
-            await asyncio.sleep(2)
+            if isinstance(data, dict) and "data" in data:
+                data = data["data"]
 
-            # Look for product link
-            content = await page.content()
-            match = re.search(rf'/[^/]+/[^/]+/[^/]+/{product_id}(?:\?|$|")', content)
-
-            if match:
-                product_url = self.BASE_URL + match.group(0).rstrip('"')
-                await page.goto(product_url, wait_until='networkidle')
-                await asyncio.sleep(2)
-                return await self._parse_product_page(page, product_id)
-
-            return None
+            product = self._parse_product(data, "")
+            if product:
+                return product
 
         except Exception as e:
-            logger.warning(f"[Sina] Error obteniendo producto {product_id}: {e}")
-            return None
+            logger.error(f"[Sina] Error getting product {identifier}: {e}")
 
-    async def _try_api(self, product_id: str, config: Optional[Dict] = None) -> Optional[Dict]:
-        """Try to get product data from API."""
-        page = await self._ensure_browser()
+        raise ScraperError(f"Could not fetch product {identifier}", source=self.source_name)
 
-        try:
-            # Try different API endpoints
-            endpoints = [
-                f"{self.BASE_URL}/api/articulos/{product_id}",
-                f"{self.BASE_URL}/api/v1/articulos/{product_id}",
-                f"{self.BASE_URL}/api/productos/{product_id}",
-            ]
-
-            for endpoint in endpoints:
-                response = await page.request.get(endpoint)
-                if response.ok:
-                    data = await response.json()
-                    if data and isinstance(data, dict):
-                        return data
-
-        except Exception as e:
-            logger.debug(f"[Sina] API not available: {e}")
-
-        return None
-
-    def _parse_api_response(self, data: Dict, product_id: str) -> ScrapedProduct:
+    def _parse_product(self, data: Dict, category: str) -> Optional[ScrapedProduct]:
         """Parse product data from API response."""
-        name = data.get('nombre') or data.get('name') or data.get('descripcion', '')
-        price = None
-        price_str = data.get('precio') or data.get('price')
-        if price_str:
-            try:
-                price = float(str(price_str).replace(',', '.'))
-            except (ValueError, TypeError):
-                pass
-
-        # Extract images
-        images = []
-        if 'imagenes' in data:
-            images = [img.get('url') or img for img in data['imagenes'] if img]
-        elif 'imagen' in data:
-            images = [data['imagen']]
-        elif 'fotos' in data:
-            images = data['fotos']
-
-        # Extract additional fields
-        sku = data.get('codigo') or data.get('sku') or data.get('cod')
-        min_qty = data.get('cantidad_minima') or data.get('minimo') or data.get('min_qty')
-        kit_content = data.get('contenido') or data.get('kit_content') or data.get('descripcion_kit')
-        brand = data.get('marca') or data.get('brand')
-        description = data.get('descripcion') or data.get('description')
-        category = data.get('categoria') or data.get('category')
-
-        # Clean and convert min_qty
-        if min_qty:
-            try:
-                min_qty = int(min_qty)
-            except (ValueError, TypeError):
-                min_qty = None
-
-        # Generate slug
-        slug = f"prod-sina-{sku}" if sku else f"prod-sina-{product_id}"
-
-        return ScrapedProduct(
-            slug=slug,
-            name=name,
-            price=price,
-            currency="ARS",
-            description=description,
-            short_description=description[:200] if description and len(description) > 200 else description,
-            brand=brand,
-            sku=sku,
-            min_purchase_qty=min_qty,
-            kit_content=kit_content,
-            images=images[:5],
-            categories=[category] if category else [],
-            source_url=f"{self.BASE_URL}/producto/{product_id}",
-        )
-
-    async def _parse_product_page(self, page: Page, product_id: str) -> Optional[ScrapedProduct]:
-        """Parse product data from rendered page."""
         try:
-            content = await page.content()
-            soup = BeautifulSoup(content, 'lxml')
-
-            # Extract name
-            name = None
-            name_selectors = ['h1', '.product-name', '.titulo', '[class*="titulo"]', '[class*="name"]']
-            for selector in name_selectors:
-                elem = soup.select_one(selector)
-                if elem and elem.text.strip():
-                    name = elem.text.strip()
-                    break
+            # Extract basic info
+            pid = str(data.get("id") or data.get("producto_id") or data.get("cod") or "")
+            name = data.get("nombre") or data.get("name") or data.get("descripcion") or ""
 
             if not name:
                 return None
 
-            # Extract price
+            # Price
             price = None
-            price_text = None
-            price_selectors = [
-                '.precio', '.price', '[class*="precio"]', '[class*="price"]',
-                'span:contains("$")', 'div:contains("$")'
-            ]
-            for selector in price_selectors:
-                elem = soup.select_one(selector)
-                if elem:
-                    price_text = elem.text.strip()
-                    price = self.extract_price(price_text)
-                    if price:
-                        break
+            price_val = data.get("precio") or data.get("price") or data.get("precio_venta")
+            if price_val:
+                try:
+                    price = float(str(price_val).replace(",", ".").replace("$", "").strip())
+                except:
+                    pass
 
-            # Extract images
+            # SKU/Code
+            sku = str(data.get("codigo") or data.get("cod") or data.get("sku") or pid)
+
+            # Images
             images = []
-            for img in soup.select('img[src*="sina"], img[src*="producto"], .product-image img'):
-                src = img.get('src') or img.get('data-src')
-                if src and 'logo' not in src.lower():
-                    if not src.startswith('http'):
-                        src = self.BASE_URL + src
-                    if src not in images:
-                        images.append(src)
+            img = data.get("imagen") or data.get("image") or data.get("foto")
+            if img:
+                if not img.startswith("http"):
+                    img = f"https://apisina-v1.leren.com.ar{img}" if img.startswith("/") else f"https://apisina-v1.leren.com.ar/{img}"
+                images.append(img)
 
-            # Extract SKU/código
-            sku = None
-            sku_match = re.search(r'[Cc][óo]digo[:\s]*(\w+)', content)
-            if sku_match:
-                sku = sku_match.group(1)
+            # Additional images
+            for key in ["imagenes", "images", "fotos", "galeria"]:
+                if key in data and isinstance(data[key], list):
+                    for img_item in data[key]:
+                        img_url = img_item if isinstance(img_item, str) else img_item.get("url") or img_item.get("imagen")
+                        if img_url and img_url not in images:
+                            if not img_url.startswith("http"):
+                                img_url = f"https://apisina-v1.leren.com.ar{img_url}" if img_url.startswith("/") else f"https://apisina-v1.leren.com.ar/{img_url}"
+                            images.append(img_url)
 
-            # Extract cantidad mínima
+            # Min purchase quantity
             min_qty = None
-            min_match = re.search(r'[Cc]antidad\s*[Mm][íi]nima[:\s]*(\d+)', content)
-            if min_match:
-                min_qty = int(min_match.group(1))
-            else:
-                min_match = re.search(r'[Mm][íi]nimo[:\s]*(\d+)\s*(?:unidad|u\.)', content)
-                if min_match:
-                    min_qty = int(min_match.group(1))
+            min_val = data.get("cantidad_minima") or data.get("minimo") or data.get("min_qty") or data.get("bulto")
+            if min_val:
+                try:
+                    min_qty = int(min_val)
+                except:
+                    pass
 
-            # Extract kit content
-            kit_content = None
-            kit_match = re.search(r'[Cc]ontenido(?:\s+del\s+kit)?[:\s]*([^<]+)', content)
-            if kit_match:
-                kit_content = kit_match.group(1).strip()
-                # Clean up
-                kit_content = re.sub(r'\s+', ' ', kit_content)
-                if len(kit_content) > 500:
-                    kit_content = kit_content[:500]
+            # Kit content
+            kit_content = data.get("contenido") or data.get("kit_content") or data.get("detalle")
+            if isinstance(kit_content, list):
+                kit_content = ", ".join(str(x) for x in kit_content)
 
-            # Extract description
-            description = None
-            desc_selectors = ['.descripcion', '.description', '[class*="descripcion"]']
-            for selector in desc_selectors:
-                elem = soup.select_one(selector)
-                if elem and elem.text.strip():
-                    description = elem.text.strip()
-                    break
+            # Description
+            description = data.get("descripcion_larga") or data.get("description") or data.get("detalle")
 
-            # Extract brand
-            brand = None
-            brand_match = re.search(r'[Mm]arca[:\s]*(\w+)', content)
-            if brand_match:
-                brand = brand_match.group(1)
+            # Brand
+            brand = data.get("marca") or data.get("brand")
 
-            # Extract category from breadcrumbs or URL
-            categories = []
-            breadcrumbs = soup.select('.breadcrumb a, nav a')
-            for bc in breadcrumbs:
-                text = bc.text.strip()
-                if text and text.lower() not in ['inicio', 'home', 'sina']:
-                    categories.append(text)
+            # Category from data or parameter
+            cat = data.get("categoria") or data.get("category") or data.get("rubro") or category
 
             # Generate slug
-            slug = f"prod-sina-{sku}" if sku else f"prod-sina-{product_id}"
+            slug = f"prod-{sku}" if sku else f"prod-sina-{pid}"
 
             return ScrapedProduct(
                 slug=slug,
@@ -548,25 +312,13 @@ class SinaScraper(BaseScraper):
                 min_purchase_qty=min_qty,
                 kit_content=kit_content,
                 images=images[:5],
-                categories=categories[:2] if categories else [],
-                source_url=page.url,
+                categories=[cat] if cat else [],
+                source_url=f"https://www.sina.com.ar/producto/{pid}",
             )
 
         except Exception as e:
-            logger.error(f"[Sina] Error parseando página: {e}")
+            logger.warning(f"[Sina] Error parsing product: {e}")
             return None
-
-    async def close(self):
-        """Close browser and cleanup."""
-        if self._browser:
-            await self._browser.close()
-            self._browser = None
-        if self._playwright:
-            await self._playwright.stop()
-            self._playwright = None
-        self._page = None
-        self._logged_in = False
-        await super().close()
 
 
 # Register the scraper
