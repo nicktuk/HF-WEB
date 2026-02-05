@@ -83,12 +83,10 @@ def seed_source_websites(db):
             "base_url": "https://www.sina.com.ar",
             "is_active": True,
             "scraper_config": {
-                "username": "diezjuarez22@gmail.com",
-                "password": "Hermanos1997!",
                 "requires_auth": True,
                 "auth_type": "login_form"
             },
-            "notes": "Catálogo Sina. Usa Browserless.io para el browser."
+            "notes": "Catálogo Sina. Credenciales en env vars: SINA_USERNAME, SINA_PASSWORD. Usa Browserless.io."
         },
         {
             "name": "protrade",

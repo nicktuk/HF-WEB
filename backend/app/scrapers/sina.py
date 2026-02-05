@@ -97,13 +97,14 @@ class SinaScraper(BaseScraper):
 
         page = await self._ensure_browser()
 
-        # Get credentials from config
-        username = config.get("username") if config else None
-        password = config.get("password") if config else None
+        # Get credentials from config or environment variables
+        import os
+        username = (config.get("username") if config else None) or os.environ.get('SINA_USERNAME')
+        password = (config.get("password") if config else None) or os.environ.get('SINA_PASSWORD')
 
         if not username or not password:
             raise ScraperError(
-                "Sina scraper requires username and password in config",
+                "Sina scraper requires username and password in config or SINA_USERNAME/SINA_PASSWORD env vars",
                 source=self.source_name
             )
 
