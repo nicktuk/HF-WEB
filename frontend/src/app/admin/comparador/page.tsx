@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Loader2, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
@@ -286,8 +287,14 @@ export default function ComparadorPage() {
                                               </span>
                                             </div>
                                           </td>
-                                          <td className="px-4 py-2 text-sm text-gray-600">
-                                            {product.original_name}
+                                          <td className="px-4 py-2 text-sm">
+                                            <Link
+                                              href={`/admin/productos/${product.id}`}
+                                              className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                            >
+                                              {product.original_name}
+                                              <ExternalLink className="h-3 w-3" />
+                                            </Link>
                                             {product.sku && (
                                               <span className="text-xs text-gray-400 ml-2">
                                                 SKU: {product.sku}
@@ -363,9 +370,13 @@ export default function ComparadorPage() {
                                       className="w-8 h-8 object-cover rounded"
                                     />
                                   )}
-                                  <span className="text-sm text-gray-900">
+                                  <Link
+                                    href={`/admin/productos/${product.id}`}
+                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                  >
                                     {product.name}
-                                  </span>
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Link>
                                 </div>
                               </td>
                               <td className="px-4 py-2 text-sm text-gray-600">
