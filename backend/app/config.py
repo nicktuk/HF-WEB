@@ -66,9 +66,6 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
     ALLOWED_IMAGE_TYPES_STR: str = "image/jpeg,image/png,image/webp,image/gif"
 
-    # ImgBB API for cloud image storage
-    IMGBB_API_KEY: str = ""
-
     @property
     def ALLOWED_IMAGE_TYPES(self) -> List[str]:
         """Parse ALLOWED_IMAGE_TYPES from string."""

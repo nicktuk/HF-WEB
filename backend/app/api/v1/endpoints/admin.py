@@ -7,8 +7,6 @@ from slowapi.util import get_remote_address
 import io
 import os
 import uuid
-import base64
-import httpx
 from pathlib import Path
 
 from app.api.deps import (
@@ -328,10 +326,13 @@ async def upload_images(
     Returns list of URLs for the uploaded images.
     Supports JPEG, PNG, WebP, GIF. Max 10MB per file.
 
-    Uses ImgBB for cloud storage when IMGBB_API_KEY is configured,
-    otherwise falls back to local storage.
+    Note: Configure UPLOAD_DIR to a persistent volume in production (e.g., Railway Volume).
     """
     uploaded_urls = []
+
+    # Ensure upload directory exists
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
 
     for file in files:
         # Validate file type
@@ -351,54 +352,17 @@ async def upload_images(
                 detail=f"File too large. Max size: {settings.MAX_UPLOAD_SIZE // (1024*1024)}MB"
             )
 
-        # Upload to ImgBB if API key is configured
-        if settings.IMGBB_API_KEY:
-            try:
-                # Convert to base64
-                image_base64 = base64.b64encode(content).decode('utf-8')
+        # Generate unique filename
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = upload_dir / filename
 
-                # Upload to ImgBB
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        "https://api.imgbb.com/1/upload",
-                        data={
-                            "key": settings.IMGBB_API_KEY,
-                            "image": image_base64,
-                        },
-                        timeout=30.0
-                    )
+        # Save file
+        with open(filepath, 'wb') as f:
+            f.write(content)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get("success"):
-                        # Use the direct image URL
-                        uploaded_urls.append(data["data"]["url"])
-                        continue
-
-                # If ImgBB upload failed, raise error
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Error uploading to ImgBB: {response.text}"
-                )
-
-            except httpx.RequestError as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Error connecting to ImgBB: {str(e)}"
-                )
-        else:
-            # Fallback to local storage
-            upload_dir = Path(settings.UPLOAD_DIR)
-            upload_dir.mkdir(parents=True, exist_ok=True)
-
-            ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
-            filename = f"{uuid.uuid4().hex}.{ext}"
-            filepath = upload_dir / filename
-
-            with open(filepath, 'wb') as f:
-                f.write(content)
-
-            uploaded_urls.append(f"/uploads/{filename}")
+        # Return URL (will be served by static files)
+        uploaded_urls.append(f"/uploads/{filename}")
 
     return {"urls": uploaded_urls}
 
