@@ -465,8 +465,16 @@ export async function uploadImages(apiKey: string, files: File[]): Promise<strin
 
   const data = await response.json();
 
-  // Convert relative URLs to full URLs (backend returns /uploads/filename.jpg)
-  // We need full URL since the API is on a different port/host than the frontend
+  // URLs can be:
+  // 1. Full URLs from cloud storage (ImgBB) - start with http:// or https://
+  // 2. Relative URLs from local storage - start with /uploads/
   const baseUrl = API_URL.replace('/api/v1', '');
-  return data.urls.map((url: string) => `${baseUrl}${url}`);
+  return data.urls.map((url: string) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Already a full URL (from ImgBB or other cloud storage)
+      return url;
+    }
+    // Relative URL - convert to full URL
+    return `${baseUrl}${url}`;
+  });
 }

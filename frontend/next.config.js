@@ -40,6 +40,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'bunny-cdn.ventasxmayor.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'i.ibb.co',
+      },
     ],
   },
   // Revalidate pages every hour

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Star, Zap, Menu, X } from 'lucide-react';
+import { Search, Star, Zap, Menu, X, ChevronLeft } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,10 @@ function HomePageContent() {
 
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // 'categories' shows main categories, 'subcategories' shows subcategories of selected category
+  const [mobileMenuMode, setMobileMenuMode] = useState<'categories' | 'subcategories'>('categories');
+  // Temporary category selection for drill-down (before applying filter)
+  const [tempCategory, setTempCategory] = useState<string | null>(null);
 
   // Sync local state when URL changes externally
   useEffect(() => {
@@ -87,10 +91,20 @@ function HomePageContent() {
     return () => clearTimeout(timeoutId);
   }, [searchInput, searchFromUrl, searchParams, router]);
 
-  // Close mobile menu when filter changes
+  // Reset mobile menu mode when menu closes or category filter changes
   useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [selectedCategory, selectedSubcategory, showFeatured, showImmediate]);
+    if (!mobileMenuOpen) {
+      setMobileMenuMode('categories');
+      setTempCategory(null);
+    }
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu when filter changes (except when drilling down)
+  useEffect(() => {
+    if (selectedSubcategory || showFeatured || showImmediate) {
+      setMobileMenuOpen(false);
+    }
+  }, [selectedSubcategory, showFeatured, showImmediate]);
 
   // Helper to update URL params
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -119,7 +133,9 @@ function HomePageContent() {
   });
 
   const { data: categories } = useCategories();
+  // Load subcategories for the selected category (URL) or temp category (drill-down menu)
   const { data: subcategories } = useSubcategories(selectedCategory);
+  const { data: tempSubcategories } = useSubcategories(tempCategory || undefined);
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
@@ -320,100 +336,165 @@ function HomePageContent() {
           {/* Mobile Dropdown Menu */}
           {mobileMenuOpen && categories && categories.length > 0 && (
             <div className="md:hidden bg-white border rounded-lg shadow-lg p-4 space-y-2">
-              <button
-                onClick={() => {
-                  updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  !selectedCategory && !showFeatured && !showImmediate
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => {
-                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  showFeatured
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Star className="h-4 w-4" />
-                Nuevo
-              </button>
-              <button
-                onClick={() => {
-                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  showImmediate
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Zap className="h-4 w-4" />
-                Entrega inmediata
-              </button>
-              <div className="border-t pt-2 mt-2">
-                <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
-                {categories.map((category) => (
+              {mobileMenuMode === 'categories' ? (
+                <>
+                  {/* Categories View */}
                   <button
-                    key={category.name}
                     onClick={() => {
-                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                      updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                      setMobileMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                      selectedCategory === category.name && !showFeatured && !showImmediate
-                        ? 'text-white'
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      !selectedCategory && !showFeatured && !showImmediate
+                        ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
-                    style={{
-                      backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
-                        ? category.color
-                        : undefined,
-                    }}
                   >
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    {category.name}
+                    Todos
                   </button>
-                ))}
-              </div>
-              {/* Subcategories in mobile menu */}
-              {selectedCategory && subcategories && subcategories.length > 0 && (
-                <div className="border-t pt-2 mt-2">
-                  <p className="text-xs text-gray-500 mb-2 px-3">Subcategorías de {selectedCategory}</p>
-                  {subcategories.map((subcategory) => (
-                    <button
-                      key={subcategory.name}
-                      onClick={() => {
-                        updateParams({ subcategory: subcategory.name });
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                        selectedSubcategory === subcategory.name
-                          ? 'text-white'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
+                  <button
+                    onClick={() => {
+                      updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      showFeatured
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Star className="h-4 w-4" />
+                    Nuevo
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      showImmediate
+                        ? 'bg-green-100 text-green-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Zap className="h-4 w-4" />
+                    Entrega inmediata
+                  </button>
+                  <div className="border-t pt-2 mt-2">
+                    <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
+                    {categories.map((category) => (
+                      <button
+                        key={category.name}
+                        onClick={() => {
+                          // Drill-down: show subcategories for this category
+                          setTempCategory(category.name);
+                          setMobileMenuMode('subcategories');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                          selectedCategory === category.name && !showFeatured && !showImmediate
+                            ? 'text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        style={{
+                          backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
+                            ? category.color
+                            : undefined,
+                        }}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Subcategories View (drill-down) */}
+                  <button
+                    onClick={() => {
+                      setMobileMenuMode('categories');
+                      setTempCategory(null);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Volver a categorías
+                  </button>
+
+                  <div className="border-t pt-2 mt-2">
+                    {/* Header showing current category */}
+                    <div
+                      className="px-3 py-2 rounded-lg mb-2 flex items-center gap-2"
                       style={{
-                        backgroundColor: selectedSubcategory === subcategory.name
-                          ? subcategory.color
-                          : undefined,
+                        backgroundColor: `${categories.find(c => c.name === tempCategory)?.color}20`,
                       }}
                     >
                       <span
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: subcategory.color }}
+                        style={{ backgroundColor: categories.find(c => c.name === tempCategory)?.color }}
                       />
-                      {subcategory.name}
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: categories.find(c => c.name === tempCategory)?.color }}
+                      >
+                        {tempCategory}
+                      </span>
+                    </div>
+
+                    {/* "All in category" button */}
+                    <button
+                      onClick={() => {
+                        updateParams({ category: tempCategory || undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50"
+                    >
+                      Ver todo en {tempCategory}
                     </button>
-                  ))}
-                </div>
+
+                    {/* Subcategories list */}
+                    {tempSubcategories && tempSubcategories.length > 0 ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-2 px-3 mt-3">Subcategorías</p>
+                        {tempSubcategories.map((subcategory) => (
+                          <button
+                            key={subcategory.name}
+                            onClick={() => {
+                              updateParams({
+                                category: tempCategory || undefined,
+                                subcategory: subcategory.name,
+                                featured: undefined,
+                                immediate_delivery: undefined
+                              });
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                              selectedSubcategory === subcategory.name
+                                ? 'text-white'
+                                : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                            style={{
+                              backgroundColor: selectedSubcategory === subcategory.name
+                                ? subcategory.color
+                                : undefined,
+                            }}
+                          >
+                            <span
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: subcategory.color }}
+                            />
+                            {subcategory.name}
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400 px-3 mt-2">
+                        No hay subcategorías
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
