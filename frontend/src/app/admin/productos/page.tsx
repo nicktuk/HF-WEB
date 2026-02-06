@@ -45,7 +45,6 @@ export default function ProductsPage() {
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [bulkCategory, setBulkCategory] = useState('');
   const [bulkSubcategory, setBulkSubcategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -93,6 +92,10 @@ export default function ProductsPage() {
   const selectedCategoryObj = categories?.find(c => c.name === categoryFilter);
   const { data: adminSubcategories } = useAdminSubcategories(selectedCategoryObj?.id);
   const subcategories = adminSubcategories as Subcategory[] | undefined;
+  // Get subcategories for bulk change modal
+  const bulkCategoryObj = categories?.find(c => c.name === bulkCategory);
+  const { data: bulkAdminSubcategories } = useAdminSubcategories(bulkCategoryObj?.id);
+  const bulkSubcategories = bulkAdminSubcategories as Subcategory[] | undefined;
 
   return (
     <div className="space-y-6">
@@ -198,7 +201,7 @@ export default function ProductsPage() {
               onClick={() => setShowCategoryModal(true)}
             >
               <FolderInput className="mr-2 h-4 w-4" />
-              Cambiar categoría
+              Cambiar categoría/subcategoría
             </Button>
             <Button
               size="sm"
@@ -429,17 +432,20 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* Bulk Category Change Modal */}
+      {/* Bulk Category/Subcategory Change Modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold mb-4">Cambiar categoría</h2>
+            <h2 className="text-lg font-semibold mb-4">Cambiar categoría y subcategoría</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Cambiar la categoría de {selectedIds.length} producto(s) seleccionado(s)
+              Cambiar la categoría/subcategoría de {selectedIds.length} producto(s) seleccionado(s)
             </p>
             <select
               value={bulkCategory}
-              onChange={(e) => setBulkCategory(e.target.value)}
+              onChange={(e) => {
+                setBulkCategory(e.target.value);
+                setBulkSubcategory('');
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">Seleccionar categoría</option>
@@ -449,8 +455,24 @@ export default function ProductsPage() {
                 </option>
               ))}
             </select>
+            <select
+              value={bulkSubcategory}
+              onChange={(e) => setBulkSubcategory(e.target.value)}
+              disabled={!bulkCategory || !bulkSubcategories || bulkSubcategories.length === 0}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Seleccionar subcategoría</option>
+              {bulkSubcategories?.map((sub) => (
+                <option key={sub.name} value={sub.name}>
+                  {sub.name}
+                </option>
+              ))}
+            </select>
             {changeCategoryMutation.isError && (
               <p className="text-sm text-red-600 mb-4">Error al cambiar categoría</p>
+            )}
+            {changeSubcategoryMutation.isError && (
+              <p className="text-sm text-red-600 mb-4">Error al cambiar subcategoría</p>
             )}
             <div className="flex justify-end gap-3">
               <Button
@@ -458,20 +480,30 @@ export default function ProductsPage() {
                 onClick={() => {
                   setShowCategoryModal(false);
                   setBulkCategory('');
+                  setBulkSubcategory('');
                 }}
               >
                 Cancelar
               </Button>
               <Button
-                disabled={!bulkCategory}
-                isLoading={changeCategoryMutation.isPending}
+                disabled={!bulkCategory && !bulkSubcategory}
+                isLoading={changeCategoryMutation.isPending || changeSubcategoryMutation.isPending}
                 onClick={async () => {
-                  await changeCategoryMutation.mutateAsync({
-                    productIds: selectedIds,
-                    category: bulkCategory,
-                  });
+                  if (bulkCategory) {
+                    await changeCategoryMutation.mutateAsync({
+                      productIds: selectedIds,
+                      category: bulkCategory,
+                    });
+                  }
+                  if (bulkSubcategory) {
+                    await changeSubcategoryMutation.mutateAsync({
+                      productIds: selectedIds,
+                      subcategory: bulkSubcategory,
+                    });
+                  }
                   setShowCategoryModal(false);
                   setBulkCategory('');
+                  setBulkSubcategory('');
                   setSelectedIds([]);
                 }}
               >
