@@ -500,3 +500,46 @@ DecoModa usa Playwright con fallback a sitemap.xml:
 SINA_USERNAME=email@ejemplo.com
 SINA_PASSWORD=contraseña
 ```
+
+---
+
+## Sesión 2026-02-05
+
+### Feature: ABM Completo de Subcategorías
+
+Se ha implementado una funcionalidad completa para la gestión de subcategorías, permitiendo una clasificación de productos más granular. La implementación abarca desde la base de datos hasta la interfaz de usuario.
+
+**Archivos Creados (Backend):**
+- `backend/app/models/subcategory.py`: Modelo SQLAlchemy para la tabla `subcategories`.
+- `backend/app/schemas/subcategory.py`: Schemas Pydantic para validación de datos en la API.
+- `backend/alembic/versions/009_add_subcategories.py`: Migración de base de datos para crear la tabla y la relación con productos.
+- `backend/app/api/v1/endpoints/subcategories.py`: Endpoints REST para el CRUD de subcategorías.
+
+**Archivos Modificados (Backend):**
+- `backend/app/models/product.py`: Añadida la relación `subcategory_id` al modelo `Product`.
+- `backend/app/api/v1/router.py`: Registro del nuevo router de subcategorías.
+- `backend/app/schemas/product.py`: Inclusión de la información de subcategoría en los schemas de producto.
+- `backend/app/api/v1/endpoints/public.py`: Soporte para filtrar productos por subcategoría en la API pública.
+- `backend/app/api/v1/endpoints/admin.py`: Soporte para filtrar y actualizar subcategorías masivamente en la API de admin.
+- `backend/app/services/product.py`: Lógica de negocio actualizada para manejar subcategorías.
+- `backend/app/db/repositories/product.py`: Actualización de las consultas a la base de datos para incluir filtros por subcategoría.
+
+**Archivos Creados (Frontend):**
+- `frontend/src/app/admin/subcategorias/page.tsx`: Nueva página para el ABM (Alta, Baja, Modificación) de subcategorías.
+
+**Archivos Modificados (Frontend):**
+- `frontend/src/types/index.ts`: Añadidos los tipos `Subcategory`.
+- `frontend/src/lib/api.ts`: Funciones para interactuar con la API de subcategorías.
+- `frontend/src/hooks/useProducts.ts`: Hook actualizado para manejar datos de subcategorías.
+- `frontend/src/hooks/useAdminFilters.ts`: Añadido `subcategoryFilter` al estado de filtros persistentes (Zustand).
+- `frontend/src/app/admin/layout.tsx`: Añadido el enlace "Subcategorías" en el menú de navegación del admin.
+- `frontend/src/app/admin/productos/page.tsx`: Interfaz para filtrar productos por subcategoría.
+- `frontend/src/components/admin/ProductTable.tsx`: Desplegable para mostrar y cambiar la subcategoría en la tabla de productos.
+- `frontend/src/app/page.tsx`: Implementado filtro jerárquico por categorías y subcategorías en la página pública.
+
+**Navegación Admin Actualizada:**
+El menú de configuración ahora incluye "Subcategorías":
+- **Configuración**
+  - Categorías
+  - Subcategorías (NUEVO)
+  - Webs Origen
