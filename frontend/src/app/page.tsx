@@ -6,7 +6,7 @@ import { Search, Star, Zap, Menu, X } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Input } from '@/components/ui/input';
-import { usePublicProducts, useCategories } from '@/hooks/useProducts';
+import { usePublicProducts, useCategories, useSubcategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 
 export default function HomePage() {
@@ -54,6 +54,7 @@ function HomePageContent() {
   // Read state from URL params
   const searchFromUrl = searchParams.get('search') || '';
   const selectedCategory = searchParams.get('category') || undefined;
+  const selectedSubcategory = searchParams.get('subcategory') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
 
@@ -89,7 +90,7 @@ function HomePageContent() {
   // Close mobile menu when filter changes
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [selectedCategory, showFeatured, showImmediate]);
+  }, [selectedCategory, selectedSubcategory, showFeatured, showImmediate]);
 
   // Helper to update URL params
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -111,12 +112,14 @@ function HomePageContent() {
     page: 1,
     limit: 1000, // Load all products without pagination
     category: showFeatured || showImmediate ? undefined : selectedCategory,
+    subcategory: showFeatured || showImmediate ? undefined : selectedSubcategory,
     search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
     immediate_delivery: showImmediate ? true : undefined,
   });
 
   const { data: categories } = useCategories();
+  const { data: subcategories } = useSubcategories(selectedCategory);
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
@@ -193,7 +196,7 @@ function HomePageContent() {
                   >
                     {selectedCategory}
                     <button
-                      onClick={() => updateParams({ category: undefined })}
+                      onClick={() => updateParams({ category: undefined, subcategory: undefined })}
                       className="hover:opacity-80 rounded-full p-0.5 transition-colors"
                       aria-label="Quitar filtro de categoría"
                     >
@@ -203,6 +206,24 @@ function HomePageContent() {
                 ) : (
                   <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
                     Todos
+                  </span>
+                )}
+                {/* Subcategory pill */}
+                {selectedSubcategory && (
+                  <span
+                    className="px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5"
+                    style={{
+                      backgroundColor: subcategories?.find(s => s.name === selectedSubcategory)?.color || '#6b7280'
+                    }}
+                  >
+                    {selectedSubcategory}
+                    <button
+                      onClick={() => updateParams({ subcategory: undefined })}
+                      className="hover:opacity-80 rounded-full p-0.5 transition-colors"
+                      aria-label="Quitar filtro de subcategoría"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </span>
                 )}
               </>
@@ -247,35 +268,51 @@ function HomePageContent() {
               <Zap className={`h-3.5 w-3.5 ${showImmediate ? 'fill-current' : ''}`} />
               Inmediata
             </button>
-            {/* Category pills for show_in_menu categories */}
-            {categories?.filter(c => c.show_in_menu).map((category, index) => (
+            {/* Category pills for show_in_menu categories - only when no category selected */}
+            {!selectedCategory && categories?.filter(c => c.show_in_menu).map((category, index) => (
               <button
                 key={category.name}
                 onClick={() => {
-                  if (selectedCategory === category.name) {
-                    updateParams({ category: undefined });
+                  updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                }}
+                className={`relative px-3 py-1.5 rounded-full text-sm font-medium transition-all animate-attention-pulse border-2 hover:scale-105`}
+                style={{
+                  backgroundColor: 'white',
+                  borderColor: category.color,
+                  color: category.color,
+                  animationDelay: `${index * 150}ms`,
+                }}
+              >
+                {category.name}
+              </button>
+            ))}
+            {/* Subcategory pills - only when category selected */}
+            {selectedCategory && subcategories && subcategories.length > 0 && subcategories.map((subcategory) => (
+              <button
+                key={subcategory.name}
+                onClick={() => {
+                  if (selectedSubcategory === subcategory.name) {
+                    updateParams({ subcategory: undefined });
                   } else {
-                    updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
+                    updateParams({ subcategory: subcategory.name });
                   }
                 }}
-                className={`relative px-3 py-1.5 rounded-full text-sm font-medium transition-all animate-attention-pulse ${
-                  selectedCategory === category.name && !showFeatured && !showImmediate
-                    ? 'text-white shadow-lg'
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  selectedSubcategory === subcategory.name
+                    ? 'text-white shadow-md'
                     : 'border-2 hover:scale-105'
                 }`}
                 style={{
-                  backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
-                    ? category.color
+                  backgroundColor: selectedSubcategory === subcategory.name
+                    ? subcategory.color
                     : 'white',
-                  borderColor: category.color,
-                  color: selectedCategory === category.name && !showFeatured && !showImmediate
+                  borderColor: subcategory.color,
+                  color: selectedSubcategory === subcategory.name
                     ? 'white'
-                    : category.color,
-                  animationDelay: `${index * 150}ms`,
+                    : subcategory.color,
                 }}
-                aria-pressed={selectedCategory === category.name}
               >
-                {category.name}
+                {subcategory.name}
               </button>
             ))}
           </div>
@@ -285,7 +322,7 @@ function HomePageContent() {
             <div className="md:hidden bg-white border rounded-lg shadow-lg p-4 space-y-2">
               <button
                 onClick={() => {
-                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined });
+                  updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   !selectedCategory && !showFeatured && !showImmediate
@@ -297,7 +334,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                   showFeatured
@@ -310,7 +347,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                   showImmediate
@@ -327,7 +364,7 @@ function HomePageContent() {
                   <button
                     key={category.name}
                     onClick={() => {
-                      updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
+                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                     }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                       selectedCategory === category.name && !showFeatured && !showImmediate
@@ -348,6 +385,36 @@ function HomePageContent() {
                   </button>
                 ))}
               </div>
+              {/* Subcategories in mobile menu */}
+              {selectedCategory && subcategories && subcategories.length > 0 && (
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-gray-500 mb-2 px-3">Subcategorías de {selectedCategory}</p>
+                  {subcategories.map((subcategory) => (
+                    <button
+                      key={subcategory.name}
+                      onClick={() => {
+                        updateParams({ subcategory: subcategory.name });
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                        selectedSubcategory === subcategory.name
+                          ? 'text-white'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      style={{
+                        backgroundColor: selectedSubcategory === subcategory.name
+                          ? subcategory.color
+                          : undefined,
+                      }}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: subcategory.color }}
+                      />
+                      {subcategory.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -356,7 +423,7 @@ function HomePageContent() {
             <div className="hidden md:flex flex-wrap gap-2">
               <button
                 onClick={() => {
-                  updateParams({ category: undefined, featured: undefined, immediate_delivery: undefined });
+                  updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   !selectedCategory && !showFeatured && !showImmediate
@@ -368,7 +435,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showFeatured
@@ -381,7 +448,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => {
-                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   showImmediate
@@ -396,7 +463,11 @@ function HomePageContent() {
                 <button
                   key={category.name}
                   onClick={() => {
-                    updateParams({ category: category.name, featured: undefined, immediate_delivery: undefined });
+                    if (selectedCategory === category.name) {
+                      updateParams({ category: undefined, subcategory: undefined });
+                    } else {
+                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                    }
                   }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     selectedCategory === category.name && !showFeatured && !showImmediate
@@ -413,6 +484,40 @@ function HomePageContent() {
                   }}
                 >
                   {category.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop Subcategories - only when category selected */}
+          {selectedCategory && subcategories && subcategories.length > 0 && !showFeatured && !showImmediate && (
+            <div className="hidden md:flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+              <span className="text-sm text-gray-500 py-1.5">Subcategorías:</span>
+              {subcategories.map((subcategory) => (
+                <button
+                  key={subcategory.name}
+                  onClick={() => {
+                    if (selectedSubcategory === subcategory.name) {
+                      updateParams({ subcategory: undefined });
+                    } else {
+                      updateParams({ subcategory: subcategory.name });
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedSubcategory === subcategory.name
+                      ? 'text-white'
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: selectedSubcategory === subcategory.name
+                      ? subcategory.color
+                      : `${subcategory.color}20`,
+                    color: selectedSubcategory === subcategory.name
+                      ? 'white'
+                      : subcategory.color,
+                  }}
+                >
+                  {subcategory.name}
                 </button>
               ))}
             </div>

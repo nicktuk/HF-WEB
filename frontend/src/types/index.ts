@@ -16,6 +16,7 @@ export interface ProductPublic {
   short_description?: string;
   brand?: string;
   category?: string;
+  subcategory?: string;
   is_featured: boolean;
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
@@ -35,6 +36,7 @@ export interface ProductAdmin extends ProductPublic {
   kit_content?: string;
   enabled: boolean;
   is_featured: boolean;
+  subcategory?: string;
   source_website_id: number;
   source_website_name?: string;
   last_scraped_at?: string;
@@ -71,6 +73,36 @@ export interface CategoryCreateForm {
   display_order: number;
   color: string;
   show_in_menu: boolean;
+}
+
+// Subcategory Types
+
+export interface Subcategory {
+  id: number;
+  name: string;
+  category_id: number;
+  category_name?: string;
+  is_active: boolean;
+  display_order: number;
+  color: string;
+  product_count: number;
+  enabled_product_count: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SubcategoryCreateForm {
+  name: string;
+  category_id: number;
+  is_active: boolean;
+  display_order: number;
+  color: string;
+}
+
+export interface SubcategoryPublic {
+  name: string;
+  category_name: string;
+  color: string;
 }
 
 // Source Website Types
@@ -168,6 +200,7 @@ export interface ProductUpdateForm {
   custom_price?: number;
   display_order?: number;
   category?: string;
+  subcategory?: string;
   description?: string;
   short_description?: string;
   brand?: string;
@@ -191,6 +224,7 @@ export interface ProductCreateManualForm {
   brand?: string;
   sku?: string;
   category?: string;
+  subcategory?: string;
   image_urls: string[];
   enabled: boolean;
   is_featured: boolean;

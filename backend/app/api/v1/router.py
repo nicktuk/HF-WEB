@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories
 
 api_router = APIRouter()
 
@@ -31,4 +31,11 @@ api_router.include_router(
     categories.router,
     prefix="/categories",
     tags=["categories"]
+)
+
+# Subcategories management
+api_router.include_router(
+    subcategories.router,
+    prefix="/subcategories",
+    tags=["subcategories"]
 )

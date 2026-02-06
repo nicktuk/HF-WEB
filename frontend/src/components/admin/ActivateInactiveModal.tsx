@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { X, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useActivateSelected, useCategories } from '@/hooks/useProducts';
+import { useActivateSelected, useCategories, useAdminSubcategories, useAdminCategories } from '@/hooks/useProducts';
 import { useApiKey } from '@/hooks/useAuth';
+import type { Category, Subcategory } from '@/types';
 
 interface ActivateInactiveModalProps {
   selectedIds: number[];
@@ -18,14 +19,30 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
   const apiKey = useApiKey() || '';
   const activateMutation = useActivateSelected(apiKey);
   const { data: existingCategories } = useCategories();
+  const { data: adminCategories } = useAdminCategories();
+  const categories = adminCategories as Category[] | undefined;
 
   // Initialize markup with existing value if > 0
   const [markup, setMarkup] = useState(existingMarkup && existingMarkup > 0 ? existingMarkup.toString() : '');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
+  const [subcategory, setSubcategory] = useState('');
+  const [customSubcategory, setCustomSubcategory] = useState('');
   const [confirmed, setConfirmed] = useState(false);
 
   const finalCategory = category === '__custom__' ? customCategory : category;
+  const finalSubcategory = subcategory === '__custom__' ? customSubcategory : subcategory;
+
+  // Get subcategories for selected category
+  const selectedCategoryObj = categories?.find(c => c.name === finalCategory);
+  const { data: availableSubcategories } = useAdminSubcategories(selectedCategoryObj?.id);
+  const subcategories = availableSubcategories as Subcategory[] | undefined;
+
+  // Reset subcategory when category changes
+  useEffect(() => {
+    setSubcategory('');
+    setCustomSubcategory('');
+  }, [category, customCategory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +54,7 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
         productIds: selectedIds,
         markupPercentage: parseFloat(markup),
         category: finalCategory || undefined,
+        subcategory: finalSubcategory || undefined,
       });
       onSuccess?.();
       onClose();
@@ -110,6 +128,40 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
             </p>
           </div>
 
+          {/* Subcategory - only show when category is selected */}
+          {finalCategory && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Subcategoria
+              </label>
+              <select
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Sin subcategoria</option>
+                {subcategories?.map((sub) => (
+                  <option key={sub.name} value={sub.name}>
+                    {sub.name}
+                  </option>
+                ))}
+                <option value="__custom__">+ Nueva subcategoria...</option>
+              </select>
+              {subcategory === '__custom__' && (
+                <Input
+                  type="text"
+                  value={customSubcategory}
+                  onChange={(e) => setCustomSubcategory(e.target.value)}
+                  placeholder="Nombre de la nueva subcategoria"
+                  maxLength={100}
+                />
+              )}
+              <p className="text-xs text-gray-500">
+                Opcional: asignar una subcategoria a los productos activados
+              </p>
+            </div>
+          )}
+
           <label className="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg cursor-pointer">
             <input
               type="checkbox"
@@ -121,6 +173,7 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
               Confirmo que quiero activar <strong>{selectedIds.length}</strong> producto(s)
               con <strong>{markup || '0'}%</strong> de markup
               {finalCategory && <> en categoria <strong>{finalCategory}</strong></>}
+              {finalSubcategory && <>, subcategoria <strong>{finalSubcategory}</strong></>}
             </span>
           </label>
 

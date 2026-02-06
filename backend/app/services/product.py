@@ -33,6 +33,7 @@ class ProductService:
         page: int = 1,
         limit: int = 20,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None
@@ -47,13 +48,13 @@ class ProductService:
         skip = (page - 1) * limit
 
         # Try cache first
-        cache_key = f"catalog:{page}:{limit}:{category}:{search}:{featured}:{immediate_delivery}"
+        cache_key = f"catalog:{page}:{limit}:{category}:{subcategory}:{search}:{featured}:{immediate_delivery}"
         cached_result = cache.get_product(cache_key)
         if cached_result:
             return cached_result
 
-        products = self.repo.get_enabled_products(skip, limit, category, search, featured, immediate_delivery)
-        total = self.repo.count_enabled(category, search, featured, immediate_delivery)
+        products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery)
+        total = self.repo.count_enabled(category, subcategory, search, featured, immediate_delivery)
 
         # Transform to public response
         public_products = [self._to_public_response(p) for p in products]
@@ -92,6 +93,7 @@ class ProductService:
             short_description=product.short_description,
             brand=product.brand,
             category=product.category,
+            subcategory=product.subcategory,
             is_featured=product.is_featured,
             is_immediate_delivery=product.is_immediate_delivery,
             is_check_stock=product.is_check_stock,
@@ -109,14 +111,15 @@ class ProductService:
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, is_featured, is_immediate_delivery, price_range)
-        total = self.repo.count_admin(enabled, source_website_id, search, category, is_featured, is_immediate_delivery, price_range)
+        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, subcategory, is_featured, is_immediate_delivery, price_range)
+        total = self.repo.count_admin(enabled, source_website_id, search, category, subcategory, is_featured, is_immediate_delivery, price_range)
         return products, total
 
     def get_by_id(self, id: int) -> Product:
@@ -259,6 +262,11 @@ class ProductService:
             product.display_order = data.display_order
         if data.category is not None:
             product.category = data.category if data.category else None
+            # Clear subcategory when category changes (subcategory no longer valid)
+            if data.category != product.category:
+                product.subcategory = None
+        if data.subcategory is not None:
+            product.subcategory = data.subcategory if data.subcategory else None
         if data.description is not None:
             product.description = data.description if data.description else None
         if data.short_description is not None:
@@ -483,7 +491,8 @@ class ProductService:
         self,
         product_ids: List[int],
         markup_percentage: Decimal,
-        category: Optional[str] = None
+        category: Optional[str] = None,
+        subcategory: Optional[str] = None
     ) -> dict:
         """
         Activate selected products and apply markup.
@@ -497,6 +506,8 @@ class ProductService:
         }
         if category:
             update_data[Product.category] = category
+        if subcategory:
+            update_data[Product.subcategory] = subcategory
 
         # Only activate products with valid price (not null and > 0)
         count = self.db.query(Product).filter(
@@ -516,24 +527,42 @@ class ProductService:
 
         self.db.commit()
         cache.invalidate_all_products()
-        logger.info(f"Activated {count} products (skipped {skipped} without valid price), markup: {markup_percentage}%, category: {category}")
+        logger.info(f"Activated {count} products (skipped {skipped} without valid price), markup: {markup_percentage}%, category: {category}, subcategory: {subcategory}")
         return {"activated": count, "skipped": skipped}
 
     def change_category_selected(self, product_ids: List[int], category: str) -> int:
         """
         Change category for selected products.
+        Also clears subcategory since it no longer applies.
 
         Returns the number of products updated.
         """
         count = self.db.query(Product).filter(
             Product.id.in_(product_ids)
         ).update(
-            {Product.category: category},
+            {Product.category: category, Product.subcategory: None},
             synchronize_session=False
         )
         self.db.commit()
         cache.invalidate_all_products()
         logger.info(f"Changed category to '{category}' for {count} products")
+        return count
+
+    def change_subcategory_selected(self, product_ids: List[int], subcategory: str) -> int:
+        """
+        Change subcategory for selected products.
+
+        Returns the number of products updated.
+        """
+        count = self.db.query(Product).filter(
+            Product.id.in_(product_ids)
+        ).update(
+            {Product.subcategory: subcategory},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Changed subcategory to '{subcategory}' for {count} products")
         return count
 
     def disable_selected(self, product_ids: List[int]) -> int:
@@ -631,6 +660,41 @@ class ProductService:
             }
             for cat in categories
         ]
+
+    def get_public_subcategories(self, category: Optional[str] = None) -> List[dict]:
+        """Get list of subcategories with their properties for public display."""
+        from app.models.subcategory import Subcategory as SubcategoryModel
+        from app.models.category import Category as CategoryModel
+
+        query = (
+            self.db.query(SubcategoryModel)
+            .join(CategoryModel, SubcategoryModel.category_id == CategoryModel.id)
+            .filter(SubcategoryModel.is_active == True)
+            .filter(CategoryModel.is_active == True)
+        )
+
+        if category:
+            query = query.filter(CategoryModel.name == category)
+
+        subcategories = query.order_by(SubcategoryModel.display_order, SubcategoryModel.name).all()
+
+        result = []
+        for sub in subcategories:
+            cat = self.db.query(CategoryModel).filter(CategoryModel.id == sub.category_id).first()
+            # Only include subcategories that have enabled products
+            product_count = self.db.query(Product).filter(
+                Product.category == cat.name if cat else None,
+                Product.subcategory == sub.name,
+                Product.enabled == True
+            ).count()
+            if product_count > 0:
+                result.append({
+                    "name": sub.name,
+                    "category_name": cat.name if cat else None,
+                    "color": sub.color or "#6b7280",
+                })
+
+        return result
 
     def get_enabled_products(self) -> List[Product]:
         """Get all enabled products with images for PDF export."""

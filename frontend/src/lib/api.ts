@@ -63,6 +63,7 @@ export const publicApi = {
     page?: number;
     limit?: number;
     category?: string;
+    subcategory?: string;
     search?: string;
     featured?: boolean;
     immediate_delivery?: boolean;
@@ -71,6 +72,7 @@ export const publicApi = {
     if (params.page) searchParams.set('page', params.page.toString());
     if (params.limit) searchParams.set('limit', params.limit.toString());
     if (params.category) searchParams.set('category', params.category);
+    if (params.subcategory) searchParams.set('subcategory', params.subcategory);
     if (params.search) searchParams.set('search', params.search);
     if (params.featured !== undefined) searchParams.set('featured', params.featured.toString());
     if (params.immediate_delivery !== undefined) {
@@ -94,6 +96,14 @@ export const publicApi = {
   async getCategories(): Promise<{ name: string; color: string; show_in_menu: boolean }[]> {
     return fetchAPI('/public/categories');
   },
+
+  /**
+   * Get list of subcategories
+   */
+  async getSubcategories(category?: string): Promise<{ name: string; category_name: string; color: string }[]> {
+    const params = category ? `?category=${encodeURIComponent(category)}` : '';
+    return fetchAPI(`/public/subcategories${params}`);
+  },
 };
 
 // ============================================
@@ -113,6 +123,7 @@ export const adminApi = {
       source_website_id?: number;
       search?: string;
       category?: string;
+      subcategory?: string;
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
       price_range?: string;
@@ -125,6 +136,7 @@ export const adminApi = {
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
     if (params.category) searchParams.set('category', params.category);
+    if (params.subcategory) searchParams.set('subcategory', params.subcategory);
     if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
     if (params.is_immediate_delivery !== undefined) {
       searchParams.set('is_immediate_delivery', params.is_immediate_delivery.toString());
@@ -245,7 +257,8 @@ export const adminApi = {
     apiKey: string,
     productIds: number[],
     markupPercentage: number,
-    category?: string
+    category?: string,
+    subcategory?: string
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/activate-selected', {
       method: 'POST',
@@ -253,6 +266,7 @@ export const adminApi = {
         product_ids: productIds,
         markup_percentage: markupPercentage,
         category: category || null,
+        subcategory: subcategory || null,
       }),
     }, apiKey);
   },
@@ -285,6 +299,23 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({
         product_ids: productIds,
+      }),
+    }, apiKey);
+  },
+
+  /**
+   * Change subcategory for selected products
+   */
+  async changeSubcategorySelected(
+    apiKey: string,
+    productIds: number[],
+    subcategory: string
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/change-subcategory-selected', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_ids: productIds,
+        subcategory: subcategory,
       }),
     }, apiKey);
   },

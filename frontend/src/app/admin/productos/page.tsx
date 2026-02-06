@@ -10,9 +10,9 @@ import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
-import type { Category } from '@/types';
+import type { Category, Subcategory } from '@/types';
 import { adminApi } from '@/lib/api';
 
 export default function ProductsPage() {
@@ -24,6 +24,7 @@ export default function ProductsPage() {
     enabledFilter,
     sourceFilter,
     categoryFilter,
+    subcategoryFilter,
     featuredFilter,
     priceRangeFilter,
     page,
@@ -32,6 +33,7 @@ export default function ProductsPage() {
     setEnabledFilter,
     setSourceFilter,
     setCategoryFilter,
+    setSubcategoryFilter,
     setFeaturedFilter,
     setPriceRangeFilter,
     setPage,
@@ -43,11 +45,14 @@ export default function ProductsPage() {
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkSubcategory, setBulkSubcategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
+  const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -75,6 +80,7 @@ export default function ProductsPage() {
     source_website_id: sourceFilter,
     search: search || undefined,
     category: categoryFilter,
+    subcategory: subcategoryFilter,
     is_featured: featuredFilter,
     price_range: priceRangeFilter,
   });
@@ -82,6 +88,11 @@ export default function ProductsPage() {
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
   const { data: adminCategories } = useAdminCategories();
   const categories = adminCategories as Category[] | undefined;
+
+  // Get subcategories for the selected category
+  const selectedCategoryObj = categories?.find(c => c.name === categoryFilter);
+  const { data: adminSubcategories } = useAdminSubcategories(selectedCategoryObj?.id);
+  const subcategories = adminSubcategories as Subcategory[] | undefined;
 
   return (
     <div className="space-y-6">
@@ -266,6 +277,26 @@ export default function ProductsPage() {
           </select>
         )}
 
+        {/* Subcategory Filter - only show when category is selected */}
+        {categoryFilter && categoryFilter !== '__none__' && subcategories && subcategories.length > 0 && (
+          <select
+            value={subcategoryFilter || ''}
+            onChange={(e) => {
+              setSubcategoryFilter(e.target.value || undefined);
+              setSelectedIds([]);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Todas las subcategorias</option>
+            <option value="__none__">Sin subcategoría</option>
+            {subcategories.map((subcategory) => (
+              <option key={subcategory.name} value={subcategory.name}>
+                {subcategory.name} ({subcategory.enabled_product_count}/{subcategory.product_count})
+              </option>
+            ))}
+          </select>
+        )}
+
         {/* Source Filter */}
         {sourceWebsites && sourceWebsites.items.length > 1 && (
           <select
@@ -308,7 +339,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || featuredFilter || priceRangeFilter) && (
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>
@@ -335,7 +366,7 @@ export default function ProductsPage() {
         apiKey={apiKey}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        categories={categories?.map(c => c.name) || []}
+        categories={categories || []}
       />
 
       {/* Pagination */}

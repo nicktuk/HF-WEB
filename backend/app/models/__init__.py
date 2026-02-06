@@ -4,6 +4,7 @@ from app.models.source_website import SourceWebsite
 from app.models.product import Product, ProductImage
 from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
 from app.models.category import Category
+from app.models.subcategory import Subcategory
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "MarketPrice",
     "MarketPriceStats",
     "Category",
+    "Subcategory",
 ]

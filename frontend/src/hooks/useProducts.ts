@@ -12,6 +12,7 @@ export function usePublicProducts(params: {
   page?: number;
   limit?: number;
   category?: string;
+  subcategory?: string;
   search?: string;
   featured?: boolean;
   immediate_delivery?: boolean;
@@ -36,6 +37,14 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => publicApi.getCategories(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+export function useSubcategories(category?: string) {
+  return useQuery({
+    queryKey: ['subcategories', category],
+    queryFn: () => publicApi.getSubcategories(category),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -65,6 +74,7 @@ export function useAdminProducts(
     source_website_id?: number;
     search?: string;
     category?: string;
+    subcategory?: string;
     is_featured?: boolean;
     is_immediate_delivery?: boolean;
     price_range?: string;
@@ -213,12 +223,13 @@ export function useActivateSelected(apiKey: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ productIds, markupPercentage, category }: { productIds: number[]; markupPercentage: number; category?: string }) =>
-      adminApi.activateSelected(apiKey, productIds, markupPercentage, category),
+    mutationFn: ({ productIds, markupPercentage, category, subcategory }: { productIds: number[]; markupPercentage: number; category?: string; subcategory?: string }) =>
+      adminApi.activateSelected(apiKey, productIds, markupPercentage, category, subcategory),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
     },
   });
 }
@@ -233,7 +244,37 @@ export function useChangeCategorySelected(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
     },
+  });
+}
+
+export function useChangeSubcategorySelected(apiKey: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productIds, subcategory }: { productIds: number[]; subcategory: string }) =>
+      adminApi.changeSubcategorySelected(apiKey, productIds, subcategory),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-products'] });
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+    },
+  });
+}
+
+export function useAdminSubcategories(categoryId?: number) {
+  return useQuery({
+    queryKey: ['admin-subcategories', categoryId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (categoryId) params.set('category_id', categoryId.toString());
+      params.set('include_inactive', 'true');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subcategories?${params}`);
+      if (!res.ok) throw new Error('Error al cargar subcategorías');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

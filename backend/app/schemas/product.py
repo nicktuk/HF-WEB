@@ -24,6 +24,7 @@ class ProductCreate(BaseModel):
     markup_percentage: Decimal = Field(default=Decimal("0"), ge=0)
     enabled: bool = Field(default=False)
     category: Optional[str] = Field(None, max_length=100)
+    subcategory: Optional[str] = Field(None, max_length=100)
 
     @field_validator("slug")
     @classmethod
@@ -45,6 +46,7 @@ class ProductUpdate(BaseModel):
     custom_price: Optional[Decimal] = Field(None, ge=0)
     display_order: Optional[int] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)
+    subcategory: Optional[str] = Field(None, max_length=100)
     # Extended fields for full editing
     description: Optional[str] = Field(None, max_length=5000)
     short_description: Optional[str] = Field(None, max_length=1000)
@@ -91,6 +93,7 @@ class ProductResponse(BaseModel):
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
     category: Optional[str] = None
+    subcategory: Optional[str] = None
     enabled: bool
     is_featured: bool = False
     is_immediate_delivery: bool = False
@@ -129,6 +132,7 @@ class ProductPublicResponse(BaseModel):
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
     category: Optional[str] = None
+    subcategory: Optional[str] = None
     is_featured: bool = False
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
@@ -191,12 +195,19 @@ class ProductActivateSelected(BaseModel):
     product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs to activate")
     markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply")
     category: Optional[str] = Field(None, max_length=100, description="Category to assign to products")
+    subcategory: Optional[str] = Field(None, max_length=100, description="Subcategory to assign to products")
 
 
 class ProductChangeCategorySelected(BaseModel):
     """Schema for changing category of selected products."""
     product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
     category: str = Field(..., min_length=1, max_length=100, description="Category to assign")
+
+
+class ProductChangeSubcategorySelected(BaseModel):
+    """Schema for changing subcategory of selected products."""
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
+    subcategory: str = Field(..., min_length=1, max_length=100, description="Subcategory to assign")
 
 
 class ProductDisableSelected(BaseModel):
@@ -213,6 +224,7 @@ class ProductCreateManual(BaseModel):
     brand: Optional[str] = Field(None, max_length=100)
     sku: Optional[str] = Field(None, max_length=100)
     category: Optional[str] = Field(None, max_length=100)
+    subcategory: Optional[str] = Field(None, max_length=100)
     image_urls: List[str] = Field(default_factory=list, max_length=10)
     enabled: bool = Field(default=True)
     is_featured: bool = Field(default=False, description="Marcar como novedad")

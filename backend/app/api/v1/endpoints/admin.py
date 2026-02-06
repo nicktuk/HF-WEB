@@ -26,6 +26,7 @@ from app.schemas.product import (
     ProductActivateInactive,
     ProductActivateSelected,
     ProductChangeCategorySelected,
+    ProductChangeSubcategorySelected,
     ProductDisableSelected,
 )
 from app.schemas.market_price import (
@@ -60,6 +61,7 @@ async def get_products_admin(
     source_website_id: Optional[int] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     category: Optional[str] = Query(default=None, max_length=100),
+    subcategory: Optional[str] = Query(default=None, max_length=100),
     is_featured: Optional[bool] = Query(default=None),
     is_immediate_delivery: Optional[bool] = Query(default=None),
     price_range: Optional[str] = Query(default=None, max_length=20),
@@ -77,6 +79,7 @@ async def get_products_admin(
         source_website_id,
         search,
         category,
+        subcategory,
         is_featured,
         is_immediate_delivery,
         price_range
@@ -100,6 +103,7 @@ async def get_products_admin(
             brand=p.brand,
             sku=p.sku,
             category=p.category,
+            subcategory=p.subcategory,
             enabled=p.enabled,
             is_featured=p.is_featured,
             is_immediate_delivery=p.is_immediate_delivery,
@@ -534,13 +538,15 @@ async def activate_selected(
     This will:
     - Enable the specified products (only those with valid price > 0)
     - Apply the specified markup percentage to them
-    - Optionally set their category
+    - Optionally set their category and subcategory
     - Skip products without valid price
     """
-    result = service.activate_selected_with_markup(data.product_ids, data.markup_percentage, data.category)
+    result = service.activate_selected_with_markup(data.product_ids, data.markup_percentage, data.category, data.subcategory)
     msg = f"Activados {result['activated']} productos con markup de {data.markup_percentage}%"
     if data.category:
         msg += f" en categoria '{data.category}'"
+    if data.subcategory:
+        msg += f", subcategoria '{data.subcategory}'"
     if result['skipped'] > 0:
         msg += f". Omitidos {result['skipped']} sin precio valido"
     return MessageResponse(message=msg)
@@ -560,6 +566,22 @@ async def change_category_selected(
     """
     count = service.change_category_selected(data.product_ids, data.category)
     return MessageResponse(message=f"Categoria '{data.category}' asignada a {count} productos")
+
+
+@router.post(
+    "/products/change-subcategory-selected",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def change_subcategory_selected(
+    data: ProductChangeSubcategorySelected,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Change subcategory for selected products.
+    """
+    count = service.change_subcategory_selected(data.product_ids, data.subcategory)
+    return MessageResponse(message=f"Subcategoria '{data.subcategory}' asignada a {count} productos")
 
 
 @router.post(

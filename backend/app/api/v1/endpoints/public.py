@@ -23,6 +23,7 @@ async def get_products(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=1000),
     category: Optional[str] = Query(default=None),
+    subcategory: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     featured: Optional[bool] = Query(default=None),
     immediate_delivery: Optional[bool] = Query(default=None),
@@ -35,7 +36,7 @@ async def get_products(
     Use featured=true to get only featured products (Novedades).
     Use immediate_delivery=true to get only products with immediate delivery.
     """
-    products, total = service.get_public_catalog(page, limit, category, search, featured, immediate_delivery)
+    products, total = service.get_public_catalog(page, limit, category, subcategory, search, featured, immediate_delivery)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     return PaginatedResponse(
@@ -70,3 +71,14 @@ async def get_categories(
 ):
     """Get list of available categories with their properties."""
     return service.get_public_categories()
+
+
+@router.get("/subcategories")
+@limiter.limit(settings.RATE_LIMIT_PUBLIC)
+async def get_subcategories(
+    request: Request,
+    category: Optional[str] = Query(default=None),
+    service: ProductService = Depends(get_product_service),
+):
+    """Get list of available subcategories with their properties."""
+    return service.get_public_subcategories(category)

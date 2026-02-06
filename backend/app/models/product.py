@@ -52,6 +52,7 @@ class Product(Base):
 
     # Categoría local (opcional, para organización propia)
     category = Column(String(100), nullable=True, index=True)
+    subcategory = Column(String(100), nullable=True, index=True)
 
     # Metadatos de scraping
     last_scraped_at = Column(DateTime, nullable=True)

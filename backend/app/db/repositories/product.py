@@ -41,6 +41,7 @@ class ProductRepository(BaseRepository[Product]):
         skip: int = 0,
         limit: int = 100,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None
@@ -54,6 +55,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             query = query.filter(Product.category == category)
+
+        if subcategory:
+            query = query.filter(Product.subcategory == subcategory)
 
         if search:
             search_term = f"%{search}%"
@@ -89,6 +93,7 @@ class ProductRepository(BaseRepository[Product]):
     def count_enabled(
         self,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None
@@ -98,6 +103,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             query = query.filter(Product.category == category)
+
+        if subcategory:
+            query = query.filter(Product.subcategory == subcategory)
 
         if search:
             search_term = f"%{search}%"
@@ -124,6 +132,7 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None
@@ -149,6 +158,12 @@ class ProductRepository(BaseRepository[Product]):
                 query = query.filter(Product.category == None)
             else:
                 query = query.filter(Product.category == category)
+
+        if subcategory:
+            if subcategory == "__none__":
+                query = query.filter(Product.subcategory == None)
+            else:
+                query = query.filter(Product.subcategory == subcategory)
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
@@ -229,6 +244,7 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None
@@ -247,6 +263,12 @@ class ProductRepository(BaseRepository[Product]):
                 query = query.filter(Product.category == None)
             else:
                 query = query.filter(Product.category == category)
+
+        if subcategory:
+            if subcategory == "__none__":
+                query = query.filter(Product.subcategory == None)
+            else:
+                query = query.filter(Product.subcategory == subcategory)
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)

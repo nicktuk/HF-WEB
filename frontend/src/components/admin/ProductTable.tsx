@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableRowSkeleton } from '@/components/ui/skeleton';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
-import { useUpdateProduct, useDeleteProduct, useRescrapeProduct } from '@/hooks/useProducts';
-import type { ProductAdmin } from '@/types';
+import { useUpdateProduct, useDeleteProduct, useRescrapeProduct, useAdminSubcategories } from '@/hooks/useProducts';
+import type { ProductAdmin, Category, Subcategory } from '@/types';
 
 interface ProductTableProps {
   products: ProductAdmin[];
@@ -17,7 +17,7 @@ interface ProductTableProps {
   apiKey: string;
   selectedIds?: number[];
   onSelectionChange?: (ids: number[]) => void;
-  categories?: string[];
+  categories?: Category[];
 }
 
 export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange, categories = [] }: ProductTableProps) {
@@ -29,9 +29,18 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
 
   const handleCategoryChange = async (product: ProductAdmin, newCategory: string) => {
     if (newCategory === (product.category || '')) return;
+    // When category changes, clear subcategory
     await updateMutation.mutateAsync({
       id: product.id,
-      data: { category: newCategory || undefined },
+      data: { category: newCategory || undefined, subcategory: undefined },
+    });
+  };
+
+  const handleSubcategoryChange = async (product: ProductAdmin, newSubcategory: string) => {
+    if (newSubcategory === (product.subcategory || '')) return;
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: { subcategory: newSubcategory || undefined },
     });
   };
 
@@ -102,6 +111,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
               {onSelectionChange && <th className="px-4 py-3 w-12"></th>}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subcategoría</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Origen</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Final</th>
@@ -111,7 +121,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {Array.from({ length: 5 }).map((_, i) => (
-              <TableRowSkeleton key={i} columns={onSelectionChange ? 8 : 7} />
+              <TableRowSkeleton key={i} columns={onSelectionChange ? 9 : 8} />
             ))}
           </tbody>
         </table>
@@ -148,6 +158,9 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Categoría
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Subcategoría
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Precio Origen
@@ -265,11 +278,21 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                   >
                     <option value="">Sin categoría</option>
                     {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                      <option key={cat.name} value={cat.name}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
+                </td>
+
+                {/* Subcategory */}
+                <td className="px-4 py-3 text-sm">
+                  <SubcategorySelect
+                    product={product}
+                    categories={categories}
+                    onSubcategoryChange={handleSubcategoryChange}
+                    disabled={updateMutation.isPending}
+                  />
                 </td>
 
                 {/* Original Price */}
@@ -343,5 +366,50 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Subcategory select component that fetches subcategories based on category
+function SubcategorySelect({
+  product,
+  categories,
+  onSubcategoryChange,
+  disabled
+}: {
+  product: ProductAdmin;
+  categories: Category[];
+  onSubcategoryChange: (product: ProductAdmin, subcategory: string) => void;
+  disabled: boolean;
+}) {
+  // Find category ID for the product's category
+  const categoryObj = categories.find(c => c.name === product.category);
+  const { data: subcategories } = useAdminSubcategories(categoryObj?.id);
+
+  if (!product.category) {
+    return (
+      <span className="text-gray-400 text-sm">-</span>
+    );
+  }
+
+  if (!subcategories || subcategories.length === 0) {
+    return (
+      <span className="text-gray-400 text-sm">-</span>
+    );
+  }
+
+  return (
+    <select
+      value={product.subcategory || ''}
+      onChange={(e) => onSubcategoryChange(product, e.target.value)}
+      className="w-full px-2 py-1 text-sm border border-gray-200 rounded hover:border-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 bg-transparent cursor-pointer"
+      disabled={disabled}
+    >
+      <option value="">Sin subcategoría</option>
+      {subcategories.map((sub: Subcategory) => (
+        <option key={sub.name} value={sub.name}>
+          {sub.name}
+        </option>
+      ))}
+    </select>
   );
 }

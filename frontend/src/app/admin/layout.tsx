@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   Tags,
+  FolderTree,
   ChevronDown,
   ChevronRight,
   Scale,
@@ -25,6 +26,7 @@ const navigation = [
 
 const configSubmenu = [
   { name: 'Categorías', href: '/admin/categorias', icon: Tags },
+  { name: 'Subcategorías', href: '/admin/subcategorias', icon: FolderTree },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
 ];
 
