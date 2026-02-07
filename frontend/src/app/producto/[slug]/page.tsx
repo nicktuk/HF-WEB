@@ -192,7 +192,6 @@ export default function ProductPage() {
           productName={product.name}
           productSlug={slug}
           productPrice={product.price}
-          variant="whatsapp"
           size="lg"
           className="w-full"
         />
