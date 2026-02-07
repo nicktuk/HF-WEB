@@ -1,13 +1,12 @@
 'use client';
 
-import { MessageCircle, Mail } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { getWhatsAppUrl, cn } from '@/lib/utils';
 
 interface ContactButtonProps {
   productName: string;
   productSlug?: string;
   productPrice?: number | null;
-  variant?: 'whatsapp' | 'email';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -24,12 +23,10 @@ export function ContactButton({
   productName,
   productSlug,
   productPrice,
-  variant = 'whatsapp',
   size = 'md',
   className,
 }: ContactButtonProps) {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
-  const email = process.env.NEXT_PUBLIC_EMAIL || '';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
   const productUrl = productSlug ? `${siteUrl}/producto/${productSlug}` : undefined;
 
@@ -41,57 +38,29 @@ export function ContactButton({
     }).format(price);
   };
 
-  if (variant === 'whatsapp') {
-    let message = `Hola! Me interesa el producto: ${productName}`;
-    if (productPrice) {
-      message += `\nPrecio: ${formatPrice(productPrice)}`;
-    }
-    if (productUrl) {
-      message += `\n${productUrl}`;
-    }
-    const url = getWhatsAppUrl(whatsappNumber, message);
-
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          baseStyles,
-          sizes[size],
-          'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
-          className
-        )}
-      >
-        <MessageCircle className="mr-2 h-5 w-5" />
-        Consultar por WhatsApp
-      </a>
-    );
-  }
-
-  let bodyText = `Hola, me interesa el producto: ${productName}`;
+  let message = `Hola! Me interesa el producto: ${productName}`;
   if (productPrice) {
-    bodyText += `\nPrecio: ${formatPrice(productPrice)}`;
+    message += `\nPrecio: ${formatPrice(productPrice)}`;
   }
   if (productUrl) {
-    bodyText += `\n\n${productUrl}`;
+    message += `\n${productUrl}`;
   }
-  const subject = encodeURIComponent(`Consulta: ${productName}`);
-  const body = encodeURIComponent(bodyText);
-  const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+  const url = getWhatsAppUrl(whatsappNumber, message);
 
   return (
     <a
-      href={mailtoUrl}
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
       className={cn(
         baseStyles,
         sizes[size],
-        'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500',
+        'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
         className
       )}
     >
-      <Mail className="mr-2 h-5 w-5" />
-      Consultar por Email
+      <MessageCircle className="mr-2 h-5 w-5" />
+      Consultar por WhatsApp
     </a>
   );
 }

@@ -179,14 +179,6 @@ export default function ProductPage() {
                 productName={product.name}
                 productSlug={slug}
                 productPrice={product.price}
-                variant="whatsapp"
-                size="lg"
-              />
-              <ContactButton
-                productName={product.name}
-                productSlug={slug}
-                productPrice={product.price}
-                variant="email"
                 size="lg"
               />
             </div>
