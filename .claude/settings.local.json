@@ -59,7 +59,9 @@
       "Bash(npx tsc:*)",
       "WebFetch(domain:decomoda-mayorista.com.ar)",
       "WebFetch(domain:www.sina.com.ar)",
-      "WebFetch(domain:www.protrade.com.ar)"
+      "WebFetch(domain:www.protrade.com.ar)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 5 /nobreak)"
     ]
   }
 }

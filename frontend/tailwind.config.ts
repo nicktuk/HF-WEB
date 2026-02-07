@@ -26,6 +26,15 @@ const config: Config = {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      keyframes: {
+        'attention-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.9' },
+        },
+      },
+      animation: {
+        'attention-pulse': 'attention-pulse 2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
