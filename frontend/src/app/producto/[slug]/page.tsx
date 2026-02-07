@@ -161,6 +161,9 @@ export default function ProductPage() {
               <p className="text-4xl font-bold text-primary-600">
                 {formatPrice(product.price)}
               </p>
+              <p className="mt-2 text-sm text-gray-500">
+                Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
+              </p>
             </div>
 
             {/* Description */}
