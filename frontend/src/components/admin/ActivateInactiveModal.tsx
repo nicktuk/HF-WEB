@@ -23,7 +23,7 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
   const categories = adminCategories as Category[] | undefined;
 
   // Initialize markup with existing value if > 0
-  const [markup, setMarkup] = useState(existingMarkup && existingMarkup > 0 ? existingMarkup.toString() : '');
+  const [markup, setMarkup] = useState(existingMarkup !== undefined ? existingMarkup.toString() : '');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -47,7 +47,7 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!markup || !confirmed || selectedIds.length === 0) return;
+    if (markup === '' || !confirmed || selectedIds.length === 0) return;
 
     try {
       await activateMutation.mutateAsync({
@@ -196,7 +196,7 @@ export function ActivateInactiveModal({ selectedIds, existingMarkup, onClose, on
             <Button
               type="submit"
               isLoading={activateMutation.isPending}
-              disabled={!markup || !confirmed || selectedIds.length === 0}
+              disabled={markup === '' || !confirmed || selectedIds.length === 0}
             >
               Activar {selectedIds.length} Producto(s)
             </Button>
