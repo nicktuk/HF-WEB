@@ -291,7 +291,6 @@ class ProductService:
             raise ValueError("Fecha inválida")
 
         rows = []
-        code_cache: dict[str, Product | None] = {}
         desc_cache: dict[str, Product | None] = {}
 
         for idx, row in enumerate(reader, start=2):  # header is line 1
@@ -304,31 +303,7 @@ class ProductService:
                 code = digits[:5] if digits else ""
                 derived_code = bool(code)
 
-            if not code:
-                errors.append("Código vacío y no se pudo derivar desde la descripción")
-
-            def normalize_code(value: str) -> str:
-                return re.sub(r"\s+", "", (value or "").strip())
-
             product = None
-            if code:
-                normalized_code = normalize_code(code)
-                cache_key = normalized_code.lower()
-                if cache_key in code_cache:
-                    product = code_cache[cache_key]
-                else:
-                    product = (
-                        self.db.query(Product)
-                        .filter(
-                            or_(
-                                func.lower(Product.sku) == code.lower(),
-                                func.lower(Product.sku) == normalized_code.lower(),
-                                func.replace(func.lower(Product.sku), " ", "") == normalized_code.lower(),
-                            )
-                        )
-                        .first()
-                    )
-                    code_cache[cache_key] = product
 
             if not product and description:
                 if description in desc_cache:
@@ -346,7 +321,7 @@ class ProductService:
                     desc_cache[description] = product
 
             if not product:
-                errors.append(f"No se encontró producto con código {code}" if code else "Producto no encontrado")
+                errors.append("Producto no encontrado para la descripción")
 
             purchase_date = None
             unit_price = None
