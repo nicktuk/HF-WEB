@@ -595,6 +595,7 @@ export default function ProductEditPage() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Compra</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
@@ -609,6 +610,12 @@ export default function ProductEditPage() {
                           return (
                             <tr key={purchase.id} className="hover:bg-gray-50">
                               <td className="px-3 py-2">{purchase.purchase_date}</td>
+                              <td className="px-3 py-2">
+                                <div className="font-medium text-gray-900 line-clamp-1">
+                                  {purchase.description || '-'}
+                                </div>
+                                <div className="text-xs text-gray-500">{purchase.code || '-'}</div>
+                              </td>
                               <td className="px-3 py-2 text-right">{purchase.quantity}</td>
                               <td className="px-3 py-2 text-right">{purchase.out_quantity}</td>
                               <td className="px-3 py-2 text-right font-medium">{available}</td>
