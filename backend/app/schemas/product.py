@@ -231,6 +231,7 @@ class ProductCreateManual(BaseModel):
     is_featured: bool = Field(default=False, description="Marcar como novedad")
     is_immediate_delivery: bool = Field(default=False, description="Entrega inmediata")
     is_check_stock: bool = Field(default=False, description="Consultar stock")
+    price_as_original: bool = Field(default=False, description="Guardar precio como original_price")
 
     @field_validator("name")
     @classmethod

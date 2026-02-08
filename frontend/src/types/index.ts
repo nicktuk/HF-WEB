@@ -262,6 +262,7 @@ export interface SourceWebsiteCreateForm {
 export interface ProductCreateManualForm {
   name: string;
   price: number;
+  price_as_original?: boolean;
   description?: string;
   short_description?: string;
   brand?: string;

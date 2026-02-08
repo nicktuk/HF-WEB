@@ -21,9 +21,10 @@ interface ManualProductFormProps {
     sku?: string;
     category?: string;
   };
+  priceAsOriginal?: boolean;
 }
 
-export function ManualProductForm({ onClose, onSuccess, initialValues }: ManualProductFormProps) {
+export function ManualProductForm({ onClose, onSuccess, initialValues, priceAsOriginal = false }: ManualProductFormProps) {
   const apiKey = useApiKey() || '';
   const createMutation = useCreateProductManual(apiKey);
 
@@ -115,6 +116,7 @@ export function ManualProductForm({ onClose, onSuccess, initialValues }: ManualP
       const created = await createMutation.mutateAsync({
         name: name.trim(),
         price: parseFloat(price),
+        price_as_original: priceAsOriginal,
         description: description.trim() || undefined,
         short_description: shortDescription.trim() || undefined,
         brand: brand.trim() || undefined,

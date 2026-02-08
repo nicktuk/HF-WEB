@@ -156,6 +156,7 @@ export default function StockUnmatchedPage() {
             setActivePurchaseForManual(null);
           }}
           initialValues={getInitialValues(activePurchaseForManual)}
+          priceAsOriginal
         />
       )}
     </div>

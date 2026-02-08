@@ -554,8 +554,9 @@ class ProductService:
             # Check if there will be a valid price after update
             has_custom_price = effective_custom_price is not None and float(effective_custom_price) > 0
             has_markup = effective_markup is not None and float(effective_markup) > 0
+            has_original_price = product.original_price is not None and float(product.original_price) > 0
 
-            if not has_custom_price and not has_markup:
+            if not has_custom_price and not has_markup and not has_original_price:
                 from app.core.exceptions import ValidationError
                 raise ValidationError(
                     "No se puede habilitar un producto sin definir un precio. "
@@ -728,13 +729,19 @@ class ProductService:
         slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
 
         # Create product
+        original_price = None
+        custom_price = data.price
+        if data.price_as_original:
+            original_price = data.price
+            custom_price = None
+
         product = Product(
             source_website_id=manual_source.id,
             slug=slug,
             source_url=None,
             original_name=data.name,
-            original_price=None,  # Manual products use custom_price
-            custom_price=data.price,
+            original_price=original_price,
+            custom_price=custom_price,
             description=data.description,
             short_description=data.short_description,
             brand=data.brand,
