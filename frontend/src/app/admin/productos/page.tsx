@@ -15,6 +15,7 @@ import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCateg
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import type { Category, Subcategory } from '@/types';
 import { adminApi } from '@/lib/api';
+import type { StockPreviewResponse } from '@/types';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
@@ -58,29 +59,7 @@ export default function ProductsPage() {
     errors: string[];
     touched_products: number;
   } | null>(null);
-  const [stockPreview, setStockPreview] = useState<{
-    rows: {
-      row_number: number;
-      description?: string;
-      code?: string;
-      derived_code?: boolean;
-      purchase_date?: string | null;
-      unit_price?: number | null;
-      quantity?: number | null;
-      total_amount?: number | null;
-      product_id?: number | null;
-      product_name?: string | null;
-      status: 'ok' | 'duplicate' | 'error';
-      errors: string[];
-    }[];
-    summary: {
-      total: number;
-      ok: number;
-      duplicate: number;
-      error: number;
-      unmatched: number;
-    };
-  } | null>(null);
+  const [stockPreview, setStockPreview] = useState<StockPreviewResponse | null>(null);
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
   const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
