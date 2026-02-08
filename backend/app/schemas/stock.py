@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class StockPurchaseResponse(BaseModel):
     id: int
-    product_id: int
+    product_id: int | None = None
     description: str | None = None
     code: str | None = None
     purchase_date: date

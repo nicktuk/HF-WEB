@@ -78,6 +78,7 @@ export default function ProductsPage() {
       ok: number;
       duplicate: number;
       error: number;
+      unmatched: number;
     };
   } | null>(null);
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
@@ -518,7 +519,7 @@ export default function ProductsPage() {
         <ModalContent className="space-y-4">
           {stockPreview && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-gray-500 uppercase">Total</p>
                   <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.total}</p>
@@ -534,6 +535,10 @@ export default function ProductsPage() {
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-gray-500 uppercase">Errores</p>
                   <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.error}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-gray-500 uppercase">Sin match</p>
+                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.unmatched}</p>
                 </div>
               </div>
 
@@ -569,6 +574,7 @@ export default function ProductsPage() {
                             {row.status === 'ok' && <span className="text-emerald-700 font-medium">OK</span>}
                             {row.status === 'duplicate' && <span className="text-amber-700 font-medium">Duplicado</span>}
                             {row.status === 'error' && <span className="text-red-600 font-medium">Error</span>}
+                            {row.status === 'unmatched' && <span className="text-slate-600 font-medium">Sin match</span>}
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-600">
                             {row.errors?.length ? row.errors.join('; ') : '-'}
@@ -645,7 +651,7 @@ export default function ProductsPage() {
               </Button>
               <Button
                 onClick={handleConfirmImport}
-                disabled={stockPreview.summary.ok === 0 || isImportingStock}
+                disabled={(stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 || isImportingStock}
                 isLoading={isImportingStock}
               >
                 Confirmar importación

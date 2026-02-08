@@ -80,7 +80,7 @@ export interface StockPreviewRow {
   total_amount?: number | null;
   product_id?: number | null;
   product_name?: string | null;
-  status: 'ok' | 'duplicate' | 'error';
+  status: 'ok' | 'duplicate' | 'error' | 'unmatched';
   errors: string[];
 }
 
@@ -91,6 +91,7 @@ export interface StockPreviewResponse {
     ok: number;
     duplicate: number;
     error: number;
+    unmatched: number;
   };
 }
 

@@ -11,7 +11,7 @@ class StockPurchase(Base):
     __tablename__ = "stock_purchases"
 
     id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True)
 
     description = Column(String(500), nullable=True)
     code = Column(String(100), nullable=True, index=True)

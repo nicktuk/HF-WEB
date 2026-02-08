@@ -193,7 +193,7 @@ class ProductService:
             if row["status"] == "duplicate":
                 skipped += 1
                 continue
-            if row["status"] != "ok":
+            if row["status"] not in ("ok", "unmatched"):
                 errors.append(f"Fila {row['row_number']}: {', '.join(row['errors'])}")
                 continue
 
@@ -208,7 +208,8 @@ class ProductService:
                 out_quantity=0,
             )
             self.db.add(purchase)
-            touched_products.add(row["product_id"])
+            if row["product_id"]:
+                touched_products.add(row["product_id"])
             created += 1
 
         self.db.commit()
@@ -321,7 +322,8 @@ class ProductService:
                     desc_cache[description] = product
 
             if not product:
-                errors.append("Producto no encontrado para la descripción")
+                # No error: allow import without product association
+                pass
 
             purchase_date = None
             unit_price = None
@@ -357,18 +359,33 @@ class ProductService:
                 total_amount = (unit_price * Decimal(quantity)).quantize(Decimal("0.01"))
 
             is_duplicate = False
-            if not errors and product and purchase_date and unit_price is not None and quantity is not None and total_amount is not None:
-                exists = (
-                    self.db.query(StockPurchase)
-                    .filter(
-                        StockPurchase.product_id == product.id,
-                        StockPurchase.purchase_date == purchase_date,
-                        StockPurchase.unit_price == unit_price,
-                        StockPurchase.quantity == quantity,
-                        StockPurchase.total_amount == total_amount,
+            if not errors and purchase_date and unit_price is not None and quantity is not None and total_amount is not None:
+                if product:
+                    exists = (
+                        self.db.query(StockPurchase)
+                        .filter(
+                            StockPurchase.product_id == product.id,
+                            StockPurchase.purchase_date == purchase_date,
+                            StockPurchase.unit_price == unit_price,
+                            StockPurchase.quantity == quantity,
+                            StockPurchase.total_amount == total_amount,
+                        )
+                        .first()
                     )
-                    .first()
-                )
+                else:
+                    exists = (
+                        self.db.query(StockPurchase)
+                        .filter(
+                            StockPurchase.product_id.is_(None),
+                            StockPurchase.description == (description or None),
+                            StockPurchase.code == (code or None),
+                            StockPurchase.purchase_date == purchase_date,
+                            StockPurchase.unit_price == unit_price,
+                            StockPurchase.quantity == quantity,
+                            StockPurchase.total_amount == total_amount,
+                        )
+                        .first()
+                    )
                 if exists:
                     is_duplicate = True
 
@@ -377,6 +394,8 @@ class ProductService:
                 status = "error"
             elif is_duplicate:
                 status = "duplicate"
+            elif not product:
+                status = "unmatched"
 
             rows.append({
                 "row_number": idx,
@@ -398,6 +417,7 @@ class ProductService:
             "ok": sum(1 for r in rows if r["status"] == "ok"),
             "duplicate": sum(1 for r in rows if r["status"] == "duplicate"),
             "error": sum(1 for r in rows if r["status"] == "error"),
+            "unmatched": sum(1 for r in rows if r["status"] == "unmatched"),
         }
 
         return {"rows": rows, "summary": summary}
