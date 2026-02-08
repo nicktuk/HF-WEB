@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
 import { uploadImages } from '@/lib/api';
 import {
@@ -18,6 +18,7 @@ import {
   useUpdateProduct,
   useDeleteProduct,
   useRescrapeProduct,
+  useStockPurchases,
 } from '@/hooks/useProducts';
 import { useRouter } from 'next/navigation';
 
@@ -29,6 +30,7 @@ export default function ProductEditPage() {
   const apiKey = useApiKey() || '';
 
   const { data: product, isLoading } = useAdminProduct(apiKey, productId);
+  const { data: stockPurchases, isLoading: isStockLoading } = useStockPurchases(apiKey, productId);
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
@@ -172,6 +174,7 @@ export default function ProductEditPage() {
   }
 
   const isManualProduct = product.source_website_name === 'Producto Manual';
+  const totalStock = (stockPurchases || []).reduce((acc, item) => acc + (item.quantity - item.out_quantity), 0);
 
   return (
     <div className="space-y-6">
@@ -566,6 +569,55 @@ export default function ProductEditPage() {
                 <p className="text-sm text-green-600 text-center">
                   Cambios guardados correctamente.
                 </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Stock Purchases */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-lg font-semibold">Stock por compras</h2>
+            </CardHeader>
+            <CardContent>
+              {isStockLoading ? (
+                <p className="text-sm text-gray-500">Cargando stock...</p>
+              ) : !stockPurchases || stockPurchases.length === 0 ? (
+                <p className="text-sm text-gray-500">No hay compras de stock registradas.</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-700">
+                    Stock disponible: <strong>{totalStock}</strong>
+                  </div>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {stockPurchases.map((purchase) => {
+                          const available = purchase.quantity - purchase.out_quantity;
+                          return (
+                            <tr key={purchase.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2">{purchase.purchase_date}</td>
+                              <td className="px-3 py-2 text-right">{purchase.quantity}</td>
+                              <td className="px-3 py-2 text-right">{purchase.out_quantity}</td>
+                              <td className="px-3 py-2 text-right font-medium">{available}</td>
+                              <td className="px-3 py-2 text-right">{formatPrice(purchase.unit_price)}</td>
+                              <td className="px-3 py-2 text-right">{formatPrice(purchase.total_amount)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

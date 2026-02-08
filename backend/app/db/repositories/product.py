@@ -2,10 +2,11 @@
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, case
+from sqlalchemy import and_, or_, case, func
 
 from app.db.repositories.base import BaseRepository
 from app.models.product import Product, ProductImage
+from app.models.stock import StockPurchase
 
 
 class ProductRepository(BaseRepository[Product]):
@@ -135,7 +136,8 @@ class ProductRepository(BaseRepository[Product]):
         subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
-        price_range: Optional[str] = None
+        price_range: Optional[str] = None,
+        in_stock: Optional[bool] = None,
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -146,6 +148,22 @@ class ProductRepository(BaseRepository[Product]):
                 joinedload(Product.market_price_stats)
             )
         )
+
+        if in_stock is not None:
+            stock_subq = (
+                self.db.query(
+                    StockPurchase.product_id.label("product_id"),
+                    func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                )
+                .group_by(StockPurchase.product_id)
+                .subquery()
+            )
+            query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+            stock_qty = func.coalesce(stock_subq.c.stock_qty, 0)
+            if in_stock:
+                query = query.filter(stock_qty > 0)
+            else:
+                query = query.filter(stock_qty <= 0)
 
         if enabled is not None:
             query = query.filter(Product.enabled == enabled)
@@ -247,10 +265,27 @@ class ProductRepository(BaseRepository[Product]):
         subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
-        price_range: Optional[str] = None
+        price_range: Optional[str] = None,
+        in_stock: Optional[bool] = None,
     ) -> int:
         """Count products with filters for admin panel."""
         query = self.db.query(Product)
+
+        if in_stock is not None:
+            stock_subq = (
+                self.db.query(
+                    StockPurchase.product_id.label("product_id"),
+                    func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                )
+                .group_by(StockPurchase.product_id)
+                .subquery()
+            )
+            query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+            stock_qty = func.coalesce(stock_subq.c.stock_qty, 0)
+            if in_stock:
+                query = query.filter(stock_qty > 0)
+            else:
+                query = query.filter(stock_qty <= 0)
 
         if enabled is not None:
             query = query.filter(Product.enabled == enabled)

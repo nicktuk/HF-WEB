@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ export default function ProductsPage() {
     categoryFilter,
     subcategoryFilter,
     featuredFilter,
+    inStockFilter,
     priceRangeFilter,
     page,
     limit,
@@ -35,6 +36,7 @@ export default function ProductsPage() {
     setCategoryFilter,
     setSubcategoryFilter,
     setFeaturedFilter,
+    setInStockFilter,
     setPriceRangeFilter,
     setPage,
     setLimit,
@@ -48,7 +50,9 @@ export default function ProductsPage() {
   const [bulkCategory, setBulkCategory] = useState('');
   const [bulkSubcategory, setBulkSubcategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isImportingStock, setIsImportingStock] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const stockFileInputRef = useRef<HTMLInputElement>(null);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
@@ -72,6 +76,34 @@ export default function ProductsPage() {
     }
   };
 
+  const handleImportStockClick = () => {
+    stockFileInputRef.current?.click();
+  };
+
+  const handleImportStockFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImportingStock(true);
+    try {
+      const result = await adminApi.importStockCsv(apiKey, file);
+      const errorCount = result.errors?.length || 0;
+      alert(
+        `ImportaciÃ³n completa.\n` +
+        `Creados: ${result.created}\n` +
+        `Omitidos (duplicados): ${result.skipped}\n` +
+        `Errores: ${errorCount}`
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al importar stock');
+    } finally {
+      setIsImportingStock(false);
+      if (stockFileInputRef.current) {
+        stockFileInputRef.current.value = '';
+      }
+    }
+  };
+
   const { data, isLoading } = useAdminProducts(apiKey, {
     page,
     limit,
@@ -81,6 +113,7 @@ export default function ProductsPage() {
     category: categoryFilter,
     subcategory: subcategoryFilter,
     is_featured: featuredFilter,
+    in_stock: inStockFilter,
     price_range: priceRangeFilter,
   });
 
@@ -116,8 +149,19 @@ export default function ProductsPage() {
             </Button>
             <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
               <button
-                onClick={() => setShowBulkMarkupModal(true)}
+                onClick={handleImportStockClick}
+                disabled={isImportingStock}
                 className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
+              >
+                <FileDown className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">Importar stock (CSV)</p>
+                  <p className="text-xs text-gray-500">Carga compras y marca entrega inmediata</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setShowBulkMarkupModal(true)}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
               >
                 <Percent className="h-4 w-4" />
                 <div>
@@ -246,6 +290,21 @@ export default function ProductsPage() {
           Nuevos
         </button>
 
+        {/* Stock Filter */}
+        <button
+          onClick={() => {
+            setInStockFilter(inStockFilter === true ? undefined : true);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            inStockFilter === true
+              ? 'bg-emerald-600 text-white'
+              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+          }`}
+        >
+          Stock
+        </button>
+
         {/* Status Filter */}
         <select
           value={enabledFilter === undefined ? '' : enabledFilter.toString()}
@@ -342,7 +401,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || priceRangeFilter) && (
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || inStockFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>
@@ -370,6 +429,14 @@ export default function ProductsPage() {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         categories={categories || []}
+      />
+
+      <input
+        ref={stockFileInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleImportStockFile}
       />
 
       {/* Pagination */}

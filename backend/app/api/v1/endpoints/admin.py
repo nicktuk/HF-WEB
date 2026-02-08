@@ -29,6 +29,10 @@ from app.schemas.product import (
     ProductChangeSubcategorySelected,
     ProductDisableSelected,
 )
+from app.schemas.stock import (
+    StockPurchaseResponse,
+    StockImportResponse,
+)
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
     MarketPriceRefreshRequest,
@@ -64,6 +68,7 @@ async def get_products_admin(
     subcategory: Optional[str] = Query(default=None, max_length=100),
     is_featured: Optional[bool] = Query(default=None),
     is_immediate_delivery: Optional[bool] = Query(default=None),
+    in_stock: Optional[bool] = Query(default=None),
     price_range: Optional[str] = Query(default=None, max_length=20),
     service: ProductService = Depends(get_product_service),
 ):
@@ -82,9 +87,12 @@ async def get_products_admin(
         subcategory,
         is_featured,
         is_immediate_delivery,
-        price_range
+        price_range,
+        in_stock,
     )
     pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    stock_summary = service.get_stock_summary([p.id for p in products])
 
     # Transform to admin response with market stats
     admin_products = []
@@ -127,6 +135,7 @@ async def get_products_admin(
             market_min_price=stats.min_price if stats else None,
             market_max_price=stats.max_price if stats else None,
             market_sample_count=stats.sample_count if stats else 0,
+            stock_qty=stock_summary.get(p.id, 0),
         ))
 
     return PaginatedResponse(
@@ -136,6 +145,45 @@ async def get_products_admin(
         limit=limit,
         pages=pages,
     )
+
+
+# ============================================
+# Stock Management
+# ============================================
+
+@router.post(
+    "/stock/import",
+    response_model=StockImportResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def import_stock_csv(
+    file: UploadFile = File(...),
+    service: ProductService = Depends(get_product_service),
+):
+    """Import stock purchases from CSV."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV.")
+
+    contents = await file.read()
+    try:
+        result = service.import_stock_csv(contents)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return result
+
+
+@router.get(
+    "/stock/purchases",
+    response_model=List[StockPurchaseResponse],
+    dependencies=[Depends(verify_admin)]
+)
+async def get_stock_purchases(
+    product_id: Optional[int] = Query(default=None),
+    service: ProductService = Depends(get_product_service),
+):
+    """Get stock purchases, optionally filtered by product."""
+    return service.get_stock_purchases(product_id=product_id)
 
 
 @router.get(
@@ -150,6 +198,7 @@ async def get_product_admin(
     """Get a single product with full admin details."""
     p = service.get_by_id(product_id)
     stats = p.market_price_stats
+    stock_summary = service.get_stock_summary([p.id])
 
     return ProductAdminResponse(
         id=p.id,
@@ -186,6 +235,7 @@ async def get_product_admin(
         market_min_price=stats.min_price if stats else None,
         market_max_price=stats.max_price if stats else None,
         market_sample_count=stats.sample_count if stats else 0,
+        stock_qty=stock_summary.get(p.id, 0),
     )
 
 

@@ -158,6 +158,7 @@ class ProductAdminResponse(ProductResponse):
     market_min_price: Optional[Decimal] = None
     market_max_price: Optional[Decimal] = None
     market_sample_count: int = 0
+    stock_qty: int = 0
 
     class Config:
         from_attributes = True

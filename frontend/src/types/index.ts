@@ -50,6 +50,23 @@ export interface ProductAdmin extends ProductPublic {
   market_min_price?: number;
   market_max_price?: number;
   market_sample_count: number;
+  stock_qty?: number;
+}
+
+// Stock Types
+
+export interface StockPurchase {
+  id: number;
+  product_id: number;
+  description?: string;
+  code?: string;
+  purchase_date: string;
+  unit_price: number;
+  quantity: number;
+  total_amount: number;
+  out_quantity: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Category Types

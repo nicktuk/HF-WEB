@@ -185,6 +185,8 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
             const finalPrice = product.custom_price
               ? Number(product.custom_price)
               : (Number(product.original_price) || 0) * (1 + Number(product.markup_percentage) / 100);
+            const stockQty = product.stock_qty || 0;
+            const hasStock = stockQty > 0;
 
             return (
               <tr key={product.id} className="hover:bg-gray-50">
@@ -223,10 +225,15 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                       <div className="flex items-center gap-2 mb-1">
                         <Link
                           href={`/admin/productos/${product.id}`}
-                          className="font-medium text-gray-900 hover:text-primary-600 line-clamp-1"
+                          className={`font-medium line-clamp-1 ${hasStock ? 'text-emerald-700 hover:text-emerald-800' : 'text-gray-900 hover:text-primary-600'}`}
                         >
                           {product.custom_name || product.original_name}
                         </Link>
+                        {hasStock && (
+                          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Stock {stockQty}
+                          </Badge>
+                        )}
                         {/* Status badges */}
                         <div className="flex items-center gap-1">
                           <button

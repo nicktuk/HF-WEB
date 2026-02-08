@@ -1,13 +1,17 @@
 """Service for Product operations."""
 from typing import Optional, List, Tuple
-from datetime import datetime
-from decimal import Decimal
+from datetime import datetime, date
+from decimal import Decimal, InvalidOperation
+import csv
+import io
+import re
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 import logging
 
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
 from app.models.product import Product, ProductImage
+from app.models.stock import StockPurchase
 from app.models.source_website import SourceWebsite
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
 from app.scrapers.registry import ScraperRegistry
@@ -114,12 +118,35 @@ class ProductService:
         subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
-        price_range: Optional[str] = None
+        price_range: Optional[str] = None,
+        in_stock: Optional[bool] = None,
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
-        products = self.repo.get_all_admin(skip, limit, enabled, source_website_id, search, category, subcategory, is_featured, is_immediate_delivery, price_range)
-        total = self.repo.count_admin(enabled, source_website_id, search, category, subcategory, is_featured, is_immediate_delivery, price_range)
+        products = self.repo.get_all_admin(
+            skip,
+            limit,
+            enabled,
+            source_website_id,
+            search,
+            category,
+            subcategory,
+            is_featured,
+            is_immediate_delivery,
+            price_range,
+            in_stock,
+        )
+        total = self.repo.count_admin(
+            enabled,
+            source_website_id,
+            search,
+            category,
+            subcategory,
+            is_featured,
+            is_immediate_delivery,
+            price_range,
+            in_stock,
+        )
         return products, total
 
     def get_by_id(self, id: int) -> Product:
@@ -128,6 +155,180 @@ class ProductService:
         if not product:
             raise NotFoundError("Product", str(id))
         return product
+
+    # Stock methods
+
+    def get_stock_summary(self, product_ids: List[int]) -> dict[int, int]:
+        """Get stock quantity summary for a list of products."""
+        if not product_ids:
+            return {}
+
+        rows = (
+            self.db.query(
+                StockPurchase.product_id,
+                func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+            )
+            .filter(StockPurchase.product_id.in_(product_ids))
+            .group_by(StockPurchase.product_id)
+            .all()
+        )
+        return {row.product_id: int(row.stock_qty or 0) for row in rows}
+
+    def get_stock_purchases(self, product_id: Optional[int] = None) -> List[StockPurchase]:
+        """Get stock purchases, optionally filtered by product."""
+        query = self.db.query(StockPurchase)
+        if product_id is not None:
+            query = query.filter(StockPurchase.product_id == product_id)
+        return query.order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc()).all()
+
+    def import_stock_csv(self, csv_bytes: bytes) -> dict:
+        """Import stock purchases from CSV bytes."""
+        content = csv_bytes.decode("utf-8-sig", errors="ignore")
+        if not content.strip():
+            raise ValueError("El archivo CSV estÃ¡ vacÃ­o.")
+
+        # Detect delimiter
+        try:
+            dialect = csv.Sniffer().sniff(content[:4096], delimiters=",;|\t")
+        except csv.Error:
+            dialect = csv.get_dialect("excel")
+
+        reader = csv.DictReader(io.StringIO(content), dialect=dialect)
+        if not reader.fieldnames:
+            raise ValueError("No se encontraron encabezados en el CSV.")
+
+        def normalize_header(h: str) -> str:
+            return re.sub(r"[^a-z0-9_]+", "", (h or "").strip().lower())
+
+        field_map = {normalize_header(h): h for h in reader.fieldnames}
+
+        def get_field(row, *names):
+            for name in names:
+                key = field_map.get(name)
+                if key and key in row:
+                    return (row.get(key) or "").strip()
+            return ""
+
+        def parse_decimal(value: str) -> Decimal:
+            raw = (value or "").strip()
+            if not raw:
+                return Decimal("0")
+            cleaned = re.sub(r"[^\d,\.]", "", raw)
+            if "," in cleaned and "." in cleaned:
+                # Assume last symbol is decimal separator
+                if cleaned.rfind(",") > cleaned.rfind("."):
+                    cleaned = cleaned.replace(".", "").replace(",", ".")
+                else:
+                    cleaned = cleaned.replace(",", "")
+            elif "," in cleaned and "." not in cleaned:
+                cleaned = cleaned.replace(",", ".")
+            return Decimal(cleaned)
+
+        def parse_int(value: str) -> int:
+            raw = re.sub(r"[^\d]", "", (value or "").strip())
+            return int(raw) if raw else 0
+
+        def parse_date(value: str) -> date:
+            raw = (value or "").strip()
+            return datetime.strptime(raw, "%d/%m/%Y").date()
+
+        created = 0
+        skipped = 0
+        errors: list[str] = []
+        touched_products: set[int] = set()
+
+        for idx, row in enumerate(reader, start=2):  # header is line 1
+            try:
+                description = get_field(row, "descripcion", "descripcin", "description")
+                code = get_field(row, "codigo", "code")
+                if not code:
+                    digits = "".join(re.findall(r"\d", description or ""))
+                    code = digits[:5] if digits else ""
+
+                if not code:
+                    raise ValueError("CÃ³digo vacÃ­o y no se pudo derivar desde la descripciÃ³n")
+
+                product = self.db.query(Product).filter(Product.sku == code).first()
+                if not product and description:
+                    matches = (
+                        self.db.query(Product)
+                        .filter(or_(Product.original_name.ilike(description), Product.custom_name.ilike(description)))
+                        .all()
+                    )
+                    if len(matches) == 1:
+                        product = matches[0]
+                    elif len(matches) > 1:
+                        raise ValueError("DescripciÃ³n coincide con mÃºltiples productos")
+
+                if not product:
+                    raise ValueError(f"No se encontrÃ³ producto con cÃ³digo {code}")
+
+                purchase_date = parse_date(get_field(row, "fecha", "fechacompra", "fechadecompra", "fecha_compra", "purchase_date"))
+                unit_price = parse_decimal(get_field(row, "precio", "unit_price", "precio_unitario"))
+                quantity = parse_int(get_field(row, "cantidad", "qty", "quantity"))
+                total_amount = parse_decimal(get_field(row, "total", "totalcompra", "total_compra", "total_amount"))
+
+                if unit_price <= 0 or quantity <= 0:
+                    raise ValueError("Precio o cantidad invÃ¡lidos")
+
+                if total_amount <= 0:
+                    total_amount = (unit_price * Decimal(quantity)).quantize(Decimal("0.01"))
+
+                # Deduplicate by unique key
+                exists = (
+                    self.db.query(StockPurchase)
+                    .filter(
+                        StockPurchase.product_id == product.id,
+                        StockPurchase.purchase_date == purchase_date,
+                        StockPurchase.unit_price == unit_price,
+                        StockPurchase.quantity == quantity,
+                        StockPurchase.total_amount == total_amount,
+                    )
+                    .first()
+                )
+                if exists:
+                    skipped += 1
+                    continue
+
+                purchase = StockPurchase(
+                    product_id=product.id,
+                    description=description or None,
+                    code=code,
+                    purchase_date=purchase_date,
+                    unit_price=unit_price,
+                    quantity=quantity,
+                    total_amount=total_amount,
+                    out_quantity=0,
+                )
+                self.db.add(purchase)
+                touched_products.add(product.id)
+                created += 1
+            except (ValueError, InvalidOperation) as exc:
+                errors.append(f"Fila {idx}: {exc}")
+
+        self.db.commit()
+
+        # Mark immediate delivery for products with stock
+        if touched_products:
+            stock_summary = self.get_stock_summary(list(touched_products))
+            for product_id, stock_qty in stock_summary.items():
+                if stock_qty > 0:
+                    self.db.query(Product).filter(Product.id == product_id).update(
+                        {
+                            Product.is_immediate_delivery: True,
+                            Product.is_check_stock: False,
+                        },
+                        synchronize_session=False,
+                    )
+            self.db.commit()
+            cache.invalidate_all_products()
+
+        return {
+            "created": created,
+            "skipped": skipped,
+            "errors": errors,
+            "touched_products": len(touched_products),
+        }
 
     async def create_from_slug(self, data: ProductCreate) -> Product:
         """

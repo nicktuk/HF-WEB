@@ -77,6 +77,7 @@ export function useAdminProducts(
     subcategory?: string;
     is_featured?: boolean;
     is_immediate_delivery?: boolean;
+    in_stock?: boolean;
     price_range?: string;
   } = {}
 ) {
@@ -84,6 +85,15 @@ export function useAdminProducts(
     queryKey: ['admin-products', params],
     queryFn: () => adminApi.getProducts(apiKey, params),
     staleTime: 30 * 1000, // 30 seconds for admin
+    enabled: !!apiKey,
+  });
+}
+
+export function useStockPurchases(apiKey: string, productId?: number) {
+  return useQuery({
+    queryKey: ['stock-purchases', productId],
+    queryFn: () => adminApi.getStockPurchases(apiKey, productId),
+    staleTime: 30 * 1000,
     enabled: !!apiKey,
   });
 }

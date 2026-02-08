@@ -33,6 +33,11 @@ SECRET_KEY=***
 ### Frontend (Railway)
 ```
 NEXT_PUBLIC_API_URL=https://hf-web-production.up.railway.app/api/v1
+NEXT_PUBLIC_WHATSAPP_NUMBER=549XXXXXXXXXX
+NEXT_PUBLIC_SITE_NAME=HeFa - Productos
+NEXT_PUBLIC_SITE_DESCRIPTION=Catalogo de productos
+# Opcional: si no se setea, se usa window.location.origin
+NEXT_PUBLIC_SITE_URL=https://tu-dominio.com
 ```
 
 ## Configuración Local
@@ -542,4 +547,37 @@ El menú de configuración ahora incluye "Subcategorías":
 - **Configuración**
   - Categorías
   - Subcategorías (NUEVO)
-  - Webs Origen
+- Webs Origen
+
+---
+
+## SesiÃ³n 2026-02-06
+
+### Frontend pÃºblico: Banner "CÃ³mo trabajamos" + Modal informativo
+- **Archivo:** `frontend/src/app/page.tsx`
+  - Banner debajo del header con CTA "Â¿Primera vez comprando con nosotros? Te contamos acÃ¡"
+  - Abre modal informativo con pasos del proceso
+- **Archivo:** `frontend/src/components/public/HowWeWorkModal.tsx`
+  - Modal con explicaciÃ³n del modelo (catÃ¡logo curado + asesoramiento + entrega inmediata)
+  - CTA a WhatsApp si `NEXT_PUBLIC_WHATSAPP_NUMBER` estÃ¡ configurado
+
+### WhatsApp: CTA y mensajes enriquecidos
+- **Archivo:** `frontend/src/components/public/ContactButton.tsx`
+  - Mensaje incluye nombre, precio (si existe) y URL del producto
+  - Usa `NEXT_PUBLIC_SITE_URL` si estÃ¡ definido; fallback a `window.location.origin`
+  - BotÃ³n flotante de WhatsApp en mobile
+- **Archivo:** `frontend/src/lib/utils.ts`
+  - `getWhatsAppUrl(phone, message)` centraliza la URL
+
+### Exportar PDF desde Admin (catÃ¡logo o lista)
+- **Frontend (Admin):** `frontend/src/app/admin/productos/page.tsx`
+  - Dropdown "Acciones" agrega:
+    - Exportar PDF (catÃ¡logo con imÃ¡genes)
+    - Exportar PDF (lista de precios)
+- **Backend:** `GET /admin/products/export/pdf?format=catalog|list`
+  - **Archivo:** `backend/app/api/v1/endpoints/admin.py`
+  - **Servicio:** `backend/app/services/pdf_generator.py`
+    - Genera PDF con branding, precios, descripciones e imÃ¡genes
+    - Usa imÃ¡genes locales (uploads) o HTTP
+    - Incluye secciÃ³n "Nuevo" si hay productos destacados
+    - WhatsApp en header/footer con nÃºmero hardcodeado `WHATSAPP_NUMBER`

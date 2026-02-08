@@ -9,6 +9,7 @@ interface AdminFiltersState {
   categoryFilter: string | undefined;
   subcategoryFilter: string | undefined;
   featuredFilter: boolean | undefined;
+  inStockFilter: boolean | undefined;
   priceRangeFilter: string | undefined;
   page: number;
   limit: number;
@@ -20,6 +21,7 @@ interface AdminFiltersState {
   setCategoryFilter: (category: string | undefined) => void;
   setSubcategoryFilter: (subcategory: string | undefined) => void;
   setFeaturedFilter: (featured: boolean | undefined) => void;
+  setInStockFilter: (inStock: boolean | undefined) => void;
   setPriceRangeFilter: (priceRange: string | undefined) => void;
   setPage: (page: number) => void;
   setLimit: (limit: number) => void;
@@ -33,6 +35,7 @@ const initialState = {
   categoryFilter: undefined as string | undefined,
   subcategoryFilter: undefined as string | undefined,
   featuredFilter: undefined as boolean | undefined,
+  inStockFilter: undefined as boolean | undefined,
   priceRangeFilter: undefined as string | undefined,
   page: 1,
   limit: 50,
@@ -49,6 +52,7 @@ export const useAdminFilters = create<AdminFiltersState>()(
       setCategoryFilter: (categoryFilter) => set({ categoryFilter, subcategoryFilter: undefined, page: 1 }),
       setSubcategoryFilter: (subcategoryFilter) => set({ subcategoryFilter, page: 1 }),
       setFeaturedFilter: (featuredFilter) => set({ featuredFilter, page: 1 }),
+      setInStockFilter: (inStockFilter) => set({ inStockFilter, page: 1 }),
       setPriceRangeFilter: (priceRangeFilter) => set({ priceRangeFilter, page: 1 }),
       setPage: (page) => set({ page }),
       setLimit: (limit) => set({ limit, page: 1 }),

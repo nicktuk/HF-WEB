@@ -10,6 +10,7 @@ import type {
   ProductCreateManualForm,
   ProductUpdateForm,
   SourceWebsiteCreateForm,
+  StockPurchase,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -126,6 +127,7 @@ export const adminApi = {
       subcategory?: string;
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
+      in_stock?: boolean;
       price_range?: string;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
@@ -140,6 +142,9 @@ export const adminApi = {
     if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
     if (params.is_immediate_delivery !== undefined) {
       searchParams.set('is_immediate_delivery', params.is_immediate_delivery.toString());
+    }
+    if (params.in_stock !== undefined) {
+      searchParams.set('in_stock', params.in_stock.toString());
     }
     if (params.price_range) searchParams.set('price_range', params.price_range);
 
@@ -437,6 +442,39 @@ export const adminApi = {
     }
 
     return response.blob();
+  },
+
+  /**
+   * Import stock purchases from CSV
+   */
+  async importStockCsv(apiKey: string, file: File): Promise<{ created: number; skipped: number; errors: string[]; touched_products: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/admin/stock/import`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-API-Key': apiKey,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al importar stock' }));
+      throw new Error(error.detail || error.message || 'Error al importar stock');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get stock purchases (optionally by product)
+   */
+  async getStockPurchases(apiKey: string, productId?: number): Promise<StockPurchase[]> {
+    const params = new URLSearchParams();
+    if (productId) params.set('product_id', productId.toString());
+    const query = params.toString();
+    return fetchAPI(`/admin/stock/purchases${query ? `?${query}` : ''}`, {}, apiKey);
   },
 };
 
