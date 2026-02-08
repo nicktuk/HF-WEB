@@ -27,6 +27,7 @@ const navigation = [
 const configSubmenu = [
   { name: 'Categorías', href: '/admin/categorias', icon: Tags },
   { name: 'Subcategorías', href: '/admin/subcategorias', icon: FolderTree },
+  { name: 'Stock', href: '/admin/stock', icon: Package },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
 ];
 

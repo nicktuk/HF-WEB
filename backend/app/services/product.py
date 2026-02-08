@@ -174,12 +174,48 @@ class ProductService:
         )
         return {row.product_id: int(row.stock_qty or 0) for row in rows}
 
-    def get_stock_purchases(self, product_id: Optional[int] = None) -> List[StockPurchase]:
-        """Get stock purchases, optionally filtered by product."""
+    def get_stock_purchases(self, product_id: Optional[int] = None, unmatched: Optional[bool] = None) -> List[StockPurchase]:
+        """Get stock purchases, optionally filtered by product or unmatched."""
         query = self.db.query(StockPurchase)
         if product_id is not None:
             query = query.filter(StockPurchase.product_id == product_id)
+        if unmatched is True:
+            query = query.filter(StockPurchase.product_id.is_(None))
+        if unmatched is False:
+            query = query.filter(StockPurchase.product_id.isnot(None))
         return query.order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc()).all()
+
+    def update_stock_purchase(self, purchase_id: int, product_id: Optional[int]) -> StockPurchase:
+        """Associate a stock purchase to a product."""
+        purchase = self.db.query(StockPurchase).filter(StockPurchase.id == purchase_id).first()
+        if not purchase:
+            raise NotFoundError("StockPurchase", str(purchase_id))
+
+        if product_id is not None:
+            product = self.db.query(Product).filter(Product.id == product_id).first()
+            if not product:
+                raise NotFoundError("Product", str(product_id))
+        else:
+            product = None
+
+        purchase.product_id = product_id
+        self.db.commit()
+        self.db.refresh(purchase)
+
+        if product_id:
+            stock_summary = self.get_stock_summary([product_id])
+            if stock_summary.get(product_id, 0) > 0:
+                self.db.query(Product).filter(Product.id == product_id).update(
+                    {
+                        Product.is_immediate_delivery: True,
+                        Product.is_check_stock: False,
+                    },
+                    synchronize_session=False,
+                )
+                self.db.commit()
+            cache.invalidate_all_products()
+
+        return purchase
 
     def import_stock_csv(self, csv_bytes: bytes) -> dict:
         """Import stock purchases from CSV bytes."""

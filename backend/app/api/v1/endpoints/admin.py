@@ -33,6 +33,7 @@ from app.schemas.stock import (
     StockPurchaseResponse,
     StockImportResponse,
     StockPreviewResponse,
+    StockPurchaseUpdate,
 )
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
@@ -203,10 +204,25 @@ async def import_stock_csv(
 )
 async def get_stock_purchases(
     product_id: Optional[int] = Query(default=None),
+    unmatched: Optional[bool] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
     """Get stock purchases, optionally filtered by product."""
-    return service.get_stock_purchases(product_id=product_id)
+    return service.get_stock_purchases(product_id=product_id, unmatched=unmatched)
+
+
+@router.patch(
+    "/stock/purchases/{purchase_id}",
+    response_model=StockPurchaseResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def update_stock_purchase(
+    purchase_id: int,
+    data: StockPurchaseUpdate,
+    service: ProductService = Depends(get_product_service),
+):
+    """Update stock purchase (associate to product)."""
+    return service.update_stock_purchase(purchase_id, data.product_id)
 
 
 @router.get(

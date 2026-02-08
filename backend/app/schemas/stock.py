@@ -1,7 +1,7 @@
 """Schemas for stock operations."""
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -47,3 +47,7 @@ class StockPreviewRow(BaseModel):
 class StockPreviewResponse(BaseModel):
     rows: List[StockPreviewRow]
     summary: dict
+
+
+class StockPurchaseUpdate(BaseModel):
+    product_id: Optional[int] = None

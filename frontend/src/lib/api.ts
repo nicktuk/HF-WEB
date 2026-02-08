@@ -494,11 +494,22 @@ export const adminApi = {
   /**
    * Get stock purchases (optionally by product)
    */
-  async getStockPurchases(apiKey: string, productId?: number): Promise<StockPurchase[]> {
+  async getStockPurchases(apiKey: string, productId?: number, unmatched?: boolean): Promise<StockPurchase[]> {
     const params = new URLSearchParams();
     if (productId) params.set('product_id', productId.toString());
+    if (unmatched !== undefined) params.set('unmatched', unmatched.toString());
     const query = params.toString();
     return fetchAPI(`/admin/stock/purchases${query ? `?${query}` : ''}`, {}, apiKey);
+  },
+
+  /**
+   * Update stock purchase (associate to product)
+   */
+  async updateStockPurchase(apiKey: string, purchaseId: number, productId: number | null): Promise<StockPurchase> {
+    return fetchAPI(`/admin/stock/purchases/${purchaseId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ product_id: productId }),
+    }, apiKey);
   },
 };
 

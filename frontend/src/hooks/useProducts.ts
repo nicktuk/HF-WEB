@@ -98,6 +98,28 @@ export function useStockPurchases(apiKey: string, productId?: number) {
   });
 }
 
+export function useUnmatchedStockPurchases(apiKey: string) {
+  return useQuery({
+    queryKey: ['stock-purchases-unmatched'],
+    queryFn: () => adminApi.getStockPurchases(apiKey, undefined, true),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useUpdateStockPurchase(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ purchaseId, productId }: { purchaseId: number; productId: number | null }) =>
+      adminApi.updateStockPurchase(apiKey, purchaseId, productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases-unmatched'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
 export function useAdminProduct(apiKey: string, id: number) {
   return useQuery({
     queryKey: ['admin-product', id],
