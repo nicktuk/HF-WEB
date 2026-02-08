@@ -986,6 +986,18 @@ async def export_products_pdf(
 # ============================================
 
 @router.get(
+    "/stats/stock-by-category",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_stock_by_category(
+    request: Request,
+    service: ProductService = Depends(get_product_service),
+):
+    """Get stock quantity and valuation by category."""
+    return service.get_stock_stats_by_category()
+
+
+@router.get(
     "/price-comparator",
     dependencies=[Depends(verify_admin)]
 )

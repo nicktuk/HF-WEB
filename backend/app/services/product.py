@@ -1415,3 +1415,47 @@ class ProductService:
             })
 
         return {"ranges": result}
+
+    def get_stock_stats_by_category(self) -> dict:
+        """
+        Get stock quantity and valuation by category.
+        Valuation uses original_price.
+        """
+        rows = (
+            self.db.query(
+                Product.category,
+                func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                func.coalesce(
+                    func.sum(
+                        (StockPurchase.quantity - StockPurchase.out_quantity) * func.coalesce(Product.original_price, 0)
+                    ),
+                    0
+                ).label("stock_value"),
+            )
+            .join(StockPurchase, StockPurchase.product_id == Product.id)
+            .group_by(Product.category)
+            .all()
+        )
+
+        items = []
+        total_qty = 0
+        total_value = 0
+        for row in rows:
+            category = row.category or "Sin categoría"
+            qty = int(row.stock_qty or 0)
+            value = float(row.stock_value or 0)
+            total_qty += qty
+            total_value += value
+            items.append({
+                "category": category,
+                "stock_qty": qty,
+                "stock_value": value,
+            })
+
+        items.sort(key=lambda x: x["stock_qty"], reverse=True)
+
+        return {
+            "total_qty": total_qty,
+            "total_value": total_value,
+            "items": items,
+        }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign } from 'lucide-react';
+import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
@@ -31,6 +31,18 @@ interface PriceRangeResponse {
   ranges: PriceRange[];
 }
 
+interface StockByCategoryItem {
+  category: string;
+  stock_qty: number;
+  stock_value: number;
+}
+
+interface StockByCategoryResponse {
+  total_qty: number;
+  total_value: number;
+  items: StockByCategoryItem[];
+}
+
 export default function AdminDashboard() {
   const apiKey = useApiKey();
   const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
@@ -51,6 +63,21 @@ export default function AdminDashboard() {
         }
       );
       if (!response.ok) throw new Error('Error fetching price range stats');
+      return response.json();
+    },
+    enabled: !!apiKey,
+  });
+
+  const { data: stockByCategory } = useQuery<StockByCategoryResponse>({
+    queryKey: ['admin-stats-stock-by-category'],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/stats/stock-by-category`,
+        {
+          headers: { 'X-Admin-API-Key': apiKey || '' },
+        }
+      );
+      if (!response.ok) throw new Error('Error fetching stock stats');
       return response.json();
     },
     enabled: !!apiKey,
@@ -263,6 +290,74 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stock by Category */}
+      {stockByCategory && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Boxes className="h-5 w-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Stock por categoría
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              Valorizado a precio origen.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="rounded-lg border p-4">
+                <p className="text-xs text-gray-500 uppercase">Unidades en stock</p>
+                <p className="text-2xl font-bold text-gray-900">{stockByCategory.total_qty}</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-xs text-gray-500 uppercase">Valorizado total</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(stockByCategory.total_value)}</p>
+              </div>
+            </div>
+
+            {stockByCategory.items.length === 0 ? (
+              <div className="text-center text-sm text-gray-500 py-6">
+                No hay stock asociado a productos.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Categoría
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                        Stock
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                        Valorizado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {stockByCategory.items.map((item) => (
+                      <tr key={item.category} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 font-medium text-gray-900">
+                          {item.category}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          {item.stock_qty}
+                        </td>
+                        <td className="px-4 py-2 text-right font-medium text-gray-900">
+                          {formatPrice(item.stock_value)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
