@@ -239,7 +239,7 @@ class ProductService:
         """Parse and validate stock CSV without importing."""
         content = csv_bytes.decode("utf-8-sig", errors="ignore")
         if not content.strip():
-            raise ValueError("El archivo CSV estÃ¡ vacÃ­o.")
+            raise ValueError("El archivo CSV está vacío.")
 
         # Detect delimiter
         try:
@@ -288,7 +288,7 @@ class ProductService:
                     return datetime.strptime(raw, fmt).date()
                 except ValueError:
                     continue
-            raise ValueError("Fecha invÃ¡lida")
+            raise ValueError("Fecha inválida")
 
         rows = []
         code_cache: dict[str, Product | None] = {}
@@ -296,8 +296,8 @@ class ProductService:
 
         for idx, row in enumerate(reader, start=2):  # header is line 1
             errors: list[str] = []
-                description = get_field(row, "producto", "descripcion", "descripcin", "description")
-                code = get_field(row, "codigo", "cdigo", "code")
+            description = get_field(row, "producto", "descripcion", "descripcin", "description")
+            code = get_field(row, "codigo", "cdigo", "code")
             derived_code = False
             if not code:
                 digits = "".join(re.findall(r"\d", description or ""))
@@ -305,7 +305,7 @@ class ProductService:
                 derived_code = bool(code)
 
             if not code:
-                errors.append("CÃ³digo vacÃ­o y no se pudo derivar desde la descripciÃ³n")
+                errors.append("Código vacío y no se pudo derivar desde la descripción")
 
             def normalize_code(value: str) -> str:
                 return re.sub(r"\s+", "", (value or "").strip())
@@ -342,11 +342,11 @@ class ProductService:
                     if len(matches) == 1:
                         product = matches[0]
                     elif len(matches) > 1:
-                        errors.append("DescripciÃ³n coincide con mÃºltiples productos")
+                        errors.append("Descripción coincide con múltiples productos")
                     desc_cache[description] = product
 
             if not product:
-                errors.append(f"No se encontrÃ³ producto con cÃ³digo {code}" if code else "Producto no encontrado")
+                errors.append(f"No se encontró producto con código {code}" if code else "Producto no encontrado")
 
             purchase_date = None
             unit_price = None
@@ -356,22 +356,22 @@ class ProductService:
             try:
                 purchase_date = parse_date(get_field(row, "fecha", "fechacompra", "fechadecompra", "fecha_compra", "purchase_date"))
             except Exception:
-                errors.append("Fecha invÃ¡lida (formato DD/MM/YYYY o DD-MM-YYYY)")
+                errors.append("Fecha inválida (formato DD/MM/YYYY o DD-MM-YYYY)")
 
             try:
                 unit_price = parse_decimal(get_field(row, "precio", "unit_price", "precio_unitario"))
             except (InvalidOperation, ValueError):
-                errors.append("Precio invÃ¡lido")
+                errors.append("Precio inválido")
 
             try:
                 quantity = parse_int(get_field(row, "cantidad", "qty", "quantity"))
             except ValueError:
-                errors.append("Cantidad invÃ¡lida")
+                errors.append("Cantidad inválida")
 
             try:
                 total_amount = parse_decimal(get_field(row, "total", "totalcompra", "total_compra", "total_amount"))
             except (InvalidOperation, ValueError):
-                errors.append("Total invÃ¡lido")
+                errors.append("Total inválido")
 
             if unit_price is not None and unit_price <= 0:
                 errors.append("Precio debe ser mayor a 0")
