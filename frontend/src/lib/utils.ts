@@ -28,8 +28,11 @@ export function formatPrice(price: number | null | undefined, currency = 'ARS'):
 export function formatPercentage(value: number | null | undefined): string {
   if (value == null) return '-';
 
-  const sign = value > 0 ? '+' : '';
-  return `${sign}${value.toFixed(1)}%`;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(numeric)) return '-';
+
+  const sign = numeric > 0 ? '+' : '';
+  return `${sign}${numeric.toFixed(1)}%`;
 }
 
 /**
