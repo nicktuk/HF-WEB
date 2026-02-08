@@ -172,7 +172,7 @@ export default function ProductPage() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">
                   Descripción
                 </h2>
-                <p className="text-gray-600">{product.short_description}</p>
+                <p className="text-gray-600 whitespace-pre-line">{product.short_description}</p>
               </div>
             )}
 
