@@ -11,20 +11,29 @@ import { uploadImages } from '@/lib/api';
 
 interface ManualProductFormProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (productId?: number) => void;
+  initialValues?: {
+    name?: string;
+    price?: number | string;
+    description?: string;
+    short_description?: string;
+    brand?: string;
+    sku?: string;
+    category?: string;
+  };
 }
 
-export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps) {
+export function ManualProductForm({ onClose, onSuccess, initialValues }: ManualProductFormProps) {
   const apiKey = useApiKey() || '';
   const createMutation = useCreateProductManual(apiKey);
 
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [brand, setBrand] = useState('');
-  const [sku, setSku] = useState('');
-  const [category, setCategory] = useState('');
+  const [name, setName] = useState(initialValues?.name || '');
+  const [price, setPrice] = useState(initialValues?.price ? String(initialValues.price) : '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [shortDescription, setShortDescription] = useState(initialValues?.short_description || '');
+  const [brand, setBrand] = useState(initialValues?.brand || '');
+  const [sku, setSku] = useState(initialValues?.sku || '');
+  const [category, setCategory] = useState(initialValues?.category || '');
   const [imageUrls, setImageUrls] = useState<string[]>(['']);
   const [enabled, setEnabled] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
@@ -103,7 +112,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
         finalImageUrls = imageUrls.filter(url => url.trim());
       }
 
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         name: name.trim(),
         price: parseFloat(price),
         description: description.trim() || undefined,
@@ -117,7 +126,7 @@ export function ManualProductForm({ onClose, onSuccess }: ManualProductFormProps
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
       });
-      onSuccess();
+      onSuccess(created?.id);
       onClose();
     } catch (error) {
       console.error('Error creating product:', error);
