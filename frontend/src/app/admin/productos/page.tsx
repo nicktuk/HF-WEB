@@ -512,7 +512,7 @@ export default function ProductsPage() {
           setStockImportResult(null);
           setStockPreviewFile(null);
         }}
-        title={stockPreview ? 'PrevisualizaciÃ³n de importaciÃ³n de stock' : 'Resumen de importaciÃ³n de stock'}
+        title={stockPreview ? 'Previsualización de importación de stock' : 'Resumen de importación de stock'}
         size="xl"
       >
         <ModalContent className="space-y-4">
@@ -581,7 +581,7 @@ export default function ProductsPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">
-                  PÃ¡gina {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
+                  Página {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -648,7 +648,7 @@ export default function ProductsPage() {
                 disabled={stockPreview.summary.ok === 0 || isImportingStock}
                 isLoading={isImportingStock}
               >
-                Confirmar importaciÃ³n
+                Confirmar importación
               </Button>
             </>
           ) : (

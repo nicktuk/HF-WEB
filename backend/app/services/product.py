@@ -283,7 +283,12 @@ class ProductService:
 
         def parse_date(value: str) -> date:
             raw = (value or "").strip()
-            return datetime.strptime(raw, "%d/%m/%Y").date()
+            for fmt in ("%d/%m/%Y", "%d-%m-%Y"):
+                try:
+                    return datetime.strptime(raw, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError("Fecha invÃ¡lida")
 
         rows = []
         code_cache: dict[str, Product | None] = {}
@@ -291,8 +296,8 @@ class ProductService:
 
         for idx, row in enumerate(reader, start=2):  # header is line 1
             errors: list[str] = []
-            description = get_field(row, "descripcion", "descripcin", "description")
-            code = get_field(row, "codigo", "code")
+                description = get_field(row, "producto", "descripcion", "descripcin", "description")
+                code = get_field(row, "codigo", "cdigo", "code")
             derived_code = False
             if not code:
                 digits = "".join(re.findall(r"\d", description or ""))
@@ -302,13 +307,28 @@ class ProductService:
             if not code:
                 errors.append("CÃ³digo vacÃ­o y no se pudo derivar desde la descripciÃ³n")
 
+            def normalize_code(value: str) -> str:
+                return re.sub(r"\s+", "", (value or "").strip())
+
             product = None
             if code:
-                if code in code_cache:
-                    product = code_cache[code]
+                normalized_code = normalize_code(code)
+                cache_key = normalized_code.lower()
+                if cache_key in code_cache:
+                    product = code_cache[cache_key]
                 else:
-                    product = self.db.query(Product).filter(Product.sku == code).first()
-                    code_cache[code] = product
+                    product = (
+                        self.db.query(Product)
+                        .filter(
+                            or_(
+                                func.lower(Product.sku) == code.lower(),
+                                func.lower(Product.sku) == normalized_code.lower(),
+                                func.replace(func.lower(Product.sku), " ", "") == normalized_code.lower(),
+                            )
+                        )
+                        .first()
+                    )
+                    code_cache[cache_key] = product
 
             if not product and description:
                 if description in desc_cache:
@@ -336,7 +356,7 @@ class ProductService:
             try:
                 purchase_date = parse_date(get_field(row, "fecha", "fechacompra", "fechadecompra", "fecha_compra", "purchase_date"))
             except Exception:
-                errors.append("Fecha invÃ¡lida (formato DD/MM/YYYY)")
+                errors.append("Fecha invÃ¡lida (formato DD/MM/YYYY o DD-MM-YYYY)")
 
             try:
                 unit_price = parse_decimal(get_field(row, "precio", "unit_price", "precio_unitario"))
