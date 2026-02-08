@@ -11,6 +11,7 @@ import type {
   ProductUpdateForm,
   SourceWebsiteCreateForm,
   StockPurchase,
+  StockPreviewResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -462,6 +463,29 @@ export const adminApi = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Error al importar stock' }));
       throw new Error(error.detail || error.message || 'Error al importar stock');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Preview stock purchases from CSV
+   */
+  async previewStockCsv(apiKey: string, file: File): Promise<StockPreviewResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/admin/stock/preview`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-API-Key': apiKey,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al previsualizar stock' }));
+      throw new Error(error.detail || error.message || 'Error al previsualizar stock');
     }
 
     return response.json();

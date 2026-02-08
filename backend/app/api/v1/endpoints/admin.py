@@ -32,6 +32,7 @@ from app.schemas.product import (
 from app.schemas.stock import (
     StockPurchaseResponse,
     StockImportResponse,
+    StockPreviewResponse,
 )
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
@@ -150,6 +151,28 @@ async def get_products_admin(
 # ============================================
 # Stock Management
 # ============================================
+
+@router.post(
+    "/stock/preview",
+    response_model=StockPreviewResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def preview_stock_csv(
+    file: UploadFile = File(...),
+    service: ProductService = Depends(get_product_service),
+):
+    """Preview stock purchases from CSV."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV.")
+
+    contents = await file.read()
+    try:
+        result = service.preview_stock_csv(contents)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return result
+
 
 @router.post(
     "/stock/import",

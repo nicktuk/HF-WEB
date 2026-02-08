@@ -183,6 +183,60 @@ class ProductService:
 
     def import_stock_csv(self, csv_bytes: bytes) -> dict:
         """Import stock purchases from CSV bytes."""
+        rows = self.preview_stock_csv(csv_bytes)["rows"]
+        created = 0
+        skipped = 0
+        errors: list[str] = []
+        touched_products: set[int] = set()
+
+        for row in rows:
+            if row["status"] == "duplicate":
+                skipped += 1
+                continue
+            if row["status"] != "ok":
+                errors.append(f"Fila {row['row_number']}: {', '.join(row['errors'])}")
+                continue
+
+            purchase = StockPurchase(
+                product_id=row["product_id"],
+                description=row.get("description") or None,
+                code=row.get("code"),
+                purchase_date=row["purchase_date"],
+                unit_price=row["unit_price"],
+                quantity=row["quantity"],
+                total_amount=row["total_amount"],
+                out_quantity=0,
+            )
+            self.db.add(purchase)
+            touched_products.add(row["product_id"])
+            created += 1
+
+        self.db.commit()
+
+        # Mark immediate delivery for products with stock
+        if touched_products:
+            stock_summary = self.get_stock_summary(list(touched_products))
+            for product_id, stock_qty in stock_summary.items():
+                if stock_qty > 0:
+                    self.db.query(Product).filter(Product.id == product_id).update(
+                        {
+                            Product.is_immediate_delivery: True,
+                            Product.is_check_stock: False,
+                        },
+                        synchronize_session=False,
+                    )
+            self.db.commit()
+            cache.invalidate_all_products()
+
+        return {
+            "created": created,
+            "skipped": skipped,
+            "errors": errors,
+            "touched_products": len(touched_products),
+        }
+
+    def preview_stock_csv(self, csv_bytes: bytes) -> dict:
+        """Parse and validate stock CSV without importing."""
         content = csv_bytes.decode("utf-8-sig", errors="ignore")
         if not content.strip():
             raise ValueError("El archivo CSV estÃ¡ vacÃ­o.")
@@ -215,7 +269,6 @@ class ProductService:
                 return Decimal("0")
             cleaned = re.sub(r"[^\d,\.]", "", raw)
             if "," in cleaned and "." in cleaned:
-                # Assume last symbol is decimal separator
                 if cleaned.rfind(",") > cleaned.rfind("."):
                     cleaned = cleaned.replace(".", "").replace(",", ".")
                 else:
@@ -232,24 +285,35 @@ class ProductService:
             raw = (value or "").strip()
             return datetime.strptime(raw, "%d/%m/%Y").date()
 
-        created = 0
-        skipped = 0
-        errors: list[str] = []
-        touched_products: set[int] = set()
+        rows = []
+        code_cache: dict[str, Product | None] = {}
+        desc_cache: dict[str, Product | None] = {}
 
         for idx, row in enumerate(reader, start=2):  # header is line 1
-            try:
-                description = get_field(row, "descripcion", "descripcin", "description")
-                code = get_field(row, "codigo", "code")
-                if not code:
-                    digits = "".join(re.findall(r"\d", description or ""))
-                    code = digits[:5] if digits else ""
+            errors: list[str] = []
+            description = get_field(row, "descripcion", "descripcin", "description")
+            code = get_field(row, "codigo", "code")
+            derived_code = False
+            if not code:
+                digits = "".join(re.findall(r"\d", description or ""))
+                code = digits[:5] if digits else ""
+                derived_code = bool(code)
 
-                if not code:
-                    raise ValueError("CÃ³digo vacÃ­o y no se pudo derivar desde la descripciÃ³n")
+            if not code:
+                errors.append("CÃ³digo vacÃ­o y no se pudo derivar desde la descripciÃ³n")
 
-                product = self.db.query(Product).filter(Product.sku == code).first()
-                if not product and description:
+            product = None
+            if code:
+                if code in code_cache:
+                    product = code_cache[code]
+                else:
+                    product = self.db.query(Product).filter(Product.sku == code).first()
+                    code_cache[code] = product
+
+            if not product and description:
+                if description in desc_cache:
+                    product = desc_cache[description]
+                else:
                     matches = (
                         self.db.query(Product)
                         .filter(or_(Product.original_name.ilike(description), Product.custom_name.ilike(description)))
@@ -258,23 +322,47 @@ class ProductService:
                     if len(matches) == 1:
                         product = matches[0]
                     elif len(matches) > 1:
-                        raise ValueError("DescripciÃ³n coincide con mÃºltiples productos")
+                        errors.append("DescripciÃ³n coincide con mÃºltiples productos")
+                    desc_cache[description] = product
 
-                if not product:
-                    raise ValueError(f"No se encontrÃ³ producto con cÃ³digo {code}")
+            if not product:
+                errors.append(f"No se encontrÃ³ producto con cÃ³digo {code}" if code else "Producto no encontrado")
 
+            purchase_date = None
+            unit_price = None
+            quantity = None
+            total_amount = None
+
+            try:
                 purchase_date = parse_date(get_field(row, "fecha", "fechacompra", "fechadecompra", "fecha_compra", "purchase_date"))
+            except Exception:
+                errors.append("Fecha invÃ¡lida (formato DD/MM/YYYY)")
+
+            try:
                 unit_price = parse_decimal(get_field(row, "precio", "unit_price", "precio_unitario"))
+            except (InvalidOperation, ValueError):
+                errors.append("Precio invÃ¡lido")
+
+            try:
                 quantity = parse_int(get_field(row, "cantidad", "qty", "quantity"))
+            except ValueError:
+                errors.append("Cantidad invÃ¡lida")
+
+            try:
                 total_amount = parse_decimal(get_field(row, "total", "totalcompra", "total_compra", "total_amount"))
+            except (InvalidOperation, ValueError):
+                errors.append("Total invÃ¡lido")
 
-                if unit_price <= 0 or quantity <= 0:
-                    raise ValueError("Precio o cantidad invÃ¡lidos")
+            if unit_price is not None and unit_price <= 0:
+                errors.append("Precio debe ser mayor a 0")
+            if quantity is not None and quantity <= 0:
+                errors.append("Cantidad debe ser mayor a 0")
 
-                if total_amount <= 0:
-                    total_amount = (unit_price * Decimal(quantity)).quantize(Decimal("0.01"))
+            if total_amount is not None and unit_price is not None and quantity is not None and total_amount <= 0:
+                total_amount = (unit_price * Decimal(quantity)).quantize(Decimal("0.01"))
 
-                # Deduplicate by unique key
+            is_duplicate = False
+            if not errors and product and purchase_date and unit_price is not None and quantity is not None and total_amount is not None:
                 exists = (
                     self.db.query(StockPurchase)
                     .filter(
@@ -287,48 +375,37 @@ class ProductService:
                     .first()
                 )
                 if exists:
-                    skipped += 1
-                    continue
+                    is_duplicate = True
 
-                purchase = StockPurchase(
-                    product_id=product.id,
-                    description=description or None,
-                    code=code,
-                    purchase_date=purchase_date,
-                    unit_price=unit_price,
-                    quantity=quantity,
-                    total_amount=total_amount,
-                    out_quantity=0,
-                )
-                self.db.add(purchase)
-                touched_products.add(product.id)
-                created += 1
-            except (ValueError, InvalidOperation) as exc:
-                errors.append(f"Fila {idx}: {exc}")
+            status = "ok"
+            if errors:
+                status = "error"
+            elif is_duplicate:
+                status = "duplicate"
 
-        self.db.commit()
+            rows.append({
+                "row_number": idx,
+                "description": description or None,
+                "code": code or None,
+                "derived_code": derived_code,
+                "purchase_date": purchase_date,
+                "unit_price": unit_price,
+                "quantity": quantity,
+                "total_amount": total_amount,
+                "product_id": product.id if product else None,
+                "product_name": product.display_name if product else None,
+                "status": status,
+                "errors": errors,
+            })
 
-        # Mark immediate delivery for products with stock
-        if touched_products:
-            stock_summary = self.get_stock_summary(list(touched_products))
-            for product_id, stock_qty in stock_summary.items():
-                if stock_qty > 0:
-                    self.db.query(Product).filter(Product.id == product_id).update(
-                        {
-                            Product.is_immediate_delivery: True,
-                            Product.is_check_stock: False,
-                        },
-                        synchronize_session=False,
-                    )
-            self.db.commit()
-            cache.invalidate_all_products()
-
-        return {
-            "created": created,
-            "skipped": skipped,
-            "errors": errors,
-            "touched_products": len(touched_products),
+        summary = {
+            "total": len(rows),
+            "ok": sum(1 for r in rows if r["status"] == "ok"),
+            "duplicate": sum(1 for r in rows if r["status"] == "duplicate"),
+            "error": sum(1 for r in rows if r["status"] == "error"),
         }
+
+        return {"rows": rows, "summary": summary}
 
     async def create_from_slug(self, data: ProductCreate) -> Product:
         """

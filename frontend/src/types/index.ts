@@ -69,6 +69,31 @@ export interface StockPurchase {
   updated_at: string;
 }
 
+export interface StockPreviewRow {
+  row_number: number;
+  description?: string;
+  code?: string;
+  derived_code?: boolean;
+  purchase_date?: string | null;
+  unit_price?: number | null;
+  quantity?: number | null;
+  total_amount?: number | null;
+  product_id?: number | null;
+  product_name?: string | null;
+  status: 'ok' | 'duplicate' | 'error';
+  errors: string[];
+}
+
+export interface StockPreviewResponse {
+  rows: StockPreviewRow[];
+  summary: {
+    total: number;
+    ok: number;
+    duplicate: number;
+    error: number;
+  };
+}
+
 // Category Types
 
 export interface Category {

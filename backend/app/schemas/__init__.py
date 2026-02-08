@@ -26,6 +26,7 @@ from app.schemas.common import (
 from app.schemas.stock import (
     StockPurchaseResponse,
     StockImportResponse,
+    StockPreviewResponse,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     # Stock
     "StockPurchaseResponse",
     "StockImportResponse",
+    "StockPreviewResponse",
 ]

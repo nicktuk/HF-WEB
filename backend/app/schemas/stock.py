@@ -27,3 +27,23 @@ class StockImportResponse(BaseModel):
     skipped: int
     errors: List[str]
     touched_products: int
+
+
+class StockPreviewRow(BaseModel):
+    row_number: int
+    description: str | None = None
+    code: str | None = None
+    derived_code: bool = False
+    purchase_date: date | None = None
+    unit_price: Decimal | None = None
+    quantity: int | None = None
+    total_amount: Decimal | None = None
+    product_id: int | None = None
+    product_name: str | None = None
+    status: str
+    errors: List[str] = []
+
+
+class StockPreviewResponse(BaseModel):
+    rows: List[StockPreviewRow]
+    summary: dict
