@@ -148,7 +148,23 @@ export default function StockUnmatchedPage() {
       {showManualModal && (
         <ManualProductForm
           onClose={() => setShowManualModal(false)}
-          onSuccess={() => setShowManualModal(false)}
+          onSuccess={async (productId) => {
+            if (selectedPurchaseId && productId) {
+              await updatePurchase.mutateAsync({ purchaseId: selectedPurchaseId, productId });
+              setSelectedPurchaseId(null);
+            }
+            setShowManualModal(false);
+          }}
+          initialValues={
+            selectedPurchase
+              ? {
+                  name: selectedPurchase.description || '',
+                  sku: selectedPurchase.code || '',
+                  price: selectedPurchase.unit_price || '',
+                  short_description: selectedPurchase.description || '',
+                }
+              : undefined
+          }
           priceAsOriginal
         />
       )}

@@ -19,6 +19,7 @@ import {
   useDeleteProduct,
   useRescrapeProduct,
   useStockPurchases,
+  useUpdateStockPurchase,
 } from '@/hooks/useProducts';
 import { useRouter } from 'next/navigation';
 
@@ -31,6 +32,7 @@ export default function ProductEditPage() {
 
   const { data: product, isLoading } = useAdminProduct(apiKey, productId);
   const { data: stockPurchases, isLoading: isStockLoading } = useStockPurchases(apiKey, productId);
+  const updateStockPurchase = useUpdateStockPurchase(apiKey);
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
@@ -598,6 +600,7 @@ export default function ProductEditPage() {
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -611,6 +614,22 @@ export default function ProductEditPage() {
                               <td className="px-3 py-2 text-right font-medium">{available}</td>
                               <td className="px-3 py-2 text-right">{formatPrice(purchase.unit_price)}</td>
                               <td className="px-3 py-2 text-right">{formatPrice(purchase.total_amount)}</td>
+                              <td className="px-3 py-2 text-right">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    if (!confirm('¿Desasociar esta compra de stock del producto?')) return;
+                                    await updateStockPurchase.mutateAsync({
+                                      purchaseId: purchase.id,
+                                      productId: null,
+                                    });
+                                  }}
+                                  disabled={updateStockPurchase.isPending}
+                                >
+                                  Desasociar
+                                </Button>
+                              </td>
                             </tr>
                           );
                         })}
