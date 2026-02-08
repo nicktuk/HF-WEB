@@ -1,10 +1,13 @@
+'use client';
+
 import { useState } from 'react';
-import { Search, Link2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
 import { useUnmatchedStockPurchases, useUpdateStockPurchase, useAdminProducts } from '@/hooks/useProducts';
 import { formatDate, formatPrice } from '@/lib/utils';
+import { ManualProductForm } from '@/components/admin/ManualProductForm';
 
 export default function StockUnmatchedPage() {
   const apiKey = useApiKey() || '';
@@ -13,6 +16,7 @@ export default function StockUnmatchedPage() {
 
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
   const [productSearch, setProductSearch] = useState('');
+  const [showManualModal, setShowManualModal] = useState(false);
 
   const { data: productsData, isLoading: isLoadingProducts } = useAdminProducts(apiKey, {
     page: 1,
@@ -82,8 +86,15 @@ export default function StockUnmatchedPage() {
 
         {/* Right: Product search */}
         <div className="bg-white rounded-lg border">
-          <div className="px-4 py-3 border-b">
+          <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Buscar producto</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowManualModal(true)}
+            >
+              Crear producto manual
+            </Button>
           </div>
           <div className="p-4 space-y-4">
             <div className="relative">
@@ -110,7 +121,13 @@ export default function StockUnmatchedPage() {
             ) : (
               <div className="divide-y border rounded-lg">
                 {productsData.items.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between px-3 py-2">
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => handleAssociate(product.id)}
+                    disabled={!selectedPurchase || updatePurchase.isPending}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 line-clamp-1">
                         {product.custom_name || product.original_name}
@@ -119,22 +136,20 @@ export default function StockUnmatchedPage() {
                         SKU: {product.sku || '-'} · {product.source_website_name || 'Manual'}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAssociate(product.id)}
-                      disabled={!selectedPurchase || updatePurchase.isPending}
-                    >
-                      <Link2 className="h-4 w-4 mr-1.5" />
-                      Asociar
-                    </Button>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {showManualModal && (
+        <ManualProductForm
+          onClose={() => setShowManualModal(false)}
+          onSuccess={() => setShowManualModal(false)}
+        />
+      )}
     </div>
   );
 }
