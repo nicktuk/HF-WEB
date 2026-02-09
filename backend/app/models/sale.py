@@ -32,6 +32,13 @@ class SaleItem(Base):
     total_price = Column(Numeric(12, 2), nullable=False)
 
     sale = relationship("Sale", back_populates="items")
+    product = relationship("Product")
+
+    @property
+    def product_name(self) -> str | None:
+        if not self.product:
+            return None
+        return self.product.custom_name or self.product.original_name
 
     __table_args__ = (
         Index("ix_sale_items_sale_product", "sale_id", "product_id"),

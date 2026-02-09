@@ -1072,6 +1072,33 @@ async def list_sales(
     return service.list_sales(limit=limit)
 
 
+@router.get(
+    "/sales/{sale_id}",
+    response_model=SaleResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_sale(
+    sale_id: int,
+    service = Depends(get_sales_service),
+):
+    """Get sale by id."""
+    return service.get_sale(sale_id)
+
+
+@router.delete(
+    "/sales/{sale_id}",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def delete_sale(
+    sale_id: int,
+    service = Depends(get_sales_service),
+):
+    """Delete sale and restore stock if delivered."""
+    service.delete_sale(sale_id)
+    return MessageResponse(message="Venta eliminada")
+
+
 @router.patch(
     "/sales/{sale_id}",
     response_model=SaleResponse,

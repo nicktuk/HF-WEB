@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle, CreditCard, Plus, Search, X } from 'lucide-react';
+import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
@@ -346,6 +347,7 @@ export default function VentasPage() {
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -379,6 +381,15 @@ export default function VentasPage() {
                           disabled={updateSale.isPending}
                         />
                       </label>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Link
+                        href={`/admin/ventas/${sale.id}`}
+                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Ver
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
                     </td>
                   </tr>
                 ))}

@@ -28,6 +28,7 @@ class SaleUpdate(BaseModel):
 class SaleItemResponse(BaseModel):
     id: int
     product_id: int
+    product_name: Optional[str] = None
     quantity: int
     unit_price: Decimal
     total_price: Decimal

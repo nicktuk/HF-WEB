@@ -53,6 +53,31 @@ class SalesService:
         if remaining > 0:
             raise ValidationError("No se pudo descontar el stock completo")
 
+    def _restore_stock(self, product_id: int, quantity: int) -> None:
+        """Restore stock to purchases by decreasing out_quantity (LIFO)."""
+        if quantity <= 0:
+            return
+
+        remaining = quantity
+        purchases = (
+            self.db.query(StockPurchase)
+            .filter(StockPurchase.product_id == product_id)
+            .order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc())
+            .all()
+        )
+
+        for purchase in purchases:
+            if remaining <= 0:
+                break
+            if purchase.out_quantity <= 0:
+                continue
+            restore = min(purchase.out_quantity, remaining)
+            purchase.out_quantity -= restore
+            remaining -= restore
+
+        if remaining > 0:
+            raise ValidationError("No se pudo revertir el stock completo")
+
     def create_sale(self, data) -> Sale:
         if not data.items:
             raise ValidationError("La venta debe tener items")
@@ -137,3 +162,22 @@ class SalesService:
         self.db.commit()
         self.db.refresh(sale)
         return sale
+
+    def get_sale(self, sale_id: int) -> Sale:
+        sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
+        if not sale:
+            raise NotFoundError("Sale", str(sale_id))
+        return sale
+
+    def delete_sale(self, sale_id: int) -> None:
+        sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
+        if not sale:
+            raise NotFoundError("Sale", str(sale_id))
+
+        if sale.delivered:
+            items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
+            for item in items:
+                self._restore_stock(item.product_id, item.quantity)
+
+        self.db.delete(sale)
+        self.db.commit()

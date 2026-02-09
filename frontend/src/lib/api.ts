@@ -545,12 +545,28 @@ export const adminApi = {
   },
 
   /**
+   * Get sale by id
+   */
+  async getSale(apiKey: string, saleId: number): Promise<Sale> {
+    return fetchAPI(`/admin/sales/${saleId}`, {}, apiKey);
+  },
+
+  /**
    * Update sale status
    */
   async updateSale(apiKey: string, saleId: number, data: { delivered?: boolean; paid?: boolean }): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  /**
+   * Delete sale
+   */
+  async deleteSale(apiKey: string, saleId: number): Promise<MessageResponse> {
+    return fetchAPI(`/admin/sales/${saleId}`, {
+      method: 'DELETE',
     }, apiKey);
   },
 };

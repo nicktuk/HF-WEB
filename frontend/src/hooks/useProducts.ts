@@ -142,11 +142,33 @@ export function useSales(apiKey: string, limit: number = 50) {
   });
 }
 
+export function useSale(apiKey: string, saleId: number) {
+  return useQuery({
+    queryKey: ['sale', saleId],
+    queryFn: () => adminApi.getSale(apiKey, saleId),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && !!saleId,
+  });
+}
+
 export function useUpdateSale(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ saleId, data }: { saleId: number; data: { delivered?: boolean; paid?: boolean } }) =>
       adminApi.updateSale(apiKey, saleId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sale'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+    },
+  });
+}
+
+export function useDeleteSale(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (saleId: number) => adminApi.deleteSale(apiKey, saleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });

@@ -38,7 +38,7 @@ export default function StockUnmatchedPage() {
       if (detail?.error === 'duplicate_stock_purchase') {
         setDuplicateInfo(detail);
       } else {
-        throw err;
+        alert(err?.message || 'Error al asociar la compra');
       }
     }
   };
@@ -160,11 +160,20 @@ export default function StockUnmatchedPage() {
         <ManualProductForm
           onClose={() => setShowManualModal(false)}
           onSuccess={async (productId) => {
-            if (selectedPurchaseId && productId) {
-              await updatePurchase.mutateAsync({ purchaseId: selectedPurchaseId, productId });
-              setSelectedPurchaseId(null);
+            try {
+              if (selectedPurchaseId && productId) {
+                await updatePurchase.mutateAsync({ purchaseId: selectedPurchaseId, productId });
+                setSelectedPurchaseId(null);
+              }
+              setShowManualModal(false);
+            } catch (err: any) {
+              const detail = err?.detail;
+              if (detail?.error === 'duplicate_stock_purchase') {
+                setDuplicateInfo(detail);
+              } else {
+                alert(err?.message || 'Error al asociar la compra');
+              }
             }
-            setShowManualModal(false);
           }}
           initialValues={
             selectedPurchase
