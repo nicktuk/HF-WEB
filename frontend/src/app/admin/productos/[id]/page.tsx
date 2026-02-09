@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
-import { ChevronLeft, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -21,7 +21,6 @@ import {
   useStockPurchases,
   useUpdateStockPurchase,
 } from '@/hooks/useProducts';
-import { useRouter } from 'next/navigation';
 
 export default function ProductEditPage() {
   const params = useParams();
@@ -57,6 +56,8 @@ export default function ProductEditPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [prevProductId, setPrevProductId] = useState<number | null>(null);
+  const [nextProductId, setNextProductId] = useState<number | null>(null);
 
   // Initialize form when product loads
   useEffect(() => {
@@ -81,6 +82,21 @@ export default function ProductEditPage() {
       setSelectedImageIndex(0);
     }
   }, [product]);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('admin_products_last_list');
+      if (!stored) return;
+      const ids = JSON.parse(stored) as number[];
+      const index = ids.indexOf(productId);
+      if (index >= 0) {
+        setPrevProductId(index > 0 ? ids[index - 1] : null);
+        setNextProductId(index < ids.length - 1 ? ids[index + 1] : null);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [productId]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -181,32 +197,60 @@ export default function ProductEditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
+      <div className="sticky top-0 z-30 bg-gray-100/80 backdrop-blur border-b border-gray-200">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin/productos"
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-gray-900">
+                  {product.custom_name || product.original_name}
+                </h1>
+                {product.is_featured && (
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">
+                    Nuevo
+                  </span>
+                )}
+                {product.is_immediate_delivery && (
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
+                    Entrega inmediata
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500">{product.slug}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => prevProductId && router.push(`/admin/productos/${prevProductId}`)}
+              disabled={!prevProductId}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => nextProductId && router.push(`/admin/productos/${nextProductId}`)}
+              disabled={!nextProductId}
+            >
+              Siguiente
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link
-            href="/admin/productos"
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">
-                {product.custom_name || product.original_name}
-              </h1>
-              {product.is_featured && (
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">
-                  Nuevo
-                </span>
-              )}
-              {product.is_immediate_delivery && (
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                  Entrega inmediata
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-500">{product.slug}</p>
-          </div>
+          <div />
         </div>
         <div className="flex items-center gap-2">
           {!isManualProduct && (
@@ -576,7 +620,7 @@ export default function ProductEditPage() {
           </Card>
 
           {/* Stock Purchases */}
-          <Card>
+          <Card className="hidden">
             <CardHeader>
               <h2 className="text-lg font-semibold">Stock por compras</h2>
             </CardHeader>
@@ -649,6 +693,79 @@ export default function ProductEditPage() {
           </Card>
         </div>
       </div>
+
+      {/* Stock Purchases - Full Width */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold">Stock por compras</h2>
+        </CardHeader>
+        <CardContent>
+          {isStockLoading ? (
+            <p className="text-sm text-gray-500">Cargando stock...</p>
+          ) : !stockPurchases || stockPurchases.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay compras de stock registradas.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-gray-700">
+                Stock disponible: <strong>{totalStock}</strong>
+              </div>
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Compra</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {stockPurchases.map((purchase) => {
+                      const available = purchase.quantity - purchase.out_quantity;
+                      return (
+                        <tr key={purchase.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2">{purchase.purchase_date}</td>
+                          <td className="px-3 py-2">
+                            <div className="font-medium text-gray-900 line-clamp-1">
+                              {purchase.description || '-'}
+                            </div>
+                            <div className="text-xs text-gray-500">{purchase.code || '-'}</div>
+                          </td>
+                          <td className="px-3 py-2 text-right">{purchase.quantity}</td>
+                          <td className="px-3 py-2 text-right">{purchase.out_quantity}</td>
+                          <td className="px-3 py-2 text-right font-medium">{available}</td>
+                          <td className="px-3 py-2 text-right">{formatPrice(purchase.unit_price)}</td>
+                          <td className="px-3 py-2 text-right">{formatPrice(purchase.total_amount)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                if (!confirm('Â¿Desasociar esta compra de stock del producto?')) return;
+                                await updateStockPurchase.mutateAsync({
+                                  purchaseId: purchase.id,
+                                  productId: null,
+                                });
+                              }}
+                              disabled={updateStockPurchase.isPending}
+                            >
+                              Desasociar
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

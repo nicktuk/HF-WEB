@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,6 +162,16 @@ export default function ProductsPage() {
     in_stock: inStockFilter,
     price_range: priceRangeFilter,
   });
+
+  useEffect(() => {
+    if (!data?.items) return;
+    const ids = data.items.map((item) => item.id);
+    try {
+      sessionStorage.setItem('admin_products_last_list', JSON.stringify(ids));
+    } catch {
+      // ignore storage errors
+    }
+  }, [data?.items]);
 
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
   const { data: adminCategories } = useAdminCategories();
