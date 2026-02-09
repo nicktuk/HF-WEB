@@ -2,6 +2,86 @@
 
 ## Arquitectura
 
+---
+
+## SesiÃƒÂ³n 2026-02-08/09
+
+### MÃƒÂ³dulo Stock (compras y asociaciÃƒÂ³n)
+
+**Backend:**
+- Modelo `StockPurchase` con `out_quantity` (salidas) y `product_id` nullable.
+- Migraciones:
+  - `backend/alembic/versions/011_add_stock_purchases.py`
+  - `backend/alembic/versions/012_make_stock_purchase_product_nullable.py`
+- Servicio `backend/app/services/product.py`:
+  - `preview_stock_csv` y `import_stock_csv` (CSV: producto, cÃƒÂ³digo, precio, cantidad, total, fecha)
+  - `get_stock_purchases`, `update_stock_purchase`, `find_duplicate_stock_purchase`
+  - `get_stock_stats_by_category`
+- Endpoints:
+  - `POST /admin/stock/preview`
+  - `POST /admin/stock/import`
+  - `GET /admin/stock/purchases?product_id=&unmatched=`
+  - `PATCH /admin/stock/purchases/{id}` (asociar/desasociar)
+  - `GET /admin/stats/stock-by-category`
+  - `GET /admin/stats/financials`
+
+**Frontend:**
+- `frontend/src/app/admin/stock/page.tsx`:
+  - Lista de compras sin match + buscador de productos
+  - AsociaciÃƒÂ³n a producto existente
+  - BotÃƒÂ³n "Crear producto manual" con datos precargados de la compra
+  - Modal de compra duplicada (409)
+  - Manejo de errores sin "Uncaught"
+- `frontend/src/app/admin/productos/[id]/page.tsx`:
+  - Flechas anterior/siguiente (lista guardada en sessionStorage desde `admin/productos`)
+  - SecciÃƒÂ³n stock por compras en ancho completo
+  - BotÃƒÂ³n "Desasociar" por compra
+- `frontend/src/app/admin/productos/page.tsx`:
+  - Guarda lista de IDs en sessionStorage para navegaciÃƒÂ³n en detalle
+- `frontend/src/app/admin/page.tsx`:
+  - Card de stock por categorÃƒÂ­a
+  - Resumen financiero (total comprado, cobrado, pendientes y stock a costo)
+
+### Reglas de CSV y asociaciÃƒÂ³n
+- Columnas: descripciÃƒÂ³n y cÃƒÂ³digo son separadas.
+- Si cÃƒÂ³digo vacÃƒÂ­o: se deriva de los 5 dÃƒÂ­gitos izquierdos de la descripciÃƒÂ³n.
+- CÃƒÂ³digo es ÃƒÂºnico (pero se quitÃƒÂ³ validaciÃƒÂ³n estricta al asociar).
+- Fecha en formato `DD/MM/YYYY`.
+- La marca "Entrega inmediata" se define en la carga de stock.
+- Existe campo de salida (OUT) para stock, a mejorar mÃƒÂ¡s adelante.
+
+### Ventas (Sales)
+
+**Backend:**
+- Modelos: `backend/app/models/sale.py` y migraciÃƒÂ³n `013_create_sales.py`
+- Schemas: `backend/app/schemas/sales.py`
+- Service: `backend/app/services/sales.py`
+  - Descuenta stock al marcar `delivered = true` (FIFO)
+  - ReversiÃƒÂ³n de stock al borrar venta entregada (LIFO)
+- Endpoints:
+  - `POST /admin/sales`
+  - `GET /admin/sales`
+  - `GET /admin/sales/{id}`
+  - `PATCH /admin/sales/{id}` (delivered/paid)
+  - `DELETE /admin/sales/{id}` (revierte stock si entregada)
+
+**Frontend:**
+- `frontend/src/app/admin/ventas/page.tsx`:
+  - Stock en venta, carrito, cantidad, precio editable
+  - Campos: cliente, notas, cuotas, vendedor (Facu/Heber), Entregado, Pagado
+  - SecciÃƒÂ³n "Ventas existentes" con toggle Entregado/Pagado
+  - Link a detalle de venta
+- `frontend/src/app/admin/ventas/[id]/page.tsx`:
+  - Vista completa de venta (items, totales, estado, notas)
+  - BotÃƒÂ³n eliminar venta con reversiÃƒÂ³n de stock
+
+### Otros fixes recientes
+- `backend/app/api/v1/endpoints/admin.py`:
+  - Errores 409 de duplicados ahora serializados con `jsonable_encoder` (evita crash por date/Decimal)
+- `frontend/src/lib/utils.ts`: `formatPercentage` tolera string
+- `frontend/src/app/producto/[slug]/page.tsx`: `short_description` respeta saltos de lÃƒÂ­nea
+- `frontend/src/components/admin/ActivateInactiveModal.tsx`: markup=0 permitido
+
 ### Backend (Python/FastAPI)
 - **URL Producción:** https://hf-web-production.up.railway.app
 - **Deploy:** Railway con Nixpacks + Procfile
