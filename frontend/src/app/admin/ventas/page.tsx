@@ -145,7 +145,9 @@ export default function VentasPage() {
                         {product.custom_name || product.original_name}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Stock: {product.stock_qty || 0} · Precio: {formatPrice(product.final_price ?? product.custom_price ?? product.original_price ?? 0)}
+                        Stock: {product.stock_qty || 0} · Precio: {formatPrice(
+                          (product.custom_price ?? product.original_price ?? 0) * (1 + Number(product.markup_percentage ?? 0) / 100)
+                        )}
                       </div>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => addToCart(product)}>
