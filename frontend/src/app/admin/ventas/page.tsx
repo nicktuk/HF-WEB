@@ -39,7 +39,9 @@ export default function VentasPage() {
   const addToCart = (product: ProductAdmin) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
-      const defaultPrice = Number(product.final_price ?? product.custom_price ?? product.original_price ?? 0);
+      const defaultPrice = Number(
+        product.custom_price ?? product.original_price ?? 0
+      ) * (1 + Number(product.markup_percentage ?? 0) / 100);
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
