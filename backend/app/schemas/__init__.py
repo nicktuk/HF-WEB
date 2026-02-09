@@ -12,6 +12,8 @@ from app.schemas.product import (
     ProductPublicResponse,
     ProductListResponse,
     ProductAdminResponse,
+    PendingPriceChangeResponse,
+    PendingPriceAction,
 )
 from app.schemas.market_price import (
     MarketPriceResponse,
@@ -50,6 +52,8 @@ __all__ = [
     "ProductPublicResponse",
     "ProductListResponse",
     "ProductAdminResponse",
+    "PendingPriceChangeResponse",
+    "PendingPriceAction",
     # Market Price
     "MarketPriceResponse",
     "MarketPriceStatsResponse",

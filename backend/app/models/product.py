@@ -1,5 +1,5 @@
-"""
-Product models - Productos del catálogo del revendedor.
+﻿"""
+Product models - Productos del catÃ¡logo del revendedor.
 """
 from sqlalchemy import (
     Column, Integer, String, Boolean, Text, Numeric,
@@ -11,27 +11,29 @@ from app.models.base import Base
 
 class Product(Base):
     """
-    Producto del catálogo.
+    Producto del catÃ¡logo.
 
     - Se crea a partir de un slug de la web origen
     - El admin puede modificar precio (markup) y habilitar/deshabilitar
-    - Solo los productos habilitados se muestran en el catálogo público
+    - Solo los productos habilitados se muestran en el catÃ¡logo pÃºblico
     """
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Relación con web origen
+    # RelaciÃ³n con web origen
     source_website_id = Column(Integer, ForeignKey("source_websites.id"), nullable=False)
     source_website = relationship("SourceWebsite", back_populates="products")
 
-    # Identificador único del producto en la web origen
+    # Identificador Ãºnico del producto en la web origen
     slug = Column(String(255), nullable=False, index=True)
     source_url = Column(String(1000), nullable=True)
 
     # Datos scrapeados de la web original
     original_name = Column(String(500), nullable=False)
-    original_price = Column(Numeric(10, 2), nullable=True, comment="Precio origen (puede ser NULL si no está disponible)")
+    original_price = Column(Numeric(10, 2), nullable=True, comment="Precio origen (puede ser NULL si no estÃ¡ disponible)")
+    pending_original_price = Column(Numeric(10, 2), nullable=True, comment="Precio origen pendiente de aprobación")
+    pending_price_detected_at = Column(DateTime, nullable=True, comment="Fecha de detección de cambio de precio")
     original_currency = Column(String(3), default="ARS")
     description = Column(Text, nullable=True)
     short_description = Column(String(1000), nullable=True)
@@ -40,18 +42,18 @@ class Product(Base):
     min_purchase_qty = Column(Integer, nullable=True, comment="Cantidad minima de compra")
     kit_content = Column(Text, nullable=True, comment="Contenido del kit/combo")
 
-    # Configuración del revendedor
+    # ConfiguraciÃ³n del revendedor
     enabled = Column(Boolean, default=False, nullable=False, index=True)
     is_featured = Column(Boolean, default=False, nullable=False, index=True, comment="Marcado como novedad")
     is_immediate_delivery = Column(Boolean, default=False, nullable=False, index=True, comment="Entrega inmediata")
     is_check_stock = Column(Boolean, default=False, nullable=False, index=True, comment="Consultar stock (excluye nuevo e inmediata)")
-    is_best_seller = Column(Boolean, default=False, nullable=False, index=True, comment="Lo más vendido")
+    is_best_seller = Column(Boolean, default=False, nullable=False, index=True, comment="Lo mÃ¡s vendido")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
-    custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si está definido)")
-    display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualización en catálogo")
+    custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
+    display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")
 
-    # Categoría local (opcional, para organización propia)
+    # CategorÃ­a local (opcional, para organizaciÃ³n propia)
     category = Column(String(100), nullable=True, index=True)
     subcategory = Column(String(100), nullable=True, index=True)
 
@@ -65,7 +67,7 @@ class Product(Base):
     market_prices = relationship("MarketPrice", back_populates="product", cascade="all, delete-orphan")
     market_price_stats = relationship("MarketPriceStats", back_populates="product", uselist=False, cascade="all, delete-orphan")
 
-    # Índice compuesto para queries frecuentes
+    # Ãndice compuesto para queries frecuentes
     __table_args__ = (
         Index("ix_products_source_slug", "source_website_id", "slug", unique=True),
         Index("ix_products_enabled_order", "enabled", "display_order"),
@@ -92,7 +94,7 @@ class Product(Base):
 
 
 class ProductImage(Base):
-    """Imágenes de un producto."""
+    """ImÃ¡genes de un producto."""
     __tablename__ = "product_images"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -104,7 +106,7 @@ class ProductImage(Base):
     display_order = Column(Integer, default=0)
     is_primary = Column(Boolean, default=False)
 
-    # Relación
+    # RelaciÃ³n
     product = relationship("Product", back_populates="images")
 
     __table_args__ = (

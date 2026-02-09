@@ -155,6 +155,8 @@ class ProductAdminResponse(ProductResponse):
     scrape_error_count: int = 0
     scrape_last_error: Optional[str] = None
     display_order: int = 0
+    pending_original_price: Optional[Decimal] = None
+    pending_price_detected_at: Optional[datetime] = None
 
     # Market intelligence
     market_avg_price: Optional[Decimal] = None
@@ -217,6 +219,23 @@ class ProductChangeSubcategorySelected(BaseModel):
 class ProductDisableSelected(BaseModel):
     """Schema for disabling selected products."""
     product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs to disable")
+
+
+class PendingPriceChangeItem(BaseModel):
+    product_id: int
+    display_name: str
+    source_website_name: Optional[str] = None
+    original_price: Optional[Decimal] = None
+    pending_original_price: Decimal
+    detected_at: Optional[datetime] = None
+
+
+class PendingPriceChangeResponse(BaseModel):
+    items: List[PendingPriceChangeItem]
+
+
+class PendingPriceAction(BaseModel):
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
 
 
 class ProductCreateManual(BaseModel):

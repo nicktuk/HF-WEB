@@ -89,6 +89,36 @@ export function useAdminProducts(
   });
 }
 
+export function usePendingPriceChanges(apiKey: string) {
+  return useQuery({
+    queryKey: ['pending-price-changes'],
+    queryFn: () => adminApi.getPendingPriceChanges(apiKey),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useApprovePendingPriceChanges(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (productIds: number[]) => adminApi.approvePendingPriceChanges(apiKey, productIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-price-changes'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+export function useRejectPendingPriceChanges(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (productIds: number[]) => adminApi.rejectPendingPriceChanges(apiKey, productIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-price-changes'] });
+    },
+  });
+}
+
 export function useStockPurchases(apiKey: string, productId?: number) {
   return useQuery({
     queryKey: ['stock-purchases', productId],

@@ -11,10 +11,11 @@ import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import type { Category, Subcategory } from '@/types';
 import { adminApi } from '@/lib/api';
+import { formatDate, formatPrice } from '@/lib/utils';
 import type { StockPreviewResponse } from '@/types';
 
 export default function ProductsPage() {
@@ -65,6 +66,8 @@ export default function ProductsPage() {
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
   const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showPendingPriceModal, setShowPendingPriceModal] = useState(false);
+  const [pendingPriceModalOpened, setPendingPriceModalOpened] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isRemovingBadge, setIsRemovingBadge] = useState(false);
   const stockFileInputRef = useRef<HTMLInputElement>(null);
@@ -197,6 +200,18 @@ export default function ProductsPage() {
     price_range: priceRangeFilter,
   });
 
+  const { data: pendingPriceChanges } = usePendingPriceChanges(apiKey);
+  const approvePendingPrices = useApprovePendingPriceChanges(apiKey);
+  const rejectPendingPrices = useRejectPendingPriceChanges(apiKey);
+
+  useEffect(() => {
+    if (pendingPriceModalOpened) return;
+    if (pendingPriceChanges?.items?.length) {
+      setShowPendingPriceModal(true);
+      setPendingPriceModalOpened(true);
+    }
+  }, [pendingPriceChanges, pendingPriceModalOpened]);
+
   useEffect(() => {
     if (!data?.items) return;
     const ids = data.items.map((item) => item.id);
@@ -219,6 +234,8 @@ export default function ProductsPage() {
   const bulkCategoryObj = categories?.find(c => c.name === bulkCategory);
   const { data: bulkAdminSubcategories } = useAdminSubcategories(bulkCategoryObj?.id);
   const bulkSubcategories = bulkAdminSubcategories as Subcategory[] | undefined;
+  const pendingItems = pendingPriceChanges?.items || [];
+  const isPendingAction = approvePendingPrices.isPending || rejectPendingPrices.isPending;
 
   return (
     <div className="space-y-6">
@@ -799,6 +816,101 @@ export default function ProductsPage() {
               ) : null}
               <Button onClick={() => setStockImportResult(null)}>Cerrar</Button>
             </>
+          )}
+        </ModalFooter>
+      </Modal>
+
+      <Modal
+        isOpen={showPendingPriceModal}
+        onClose={() => setShowPendingPriceModal(false)}
+        title="Cambios de precio detectados"
+        size="lg"
+      >
+        <ModalContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Se detectaron cambios de precio origen en productos ya existentes. AprobÃ¡ para actualizar el precio.
+          </p>
+          {pendingItems.length === 0 ? (
+            <div className="text-sm text-gray-500">No hay cambios pendientes.</div>
+          ) : (
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fuente</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actual</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Nuevo</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Detectado</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {pendingItems.map((item) => (
+                    <tr key={item.product_id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-gray-900 line-clamp-1">
+                          {item.display_name}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {item.source_website_name || '-'}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {formatPrice(item.original_price ?? null)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-gray-900">
+                        {formatPrice(item.pending_original_price)}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {formatDate(item.detected_at)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => approvePendingPrices.mutateAsync([item.product_id])}
+                            disabled={isPendingAction}
+                          >
+                            Aprobar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => rejectPendingPrices.mutateAsync([item.product_id])}
+                            disabled={isPendingAction}
+                          >
+                            Descartar
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          {pendingItems.length > 0 ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => rejectPendingPrices.mutateAsync(pendingItems.map((item) => item.product_id))}
+                disabled={isPendingAction}
+              >
+                Descartar todos
+              </Button>
+              <Button
+                onClick={() => approvePendingPrices.mutateAsync(pendingItems.map((item) => item.product_id))}
+                disabled={isPendingAction}
+              >
+                Aprobar todos
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setShowPendingPriceModal(false)}>Cerrar</Button>
           )}
         </ModalFooter>
       </Modal>

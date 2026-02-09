@@ -29,6 +29,8 @@ export interface ProductAdmin extends ProductPublic {
   original_name: string;
   custom_name?: string;
   original_price?: number;
+  pending_original_price?: number;
+  pending_price_detected_at?: string;
   markup_percentage: number;
   custom_price?: number;
   description?: string;
@@ -52,6 +54,15 @@ export interface ProductAdmin extends ProductPublic {
   market_max_price?: number;
   market_sample_count: number;
   stock_qty?: number;
+}
+
+export interface PendingPriceChange {
+  product_id: number;
+  display_name: string;
+  source_website_name?: string;
+  original_price?: number;
+  pending_original_price: number;
+  detected_at?: string;
 }
 
 // Stock Types

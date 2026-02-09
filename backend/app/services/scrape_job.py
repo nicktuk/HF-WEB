@@ -234,8 +234,18 @@ class ScrapeJobManager:
         if existing:
             # Update existing
             existing.original_name = scraped.name
-            if scraped.price:
-                existing.original_price = Decimal(str(scraped.price))
+            if scraped.price is not None:
+                new_price = Decimal(str(scraped.price))
+                if existing.original_price is None:
+                    existing.original_price = new_price
+                    existing.pending_original_price = None
+                    existing.pending_price_detected_at = None
+                elif Decimal(str(existing.original_price)) != new_price:
+                    existing.pending_original_price = new_price
+                    existing.pending_price_detected_at = datetime.utcnow()
+                else:
+                    existing.pending_original_price = None
+                    existing.pending_price_detected_at = None
             if scraped.sku:
                 existing.sku = scraped.sku
             if scraped.categories:
@@ -258,7 +268,7 @@ class ScrapeJobManager:
             slug=scraped.slug,
             source_url=scraped.source_url,
             original_name=scraped.name,
-            original_price=Decimal(str(scraped.price)) if scraped.price else None,
+            original_price=Decimal(str(scraped.price)) if scraped.price is not None else None,
             description=scraped.description,
             short_description=scraped.short_description,
             brand=scraped.brand,

@@ -673,8 +673,18 @@ class ProductService:
 
             # Update scraped fields (preserve admin customizations)
             product.original_name = scraped.name
-            if scraped.price:
-                product.original_price = Decimal(str(scraped.price))
+            if scraped.price is not None:
+                new_price = Decimal(str(scraped.price))
+                if product.original_price is None:
+                    product.original_price = new_price
+                    product.pending_original_price = None
+                    product.pending_price_detected_at = None
+                elif Decimal(str(product.original_price)) != new_price:
+                    product.pending_original_price = new_price
+                    product.pending_price_detected_at = datetime.utcnow()
+                else:
+                    product.pending_original_price = None
+                    product.pending_price_detected_at = None
             product.description = scraped.description
             product.short_description = scraped.short_description
             product.brand = scraped.brand or product.brand
@@ -1486,6 +1496,71 @@ class ProductService:
             "total_value": total_value,
             "items": items,
         }
+
+    def get_pending_price_changes(self) -> dict:
+        """Get products with pending original price changes."""
+        products = (
+            self.db.query(Product)
+            .filter(Product.pending_original_price.isnot(None))
+            .order_by(Product.pending_price_detected_at.desc().nullslast(), Product.id.desc())
+            .all()
+        )
+
+        items = []
+        for product in products:
+            items.append({
+                "product_id": product.id,
+                "display_name": product.display_name,
+                "source_website_name": product.source_website.display_name if product.source_website else None,
+                "original_price": float(product.original_price) if product.original_price is not None else None,
+                "pending_original_price": float(product.pending_original_price) if product.pending_original_price is not None else None,
+                "detected_at": product.pending_price_detected_at,
+            })
+
+        return {"items": items}
+
+    def approve_pending_prices(self, product_ids: List[int]) -> int:
+        """Approve pending original price changes."""
+        products = (
+            self.db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .all()
+        )
+        updated = 0
+        for product in products:
+            if product.pending_original_price is None:
+                continue
+            product.original_price = product.pending_original_price
+            product.pending_original_price = None
+            product.pending_price_detected_at = None
+            updated += 1
+
+        if updated:
+            self.db.commit()
+            cache.invalidate_all_products()
+
+        return updated
+
+    def reject_pending_prices(self, product_ids: List[int]) -> int:
+        """Reject pending original price changes."""
+        products = (
+            self.db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .all()
+        )
+        updated = 0
+        for product in products:
+            if product.pending_original_price is None:
+                continue
+            product.pending_original_price = None
+            product.pending_price_detected_at = None
+            updated += 1
+
+        if updated:
+            self.db.commit()
+            cache.invalidate_all_products()
+
+        return updated
 
     def get_financial_stats(self) -> dict:
         """Get dashboard financial stats."""

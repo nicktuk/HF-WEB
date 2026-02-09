@@ -12,6 +12,7 @@ import type {
   SourceWebsiteCreateForm,
   StockPurchase,
   StockPreviewResponse,
+  PendingPriceChange,
   SaleCreateForm,
   Sale,
   WhatsAppProductItem,
@@ -156,6 +157,33 @@ export const adminApi = {
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/products${query ? `?${query}` : ''}`, {}, apiKey);
+  },
+
+  /**
+   * Get pending original price changes
+   */
+  async getPendingPriceChanges(apiKey: string): Promise<{ items: PendingPriceChange[] }> {
+    return fetchAPI('/admin/products/pending-prices', {}, apiKey);
+  },
+
+  /**
+   * Approve pending original price changes
+   */
+  async approvePendingPriceChanges(apiKey: string, productIds: number[]): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/pending-prices/approve', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds }),
+    }, apiKey);
+  },
+
+  /**
+   * Reject pending original price changes
+   */
+  async rejectPendingPriceChanges(apiKey: string, productIds: number[]): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/pending-prices/reject', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds }),
+    }, apiKey);
   },
 
   /**
