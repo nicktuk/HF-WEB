@@ -12,6 +12,7 @@ import logging
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
 from app.models.product import Product, ProductImage
 from app.models.stock import StockPurchase
+from app.models.sale import Sale
 from app.models.source_website import SourceWebsite
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
 from app.scrapers.registry import ScraperRegistry
@@ -1481,4 +1482,51 @@ class ProductService:
             "total_qty": total_qty,
             "total_value": total_value,
             "items": items,
+        }
+
+    def get_financial_stats(self) -> dict:
+        """Get dashboard financial stats."""
+        total_purchased = (
+            self.db.query(func.coalesce(func.sum(StockPurchase.total_amount), 0))
+            .scalar()
+        )
+
+        total_collected = (
+            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+            .filter(Sale.paid.is_(True))
+            .scalar()
+        )
+
+        total_pending_delivery = (
+            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+            .filter(Sale.delivered.is_(False))
+            .scalar()
+        )
+
+        total_pending_payment = (
+            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+            .filter(Sale.paid.is_(False))
+            .scalar()
+        )
+
+        stock_value_cost = (
+            self.db.query(
+                func.coalesce(
+                    func.sum(
+                        (StockPurchase.quantity - StockPurchase.out_quantity)
+                        * func.coalesce(Product.original_price, 0)
+                    ),
+                    0,
+                )
+            )
+            .join(Product, StockPurchase.product_id == Product.id)
+            .scalar()
+        )
+
+        return {
+            "total_purchased": float(total_purchased or 0),
+            "total_collected": float(total_collected or 0),
+            "total_pending_delivery": float(total_pending_delivery or 0),
+            "total_pending_payment": float(total_pending_payment or 0),
+            "stock_value_cost": float(stock_value_cost or 0),
         }

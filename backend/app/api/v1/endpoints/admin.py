@@ -1028,6 +1028,18 @@ async def get_stock_by_category(
     return service.get_stock_stats_by_category()
 
 
+@router.get(
+    "/stats/financials",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_financial_stats(
+    request: Request,
+    service: ProductService = Depends(get_product_service),
+):
+    """Get financial dashboard stats."""
+    return service.get_financial_stats()
+
+
 # ============================================
 # Sales
 # ============================================

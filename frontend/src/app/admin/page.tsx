@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes } from 'lucide-react';
+import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
@@ -43,6 +43,14 @@ interface StockByCategoryResponse {
   items: StockByCategoryItem[];
 }
 
+interface FinancialStatsResponse {
+  total_purchased: number;
+  total_collected: number;
+  total_pending_delivery: number;
+  total_pending_payment: number;
+  stock_value_cost: number;
+}
+
 export default function AdminDashboard() {
   const apiKey = useApiKey();
   const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
@@ -78,6 +86,21 @@ export default function AdminDashboard() {
         }
       );
       if (!response.ok) throw new Error('Error fetching stock stats');
+      return response.json();
+    },
+    enabled: !!apiKey,
+  });
+
+  const { data: financialStats } = useQuery<FinancialStatsResponse>({
+    queryKey: ['admin-stats-financials'],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/stats/financials`,
+        {
+          headers: { 'X-Admin-API-Key': apiKey || '' },
+        }
+      );
+      if (!response.ok) throw new Error('Error fetching financial stats');
       return response.json();
     },
     enabled: !!apiKey,
@@ -289,6 +312,72 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Financial Stats */}
+      {financialStats && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Resumen financiero
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              Valores de ventas y stock a costo origen.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+                  <DollarSign className="h-4 w-4" />
+                  Total comprado
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatPrice(financialStats.total_purchased)}
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+                  <CreditCard className="h-4 w-4" />
+                  Total cobrado
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatPrice(financialStats.total_collected)}
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+                  <Truck className="h-4 w-4" />
+                  Pendiente entrega
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatPrice(financialStats.total_pending_delivery)}
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+                  <Clock className="h-4 w-4" />
+                  Pendiente cobro
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatPrice(financialStats.total_pending_payment)}
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+                  <Boxes className="h-4 w-4" />
+                  Stock a costo
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatPrice(financialStats.stock_value_cost)}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
