@@ -133,6 +133,28 @@ export function useCreateSale(apiKey: string) {
   });
 }
 
+export function useSales(apiKey: string, limit: number = 50) {
+  return useQuery({
+    queryKey: ['sales', limit],
+    queryFn: () => adminApi.listSales(apiKey, limit),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useUpdateSale(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId, data }: { saleId: number; data: { delivered?: boolean; paid?: boolean } }) =>
+      adminApi.updateSale(apiKey, saleId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+    },
+  });
+}
+
 export function useAdminProduct(apiKey: string, id: number) {
   return useQuery({
     queryKey: ['admin-product', id],

@@ -5,7 +5,7 @@ import { CheckCircle, CreditCard, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useUpdateSale } from '@/hooks/useProducts';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleItemCreate } from '@/types';
 
@@ -26,6 +26,8 @@ export default function VentasPage() {
   const [paid, setPaid] = useState(false);
 
   const createSale = useCreateSale(apiKey);
+  const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 50);
+  const updateSale = useUpdateSale(apiKey);
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
     page: 1,
@@ -104,6 +106,13 @@ export default function VentasPage() {
     setInstallments('');
     setDelivered(false);
     setPaid(false);
+  };
+
+  const handleToggleSale = async (saleId: number, field: 'delivered' | 'paid', value: boolean) => {
+    await updateSale.mutateAsync({
+      saleId,
+      data: { [field]: value },
+    });
   };
 
   return (
@@ -307,6 +316,76 @@ export default function VentasPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-lg border">
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Ventas existentes</h2>
+            <p className="text-sm text-gray-500">
+              El stock se descuenta al marcar una venta como Entregada.
+            </p>
+          </div>
+          <span className="text-xs text-gray-500">
+            {salesData?.length || 0} ventas
+          </span>
+        </div>
+        {isSalesLoading ? (
+          <div className="p-4 text-sm text-gray-500">Cargando ventas...</div>
+        ) : !salesData || salesData.length === 0 ? (
+          <div className="p-4 text-sm text-gray-500">No hay ventas registradas.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {salesData.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
+                    <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
+                    <td className="px-3 py-2 text-gray-700">{sale.seller}</td>
+                    <td className="px-3 py-2 text-gray-700">
+                      {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
+                    <td className="px-3 py-2 text-center">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={sale.delivered}
+                          onChange={(e) => handleToggleSale(sale.id, 'delivered', e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                          disabled={updateSale.isPending}
+                        />
+                      </label>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={sale.paid}
+                          onChange={(e) => handleToggleSale(sale.id, 'paid', e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                          disabled={updateSale.isPending}
+                        />
+                      </label>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
