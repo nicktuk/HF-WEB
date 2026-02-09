@@ -102,6 +102,7 @@ class ProductService:
             is_featured=product.is_featured,
             is_immediate_delivery=product.is_immediate_delivery,
             is_check_stock=product.is_check_stock,
+            is_best_seller=product.is_best_seller,
             images=images,
             source_url=product.source_url,
         )
@@ -606,6 +607,8 @@ class ProductService:
             if data.is_check_stock:
                 product.is_featured = False
                 product.is_immediate_delivery = False
+        if data.is_best_seller is not None:
+            product.is_best_seller = data.is_best_seller
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:
@@ -1530,3 +1533,83 @@ class ProductService:
             "total_pending_payment": float(total_pending_payment or 0),
             "stock_value_cost": float(stock_value_cost or 0),
         }
+
+    def bulk_remove_badge(
+        self,
+        product_ids: Optional[List[int]] = None,
+        badge_field: str = "is_featured"
+    ) -> int:
+        """
+        Remove badge from selected products or all enabled products.
+
+        Args:
+            product_ids: List of product IDs. If None, applies to all enabled products.
+            badge_field: Which badge to remove (is_featured, is_immediate_delivery, is_best_seller)
+
+        Returns:
+            Number of products updated
+        """
+        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller"]
+        if badge_field not in valid_badges:
+            raise ValueError(f"Invalid badge field. Must be one of: {valid_badges}")
+
+        query = self.db.query(Product)
+
+        if product_ids:
+            query = query.filter(Product.id.in_(product_ids))
+        else:
+            # Apply to all enabled products
+            query = query.filter(Product.enabled == True)
+
+        count = query.update(
+            {getattr(Product, badge_field): False},
+            synchronize_session=False
+        )
+
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Removed {badge_field} from {count} products")
+
+        return count
+
+    def calculate_best_sellers(self, threshold: int = 5) -> int:
+        """
+        Automatically mark products as best sellers based on sales quantity.
+
+        Args:
+            threshold: Minimum quantity sold to be considered best seller
+
+        Returns:
+            Number of products marked as best sellers
+        """
+        from app.models.sale import SaleItem
+
+        # Get top selling products
+        top_sellers = (
+            self.db.query(
+                SaleItem.product_id,
+                func.sum(SaleItem.quantity).label('total_sold')
+            )
+            .group_by(SaleItem.product_id)
+            .having(func.sum(SaleItem.quantity) >= threshold)
+            .all()
+        )
+
+        product_ids = [row.product_id for row in top_sellers]
+
+        if not product_ids:
+            return 0
+
+        # Mark as best sellers
+        count = self.db.query(Product).filter(
+            Product.id.in_(product_ids)
+        ).update(
+            {Product.is_best_seller: True},
+            synchronize_session=False
+        )
+
+        self.db.commit()
+        cache.invalidate_all_products()
+        logger.info(f"Marked {count} products as best sellers (threshold: {threshold})")
+
+        return count

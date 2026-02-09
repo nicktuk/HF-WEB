@@ -41,6 +41,7 @@ class ProductUpdate(BaseModel):
     is_featured: Optional[bool] = None
     is_immediate_delivery: Optional[bool] = None
     is_check_stock: Optional[bool] = None
+    is_best_seller: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     custom_price: Optional[Decimal] = Field(None, ge=0)
@@ -98,6 +99,7 @@ class ProductResponse(BaseModel):
     is_featured: bool = False
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
+    is_best_seller: bool = False
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -136,6 +138,7 @@ class ProductPublicResponse(BaseModel):
     is_featured: bool = False
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
+    is_best_seller: bool = False
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
 
@@ -250,3 +253,17 @@ class ProductCreateManual(BaseModel):
             if url and (url.startswith("http://") or url.startswith("https://")):
                 validated.append(url)
         return validated
+
+
+class ProductRemoveBadge(BaseModel):
+    """Schema for removing badges from products."""
+    product_ids: Optional[List[int]] = Field(
+        None,
+        max_length=500,
+        description="Product IDs. If empty/null, applies to all enabled products"
+    )
+    badge: str = Field(
+        ...,
+        pattern="^(is_featured|is_immediate_delivery|is_best_seller)$",
+        description="Badge to remove: is_featured, is_immediate_delivery, or is_best_seller"
+    )

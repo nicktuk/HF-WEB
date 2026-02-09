@@ -14,6 +14,9 @@ import type {
   StockPreviewResponse,
   SaleCreateForm,
   Sale,
+  WhatsAppProductItem,
+  WhatsAppMessage,
+  WhatsAppBulkMessage,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -567,6 +570,91 @@ export const adminApi = {
   async deleteSale(apiKey: string, saleId: number): Promise<MessageResponse> {
     return fetchAPI(`/admin/sales/${saleId}`, {
       method: 'DELETE',
+    }, apiKey);
+  },
+
+  // Badge Management
+
+  /**
+   * Remove badge from products
+   */
+  async removeBadgeBulk(
+    apiKey: string,
+    badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller',
+    productIds?: number[]
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/remove-badge', {
+      method: 'POST',
+      body: JSON.stringify({
+        badge,
+        product_ids: productIds || null,
+      }),
+    }, apiKey);
+  },
+
+  /**
+   * Calculate and mark best sellers based on sales
+   */
+  async calculateBestSellers(apiKey: string, threshold: number = 5): Promise<MessageResponse> {
+    return fetchAPI(`/admin/products/calculate-best-sellers?threshold=${threshold}`, {
+      method: 'POST',
+    }, apiKey);
+  },
+
+  // WhatsApp Message Generator
+
+  /**
+   * Filter products for WhatsApp message generation
+   */
+  async filterProductsForWhatsApp(
+    apiKey: string,
+    filters: {
+      is_featured?: boolean;
+      is_immediate_delivery?: boolean;
+      is_best_seller?: boolean;
+      category?: string;
+      limit?: number;
+    }
+  ): Promise<WhatsAppProductItem[]> {
+    return fetchAPI('/admin/whatsapp/filter-products', {
+      method: 'POST',
+      body: JSON.stringify(filters),
+    }, apiKey);
+  },
+
+  /**
+   * Generate WhatsApp messages for selected products
+   */
+  async generateWhatsAppMessages(
+    apiKey: string,
+    data: {
+      product_ids: number[];
+      template?: 'default' | 'promo' | 'nuevos' | 'mas_vendidos' | 'custom';
+      include_price?: boolean;
+      custom_text?: string;
+    }
+  ): Promise<WhatsAppMessage[]> {
+    return fetchAPI('/admin/whatsapp/generate-messages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  /**
+   * Generate a single combined WhatsApp message for multiple products
+   */
+  async generateWhatsAppBulkMessage(
+    apiKey: string,
+    data: {
+      product_ids: number[];
+      template?: 'default' | 'promo' | 'nuevos' | 'mas_vendidos' | 'custom';
+      include_price?: boolean;
+      custom_text?: string;
+    }
+  ): Promise<WhatsAppBulkMessage> {
+    return fetchAPI('/admin/whatsapp/generate-bulk-message', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }, apiKey);
   },
 };

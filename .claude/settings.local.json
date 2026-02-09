@@ -61,7 +61,8 @@
       "WebFetch(domain:www.sina.com.ar)",
       "WebFetch(domain:www.protrade.com.ar)",
       "Bash(npm run dev:*)",
-      "Bash(timeout /t 5 /nobreak)"
+      "Bash(timeout /t 5 /nobreak)",
+      "WebSearch"
     ]
   }
 }

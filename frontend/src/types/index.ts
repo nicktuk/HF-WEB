@@ -20,6 +20,7 @@ export interface ProductPublic {
   is_featured: boolean;
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
+  is_best_seller: boolean;
   images: ProductImage[];
   source_url?: string;
 }
@@ -238,6 +239,7 @@ export interface ProductUpdateForm {
   is_featured?: boolean;
   is_immediate_delivery?: boolean;
   is_check_stock?: boolean;
+  is_best_seller?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   custom_price?: number;
@@ -313,4 +315,34 @@ export interface Sale {
   paid: boolean;
   total_amount: number;
   items: SaleItem[];
+}
+
+// WhatsApp Types
+
+export interface WhatsAppProductItem {
+  id: number;
+  name: string;
+  price: number | null;
+  image_url: string | null;
+  is_featured: boolean;
+  is_immediate_delivery: boolean;
+  is_best_seller: boolean;
+  category: string | null;
+}
+
+export interface WhatsAppMessage {
+  text: string;
+  image_url: string | null;
+  product_id: number;
+  product_name: string;
+}
+
+export interface WhatsAppBulkMessage {
+  text: string;
+  images: Array<{
+    product_id: number;
+    product_name: string;
+    image_url: string;
+  }>;
+  product_count: number;
 }

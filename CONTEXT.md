@@ -4,6 +4,80 @@
 
 ---
 
+## Sesion 2026-02-09 (cont.)
+
+### Nuevo Campo: is_best_seller (Lo mas vendido)
+
+**Backend:**
+- Migracion: `backend/alembic/versions/015_add_is_best_seller.py`
+- Modelo actualizado: `backend/app/models/product.py` - campo `is_best_seller`
+- Schemas actualizados: `backend/app/schemas/product.py` - ProductRemoveBadge
+- Servicio: `backend/app/services/product.py`:
+  - `bulk_remove_badge(product_ids, badge_field)` - quitar badges masivamente
+  - `calculate_best_sellers(threshold)` - marca automatica segun ventas
+
+**Frontend:**
+- Filtro "Mas Vendido" en pagina de productos (purpura)
+- Badge visual en tabla de productos
+
+### Acciones Masivas para Badges
+
+**Endpoints:**
+- `POST /admin/products/remove-badge` - quita badge de productos
+- `POST /admin/products/calculate-best-sellers?threshold=5` - calcula mas vendidos
+
+**Frontend (productos):**
+- Botones en barra de seleccion: Quitar Nuevo, Quitar Inmediata, Quitar Top
+- Dropdown Acciones: Calcular mas vendidos, Quitar todos (x3)
+
+### Generador de Mensajes WhatsApp
+
+**Backend:**
+- Servicio: `backend/app/services/whatsapp_generator.py`
+- Schemas: `backend/app/schemas/whatsapp.py`
+- Endpoints:
+  - `POST /admin/whatsapp/filter-products` - filtra productos por badges
+  - `POST /admin/whatsapp/generate-messages` - genera mensajes individuales
+  - `POST /admin/whatsapp/generate-bulk-message` - genera mensaje combinado
+
+**Frontend:**
+- Nueva pagina: `frontend/src/app/admin/whatsapp/page.tsx`
+- Menu actualizado: `frontend/src/app/admin/layout.tsx`
+
+**Templates disponibles:**
+- `default`: Estandar con badges
+- `nuevos`: "NUEVO EN CATALOGO"
+- `mas_vendidos`: "LO MAS VENDIDO"
+- `promo`: Promocional
+- `custom`: Texto personalizado con placeholders
+
+**Flujo:**
+1. Filtrar productos por badges
+2. Seleccionar productos
+3. Elegir template y opciones
+4. Generar mensajes (individual o combinado)
+5. Copiar texto + descargar imagenes
+6. Publicar manualmente en canal WhatsApp
+
+### Fix: Constraint de duplicados en stock
+
+- Migracion: `backend/alembic/versions/014_remove_stock_dedupe_constraint.py`
+- Elimina `uq_stock_purchases_dedupe` para permitir re-asociaciones
+- Modelo actualizado: `backend/app/models/stock.py`
+
+### Fix: Endpoint de asociacion stock
+
+- `backend/app/api/v1/endpoints/admin.py` - PATCH /stock/purchases/{id}
+- Eliminada validacion de duplicados al asociar manualmente
+
+### Variables de Entorno (CORS)
+
+```
+ALLOWED_ORIGINS_STR=https://grand-passion-production.up.railway.app,https://www.hefaproductos.com.ar,https://hefaproductos.com.ar
+```
+
+---
+
 ## SesiÃƒÂ³n 2026-02-08/09
 
 ### MÃƒÂ³dulo Stock (compras y asociaciÃƒÂ³n)

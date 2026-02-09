@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -28,6 +28,7 @@ export default function ProductsPage() {
     categoryFilter,
     subcategoryFilter,
     featuredFilter,
+    bestSellerFilter,
     inStockFilter,
     priceRangeFilter,
     page,
@@ -38,6 +39,7 @@ export default function ProductsPage() {
     setCategoryFilter,
     setSubcategoryFilter,
     setFeaturedFilter,
+    setBestSellerFilter,
     setInStockFilter,
     setPriceRangeFilter,
     setPage,
@@ -63,10 +65,42 @@ export default function ProductsPage() {
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
   const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isRemovingBadge, setIsRemovingBadge] = useState(false);
   const stockFileInputRef = useRef<HTMLInputElement>(null);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleRemoveBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller', productIds?: number[]) => {
+    setIsRemovingBadge(true);
+    try {
+      const result = await adminApi.removeBadgeBulk(apiKey, badge, productIds);
+      showToast(result.message, 'success');
+      setSelectedIds([]);
+      // Refetch products
+      window.location.reload();
+    } catch (error) {
+      showToast('Error al quitar marca', 'error');
+    } finally {
+      setIsRemovingBadge(false);
+    }
+  };
+
+  const handleCalculateBestSellers = async () => {
+    try {
+      const result = await adminApi.calculateBestSellers(apiKey, 5);
+      showToast(result.message, 'success');
+      window.location.reload();
+    } catch (error) {
+      showToast('Error al calcular más vendidos', 'error');
+    }
+  };
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -188,6 +222,15 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white shadow-lg ${
+          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -239,12 +282,68 @@ export default function ProductsPage() {
               <button
                 onClick={() => handleExportPdf('list')}
                 disabled={isExporting}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
               >
                 <FileDown className="h-4 w-4" />
                 <div>
                   <p className="font-medium">Exportar PDF (lista)</p>
                   <p className="text-xs text-gray-500">Lista de precios simple</p>
+                </div>
+              </button>
+              <div className="border-t my-1" />
+              <button
+                onClick={handleCalculateBestSellers}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4 text-purple-600" />
+                <div>
+                  <p className="font-medium">Calcular mas vendidos</p>
+                  <p className="text-xs text-gray-500">Marca automatica segun ventas</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Quitar marca "Nuevo" de TODOS los productos habilitados?')) {
+                    handleRemoveBadge('is_featured');
+                  }
+                }}
+                disabled={isRemovingBadge}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Star className="h-4 w-4 text-amber-600" />
+                <div>
+                  <p className="font-medium">Quitar todos "Nuevo"</p>
+                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Quitar marca "Entrega inmediata" de TODOS los productos habilitados?')) {
+                    handleRemoveBadge('is_immediate_delivery');
+                  }
+                }}
+                disabled={isRemovingBadge}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Zap className="h-4 w-4 text-emerald-600" />
+                <div>
+                  <p className="font-medium">Quitar todos "Inmediata"</p>
+                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Quitar marca "Mas vendido" de TODOS los productos habilitados?')) {
+                    handleRemoveBadge('is_best_seller');
+                  }
+                }}
+                disabled={isRemovingBadge}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4 text-purple-600" />
+                <div>
+                  <p className="font-medium">Quitar todos "Top"</p>
+                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
                 </div>
               </button>
             </div>
@@ -279,39 +378,68 @@ export default function ProductsPage() {
 
       {/* Barra contextual de selección */}
       {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 text-blue-900">
               <Check className="h-5 w-5" />
               <span className="font-medium">{selectedIds.length} seleccionados</span>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => setShowActivateModal(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Power className="mr-2 h-4 w-4" />
-              Activar
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowCategoryModal(true)}
-            >
-              <FolderInput className="mr-2 h-4 w-4" />
-              Cambiar categoría/subcategoría
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedIds([])}
-              className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
-            >
-              <X className="h-4 w-4" />
-              Deseleccionar
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                onClick={() => setShowActivateModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Power className="mr-2 h-4 w-4" />
+                Activar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowCategoryModal(true)}
+              >
+                <FolderInput className="mr-2 h-4 w-4" />
+                Categoria
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRemoveBadge('is_featured', selectedIds)}
+                disabled={isRemovingBadge}
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <Star className="mr-1 h-4 w-4" />
+                Quitar Nuevo
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRemoveBadge('is_immediate_delivery', selectedIds)}
+                disabled={isRemovingBadge}
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                <Zap className="mr-1 h-4 w-4" />
+                Quitar Inmediata
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRemoveBadge('is_best_seller', selectedIds)}
+                disabled={isRemovingBadge}
+                className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                <TrendingUp className="mr-1 h-4 w-4" />
+                Quitar Top
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds([])}
+                className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -344,6 +472,22 @@ export default function ProductsPage() {
         >
           <Star className="h-4 w-4" />
           Nuevos
+        </button>
+
+        {/* Best Seller Filter */}
+        <button
+          onClick={() => {
+            setBestSellerFilter(bestSellerFilter === true ? undefined : true);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            bestSellerFilter === true
+              ? 'bg-purple-600 text-white'
+              : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+          }`}
+        >
+          <TrendingUp className="h-4 w-4" />
+          Mas Vendido
         </button>
 
         {/* Stock Filter */}

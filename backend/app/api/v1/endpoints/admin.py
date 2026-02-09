@@ -29,7 +29,17 @@ from app.schemas.product import (
     ProductChangeCategorySelected,
     ProductChangeSubcategorySelected,
     ProductDisableSelected,
+    ProductRemoveBadge,
 )
+from app.schemas.whatsapp import (
+    WhatsAppFilterRequest,
+    WhatsAppMessageRequest,
+    WhatsAppMessageResponse,
+    WhatsAppBulkMessageResponse,
+    WhatsAppProductItem,
+)
+from app.services.whatsapp_generator import WhatsAppMessageGenerator
+from app.models.product import Product
 from app.schemas.stock import (
     StockPurchaseResponse,
     StockImportResponse,
@@ -1146,3 +1156,170 @@ async def get_stats_by_price_range(
     Returns count and sample products for each range.
     """
     return service.get_stats_by_price_range()
+
+
+# ============================================
+# Badge Management
+# ============================================
+
+@router.post(
+    "/products/remove-badge",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def remove_badge_bulk(
+    data: ProductRemoveBadge,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Remove badge from selected products or all enabled products.
+
+    Badges:
+    - is_featured (Nuevo)
+    - is_immediate_delivery (Entrega inmediata)
+    - is_best_seller (Lo más vendido)
+
+    If product_ids is empty/null, applies to all enabled products.
+    """
+    count = service.bulk_remove_badge(
+        product_ids=data.product_ids if data.product_ids else None,
+        badge_field=data.badge
+    )
+
+    badge_names = {
+        "is_featured": "Nuevo",
+        "is_immediate_delivery": "Entrega inmediata",
+        "is_best_seller": "Lo más vendido"
+    }
+    badge_name = badge_names.get(data.badge, data.badge)
+    scope = f"{len(data.product_ids)} productos" if data.product_ids else "todos los productos habilitados"
+
+    return MessageResponse(
+        message=f"Marca '{badge_name}' removida de {count} productos ({scope})"
+    )
+
+
+@router.post(
+    "/products/calculate-best-sellers",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def calculate_best_sellers(
+    threshold: int = Query(default=5, ge=1, description="Minimum quantity sold"),
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Automatically mark products as best sellers based on sales quantity.
+
+    Products with total sales >= threshold will be marked as best sellers.
+    """
+    count = service.calculate_best_sellers(threshold)
+    return MessageResponse(
+        message=f"Marcados {count} productos como 'Lo más vendido' (umbral: {threshold} unidades vendidas)"
+    )
+
+
+# ============================================
+# WhatsApp Message Generator
+# ============================================
+
+@router.post(
+    "/whatsapp/filter-products",
+    response_model=List[WhatsAppProductItem],
+    dependencies=[Depends(verify_admin)]
+)
+async def filter_products_for_whatsapp(
+    data: WhatsAppFilterRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Get products filtered by badges for WhatsApp message generation.
+    """
+    generator = WhatsAppMessageGenerator(service.db)
+    products = generator.get_filtered_products(
+        is_featured=data.is_featured,
+        is_immediate_delivery=data.is_immediate_delivery,
+        is_best_seller=data.is_best_seller,
+        category=data.category,
+        limit=data.limit
+    )
+
+    result = []
+    for p in products:
+        image_url = None
+        for img in p.images:
+            if img.is_primary:
+                image_url = img.url
+                break
+        if not image_url and p.images:
+            image_url = p.images[0].url
+
+        result.append(WhatsAppProductItem(
+            id=p.id,
+            name=p.custom_name or p.original_name,
+            price=float(p.final_price) if p.final_price else None,
+            image_url=image_url,
+            is_featured=p.is_featured,
+            is_immediate_delivery=p.is_immediate_delivery,
+            is_best_seller=p.is_best_seller,
+            category=p.category,
+        ))
+
+    return result
+
+
+@router.post(
+    "/whatsapp/generate-messages",
+    response_model=List[WhatsAppMessageResponse],
+    dependencies=[Depends(verify_admin)]
+)
+async def generate_whatsapp_messages(
+    data: WhatsAppMessageRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Generate WhatsApp messages for selected products.
+
+    Templates:
+    - default: Standard product info with badges
+    - promo: Promotional "OFERTA ESPECIAL" format
+    - nuevos: "NUEVO EN CATALOGO" format
+    - mas_vendidos: "LO MAS VENDIDO" format
+    - custom: Use custom_text with placeholders {product_name}, {price}
+    """
+    generator = WhatsAppMessageGenerator(service.db)
+    messages = generator.generate_messages(
+        product_ids=data.product_ids,
+        template=data.template,
+        include_price=data.include_price,
+        custom_text=data.custom_text
+    )
+    return [WhatsAppMessageResponse(**msg) for msg in messages]
+
+
+@router.post(
+    "/whatsapp/generate-bulk-message",
+    response_model=WhatsAppBulkMessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def generate_whatsapp_bulk_message(
+    data: WhatsAppMessageRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Generate a single combined WhatsApp message for multiple products.
+
+    Useful for creating a list message with all selected products.
+    """
+    generator = WhatsAppMessageGenerator(service.db)
+    products = service.db.query(Product).filter(
+        Product.id.in_(data.product_ids)
+    ).all()
+
+    result = generator.generate_bulk_message(
+        products=products,
+        template=data.template,
+        include_price=data.include_price,
+        custom_text=data.custom_text
+    )
+    return WhatsAppBulkMessageResponse(**result)
