@@ -2,15 +2,11 @@
 
 import { useState } from 'react';
 import { adminApi } from '@/lib/api';
+import { useApiKey } from '@/hooks/useAuth';
 import type { WhatsAppProductItem, WhatsAppMessage, WhatsAppBulkMessage } from '@/types';
 
 export default function WhatsAppGeneratorPage() {
-  const [apiKey] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('admin_api_key') || '';
-    }
-    return '';
-  });
+  const apiKey = useApiKey() || '';
 
   // Filters
   const [filterFeatured, setFilterFeatured] = useState(false);
