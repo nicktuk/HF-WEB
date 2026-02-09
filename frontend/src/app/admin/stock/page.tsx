@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { useApiKey } from '@/hooks/useAuth';
@@ -17,6 +18,7 @@ export default function StockUnmatchedPage() {
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [showManualModal, setShowManualModal] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<any | null>(null);
 
   const { data: productsData, isLoading: isLoadingProducts } = useAdminProducts(apiKey, {
     page: 1,
@@ -28,8 +30,17 @@ export default function StockUnmatchedPage() {
 
   const handleAssociate = async (productId: number) => {
     if (!selectedPurchase) return;
-    await updatePurchase.mutateAsync({ purchaseId: selectedPurchase.id, productId });
-    setSelectedPurchaseId(null);
+    try {
+      await updatePurchase.mutateAsync({ purchaseId: selectedPurchase.id, productId });
+      setSelectedPurchaseId(null);
+    } catch (err: any) {
+      const detail = err?.detail;
+      if (detail?.error === 'duplicate_stock_purchase') {
+        setDuplicateInfo(detail);
+      } else {
+        throw err;
+      }
+    }
   };
 
   return (
@@ -168,6 +179,32 @@ export default function StockUnmatchedPage() {
           priceAsOriginal
         />
       )}
+
+      <Modal
+        isOpen={!!duplicateInfo}
+        onClose={() => setDuplicateInfo(null)}
+        title="Compra duplicada"
+        size="md"
+      >
+        <ModalContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Ya existe una compra igual asociada a este producto.
+          </p>
+          {duplicateInfo?.existing && (
+            <div className="border rounded-lg p-3 space-y-2 text-sm">
+              <div><strong>Descripción:</strong> {duplicateInfo.existing.description || '-'}</div>
+              <div><strong>Código:</strong> {duplicateInfo.existing.code || '-'}</div>
+              <div><strong>Fecha:</strong> {duplicateInfo.existing.purchase_date}</div>
+              <div><strong>Cantidad:</strong> {duplicateInfo.existing.quantity}</div>
+              <div><strong>Precio unitario:</strong> {duplicateInfo.existing.unit_price}</div>
+              <div><strong>Total:</strong> {duplicateInfo.existing.total_amount}</div>
+            </div>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          <Button onClick={() => setDuplicateInfo(null)}>Cerrar</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

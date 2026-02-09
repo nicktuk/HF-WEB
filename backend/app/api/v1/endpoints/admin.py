@@ -228,6 +228,29 @@ async def update_stock_purchase(
     service: ProductService = Depends(get_product_service),
 ):
     """Update stock purchase (associate to product)."""
+    if data.product_id is not None:
+        duplicate = service.find_duplicate_stock_purchase(purchase_id, data.product_id)
+        if duplicate:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "duplicate_stock_purchase",
+                    "message": "Ya existe una compra igual asociada a este producto.",
+                    "existing": {
+                        "id": duplicate.id,
+                        "product_id": duplicate.product_id,
+                        "description": duplicate.description,
+                        "code": duplicate.code,
+                        "purchase_date": duplicate.purchase_date,
+                        "unit_price": duplicate.unit_price,
+                        "quantity": duplicate.quantity,
+                        "total_amount": duplicate.total_amount,
+                        "out_quantity": duplicate.out_quantity,
+                        "created_at": duplicate.created_at,
+                        "updated_at": duplicate.updated_at,
+                    },
+                },
+            )
     return service.update_stock_purchase(purchase_id, data.product_id)
 
 

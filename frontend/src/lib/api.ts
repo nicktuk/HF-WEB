@@ -508,10 +508,23 @@ export const adminApi = {
    * Update stock purchase (associate to product)
    */
   async updateStockPurchase(apiKey: string, purchaseId: number, productId: number | null): Promise<StockPurchase> {
-    return fetchAPI(`/admin/stock/purchases/${purchaseId}`, {
+    const response = await fetch(`${API_URL}/admin/stock/purchases/${purchaseId}`, {
       method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': apiKey,
+      },
       body: JSON.stringify({ product_id: productId }),
-    }, apiKey);
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al actualizar compra' }));
+      const err = new Error(error.message || `HTTP error ${response.status}`);
+      (err as any).detail = error;
+      throw err;
+    }
+
+    return response.json();
   },
 
   /**

@@ -217,6 +217,29 @@ class ProductService:
 
         return purchase
 
+    def find_duplicate_stock_purchase(
+        self,
+        purchase_id: int,
+        product_id: int,
+    ) -> Optional[StockPurchase]:
+        """Find duplicate stock purchase for a given product."""
+        purchase = self.db.query(StockPurchase).filter(StockPurchase.id == purchase_id).first()
+        if not purchase:
+            raise NotFoundError("StockPurchase", str(purchase_id))
+
+        return (
+            self.db.query(StockPurchase)
+            .filter(
+                StockPurchase.id != purchase.id,
+                StockPurchase.product_id == product_id,
+                StockPurchase.purchase_date == purchase.purchase_date,
+                StockPurchase.unit_price == purchase.unit_price,
+                StockPurchase.quantity == purchase.quantity,
+                StockPurchase.total_amount == purchase.total_amount,
+            )
+            .first()
+        )
+
     def import_stock_csv(self, csv_bytes: bytes) -> dict:
         """Import stock purchases from CSV bytes."""
         rows = self.preview_stock_csv(csv_bytes)["rows"]
