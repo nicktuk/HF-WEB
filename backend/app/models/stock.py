@@ -1,7 +1,7 @@
 """
 Stock models - compras de stock por producto.
 """
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -25,13 +25,5 @@ class StockPurchase(Base):
     product = relationship("Product")
 
     __table_args__ = (
-        UniqueConstraint(
-            "product_id",
-            "purchase_date",
-            "unit_price",
-            "quantity",
-            "total_amount",
-            name="uq_stock_purchases_dedupe",
-        ),
         Index("ix_stock_purchases_product_date", "product_id", "purchase_date"),
     )
