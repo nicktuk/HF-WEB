@@ -275,3 +275,41 @@ export interface ProductCreateManualForm {
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
 }
+
+// Sales Types
+
+export interface SaleItemCreate {
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface SaleCreateForm {
+  customer_name?: string;
+  notes?: string;
+  installments?: number;
+  seller: 'Facu' | 'Heber';
+  delivered: boolean;
+  paid: boolean;
+  items: SaleItemCreate[];
+}
+
+export interface SaleItem {
+  id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+export interface Sale {
+  id: number;
+  customer_name?: string;
+  notes?: string;
+  installments?: number;
+  seller: 'Facu' | 'Heber';
+  delivered: boolean;
+  paid: boolean;
+  total_amount: number;
+  items: SaleItem[];
+}

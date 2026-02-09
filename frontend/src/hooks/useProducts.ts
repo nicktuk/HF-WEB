@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -116,6 +116,19 @@ export function useUpdateStockPurchase(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
       queryClient.invalidateQueries({ queryKey: ['stock-purchases-unmatched'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+export function useCreateSale(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SaleCreateForm) => adminApi.createSale(apiKey, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases-unmatched'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
   });
 }

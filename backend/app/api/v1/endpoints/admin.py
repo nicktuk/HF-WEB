@@ -35,6 +35,11 @@ from app.schemas.stock import (
     StockPreviewResponse,
     StockPurchaseUpdate,
 )
+from app.schemas.sales import (
+    SaleCreate,
+    SaleUpdate,
+    SaleResponse,
+)
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
     MarketPriceRefreshRequest,
@@ -43,6 +48,7 @@ from app.schemas.market_price import (
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.core.security import verify_admin
 from app.config import settings
+from app.api.deps import get_sales_service
 
 router = APIRouter()
 
@@ -995,6 +1001,52 @@ async def get_stock_by_category(
 ):
     """Get stock quantity and valuation by category."""
     return service.get_stock_stats_by_category()
+
+
+# ============================================
+# Sales
+# ============================================
+
+@router.post(
+    "/sales",
+    response_model=SaleResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def create_sale(
+    data: SaleCreate,
+    service = Depends(get_sales_service),
+):
+    """Create a sale."""
+    sale = service.create_sale(data)
+    return sale
+
+
+@router.get(
+    "/sales",
+    response_model=list[SaleResponse],
+    dependencies=[Depends(verify_admin)]
+)
+async def list_sales(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200),
+    service = Depends(get_sales_service),
+):
+    """List recent sales."""
+    return service.list_sales(limit=limit)
+
+
+@router.patch(
+    "/sales/{sale_id}",
+    response_model=SaleResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def update_sale(
+    sale_id: int,
+    data: SaleUpdate,
+    service = Depends(get_sales_service),
+):
+    """Update sale status (delivered/paid)."""
+    return service.update_sale(sale_id, data.delivered, data.paid)
 
 
 @router.get(

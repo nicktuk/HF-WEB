@@ -6,6 +6,7 @@ from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
 from app.models.category import Category
 from app.models.subcategory import Subcategory
 from app.models.stock import StockPurchase
+from app.models.sale import Sale, SaleItem
 
 __all__ = [
     "Base",
@@ -18,4 +19,6 @@ __all__ = [
     "Category",
     "Subcategory",
     "StockPurchase",
+    "Sale",
+    "SaleItem",
 ]

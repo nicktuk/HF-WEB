@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.services.product import ProductService
 from app.services.source_website import SourceWebsiteService
 from app.services.market_intelligence import MarketIntelligenceService
+from app.services.sales import SalesService
 from app.core.security import verify_admin
 
 
@@ -23,3 +24,8 @@ def get_source_website_service(db: Session = Depends(get_db)) -> SourceWebsiteSe
 def get_market_intelligence_service(db: Session = Depends(get_db)) -> MarketIntelligenceService:
     """Get market intelligence service instance."""
     return MarketIntelligenceService(db)
+
+
+def get_sales_service(db: Session = Depends(get_db)) -> SalesService:
+    """Get sales service instance."""
+    return SalesService(db)

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos', href: '/admin/productos', icon: Package },
+  { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'Comparador', href: '/admin/comparador', icon: Scale },
 ];
 

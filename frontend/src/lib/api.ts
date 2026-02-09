@@ -12,6 +12,8 @@ import type {
   SourceWebsiteCreateForm,
   StockPurchase,
   StockPreviewResponse,
+  SaleCreateForm,
+  Sale,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -509,6 +511,33 @@ export const adminApi = {
     return fetchAPI(`/admin/stock/purchases/${purchaseId}`, {
       method: 'PATCH',
       body: JSON.stringify({ product_id: productId }),
+    }, apiKey);
+  },
+
+  /**
+   * Create sale
+   */
+  async createSale(apiKey: string, data: SaleCreateForm): Promise<Sale> {
+    return fetchAPI('/admin/sales', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  /**
+   * List sales
+   */
+  async listSales(apiKey: string, limit: number = 50): Promise<Sale[]> {
+    return fetchAPI(`/admin/sales?limit=${limit}`, {}, apiKey);
+  },
+
+  /**
+   * Update sale status
+   */
+  async updateSale(apiKey: string, saleId: number, data: { delivered?: boolean; paid?: boolean }): Promise<Sale> {
+    return fetchAPI(`/admin/sales/${saleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     }, apiKey);
   },
 };
