@@ -275,6 +275,25 @@ export const adminApi = {
   },
 
   /**
+   * Set wholesale markup percentage for products
+   */
+  async bulkSetWholesaleMarkup(
+    apiKey: string,
+    markupPercentage: number,
+    onlyEnabled: boolean = false,
+    sourceWebsiteId?: number
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/bulk-wholesale-markup', {
+      method: 'POST',
+      body: JSON.stringify({
+        markup_percentage: markupPercentage,
+        only_enabled: onlyEnabled,
+        source_website_id: sourceWebsiteId,
+      }),
+    }, apiKey);
+  },
+
+  /**
    * Activate all inactive products with markup
    */
   async activateAllInactive(
@@ -473,6 +492,27 @@ export const adminApi = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Error al generar PDF' }));
       throw new Error(error.detail || error.message || 'Error al generar PDF');
+    }
+
+    return response.blob();
+  },
+
+  /**
+   * Export selected products with wholesale price
+   */
+  async exportWholesaleSelected(apiKey: string, productIds: number[]): Promise<Blob> {
+    const response = await fetch(`${API_URL}/admin/products/export/wholesale`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-API-Key': apiKey,
+      },
+      body: JSON.stringify({ product_ids: productIds }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al exportar mayorista' }));
+      throw new Error(error.detail || error.message || 'Error al exportar mayorista');
     }
 
     return response.blob();

@@ -32,6 +32,8 @@ from app.schemas.product import (
     ProductRemoveBadge,
     PendingPriceChangeResponse,
     PendingPriceAction,
+    ProductBulkWholesaleMarkup,
+    ProductSelectedExport,
 )
 from app.schemas.whatsapp import (
     WhatsAppFilterRequest,
@@ -616,6 +618,32 @@ async def bulk_set_markup(
 
 
 @router.post(
+    "/products/bulk-wholesale-markup",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def bulk_set_wholesale_markup(
+    data: ProductBulkWholesaleMarkup,
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Set wholesale markup percentage for products.
+
+    By default updates all products (only_enabled=false).
+    Set only_enabled=true to update enabled products only.
+    Set source_website_id to filter by source.
+    """
+    count = service.bulk_set_wholesale_markup(
+        data.markup_percentage,
+        data.only_enabled,
+        data.source_website_id
+    )
+    scope = "habilitados" if data.only_enabled else "todos"
+    source_msg = f" de fuente {data.source_website_id}" if data.source_website_id else ""
+    return MessageResponse(message=f"Markup mayorista {data.markup_percentage}% aplicado a {count} productos {scope}{source_msg}")
+
+
+@router.post(
     "/products/activate-all-inactive",
     response_model=MessageResponse,
     dependencies=[Depends(verify_admin)]
@@ -992,6 +1020,37 @@ async def export_products_pdf(
             include_images=True
         )
         filename = "catalogo.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.post(
+    "/products/export/wholesale",
+    dependencies=[Depends(verify_admin)]
+)
+async def export_selected_wholesale_pdf(
+    request: Request,
+    data: ProductSelectedExport,
+    service: ProductService = Depends(get_product_service),
+):
+    """Export selected products to PDF with wholesale price."""
+    products = service.get_products_by_ids(data.product_ids)
+
+    if not products:
+        raise HTTPException(status_code=404, detail="No products to export")
+
+    pdf_service = PDFGeneratorService()
+    pdf_bytes = await pdf_service.generate_wholesale_selected_pdf(
+        products,
+        title="Lista Mayorista"
+    )
+    filename = "lista_mayorista.pdf"
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),

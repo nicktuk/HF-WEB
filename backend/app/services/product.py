@@ -840,6 +840,33 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
+    def bulk_set_wholesale_markup(
+        self,
+        markup_percentage: Decimal,
+        only_enabled: bool = True,
+        source_website_id: Optional[int] = None
+    ) -> int:
+        """Set wholesale markup percentage for multiple products."""
+        query = self.db.query(Product)
+        if only_enabled:
+            query = query.filter(Product.enabled == True)
+        if source_website_id:
+            query = query.filter(Product.source_website_id == source_website_id)
+
+        count = query.update(
+            {Product.wholesale_markup_percentage: markup_percentage},
+            synchronize_session=False
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        return count
+
+    def get_products_by_ids(self, product_ids: List[int]) -> List[Product]:
+        """Get products by ids (no filter)."""
+        if not product_ids:
+            return []
+        return self.db.query(Product).filter(Product.id.in_(product_ids)).all()
+
     def activate_all_inactive_with_markup(self, markup_percentage: Decimal) -> int:
         """
         Activate all inactive products and apply markup.

@@ -86,6 +86,7 @@ class ProductResponse(BaseModel):
     custom_name: Optional[str] = None
     original_price: Optional[Decimal] = None
     markup_percentage: Decimal
+    wholesale_markup_percentage: Decimal = Field(default=Decimal("0"), ge=0)
     custom_price: Optional[Decimal] = None
     description: Optional[str] = None
     short_description: Optional[str] = None
@@ -191,6 +192,13 @@ class ProductBulkMarkup(BaseModel):
     source_website_id: Optional[int] = Field(None, description="Filter by source website")
 
 
+class ProductBulkWholesaleMarkup(BaseModel):
+    """Schema for bulk wholesale markup update."""
+    markup_percentage: Decimal = Field(..., ge=0, description="Wholesale markup percentage to apply")
+    only_enabled: bool = Field(default=False, description="Only update enabled products")
+    source_website_id: Optional[int] = Field(None, description="Filter by source website")
+
+
 class ProductActivateInactive(BaseModel):
     """Schema for activating all inactive products with markup."""
     markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply to activated products")
@@ -219,6 +227,11 @@ class ProductChangeSubcategorySelected(BaseModel):
 class ProductDisableSelected(BaseModel):
     """Schema for disabling selected products."""
     product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs to disable")
+
+
+class ProductSelectedExport(BaseModel):
+    """Schema for exporting selected products."""
+    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
 
 
 class PendingPriceChangeItem(BaseModel):

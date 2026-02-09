@@ -49,6 +49,7 @@ class Product(Base):
     is_check_stock = Column(Boolean, default=False, nullable=False, index=True, comment="Consultar stock (excluye nuevo e inmediata)")
     is_best_seller = Column(Boolean, default=False, nullable=False, index=True, comment="Lo mÃ¡s vendido")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
+    wholesale_markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup mayorista en porcentaje")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")

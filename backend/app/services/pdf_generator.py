@@ -304,6 +304,99 @@ class PDFGeneratorService:
 
         return pdf_bytes
 
+    async def generate_wholesale_selected_pdf(
+        self,
+        products: List[Product],
+        title: str = "Lista Mayorista",
+    ) -> bytes:
+        """
+        Generate a PDF with medium images, full name, and wholesale price.
+        """
+        buffer = io.BytesIO()
+
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=2.8*cm,
+            bottomMargin=2.8*cm,
+        )
+
+        story = []
+        story.append(Paragraph(title, self.styles['CatalogTitle']))
+        story.append(Spacer(1, 16))
+
+        cell_style = ParagraphStyle(
+            name='WholesaleCell',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            wordWrap='CJK',
+            leading=13,
+            textColor=colors.HexColor('#111827'),
+        )
+        price_style = ParagraphStyle(
+            name='WholesalePrice',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor(BRAND_ACCENT),
+            alignment=TA_RIGHT,
+        )
+        header_style = ParagraphStyle(
+            name='WholesaleHeader',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            fontName='Helvetica-Bold',
+            textColor=colors.white,
+        )
+
+        table_data = [[
+            Paragraph('Foto', header_style),
+            Paragraph('Producto', header_style),
+            Paragraph('Precio mayorista', header_style),
+        ]]
+
+        for product in products:
+            name = product.custom_name or product.original_name
+            wholesale_price = None
+            if product.original_price is not None:
+                wholesale_price = float(product.original_price) * (1 + float(product.wholesale_markup_percentage or 0) / 100)
+            price_text = self._format_price(wholesale_price) if wholesale_price else "-"
+
+            img = None
+            if product.images:
+                primary = next((i for i in product.images if i.is_primary), product.images[0])
+                img = await self._fetch_image(primary.url, max_width=4*cm, max_height=4*cm)
+
+            table_data.append([
+                img if img else Paragraph('-', cell_style),
+                Paragraph(name, cell_style),
+                Paragraph(price_text, price_style),
+            ])
+
+        table = Table(table_data, colWidths=[4*cm, 10*cm, 3.5*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_PRIMARY)),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+            ('TOPPADDING', (0, 0), (-1, 0), 10),
+            ('LEFTPADDING', (0, 0), (-1, 0), 8),
+            ('RIGHTPADDING', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+            ('VALIGN', (0, 1), (0, -1), 'MIDDLE'),
+            ('VALIGN', (1, 1), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+        ]))
+
+        story.append(table)
+
+        doc.build(story, onFirstPage=_header_footer, onLaterPages=_header_footer)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+
+        return pdf_bytes
+
     def _create_category_header(self, text: str):
         """Create a visually prominent category header."""
         # Create a table with colored background for the category

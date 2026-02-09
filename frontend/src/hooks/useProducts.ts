@@ -227,6 +227,23 @@ export function useCreateProduct(apiKey: string) {
   });
 }
 
+export function useBulkSetWholesaleMarkup(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      markupPercentage,
+      onlyEnabled,
+      sourceWebsiteId,
+    }: {
+      markupPercentage: number;
+      onlyEnabled?: boolean;
+      sourceWebsiteId?: number;
+    }) => adminApi.bulkSetWholesaleMarkup(apiKey, markupPercentage, onlyEnabled, sourceWebsiteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
 export function useCreateProductManual(apiKey: string) {
   const queryClient = useQueryClient();
 

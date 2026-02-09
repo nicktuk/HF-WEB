@@ -14,6 +14,8 @@ from app.schemas.product import (
     ProductAdminResponse,
     PendingPriceChangeResponse,
     PendingPriceAction,
+    ProductBulkWholesaleMarkup,
+    ProductSelectedExport,
 )
 from app.schemas.market_price import (
     MarketPriceResponse,
@@ -54,6 +56,8 @@ __all__ = [
     "ProductAdminResponse",
     "PendingPriceChangeResponse",
     "PendingPriceAction",
+    "ProductBulkWholesaleMarkup",
+    "ProductSelectedExport",
     # Market Price
     "MarketPriceResponse",
     "MarketPriceStatsResponse",
