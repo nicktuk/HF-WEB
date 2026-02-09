@@ -1,8 +1,8 @@
 """
 Add pending original price fields.
 
-Revision ID: 014
-Revises: 013
+Revision ID: 016
+Revises: 015
 Create Date: 2026-02-09 00:00:00.000000
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "014"
-down_revision = "013"
+revision = "016"
+down_revision = "015"
 branch_labels = None
 depends_on = None
 
