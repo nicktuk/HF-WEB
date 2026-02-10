@@ -43,10 +43,6 @@ class WhatsAppMessageGenerator:
             return "Consultar"
         return f"${price:,.0f}".replace(",", ".")
 
-    def _generate_wa_link_short(self) -> str:
-        """Generate short WhatsApp link for message text."""
-        return f"https://wa.me/{WHATSAPP_NUMBER}"
-
     def _generate_wa_link_full(self, product_name: str, price: Optional[int], slug: str) -> str:
         """Generate full WhatsApp link with pre-filled message for button."""
         message = f"Hola! Me interesa el producto: {product_name}"
@@ -90,8 +86,7 @@ class WhatsAppMessageGenerator:
             is_best_seller=product.is_best_seller,
             template=template,
             include_price=include_price,
-            custom_text=custom_text,
-            slug=product.slug
+            custom_text=custom_text
         )
 
         wa_link = self._generate_wa_link_full(display_name, price, product.slug)
@@ -114,8 +109,7 @@ class WhatsAppMessageGenerator:
         is_best_seller: bool,
         template: str,
         include_price: bool,
-        custom_text: Optional[str],
-        slug: str
+        custom_text: Optional[str]
     ) -> str:
         """Build message text based on template."""
 
@@ -132,8 +126,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "📲 *Consultanos por WhatsApp!*\n"
-            text += f"👉 {self._generate_wa_link_short()}"
+            text += "👉 *Tocá acá para consultar*"
             return text
 
         if template == "mas_vendidos":
@@ -144,8 +137,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "🏃 *No te quedes sin el tuyo!*\n"
-            text += f"👉 {self._generate_wa_link_short()}"
+            text += "👉 *Tocá acá para consultar*"
             return text
 
         if template == "promo":
@@ -154,8 +146,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💥 *Solo {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "⏰ *No te lo pierdas!*\n"
-            text += f"👉 {self._generate_wa_link_short()}"
+            text += "👉 *Tocá acá para consultar*"
             return text
 
         # Default template
@@ -180,8 +171,7 @@ class WhatsAppMessageGenerator:
             text += " • ".join(badges) + "\n\n"
 
         text += "━━━━━━━━━━━━━━━\n"
-        text += "📲 *Consultanos por WhatsApp!*\n"
-        text += f"👉 {self._generate_wa_link_short()}"
+        text += "👉 *Tocá acá para consultar*"
 
         return text
 
@@ -241,9 +231,7 @@ class WhatsAppMessageGenerator:
                 })
 
         lines.append("\n━━━━━━━━━━━━━━━")
-        lines.append("📲 *Consultanos por cualquiera!*")
-        lines.append(f"👉 https://wa.me/{WHATSAPP_NUMBER}")
-        lines.append(f"\n🌐 Ver catálogo: {CATALOG_URL}")
+        lines.append("👉 *Consultanos por cualquiera!*")
 
         return {
             "text": "\n".join(lines),
