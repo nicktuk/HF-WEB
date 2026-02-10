@@ -1610,7 +1610,7 @@ class ProductService:
 
         total_pending_payment = (
             self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-            .filter(Sale.paid.is_(False))
+            .filter(Sale.delivered.is_(True), Sale.paid.is_(False))
             .scalar()
         )
 
