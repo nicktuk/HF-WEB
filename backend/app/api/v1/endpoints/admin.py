@@ -331,8 +331,6 @@ async def create_product(
         original_price=product.original_price,
         markup_percentage=product.markup_percentage,
         wholesale_markup_percentage=product.wholesale_markup_percentage,
-        wholesale_markup_percentage=product.wholesale_markup_percentage,
-        wholesale_markup_percentage=product.wholesale_markup_percentage,
         custom_price=product.custom_price,
         description=product.description,
         short_description=product.short_description,
