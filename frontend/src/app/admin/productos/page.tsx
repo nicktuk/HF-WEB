@@ -73,6 +73,8 @@ export default function ProductsPage() {
   const [pendingPriceModalOpened, setPendingPriceModalOpened] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isRemovingBadge, setIsRemovingBadge] = useState(false);
+  const [isMarkingNew, setIsMarkingNew] = useState(false);
+  const [markNewDate, setMarkNewDate] = useState('');
   const stockFileInputRef = useRef<HTMLInputElement>(null);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
@@ -95,6 +97,24 @@ export default function ProductsPage() {
       showToast('Error al quitar marca', 'error');
     } finally {
       setIsRemovingBadge(false);
+    }
+  };
+
+  const handleMarkNewByDate = async () => {
+    if (!markNewDate) {
+      showToast('Selecciona una fecha', 'error');
+      return;
+    }
+    setIsMarkingNew(true);
+    try {
+      const result = await adminApi.markNewByDate(apiKey, markNewDate);
+      showToast(result.message, 'success');
+      setMarkNewDate('');
+      window.location.reload();
+    } catch (error) {
+      showToast('Error al marcar productos', 'error');
+    } finally {
+      setIsMarkingNew(false);
     }
   };
 
@@ -351,6 +371,29 @@ export default function ProductsPage() {
                   <p className="text-xs text-gray-500">Marca automatica segun ventas</p>
                 </div>
               </button>
+              <div className="px-4 py-3 hover:bg-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-4 w-4 text-amber-500" />
+                  <p className="font-medium text-sm">Marcar "Nuevo" por fecha</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={markNewDate}
+                    onChange={(e) => setMarkNewDate(e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border rounded"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleMarkNewByDate}
+                    disabled={!markNewDate || isMarkingNew}
+                    isLoading={isMarkingNew}
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+              </div>
+              <div className="border-t my-1" />
               <button
                 onClick={() => {
                   if (confirm('Quitar marca "Nuevo" de TODOS los productos habilitados?')) {

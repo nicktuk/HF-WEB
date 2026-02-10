@@ -671,6 +671,15 @@ export const adminApi = {
     }, apiKey);
   },
 
+  /**
+   * Mark products scraped on a specific date as "Nuevo"
+   */
+  async markNewByDate(apiKey: string, scrapeDate: string): Promise<MessageResponse> {
+    return fetchAPI(`/admin/products/mark-new-by-date?scrape_date=${scrapeDate}`, {
+      method: 'POST',
+    }, apiKey);
+  },
+
   // WhatsApp Message Generator
 
   /**
