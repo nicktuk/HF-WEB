@@ -83,7 +83,8 @@ class WhatsAppMessageGenerator:
             is_best_seller=product.is_best_seller,
             template=template,
             include_price=include_price,
-            custom_text=custom_text
+            custom_text=custom_text,
+            slug=product.slug
         )
 
         wa_link = self._generate_wa_link_full(display_name, price, product.slug)
@@ -106,9 +107,11 @@ class WhatsAppMessageGenerator:
         is_best_seller: bool,
         template: str,
         include_price: bool,
-        custom_text: Optional[str]
+        custom_text: Optional[str],
+        slug: str
     ) -> str:
         """Build message text based on template."""
+        product_url = f"{settings.CATALOG_URL}/producto/{slug}"
 
         if template == "custom" and custom_text:
             text = custom_text.replace("{product_name}", display_name)
@@ -123,7 +126,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "👉 *Tocá acá para consultar*"
+            text += f"👉 {product_url}"
             return text
 
         if template == "mas_vendidos":
@@ -134,7 +137,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "👉 *Tocá acá para consultar*"
+            text += f"👉 {product_url}"
             return text
 
         if template == "promo":
@@ -143,7 +146,7 @@ class WhatsAppMessageGenerator:
             if include_price and price:
                 text += f"💥 *Solo {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
-            text += "👉 *Tocá acá para consultar*"
+            text += f"👉 {product_url}"
             return text
 
         # Default template
@@ -168,7 +171,7 @@ class WhatsAppMessageGenerator:
             text += " • ".join(badges) + "\n\n"
 
         text += "━━━━━━━━━━━━━━━\n"
-        text += "👉 *Tocá acá para consultar*"
+        text += f"👉 {product_url}"
 
         return text
 
@@ -228,7 +231,7 @@ class WhatsAppMessageGenerator:
                 })
 
         lines.append("\n━━━━━━━━━━━━━━━")
-        lines.append("👉 *Consultanos por cualquiera!*")
+        lines.append(f"👉 {settings.CATALOG_URL}")
 
         return {
             "text": "\n".join(lines),
