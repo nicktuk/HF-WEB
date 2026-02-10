@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock } from 'lucide-react';
+import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
@@ -61,6 +61,7 @@ interface FinancialStatsResponse {
 export default function AdminDashboard() {
   const apiKey = useApiKey();
   const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
+  const [showSellerStats, setShowSellerStats] = useState(false);
 
   // Get counts for enabled/disabled
   const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
@@ -335,83 +336,126 @@ export default function AdminDashboard() {
               </h2>
             </div>
             <p className="text-sm text-gray-500">
-              Valores de ventas y stock a costo origen.
+              Valores de ventas y stock a costo origen. Click en los KPIs de ventas para ver detalle por vendedor.
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+              {/* Total comprado - no clickeable */}
+              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wide">
                   <DollarSign className="h-4 w-4" />
                   Total comprado
                 </div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-slate-900 mt-1">
                   {formatPrice(financialStats.total_purchased)}
                 </p>
               </div>
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
-                  <CreditCard className="h-4 w-4" />
-                  Total cobrado
+
+              {/* Total cobrado - clickeable */}
+              <button
+                onClick={() => setShowSellerStats(!showSellerStats)}
+                className="rounded-xl border bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 shadow-sm hover:shadow-md hover:from-emerald-100 hover:to-emerald-150 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 uppercase tracking-wide">
+                    <CreditCard className="h-4 w-4" />
+                    Total cobrado
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-emerald-700 mt-1">
                   {formatPrice(financialStats.total_collected)}
                 </p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
-                  <Truck className="h-4 w-4" />
-                  Pendiente entrega
+              </button>
+
+              {/* Pendiente entrega - clickeable */}
+              <button
+                onClick={() => setShowSellerStats(!showSellerStats)}
+                className="rounded-xl border bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm hover:shadow-md hover:from-amber-100 hover:to-amber-150 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-amber-600 uppercase tracking-wide">
+                    <Truck className="h-4 w-4" />
+                    Pend. entrega
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-amber-700 mt-1">
                   {formatPrice(financialStats.total_pending_delivery)}
                 </p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
-                  <Clock className="h-4 w-4" />
-                  Pendiente cobro
+              </button>
+
+              {/* Pendiente cobro - clickeable */}
+              <button
+                onClick={() => setShowSellerStats(!showSellerStats)}
+                className="rounded-xl border bg-gradient-to-br from-rose-50 to-rose-100 p-4 shadow-sm hover:shadow-md hover:from-rose-100 hover:to-rose-150 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-rose-600 uppercase tracking-wide">
+                    <Clock className="h-4 w-4" />
+                    Pend. cobro
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-rose-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-rose-700 mt-1">
                   {formatPrice(financialStats.total_pending_payment)}
                 </p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-500 uppercase">
+              </button>
+
+              {/* Stock a costo - no clickeable */}
+              <div className="rounded-xl border bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-blue-600 uppercase tracking-wide">
                   <Boxes className="h-4 w-4" />
                   Stock a costo
                 </div>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-blue-700 mt-1">
                   {formatPrice(financialStats.stock_value_cost)}
                 </p>
               </div>
             </div>
 
-            {/* Stats by Seller */}
-            {financialStats.by_seller && (
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Por vendedor</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-3 font-medium text-gray-600">Vendedor</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600">Cobrado</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600">Pend. Entrega</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600">Pend. Cobro</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(financialStats.by_seller).map(([seller, stats]) => (
-                        <tr key={seller} className="border-b last:border-b-0 hover:bg-gray-50">
-                          <td className="py-2 px-3 font-medium">{seller}</td>
-                          <td className="py-2 px-3 text-right">{formatPrice(stats.collected)}</td>
-                          <td className="py-2 px-3 text-right">{formatPrice(stats.pending_delivery)}</td>
-                          <td className="py-2 px-3 text-right">{formatPrice(stats.pending_payment)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* Stats by Seller - Collapsible */}
+            {financialStats.by_seller && showSellerStats && (
+              <div className="rounded-xl border bg-gradient-to-br from-gray-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Detalle por vendedor
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(financialStats.by_seller).map(([seller, stats]) => (
+                    <div key={seller} className="rounded-lg border bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                          {seller[0]}
+                        </div>
+                        <span className="font-semibold text-gray-900">{seller}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-emerald-600 flex items-center gap-1.5">
+                            <CreditCard className="h-3.5 w-3.5" />
+                            Cobrado
+                          </span>
+                          <span className="font-semibold text-emerald-700">{formatPrice(stats.collected)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-amber-600 flex items-center gap-1.5">
+                            <Truck className="h-3.5 w-3.5" />
+                            Pend. Entrega
+                          </span>
+                          <span className="font-semibold text-amber-700">{formatPrice(stats.pending_delivery)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-rose-600 flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5" />
+                            Pend. Cobro
+                          </span>
+                          <span className="font-semibold text-rose-700">{formatPrice(stats.pending_payment)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
