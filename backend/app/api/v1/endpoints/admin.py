@@ -1156,10 +1156,11 @@ async def create_sale(
 async def list_sales(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
+    search: Optional[str] = Query(default=None, max_length=100),
     service = Depends(get_sales_service),
 ):
-    """List recent sales."""
-    return service.list_sales(limit=limit)
+    """List recent sales. Optionally filter by customer name or product name."""
+    return service.list_sales(limit=limit, search=search)
 
 
 @router.get(

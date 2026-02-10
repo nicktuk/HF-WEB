@@ -6,6 +6,7 @@ from sqlalchemy import func
 from app.models.sale import Sale, SaleItem
 from app.models.product import Product
 from app.models.stock import StockPurchase
+from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
 
 
@@ -135,13 +136,21 @@ class SalesService:
         self.db.refresh(sale)
         return sale
 
-    def list_sales(self, limit: int = 50) -> list[Sale]:
-        return (
-            self.db.query(Sale)
-            .order_by(Sale.created_at.desc())
-            .limit(limit)
-            .all()
-        )
+    def list_sales(self, limit: int = 50, search: str | None = None) -> list[Sale]:
+        query = self.db.query(Sale)
+
+        if search:
+            search_term = f"%{search}%"
+            # Search by customer_name or product name in items
+            query = query.outerjoin(SaleItem).outerjoin(Product).filter(
+                or_(
+                    Sale.customer_name.ilike(search_term),
+                    Product.custom_name.ilike(search_term),
+                    Product.original_name.ilike(search_term),
+                )
+            ).distinct()
+
+        return query.order_by(Sale.created_at.desc()).limit(limit).all()
 
     def update_sale(self, sale_id: int, delivered: bool | None, paid: bool | None) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()

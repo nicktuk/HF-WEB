@@ -611,8 +611,10 @@ export const adminApi = {
   /**
    * List sales
    */
-  async listSales(apiKey: string, limit: number = 50): Promise<Sale[]> {
-    return fetchAPI(`/admin/sales?limit=${limit}`, {}, apiKey);
+  async listSales(apiKey: string, limit: number = 50, search?: string): Promise<Sale[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (search) params.append('search', search);
+    return fetchAPI(`/admin/sales?${params.toString()}`, {}, apiKey);
   },
 
   /**

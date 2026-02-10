@@ -19,6 +19,7 @@ interface CartItem {
 export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
+  const [salesSearch, setSalesSearch] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
@@ -27,7 +28,7 @@ export default function VentasPage() {
   const [paid, setPaid] = useState(false);
 
   const createSale = useCreateSale(apiKey);
-  const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 50);
+  const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
   const updateSale = useUpdateSale(apiKey);
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
@@ -320,16 +321,28 @@ export default function VentasPage() {
       </div>
 
       <div className="bg-white rounded-lg border">
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Ventas existentes</h2>
-            <p className="text-sm text-gray-500">
-              El stock se descuenta al marcar una venta como Entregada.
-            </p>
+        <div className="px-4 py-3 border-b space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Ventas existentes</h2>
+              <p className="text-sm text-gray-500">
+                El stock se descuenta al marcar una venta como Entregada.
+              </p>
+            </div>
+            <span className="text-xs text-gray-500">
+              {salesData?.length || 0} ventas
+            </span>
           </div>
-          <span className="text-xs text-gray-500">
-            {salesData?.length || 0} ventas
-          </span>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Buscar por cliente o producto..."
+              value={salesSearch}
+              onChange={(e) => setSalesSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
         {isSalesLoading ? (
           <div className="p-4 text-sm text-gray-500">Cargando ventas...</div>
