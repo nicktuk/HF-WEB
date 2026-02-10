@@ -1648,12 +1648,38 @@ class ProductService:
 
         stock_value_available = float(stock_value_cost or 0) - float(pending_delivery_value or 0)
 
+        # Stats by seller
+        sellers = ["Facu", "Heber"]
+        by_seller = {}
+        for seller in sellers:
+            collected = (
+                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+                .filter(Sale.paid.is_(True), Sale.seller == seller)
+                .scalar()
+            )
+            pending_delivery = (
+                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+                .filter(Sale.delivered.is_(False), Sale.seller == seller)
+                .scalar()
+            )
+            pending_payment = (
+                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+                .filter(Sale.delivered.is_(True), Sale.paid.is_(False), Sale.seller == seller)
+                .scalar()
+            )
+            by_seller[seller] = {
+                "collected": float(collected or 0),
+                "pending_delivery": float(pending_delivery or 0),
+                "pending_payment": float(pending_payment or 0),
+            }
+
         return {
             "total_purchased": float(total_purchased or 0),
             "total_collected": float(total_collected or 0),
             "total_pending_delivery": float(total_pending_delivery or 0),
             "total_pending_payment": float(total_pending_payment or 0),
             "stock_value_cost": stock_value_available,
+            "by_seller": by_seller,
         }
 
     def bulk_remove_badge(

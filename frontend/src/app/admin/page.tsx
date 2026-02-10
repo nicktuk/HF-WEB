@@ -43,12 +43,19 @@ interface StockByCategoryResponse {
   items: StockByCategoryItem[];
 }
 
+interface SellerStats {
+  collected: number;
+  pending_delivery: number;
+  pending_payment: number;
+}
+
 interface FinancialStatsResponse {
   total_purchased: number;
   total_collected: number;
   total_pending_delivery: number;
   total_pending_payment: number;
   stock_value_cost: number;
+  by_seller?: Record<string, SellerStats>;
 }
 
 export default function AdminDashboard() {
@@ -379,6 +386,35 @@ export default function AdminDashboard() {
                 </p>
               </div>
             </div>
+
+            {/* Stats by Seller */}
+            {financialStats.by_seller && (
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Por vendedor</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium text-gray-600">Vendedor</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600">Cobrado</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600">Pend. Entrega</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600">Pend. Cobro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(financialStats.by_seller).map(([seller, stats]) => (
+                        <tr key={seller} className="border-b last:border-b-0 hover:bg-gray-50">
+                          <td className="py-2 px-3 font-medium">{seller}</td>
+                          <td className="py-2 px-3 text-right">{formatPrice(stats.collected)}</td>
+                          <td className="py-2 px-3 text-right">{formatPrice(stats.pending_delivery)}</td>
+                          <td className="py-2 px-3 text-right">{formatPrice(stats.pending_payment)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
