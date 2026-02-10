@@ -49,6 +49,8 @@ from app.schemas.stock import (
     StockImportResponse,
     StockPreviewResponse,
     StockPurchaseUpdate,
+    StockSummaryRequest,
+    StockSummaryResponse,
 )
 from app.schemas.sales import (
     SaleCreate,
@@ -231,6 +233,21 @@ async def get_stock_purchases(
 ):
     """Get stock purchases, optionally filtered by product."""
     return service.get_stock_purchases(product_id=product_id, unmatched=unmatched)
+
+
+@router.post(
+    "/stock/summary",
+    response_model=StockSummaryResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_stock_summary(
+    data: StockSummaryRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    """Get stock summary for a list of product IDs."""
+    summary = service.get_stock_summary(data.product_ids)
+    items = [{"product_id": pid, "stock_qty": qty} for pid, qty in summary.items()]
+    return {"items": items}
 
 
 @router.patch(

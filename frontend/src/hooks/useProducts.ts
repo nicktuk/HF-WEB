@@ -119,6 +119,15 @@ export function useRejectPendingPriceChanges(apiKey: string) {
   });
 }
 
+export function useStockSummary(apiKey: string, productIds: number[]) {
+  return useQuery({
+    queryKey: ['stock-summary', productIds],
+    queryFn: () => adminApi.getStockSummary(apiKey, productIds),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && productIds.length > 0,
+  });
+}
+
 export function useStockPurchases(apiKey: string, productId?: number) {
   return useQuery({
     queryKey: ['stock-purchases', productId],

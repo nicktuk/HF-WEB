@@ -32,6 +32,8 @@ from app.schemas.stock import (
     StockImportResponse,
     StockPreviewResponse,
     StockPurchaseUpdate,
+    StockSummaryRequest,
+    StockSummaryResponse,
 )
 from app.schemas.sales import (
     SaleItemCreate,
@@ -71,6 +73,8 @@ __all__ = [
     "StockImportResponse",
     "StockPreviewResponse",
     "StockPurchaseUpdate",
+    "StockSummaryRequest",
+    "StockSummaryResponse",
     # Sales
     "SaleItemCreate",
     "SaleCreate",

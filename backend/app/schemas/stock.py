@@ -51,3 +51,11 @@ class StockPreviewResponse(BaseModel):
 
 class StockPurchaseUpdate(BaseModel):
     product_id: Optional[int] = None
+
+
+class StockSummaryRequest(BaseModel):
+    product_ids: List[int]
+
+
+class StockSummaryResponse(BaseModel):
+    items: List[dict]

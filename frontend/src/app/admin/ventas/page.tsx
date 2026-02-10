@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useUpdateSale } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useUpdateSale, useStockSummary } from '@/hooks/useProducts';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleItemCreate } from '@/types';
 
@@ -22,6 +22,7 @@ export default function VentasPage() {
   const [salesSearch, setSalesSearch] = useState('');
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [stockShortageOnly, setStockShortageOnly] = useState(false);
   const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
   const [editCustomer, setEditCustomer] = useState('');
@@ -140,6 +141,31 @@ export default function VentasPage() {
     });
   }, [salesData, deliveredFilter, paidFilter]);
 
+  const saleProductIds = useMemo(() => {
+    const ids = new Set<number>();
+    (salesData || []).forEach((sale) => {
+      sale.items.forEach((item) => ids.add(item.product_id));
+    });
+    return Array.from(ids);
+  }, [salesData]);
+
+  const { data: stockSummary } = useStockSummary(apiKey, saleProductIds);
+  const stockMap = useMemo(() => {
+    const map = new Map<number, number>();
+    stockSummary?.items?.forEach((item) => map.set(item.product_id, item.stock_qty));
+    return map;
+  }, [stockSummary]);
+
+  const salesWithStockShortage = useMemo(() => {
+    return filteredSales.filter((sale) => {
+      if (sale.delivered) return false;
+      return sale.items.some((item) => {
+        const available = stockMap.get(item.product_id) ?? 0;
+        return item.quantity > available;
+      });
+    });
+  }, [filteredSales, stockMap]);
+
   const groupedSales = useMemo(() => {
     const groups: Record<string, typeof filteredSales> = {};
     filteredSales.forEach((sale) => {
@@ -161,11 +187,12 @@ export default function VentasPage() {
   }, [salesData]);
 
   const filteredTotals = useMemo(() => {
-    const totalSales = filteredSales.length;
-    const totalItems = filteredSales.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-    const totalAmount = filteredSales.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    const base = stockShortageOnly ? salesWithStockShortage : filteredSales;
+    const totalSales = base.length;
+    const totalItems = base.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+    const totalAmount = base.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
     return { totalSales, totalItems, totalAmount };
-  }, [filteredSales]);
+  }, [filteredSales, salesWithStockShortage, stockShortageOnly]);
 
   const openEditModal = (saleId: number) => {
     const sale = salesData?.find((s) => s.id === saleId);
@@ -474,15 +501,27 @@ export default function VentasPage() {
                 <option value="no">No</option>
               </select>
             </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={stockShortageOnly}
+                onChange={(e) => setStockShortageOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600"
+              />
+              Ventas sin stock
+            </label>
           </div>
         </div>
         {isSalesLoading ? (
           <div className="p-4 text-sm text-gray-500">Cargando ventas...</div>
-        ) : filteredSales.length === 0 ? (
+        ) : (stockShortageOnly ? salesWithStockShortage.length === 0 : filteredSales.length === 0) ? (
           <div className="p-4 text-sm text-gray-500">No hay ventas registradas.</div>
         ) : (
           <div className="space-y-4">
-            {groupedSales.map((group) => (
+            {(stockShortageOnly ? groupedSales.map((group) => ({
+              ...group,
+              items: group.items.filter((sale) => salesWithStockShortage.some((s) => s.id === sale.id)),
+            })).filter((group) => group.items.length > 0) : groupedSales).map((group) => (
               <div key={group.seller} className="border rounded-lg overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
                   <div className="font-semibold text-gray-900">{group.seller}</div>

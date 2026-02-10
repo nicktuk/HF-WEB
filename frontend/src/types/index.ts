@@ -82,6 +82,11 @@ export interface StockPurchase {
   updated_at: string;
 }
 
+export interface StockSummaryItem {
+  product_id: number;
+  stock_qty: number;
+}
+
 export interface StockPreviewRow {
   row_number: number;
   description?: string;

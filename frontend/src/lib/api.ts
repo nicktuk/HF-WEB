@@ -12,6 +12,7 @@ import type {
   SourceWebsiteCreateForm,
   StockPurchase,
   StockPreviewResponse,
+  StockSummaryItem,
   PendingPriceChange,
   SaleCreateForm,
   Sale,
@@ -573,6 +574,16 @@ export const adminApi = {
     if (unmatched !== undefined) params.set('unmatched', unmatched.toString());
     const query = params.toString();
     return fetchAPI(`/admin/stock/purchases${query ? `?${query}` : ''}`, {}, apiKey);
+  },
+
+  /**
+   * Get stock summary for product IDs
+   */
+  async getStockSummary(apiKey: string, productIds: number[]): Promise<{ items: StockSummaryItem[] }> {
+    return fetchAPI('/admin/stock/summary', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds }),
+    }, apiKey);
   },
 
   /**
