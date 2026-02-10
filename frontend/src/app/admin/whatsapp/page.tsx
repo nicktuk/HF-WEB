@@ -1,18 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { adminApi } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { adminApi, publicApi } from '@/lib/api';
 import { useApiKey } from '@/hooks/useAuth';
 import type { WhatsAppProductItem, WhatsAppMessage, WhatsAppBulkMessage } from '@/types';
 
 export default function WhatsAppGeneratorPage() {
   const apiKey = useApiKey() || '';
 
+  // Categories and subcategories
+  const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
+  const [subcategories, setSubcategories] = useState<{ name: string; category_name: string }[]>([]);
+
   // Filters
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterSubcategory, setFilterSubcategory] = useState<string>('');
   const [filterFeatured, setFilterFeatured] = useState(false);
   const [filterImmediate, setFilterImmediate] = useState(false);
   const [filterBestSeller, setFilterBestSeller] = useState(false);
-  const [filterLimit, setFilterLimit] = useState(20);
 
   // Products and selection
   const [products, setProducts] = useState<WhatsAppProductItem[]>([]);
@@ -37,6 +42,44 @@ export default function WhatsAppGeneratorPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Load categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await publicApi.getCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Load subcategories when category changes
+  useEffect(() => {
+    const loadSubcategories = async () => {
+      if (filterCategory) {
+        try {
+          const subs = await publicApi.getSubcategories(filterCategory);
+          setSubcategories(subs);
+        } catch (error) {
+          console.error('Error loading subcategories:', error);
+        }
+      } else {
+        setSubcategories([]);
+      }
+      setFilterSubcategory('');
+    };
+    loadSubcategories();
+  }, [filterCategory]);
+
+  // Load products on mount
+  useEffect(() => {
+    if (apiKey) {
+      loadProducts();
+    }
+  }, [apiKey]);
+
   const loadProducts = async () => {
     if (!apiKey) {
       showToast('API Key no configurada', 'error');
@@ -45,12 +88,21 @@ export default function WhatsAppGeneratorPage() {
 
     setLoading(true);
     try {
-      const filters: { is_featured?: boolean; is_immediate_delivery?: boolean; is_best_seller?: boolean; limit: number } = {
-        limit: filterLimit,
+      const filters: {
+        is_featured?: boolean;
+        is_immediate_delivery?: boolean;
+        is_best_seller?: boolean;
+        category?: string;
+        subcategory?: string;
+        limit: number;
+      } = {
+        limit: 500,
       };
       if (filterFeatured) filters.is_featured = true;
       if (filterImmediate) filters.is_immediate_delivery = true;
       if (filterBestSeller) filters.is_best_seller = true;
+      if (filterCategory) filters.category = filterCategory;
+      if (filterSubcategory) filters.subcategory = filterSubcategory;
 
       const data = await adminApi.filterProductsForWhatsApp(apiKey, filters);
       setProducts(data);
@@ -135,6 +187,11 @@ export default function WhatsAppGeneratorPage() {
     }
   };
 
+  // Filter subcategories for selected category
+  const availableSubcategories = subcategories.filter(
+    sub => sub.category_name === filterCategory
+  );
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -155,54 +212,82 @@ export default function WhatsAppGeneratorPage() {
       {/* Filters */}
       <div className="bg-white rounded-lg border p-6">
         <h2 className="text-lg font-semibold mb-4">Filtrar Productos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={filterFeatured}
-              onChange={(e) => setFilterFeatured(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span>Nuevos</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={filterImmediate}
-              onChange={(e) => setFilterImmediate(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span>Entrega Inmediata</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={filterBestSeller}
-              onChange={(e) => setFilterBestSeller(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span>Lo Mas Vendido</span>
-          </label>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+          {/* Category filter */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Limite</label>
+            <label className="block text-sm text-gray-600 mb-1">Categoria</label>
             <select
-              value={filterLimit}
-              onChange={(e) => setFilterLimit(Number(e.target.value))}
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+              <option value="">Todas</option>
+              {categories.map((cat) => (
+                <option key={cat.name} value={cat.name}>{cat.name}</option>
+              ))}
             </select>
           </div>
-          <button
-            onClick={loadProducts}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Cargando...' : 'Buscar Productos'}
-          </button>
+
+          {/* Subcategory filter */}
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Subcategoria</label>
+            <select
+              value={filterSubcategory}
+              onChange={(e) => setFilterSubcategory(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              disabled={!filterCategory}
+            >
+              <option value="">Todas</option>
+              {availableSubcategories.map((sub) => (
+                <option key={sub.name} value={sub.name}>{sub.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Badge filters */}
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={filterFeatured}
+                onChange={(e) => setFilterFeatured(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">Nuevos</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={filterImmediate}
+                onChange={(e) => setFilterImmediate(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">Entrega Inmediata</span>
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={filterBestSeller}
+                onChange={(e) => setFilterBestSeller(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">Lo Mas Vendido</span>
+            </label>
+          </div>
+
+          {/* Search button */}
+          <div className="lg:col-span-2">
+            <button
+              onClick={loadProducts}
+              disabled={loading}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Cargando...' : 'Buscar Productos'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -220,12 +305,12 @@ export default function WhatsAppGeneratorPage() {
               {selectedIds.length === products.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[500px] overflow-y-auto">
             {products.map((product) => (
               <div
                 key={product.id}
                 onClick={() => toggleProduct(product.id)}
-                className={`cursor-pointer border rounded-lg p-3 transition ${
+                className={`cursor-pointer border rounded-lg p-2 transition ${
                   selectedIds.includes(product.id)
                     ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
                     : 'hover:border-gray-400'
@@ -235,28 +320,31 @@ export default function WhatsAppGeneratorPage() {
                   <img
                     src={product.image_url}
                     alt={product.name}
-                    className="w-full h-32 object-cover rounded mb-2"
+                    className="w-full h-24 object-cover rounded mb-2"
                   />
                 ) : (
-                  <div className="w-full h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-400">
+                  <div className="w-full h-24 bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-400 text-xs">
                     Sin imagen
                   </div>
                 )}
-                <p className="text-sm font-medium truncate">{product.name}</p>
+                <p className="text-xs font-medium truncate">{product.name}</p>
                 {product.price && (
-                  <p className="text-sm text-gray-600">${product.price.toLocaleString('es-AR')}</p>
+                  <p className="text-xs text-gray-600">${product.price.toLocaleString('es-AR')}</p>
                 )}
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {product.is_featured && (
-                    <span className="text-xs px-1 py-0.5 bg-orange-100 text-orange-700 rounded">Nuevo</span>
+                    <span className="text-[10px] px-1 py-0.5 bg-orange-100 text-orange-700 rounded">Nuevo</span>
                   )}
                   {product.is_immediate_delivery && (
-                    <span className="text-xs px-1 py-0.5 bg-green-100 text-green-700 rounded">Inmediata</span>
+                    <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded">Inmediata</span>
                   )}
                   {product.is_best_seller && (
-                    <span className="text-xs px-1 py-0.5 bg-purple-100 text-purple-700 rounded">Top</span>
+                    <span className="text-[10px] px-1 py-0.5 bg-purple-100 text-purple-700 rounded">Top</span>
                   )}
                 </div>
+                {product.category && (
+                  <p className="text-[10px] text-gray-500 mt-1 truncate">{product.category}</p>
+                )}
               </div>
             ))}
           </div>
@@ -390,7 +478,7 @@ export default function WhatsAppGeneratorPage() {
                       onClick={() => copyToClipboard(msg.text)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
                     >
-                      📋 Copiar texto
+                      Copiar texto
                     </button>
                     {msg.wa_link && (
                       <a
@@ -399,7 +487,7 @@ export default function WhatsAppGeneratorPage() {
                         rel="noopener noreferrer"
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium text-center"
                       >
-                        💬 Abrir en WhatsApp
+                        Abrir en WhatsApp
                       </a>
                     )}
                   </div>
@@ -461,7 +549,7 @@ export default function WhatsAppGeneratorPage() {
       {/* Empty state */}
       {products.length === 0 && !loading && (
         <div className="bg-white rounded-lg border p-12 text-center text-gray-500">
-          <p>Selecciona filtros y busca productos para generar mensajes</p>
+          <p>Cargando productos...</p>
         </div>
       )}
     </div>

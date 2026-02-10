@@ -341,6 +341,7 @@ export interface WhatsAppProductItem {
   is_immediate_delivery: boolean;
   is_best_seller: boolean;
   category: string | null;
+  subcategory: string | null;
 }
 
 export interface WhatsAppMessage {

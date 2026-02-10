@@ -18,7 +18,8 @@ class WhatsAppMessageGenerator:
         is_immediate_delivery: Optional[bool] = None,
         is_best_seller: Optional[bool] = None,
         category: Optional[str] = None,
-        limit: int = 20
+        subcategory: Optional[str] = None,
+        limit: int = 500
     ) -> List[Product]:
         """Get products filtered by badges for message generation."""
         query = self.db.query(Product).filter(Product.enabled == True)
@@ -31,6 +32,8 @@ class WhatsAppMessageGenerator:
             query = query.filter(Product.is_best_seller == is_best_seller)
         if category:
             query = query.filter(Product.category == category)
+        if subcategory:
+            query = query.filter(Product.subcategory == subcategory)
 
         return query.order_by(Product.updated_at.desc()).limit(limit).all()
 

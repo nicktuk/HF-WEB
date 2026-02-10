@@ -1362,6 +1362,7 @@ async def filter_products_for_whatsapp(
         is_immediate_delivery=data.is_immediate_delivery,
         is_best_seller=data.is_best_seller,
         category=data.category,
+        subcategory=data.subcategory,
         limit=data.limit
     )
 
@@ -1384,6 +1385,7 @@ async def filter_products_for_whatsapp(
             is_immediate_delivery=p.is_immediate_delivery,
             is_best_seller=p.is_best_seller,
             category=p.category,
+            subcategory=p.subcategory,
         ))
 
     return result

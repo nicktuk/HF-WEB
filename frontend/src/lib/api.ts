@@ -692,6 +692,7 @@ export const adminApi = {
       is_immediate_delivery?: boolean;
       is_best_seller?: boolean;
       category?: string;
+      subcategory?: string;
       limit?: number;
     }
   ): Promise<WhatsAppProductItem[]> {
