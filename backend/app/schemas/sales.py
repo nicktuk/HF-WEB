@@ -23,6 +23,10 @@ class SaleCreate(BaseModel):
 class SaleUpdate(BaseModel):
     delivered: Optional[bool] = None
     paid: Optional[bool] = None
+    customer_name: Optional[str] = None
+    notes: Optional[str] = None
+    installments: Optional[int] = Field(default=None, ge=0)
+    seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
 
 
 class SaleItemResponse(BaseModel):

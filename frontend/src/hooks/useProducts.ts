@@ -184,7 +184,13 @@ export function useSale(apiKey: string, saleId: number) {
 export function useUpdateSale(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ saleId, data }: { saleId: number; data: { delivered?: boolean; paid?: boolean } }) =>
+    mutationFn: ({
+      saleId,
+      data,
+    }: {
+      saleId: number;
+      data: { delivered?: boolean; paid?: boolean; customer_name?: string; notes?: string; installments?: number; seller?: 'Facu' | 'Heber' };
+    }) =>
       adminApi.updateSale(apiKey, saleId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });

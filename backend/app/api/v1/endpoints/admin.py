@@ -1219,7 +1219,15 @@ async def update_sale(
     service = Depends(get_sales_service),
 ):
     """Update sale status (delivered/paid)."""
-    return service.update_sale(sale_id, data.delivered, data.paid)
+    return service.update_sale(
+        sale_id,
+        data.delivered,
+        data.paid,
+        data.customer_name,
+        data.notes,
+        data.installments,
+        data.seller,
+    )
 
 
 @router.get(

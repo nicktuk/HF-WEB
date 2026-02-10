@@ -152,7 +152,16 @@ class SalesService:
 
         return query.order_by(Sale.created_at.desc()).limit(limit).all()
 
-    def update_sale(self, sale_id: int, delivered: bool | None, paid: bool | None) -> Sale:
+    def update_sale(
+        self,
+        sale_id: int,
+        delivered: bool | None,
+        paid: bool | None,
+        customer_name: str | None = None,
+        notes: str | None = None,
+        installments: int | None = None,
+        seller: str | None = None,
+    ) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
@@ -167,6 +176,14 @@ class SalesService:
             sale.delivered = delivered
         if paid is not None:
             sale.paid = paid
+        if customer_name is not None:
+            sale.customer_name = customer_name
+        if notes is not None:
+            sale.notes = notes
+        if installments is not None:
+            sale.installments = installments
+        if seller is not None:
+            sale.seller = seller
 
         self.db.commit()
         self.db.refresh(sale)

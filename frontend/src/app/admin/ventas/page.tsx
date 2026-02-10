@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink } from 'lucide-react';
+import { Fragment, useMemo, useState } from 'react';
+import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink, Edit2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,11 @@ export default function VentasPage() {
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
+  const [editCustomer, setEditCustomer] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editInstallments, setEditInstallments] = useState('');
+  const [editSeller, setEditSeller] = useState<'Facu' | 'Heber'>('Facu');
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
@@ -134,6 +139,43 @@ export default function VentasPage() {
       return true;
     });
   }, [salesData, deliveredFilter, paidFilter]);
+
+  const groupedSales = useMemo(() => {
+    const groups: Record<string, typeof filteredSales> = {};
+    filteredSales.forEach((sale) => {
+      const key = sale.seller || 'Sin vendedor';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(sale);
+    });
+    return Object.entries(groups).map(([sellerKey, items]) => ({
+      seller: sellerKey,
+      items,
+    }));
+  }, [filteredSales]);
+
+  const openEditModal = (saleId: number) => {
+    const sale = salesData?.find((s) => s.id === saleId);
+    if (!sale) return;
+    setEditCustomer(sale.customer_name || '');
+    setEditNotes(sale.notes || '');
+    setEditInstallments(sale.installments != null ? String(sale.installments) : '');
+    setEditSeller(sale.seller);
+    setEditingSaleId(saleId);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingSaleId) return;
+    await updateSale.mutateAsync({
+      saleId: editingSaleId,
+      data: {
+        customer_name: editCustomer || undefined,
+        notes: editNotes || undefined,
+        installments: editInstallments ? Number(editInstallments) : undefined,
+        seller: editSeller,
+      },
+    });
+    setEditingSaleId(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -393,107 +435,184 @@ export default function VentasPage() {
         ) : filteredSales.length === 0 ? (
           <div className="p-4 text-sm text-gray-500">No hay ventas registradas.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredSales.map((sale) => (
-                  <>
-                    <tr
-                      key={sale.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
-                    >
-                    <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
-                    <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
-                    <td className="px-3 py-2 text-gray-700">{sale.seller}</td>
-                    <td className="px-3 py-2 text-gray-700">
-                      {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
-                    <td className="px-3 py-2 text-center">
-                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={sale.delivered}
-                          onChange={(e) => handleToggleSale(sale.id, 'delivered', e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                          disabled={updateSale.isPending}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </label>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={sale.paid}
-                          onChange={(e) => handleToggleSale(sale.id, 'paid', e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                          disabled={updateSale.isPending}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </label>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Link
-                        href={`/admin/ventas/${sale.id}`}
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Ver
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </td>
-                    </tr>
-                    {expandedSaleId === sale.id && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={8} className="px-4 py-3">
-                          <div className="overflow-x-auto border rounded-lg bg-white">
-                            <table className="min-w-full text-sm">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-200">
-                                {sale.items.map((item) => (
-                                  <tr key={item.id}>
-                                    <td className="px-3 py-2 text-gray-900">
-                                      {item.product_name || `Producto #${item.product_id}`}
-                                    </td>
-                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
-                                    <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
-                                    <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </td>
+          <div className="space-y-4">
+            {groupedSales.map((group) => (
+              <div key={group.seller} className="border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                  <div className="font-semibold text-gray-900">{group.seller}</div>
+                  <div className="text-xs text-gray-500">{group.items.length} ventas</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                       </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {group.items.map((sale) => (
+                        <Fragment key={sale.id}>
+                          <tr
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
+                          >
+                            <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
+                            <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
+                            </td>
+                            <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
+                            <td className="px-3 py-2 text-center">
+                              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={sale.delivered}
+                                  onChange={(e) => handleToggleSale(sale.id, 'delivered', e.target.checked)}
+                                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                                  disabled={updateSale.isPending}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </label>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={sale.paid}
+                                  onChange={(e) => handleToggleSale(sale.id, 'paid', e.target.checked)}
+                                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                                  disabled={updateSale.isPending}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </label>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-3">
+                                <button
+                                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditModal(sale.id);
+                                  }}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                  Editar
+                                </button>
+                                <Link
+                                  href={`/admin/ventas/${sale.id}`}
+                                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Ver
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedSaleId === sale.id && (
+                            <tr className="bg-gray-50">
+                              <td colSpan={7} className="px-4 py-3">
+                                <div className="overflow-x-auto border rounded-lg bg-white">
+                                  <table className="min-w-full text-sm">
+                                    <thead className="bg-gray-100">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                      {sale.items.map((item) => (
+                                        <tr key={item.id}>
+                                          <td className="px-3 py-2 text-gray-900">
+                                            {item.product_name || `Producto #${item.product_id}`}
+                                          </td>
+                                          <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                          <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                          <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {editingSaleId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Editar venta #{editingSaleId}</h2>
+              <button onClick={() => setEditingSaleId(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <Input
+                label="Cliente"
+                value={editCustomer}
+                onChange={(e) => setEditCustomer(e.target.value)}
+                placeholder="Nombre del cliente"
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+                <select
+                  value={editSeller}
+                  onChange={(e) => setEditSeller(e.target.value as 'Facu' | 'Heber')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="Facu">Facu</option>
+                  <option value="Heber">Heber</option>
+                </select>
+              </div>
+              <Input
+                label="Cuotas"
+                type="number"
+                min="0"
+                value={editInstallments}
+                onChange={(e) => setEditInstallments(e.target.value)}
+                placeholder="0"
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Notas adicionales..."
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t">
+              <Button variant="outline" onClick={() => setEditingSaleId(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit} isLoading={updateSale.isPending}>
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

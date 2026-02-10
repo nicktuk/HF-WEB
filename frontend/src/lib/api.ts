@@ -627,7 +627,11 @@ export const adminApi = {
   /**
    * Update sale status
    */
-  async updateSale(apiKey: string, saleId: number, data: { delivered?: boolean; paid?: boolean }): Promise<Sale> {
+  async updateSale(
+    apiKey: string,
+    saleId: number,
+    data: { delivered?: boolean; paid?: boolean; customer_name?: string; notes?: string; installments?: number; seller?: 'Facu' | 'Heber' }
+  ): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
