@@ -43,8 +43,12 @@ class WhatsAppMessageGenerator:
             return "Consultar"
         return f"${price:,.0f}".replace(",", ".")
 
-    def _generate_wa_link(self, product_name: str, price: Optional[int], slug: str) -> str:
-        """Generate WhatsApp consultation link."""
+    def _generate_wa_link_short(self) -> str:
+        """Generate short WhatsApp link for message text."""
+        return f"https://wa.me/{WHATSAPP_NUMBER}"
+
+    def _generate_wa_link_full(self, product_name: str, price: Optional[int], slug: str) -> str:
+        """Generate full WhatsApp link with pre-filled message for button."""
         message = f"Hola! Me interesa el producto: {product_name}"
         if price:
             message += f" (${price:,.0f})".replace(",", ".")
@@ -90,7 +94,7 @@ class WhatsAppMessageGenerator:
             slug=product.slug
         )
 
-        wa_link = self._generate_wa_link(display_name, price, product.slug)
+        wa_link = self._generate_wa_link_full(display_name, price, product.slug)
 
         return {
             "text": text,
@@ -129,7 +133,7 @@ class WhatsAppMessageGenerator:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
             text += "📲 *Consultanos por WhatsApp!*\n"
-            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
+            text += f"👉 {self._generate_wa_link_short()}"
             return text
 
         if template == "mas_vendidos":
@@ -141,7 +145,7 @@ class WhatsAppMessageGenerator:
                 text += f"💰 *Precio: {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
             text += "🏃 *No te quedes sin el tuyo!*\n"
-            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
+            text += f"👉 {self._generate_wa_link_short()}"
             return text
 
         if template == "promo":
@@ -151,7 +155,7 @@ class WhatsAppMessageGenerator:
                 text += f"💥 *Solo {self._format_price(price)}*\n\n"
             text += "━━━━━━━━━━━━━━━\n"
             text += "⏰ *No te lo pierdas!*\n"
-            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
+            text += f"👉 {self._generate_wa_link_short()}"
             return text
 
         # Default template
@@ -177,7 +181,7 @@ class WhatsAppMessageGenerator:
 
         text += "━━━━━━━━━━━━━━━\n"
         text += "📲 *Consultanos por WhatsApp!*\n"
-        text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
+        text += f"👉 {self._generate_wa_link_short()}"
 
         return text
 
