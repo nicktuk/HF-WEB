@@ -32,6 +32,7 @@ export interface ProductAdmin extends ProductPublic {
   pending_original_price?: number;
   pending_price_detected_at?: string;
   markup_percentage: number;
+  wholesale_markup_percentage?: number;
   custom_price?: number;
   description?: string;
   sku?: string;

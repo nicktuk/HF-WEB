@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap } from 'lucide-react';
@@ -8,6 +8,7 @@ import { ProductTable } from '@/components/admin/ProductTable';
 import { AddProductModal } from '@/components/admin/ProductForm';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
+import { BulkWholesaleMarkupModal } from '@/components/admin/BulkWholesaleMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
@@ -50,11 +51,13 @@ export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
+  const [showWholesaleMarkupModal, setShowWholesaleMarkupModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [bulkCategory, setBulkCategory] = useState('');
   const [bulkSubcategory, setBulkSubcategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingWholesale, setIsExportingWholesale] = useState(false);
   const [isImportingStock, setIsImportingStock] = useState(false);
   const [stockImportResult, setStockImportResult] = useState<{
     created: number;
@@ -101,7 +104,7 @@ export default function ProductsPage() {
       showToast(result.message, 'success');
       window.location.reload();
     } catch (error) {
-      showToast('Error al calcular más vendidos', 'error');
+      showToast('Error al calcular mÃ¡s vendidos', 'error');
     }
   };
 
@@ -121,6 +124,26 @@ export default function ProductsPage() {
       alert(error instanceof Error ? error.message : 'Error al exportar PDF');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportWholesaleSelected = async () => {
+    if (!selectedIds.length) return;
+    setIsExportingWholesale(true);
+    try {
+      const blob = await adminApi.exportWholesaleSelected(apiKey, selectedIds);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lista_mayorista_seleccionados.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al exportar mayorista');
+    } finally {
+      setIsExportingWholesale(false);
     }
   };
 
@@ -253,7 +276,7 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
           <p className="text-gray-600">
-            Gestiona los productos de tu catálogo
+            Gestiona los productos de tu catÃ¡logo
           </p>
         </div>
         <div className="flex gap-2">
@@ -282,7 +305,17 @@ export default function ProductsPage() {
                 <Percent className="h-4 w-4" />
                 <div>
                   <p className="font-medium">Markup masivo</p>
-                  <p className="text-xs text-gray-500">Aplicar markup a múltiples productos</p>
+                  <p className="text-xs text-gray-500">Aplicar markup a mÃºltiples productos</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setShowWholesaleMarkupModal(true)}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
+              >
+                <Percent className="h-4 w-4 text-emerald-600" />
+                <div>
+                  <p className="font-medium">Markup mayorista</p>
+                  <p className="text-xs text-gray-500">Aplica a todos los productos</p>
                 </div>
               </button>
               <button
@@ -292,8 +325,8 @@ export default function ProductsPage() {
               >
                 <FileDown className="h-4 w-4" />
                 <div>
-                  <p className="font-medium">Exportar PDF (catálogo)</p>
-                  <p className="text-xs text-gray-500">Catálogo con imágenes</p>
+                  <p className="font-medium">Exportar PDF (catÃ¡logo)</p>
+                  <p className="text-xs text-gray-500">CatÃ¡logo con imÃ¡genes</p>
                 </div>
               </button>
               <button
@@ -393,7 +426,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Barra contextual de selección */}
+      {/* Barra contextual de selecciÃ³n */}
       {selectedIds.length > 0 && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -417,6 +450,15 @@ export default function ProductsPage() {
               >
                 <FolderInput className="mr-2 h-4 w-4" />
                 Categoria
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportWholesaleSelected}
+                disabled={isExportingWholesale}
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Exportar mayorista
               </Button>
               <Button
                 size="sm"
@@ -547,7 +589,7 @@ export default function ProductsPage() {
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Todas las categorias</option>
-            <option value="__none__">Sin categoría</option>
+            <option value="__none__">Sin categorÃ­a</option>
             {categories.map((category) => (
               <option key={category.name} value={category.name}>
                 {category.name} ({category.enabled_product_count}/{category.product_count})
@@ -567,7 +609,7 @@ export default function ProductsPage() {
             className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Todas las subcategorias</option>
-            <option value="__none__">Sin subcategoría</option>
+            <option value="__none__">Sin subcategorÃ­a</option>
             {subcategories.map((subcategory) => (
               <option key={subcategory.name} value={subcategory.name}>
                 {subcategory.name} ({subcategory.enabled_product_count}/{subcategory.product_count})
@@ -625,7 +667,7 @@ export default function ProductsPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Por página:</span>
+          <span className="text-sm text-gray-600">Por pÃ¡gina:</span>
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
@@ -663,7 +705,7 @@ export default function ProductsPage() {
           setStockImportResult(null);
           setStockPreviewFile(null);
         }}
-        title={stockPreview ? 'Previsualización de importación de stock' : 'Resumen de importación de stock'}
+        title={stockPreview ? 'PrevisualizaciÃ³n de importaciÃ³n de stock' : 'Resumen de importaciÃ³n de stock'}
         size="xl"
       >
         <ModalContent className="space-y-4">
@@ -698,7 +740,7 @@ export default function ProductsPage() {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fila</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">CÃ³digo</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">CÃƒÂ³digo</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -737,7 +779,7 @@ export default function ProductsPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">
-                  Página {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
+                  PÃ¡gina {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -804,7 +846,7 @@ export default function ProductsPage() {
                 disabled={(stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 || isImportingStock}
                 isLoading={isImportingStock}
               >
-                Confirmar importación
+                Confirmar importaciÃ³n
               </Button>
             </>
           ) : (
@@ -828,7 +870,7 @@ export default function ProductsPage() {
       >
         <ModalContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            Se detectaron cambios de precio origen en productos ya existentes. AprobÃ¡ para actualizar el precio.
+            Se detectaron cambios de precio origen en productos ya existentes. AprobÃƒÂ¡ para actualizar el precio.
           </p>
           {pendingItems.length === 0 ? (
             <div className="text-sm text-gray-500">No hay cambios pendientes.</div>
@@ -926,7 +968,7 @@ export default function ProductsPage() {
             Anterior
           </Button>
           <span className="px-4 py-2 text-gray-600">
-            Página {page} de {data.pages}
+            PÃ¡gina {page} de {data.pages}
           </span>
           <Button
             variant="outline"
@@ -960,6 +1002,13 @@ export default function ProductsPage() {
         />
       )}
 
+      {/* Bulk Wholesale Markup Modal */}
+      {showWholesaleMarkupModal && (
+        <BulkWholesaleMarkupModal
+          onClose={() => setShowWholesaleMarkupModal(false)}
+        />
+      )}
+
       {/* Activate Inactive Modal */}
       {showActivateModal && (
         <ActivateInactiveModal
@@ -979,9 +1028,9 @@ export default function ProductsPage() {
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold mb-4">Cambiar categoría y subcategoría</h2>
+            <h2 className="text-lg font-semibold mb-4">Cambiar categorÃ­a y subcategorÃ­a</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Cambiar la categoría/subcategoría de {selectedIds.length} producto(s) seleccionado(s)
+              Cambiar la categorÃ­a/subcategorÃ­a de {selectedIds.length} producto(s) seleccionado(s)
             </p>
             <select
               value={bulkCategory}
@@ -991,7 +1040,7 @@ export default function ProductsPage() {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="">Seleccionar categoría</option>
+              <option value="">Seleccionar categorÃ­a</option>
               {categories?.map((cat) => (
                 <option key={cat.name} value={cat.name}>
                   {cat.name}
@@ -1004,7 +1053,7 @@ export default function ProductsPage() {
               disabled={!bulkCategory || !bulkSubcategories || bulkSubcategories.length === 0}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="">Seleccionar subcategoría</option>
+              <option value="">Seleccionar subcategorÃ­a</option>
               {bulkSubcategories?.map((sub) => (
                 <option key={sub.name} value={sub.name}>
                   {sub.name}
@@ -1012,10 +1061,10 @@ export default function ProductsPage() {
               ))}
             </select>
             {changeCategoryMutation.isError && (
-              <p className="text-sm text-red-600 mb-4">Error al cambiar categoría</p>
+              <p className="text-sm text-red-600 mb-4">Error al cambiar categorÃ­a</p>
             )}
             {changeSubcategoryMutation.isError && (
-              <p className="text-sm text-red-600 mb-4">Error al cambiar subcategoría</p>
+              <p className="text-sm text-red-600 mb-4">Error al cambiar subcategorÃ­a</p>
             )}
             <div className="flex justify-end gap-3">
               <Button
