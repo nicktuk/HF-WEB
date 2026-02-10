@@ -20,6 +20,9 @@ export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
   const [salesSearch, setSalesSearch] = useState('');
+  const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
@@ -116,6 +119,21 @@ export default function VentasPage() {
       data: { [field]: value },
     });
   };
+
+  const filteredSales = useMemo(() => {
+    if (!salesData) return [];
+    return salesData.filter((sale) => {
+      if (deliveredFilter !== 'all') {
+        if (deliveredFilter === 'yes' && !sale.delivered) return false;
+        if (deliveredFilter === 'no' && sale.delivered) return false;
+      }
+      if (paidFilter !== 'all') {
+        if (paidFilter === 'yes' && !sale.paid) return false;
+        if (paidFilter === 'no' && sale.paid) return false;
+      }
+      return true;
+    });
+  }, [salesData, deliveredFilter, paidFilter]);
 
   return (
     <div className="space-y-6">
@@ -330,23 +348,49 @@ export default function VentasPage() {
               </p>
             </div>
             <span className="text-xs text-gray-500">
-              {salesData?.length || 0} ventas
+              {filteredSales.length} ventas
             </span>
           </div>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Buscar por cliente o producto..."
-              value={salesSearch}
-              onChange={(e) => setSalesSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-wrap gap-3">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Buscar por cliente o producto..."
+                value={salesSearch}
+                onChange={(e) => setSalesSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Entregado</label>
+              <select
+                value={deliveredFilter}
+                onChange={(e) => setDeliveredFilter(e.target.value as 'all' | 'yes' | 'no')}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">Todos</option>
+                <option value="yes">SÃ­</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Pagado</label>
+              <select
+                value={paidFilter}
+                onChange={(e) => setPaidFilter(e.target.value as 'all' | 'yes' | 'no')}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">Todos</option>
+                <option value="yes">SÃ­</option>
+                <option value="no">No</option>
+              </select>
+            </div>
           </div>
         </div>
         {isSalesLoading ? (
           <div className="p-4 text-sm text-gray-500">Cargando ventas...</div>
-        ) : !salesData || salesData.length === 0 ? (
+        ) : filteredSales.length === 0 ? (
           <div className="p-4 text-sm text-gray-500">No hay ventas registradas.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -364,8 +408,13 @@ export default function VentasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {salesData.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-gray-50">
+                {filteredSales.map((sale) => (
+                  <>
+                    <tr
+                      key={sale.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
+                    >
                     <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
                     <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
                     <td className="px-3 py-2 text-gray-700">{sale.seller}</td>
@@ -381,6 +430,7 @@ export default function VentasPage() {
                           onChange={(e) => handleToggleSale(sale.id, 'delivered', e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 text-primary-600"
                           disabled={updateSale.isPending}
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </label>
                     </td>
@@ -392,6 +442,7 @@ export default function VentasPage() {
                           onChange={(e) => handleToggleSale(sale.id, 'paid', e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 text-primary-600"
                           disabled={updateSale.isPending}
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </label>
                     </td>
@@ -399,12 +450,44 @@ export default function VentasPage() {
                       <Link
                         href={`/admin/ventas/${sale.id}`}
                         className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         Ver
                         <ExternalLink className="h-3 w-3" />
                       </Link>
                     </td>
-                  </tr>
+                    </tr>
+                    {expandedSaleId === sale.id && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={8} className="px-4 py-3">
+                          <div className="overflow-x-auto border rounded-lg bg-white">
+                            <table className="min-w-full text-sm">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {sale.items.map((item) => (
+                                  <tr key={item.id}>
+                                    <td className="px-3 py-2 text-gray-900">
+                                      {item.product_name || `Producto #${item.product_id}`}
+                                    </td>
+                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                    <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                    <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>
