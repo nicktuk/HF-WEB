@@ -17,21 +17,17 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        'products',
-        sa.Column(
-            'is_best_seller',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.false(),
-            comment='Lo mas vendido'
-        )
-    )
-    op.create_index(
-        'ix_products_is_best_seller',
-        'products',
-        ['is_best_seller']
-    )
+    # Add column if not exists
+    op.execute("""
+        ALTER TABLE products
+        ADD COLUMN IF NOT EXISTS is_best_seller BOOLEAN NOT NULL DEFAULT false
+    """)
+
+    # Create index if not exists
+    op.execute("""
+        CREATE INDEX IF NOT EXISTS ix_products_is_best_seller
+        ON products (is_best_seller)
+    """)
 
     # Remove "Nuevo" badge from products NOT scraped today
     op.execute("""
