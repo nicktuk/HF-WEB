@@ -1133,6 +1133,21 @@ async def get_financial_stats(
     return service.get_financial_stats()
 
 
+@router.post(
+    "/products/mark-new-by-date",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def mark_products_new_by_date(
+    request: Request,
+    scrape_date: str = Query(..., description="Fecha de scraping YYYY-MM-DD"),
+    service: ProductService = Depends(get_product_service),
+):
+    """Mark products scraped on a specific date as 'Nuevo' (is_featured=true)."""
+    count = service.mark_new_by_scrape_date(scrape_date)
+    return MessageResponse(message=f"Productos marcados como nuevos: {count}")
+
+
 # ============================================
 # Sales
 # ============================================

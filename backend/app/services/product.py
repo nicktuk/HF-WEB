@@ -1682,6 +1682,19 @@ class ProductService:
             "by_seller": by_seller,
         }
 
+    def mark_new_by_scrape_date(self, scrape_date: str) -> int:
+        """Mark products scraped on a specific date as 'Nuevo' (is_featured=true)."""
+        from sqlalchemy import cast, Date
+
+        count = (
+            self.db.query(Product)
+            .filter(cast(Product.last_scraped_at, Date) == scrape_date)
+            .update({Product.is_featured: True}, synchronize_session=False)
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        return count
+
     def bulk_remove_badge(
         self,
         product_ids: Optional[List[int]] = None,
