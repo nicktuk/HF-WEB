@@ -254,6 +254,7 @@ export interface ProductUpdateForm {
   is_best_seller?: boolean;
   markup_percentage?: number;
   custom_name?: string;
+  original_price?: number;
   custom_price?: number;
   display_order?: number;
   category?: string;

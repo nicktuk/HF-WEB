@@ -43,6 +43,7 @@ export default function ProductEditPage() {
   const [isCheckStock, setIsCheckStock] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
   const [customPrice, setCustomPrice] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -68,6 +69,7 @@ export default function ProductEditPage() {
       setIsCheckStock(product.is_check_stock || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
+      setOriginalPrice(product.original_price ? String(product.original_price) : '');
       setCustomPrice(product.custom_price ? String(product.custom_price) : '');
       setCategory(product.category || '');
       setDescription(product.description || '');
@@ -141,6 +143,7 @@ export default function ProductEditPage() {
         is_check_stock: isCheckStock,
         markup_percentage: markup,
         custom_name: customName || '',
+        original_price: originalPrice ? parseFloat(originalPrice) : 0,
         custom_price: customPrice ? parseFloat(customPrice) : 0,
         category: category || '',
         description: description || '',
@@ -585,6 +588,16 @@ export default function ProductEditPage() {
                   />
                 </button>
               </div>
+
+              {/* Original Price */}
+              <Input
+                label="Precio de origen"
+                type="number"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+                placeholder="Precio del proveedor"
+                helperText="Precio de costo/proveedor"
+              />
 
               {/* Custom Price */}
               <Input

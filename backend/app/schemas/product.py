@@ -44,6 +44,7 @@ class ProductUpdate(BaseModel):
     is_best_seller: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
+    original_price: Optional[Decimal] = Field(None, ge=0)
     custom_price: Optional[Decimal] = Field(None, ge=0)
     display_order: Optional[int] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)

@@ -613,6 +613,8 @@ class ProductService:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:
             product.custom_name = data.custom_name if data.custom_name else None
+        if data.original_price is not None:
+            product.original_price = data.original_price if data.original_price > 0 else None
         if data.custom_price is not None:
             product.custom_price = data.custom_price if data.custom_price > 0 else None
         if data.display_order is not None:
