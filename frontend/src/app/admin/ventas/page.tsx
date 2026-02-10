@@ -153,6 +153,20 @@ export default function VentasPage() {
     }));
   }, [filteredSales]);
 
+  const totals = useMemo(() => {
+    const totalSales = salesData?.length || 0;
+    const totalItems = (salesData || []).reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+    const totalAmount = (salesData || []).reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    return { totalSales, totalItems, totalAmount };
+  }, [salesData]);
+
+  const filteredTotals = useMemo(() => {
+    const totalSales = filteredSales.length;
+    const totalItems = filteredSales.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+    const totalAmount = filteredSales.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    return { totalSales, totalItems, totalAmount };
+  }, [filteredSales]);
+
   const openEditModal = (saleId: number) => {
     const sale = salesData?.find((s) => s.id === saleId);
     if (!sale) return;
@@ -393,6 +407,38 @@ export default function VentasPage() {
               {filteredSales.length} ventas
             </span>
           </div>
+          {deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-gray-500 uppercase">Ventas totales</p>
+                <p className="text-2xl font-bold text-gray-900">{totals.totalSales}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-gray-500 uppercase">Items vendidos</p>
+                <p className="text-2xl font-bold text-gray-900">{totals.totalItems}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-gray-500 uppercase">Valorizado</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(totals.totalAmount)}</p>
+              </div>
+            </div>
+          )}
+          {(deliveredFilter !== 'all' || paidFilter !== 'all' || salesSearch) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3 bg-gray-50">
+                <p className="text-xs text-gray-500 uppercase">Ventas filtradas</p>
+                <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalSales}</p>
+              </div>
+              <div className="rounded-lg border p-3 bg-gray-50">
+                <p className="text-xs text-gray-500 uppercase">Items vendidos</p>
+                <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalItems}</p>
+              </div>
+              <div className="rounded-lg border p-3 bg-gray-50">
+                <p className="text-xs text-gray-500 uppercase">Valorizado</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(filteredTotals.totalAmount)}</p>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -448,7 +494,7 @@ export default function VentasPage() {
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
@@ -464,7 +510,7 @@ export default function VentasPage() {
                           >
                             <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
                             <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
-                            <td className="px-3 py-2 text-gray-700">
+                            <td className="px-3 py-2 text-right text-gray-700">
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
                             </td>
                             <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
@@ -547,6 +593,19 @@ export default function VentasPage() {
                           )}
                         </Fragment>
                       ))}
+                      <tr className="bg-gray-50 font-semibold">
+                        <td className="px-3 py-2 text-gray-700">Totales</td>
+                        <td className="px-3 py-2 text-gray-700">-</td>
+                        <td className="px-3 py-2 text-right text-gray-700">
+                          {group.items.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0)}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-900">
+                          {formatPrice(group.items.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0))}
+                        </td>
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2" />
+                      </tr>
                     </tbody>
                   </table>
                 </div>
