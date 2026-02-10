@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink, Edit2 } from 'lucide-react';
+import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink, Edit2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,14 +157,19 @@ export default function VentasPage() {
   }, [stockSummary]);
 
   const salesWithStockShortage = useMemo(() => {
-    return filteredSales.filter((sale) => {
-      if (sale.delivered) return false;
-      return sale.items.some((item) => {
-        const available = stockMap.get(item.product_id) ?? 0;
-        return item.quantity > available;
+      return filteredSales.filter((sale) => {
+        if (sale.delivered) return false;
+        return sale.items.some((item) => {
+          const available = stockMap.get(item.product_id) ?? 0;
+          return item.quantity > available;
+        });
       });
-    });
-  }, [filteredSales, stockMap]);
+    }, [filteredSales, stockMap]);
+
+  const getShortageQty = (productId: number, quantity: number) => {
+    const available = stockMap.get(productId) ?? 0;
+    return Math.max(0, quantity - available);
+  };
 
   const groupedSales = useMemo(() => {
     const groups: Record<string, typeof filteredSales> = {};
@@ -614,16 +619,29 @@ export default function VentasPage() {
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                      {sale.items.map((item) => (
-                                        <tr key={item.id}>
-                                          <td className="px-3 py-2 text-gray-900">
-                                            {item.product_name || `Producto #${item.product_id}`}
-                                          </td>
-                                          <td className="px-3 py-2 text-right">{item.quantity}</td>
-                                          <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
-                                          <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
-                                        </tr>
-                                      ))}
+                                      {sale.items.map((item) => {
+                                        const shortage = getShortageQty(item.product_id, item.quantity);
+                                        return (
+                                          <tr key={item.id} className={shortage > 0 ? 'bg-amber-50' : undefined}>
+                                            <td className="px-3 py-2 text-gray-900">
+                                              <div className="flex items-center gap-2">
+                                                {shortage > 0 && (
+                                                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                )}
+                                                <span>{item.product_name || `Producto #${item.product_id}`}</span>
+                                                {shortage > 0 && (
+                                                  <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                                                    Faltan {shortage}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </td>
+                                            <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                            <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                            <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
+                                          </tr>
+                                        );
+                                      })}
                                     </tbody>
                                   </table>
                                 </div>
