@@ -17,8 +17,11 @@ depends_on = None
 
 def upgrade():
     # Remove the unique constraint that prevents associating
-    # the same stock purchase data to a product
-    op.drop_constraint('uq_stock_purchases_dedupe', 'stock_purchases', type_='unique')
+    # the same stock purchase data to a product (if it exists)
+    op.execute("""
+        ALTER TABLE stock_purchases
+        DROP CONSTRAINT IF EXISTS uq_stock_purchases_dedupe
+    """)
 
 
 def downgrade():
