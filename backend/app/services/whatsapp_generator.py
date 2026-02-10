@@ -1,7 +1,12 @@
 """Service for WhatsApp message generation."""
 from typing import List, Optional
+from urllib.parse import quote
 from sqlalchemy.orm import Session
 from app.models.product import Product
+
+# Configuración
+WHATSAPP_NUMBER = "5491133240285"
+CATALOG_URL = "https://www.hefaproductos.com.ar"
 
 
 class WhatsAppMessageGenerator:
@@ -32,6 +37,21 @@ class WhatsAppMessageGenerator:
 
         return query.order_by(Product.updated_at.desc()).limit(limit).all()
 
+    def _format_price(self, price: Optional[int]) -> str:
+        """Format price with thousand separators."""
+        if not price:
+            return "Consultar"
+        return f"${price:,.0f}".replace(",", ".")
+
+    def _generate_wa_link(self, product_name: str, price: Optional[int], slug: str) -> str:
+        """Generate WhatsApp consultation link."""
+        message = f"Hola! Me interesa el producto: {product_name}"
+        if price:
+            message += f" (${price:,.0f})".replace(",", ".")
+        message += f"\n\nVi el producto en: {CATALOG_URL}/producto/{slug}"
+        encoded_message = quote(message)
+        return f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded_message}"
+
     def generate_message(
         self,
         product: Product,
@@ -43,7 +63,7 @@ class WhatsAppMessageGenerator:
         Generate WhatsApp message for a single product.
 
         Returns:
-            Dict with 'text', 'image_url', 'product_id', 'product_name'
+            Dict with 'text', 'image_url', 'product_id', 'product_name', 'wa_link'
         """
         display_name = product.custom_name or product.original_name
         price = product.final_price
@@ -66,14 +86,18 @@ class WhatsAppMessageGenerator:
             is_best_seller=product.is_best_seller,
             template=template,
             include_price=include_price,
-            custom_text=custom_text
+            custom_text=custom_text,
+            slug=product.slug
         )
+
+        wa_link = self._generate_wa_link(display_name, price, product.slug)
 
         return {
             "text": text,
             "image_url": image_url,
             "product_id": product.id,
-            "product_name": display_name
+            "product_name": display_name,
+            "wa_link": wa_link
         }
 
     def _build_message_text(
@@ -86,65 +110,74 @@ class WhatsAppMessageGenerator:
         is_best_seller: bool,
         template: str,
         include_price: bool,
-        custom_text: Optional[str]
+        custom_text: Optional[str],
+        slug: str
     ) -> str:
         """Build message text based on template."""
 
         if template == "custom" and custom_text:
             text = custom_text.replace("{product_name}", display_name)
-            text = text.replace("{price}", f"${price:,.0f}" if price else "Consultar")
+            text = text.replace("{price}", self._format_price(price) if price else "Consultar")
             return text
 
         if template == "nuevos":
-            text = f"*NUEVO EN CATALOGO*\n\n"
-            text += f"*{display_name}*\n\n"
+            text = "✨ *NUEVO EN CATÁLOGO* ✨\n\n"
+            text += f"📦 *{display_name}*\n\n"
             if short_description:
-                text += f"{short_description}\n\n"
+                text += f"_{short_description}_\n\n"
             if include_price and price:
-                text += f"*Precio: ${price:,.0f}*\n\n"
-            text += "Consultanos por WhatsApp!"
+                text += f"💰 *Precio: {self._format_price(price)}*\n\n"
+            text += "━━━━━━━━━━━━━━━\n"
+            text += "📲 *Consultanos por WhatsApp!*\n"
+            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
             return text
 
         if template == "mas_vendidos":
-            text = f"*LO MAS VENDIDO*\n\n"
-            text += f"*{display_name}*\n\n"
+            text = "🔥 *LO MÁS VENDIDO* 🔥\n\n"
+            text += f"⭐ *{display_name}*\n\n"
             if short_description:
-                text += f"{short_description}\n\n"
+                text += f"_{short_description}_\n\n"
             if include_price and price:
-                text += f"*Precio: ${price:,.0f}*\n\n"
-            text += "No te quedes sin el tuyo!"
+                text += f"💰 *Precio: {self._format_price(price)}*\n\n"
+            text += "━━━━━━━━━━━━━━━\n"
+            text += "🏃 *No te quedes sin el tuyo!*\n"
+            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
             return text
 
         if template == "promo":
-            text = f"*OFERTA ESPECIAL*\n\n"
-            text += f"*{display_name}*\n\n"
+            text = "🎉 *OFERTA ESPECIAL* 🎉\n\n"
+            text += f"🎁 *{display_name}*\n\n"
             if include_price and price:
-                text += f"*Solo ${price:,.0f}*\n\n"
-            text += "No te lo pierdas!\nPedilo ahora por WhatsApp"
+                text += f"💥 *Solo {self._format_price(price)}*\n\n"
+            text += "━━━━━━━━━━━━━━━\n"
+            text += "⏰ *No te lo pierdas!*\n"
+            text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
             return text
 
         # Default template
-        text = f"*{display_name}*\n\n"
+        text = f"📦 *{display_name}*\n\n"
 
         if short_description:
-            text += f"{short_description}\n\n"
+            text += f"_{short_description}_\n\n"
 
         if include_price and price:
-            text += f"*Precio: ${price:,.0f}*\n\n"
+            text += f"💰 *Precio: {self._format_price(price)}*\n\n"
 
-        # Add badges
+        # Add badges with emojis
         badges = []
         if is_featured:
-            badges.append("NUEVO")
+            badges.append("✨ NUEVO")
         if is_immediate_delivery:
-            badges.append("Entrega Inmediata")
+            badges.append("🚀 Entrega Inmediata")
         if is_best_seller:
-            badges.append("Lo Mas Vendido")
+            badges.append("🔥 Lo Más Vendido")
 
         if badges:
-            text += " | ".join(badges) + "\n\n"
+            text += " • ".join(badges) + "\n\n"
 
-        text += "Consultanos por WhatsApp!"
+        text += "━━━━━━━━━━━━━━━\n"
+        text += "📲 *Consultanos por WhatsApp!*\n"
+        text += f"👉 {self._generate_wa_link(display_name, price, slug)}"
 
         return text
 
@@ -166,13 +199,13 @@ class WhatsAppMessageGenerator:
 
         # Build header based on template
         if template == "nuevos":
-            header = "*NUEVOS EN CATALOGO*\n\n"
+            header = "✨ *NUEVOS EN CATÁLOGO* ✨\n\n"
         elif template == "mas_vendidos":
-            header = "*LO MAS VENDIDO DE LA SEMANA*\n\n"
+            header = "🔥 *LO MÁS VENDIDO DE LA SEMANA* 🔥\n\n"
         elif template == "promo":
-            header = "*OFERTAS ESPECIALES*\n\n"
+            header = "🎉 *OFERTAS ESPECIALES* 🎉\n\n"
         else:
-            header = "*PRODUCTOS DESTACADOS*\n\n"
+            header = "⭐ *PRODUCTOS DESTACADOS* ⭐\n\n"
 
         lines = [header]
         images = []
@@ -181,9 +214,10 @@ class WhatsAppMessageGenerator:
             display_name = product.custom_name or product.original_name
             price = product.final_price
 
-            line = f"{i}. *{display_name}*"
+            emoji = "📦" if i % 2 == 0 else "🎁"
+            line = f"{emoji} *{display_name}*"
             if include_price and price:
-                line += f" - ${price:,.0f}"
+                line += f" — {self._format_price(price)}"
             lines.append(line)
 
             # Collect images
@@ -202,7 +236,10 @@ class WhatsAppMessageGenerator:
                     "image_url": image_url
                 })
 
-        lines.append("\nConsultanos por WhatsApp!")
+        lines.append("\n━━━━━━━━━━━━━━━")
+        lines.append("📲 *Consultanos por cualquiera!*")
+        lines.append(f"👉 https://wa.me/{WHATSAPP_NUMBER}")
+        lines.append(f"\n🌐 Ver catálogo: {CATALOG_URL}")
 
         return {
             "text": "\n".join(lines),

@@ -348,6 +348,7 @@ export interface WhatsAppMessage {
   image_url: string | null;
   product_id: number;
   product_name: string;
+  wa_link: string | null;
 }
 
 export interface WhatsAppBulkMessage {

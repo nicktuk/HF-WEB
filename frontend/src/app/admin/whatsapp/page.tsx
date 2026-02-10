@@ -382,15 +382,27 @@ export default function WhatsAppGeneratorPage() {
 
                 {/* Text */}
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
                     <pre className="whitespace-pre-wrap font-sans text-sm">{msg.text}</pre>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(msg.text)}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Copiar texto
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => copyToClipboard(msg.text)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                    >
+                      📋 Copiar texto
+                    </button>
+                    {msg.wa_link && (
+                      <a
+                        href={msg.wa_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium text-center"
+                      >
+                        💬 Abrir en WhatsApp
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

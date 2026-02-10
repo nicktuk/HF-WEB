@@ -41,6 +41,7 @@ class WhatsAppMessageResponse(BaseModel):
     image_url: Optional[str] = None
     product_id: int
     product_name: str
+    wa_link: Optional[str] = None
 
 
 class WhatsAppBulkMessageResponse(BaseModel):
