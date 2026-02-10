@@ -1,7 +1,7 @@
 """Remove unique constraint from stock_purchases to allow duplicate associations
 
-Revision ID: 014
-Revises: 013
+Revision ID: 018
+Revises: 017
 Create Date: 2026-02-09
 
 """
@@ -9,8 +9,8 @@ from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision = '014'
-down_revision = '013'
+revision = '018'
+down_revision = '017'
 branch_labels = None
 depends_on = None
 

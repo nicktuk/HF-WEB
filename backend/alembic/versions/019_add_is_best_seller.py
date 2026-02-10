@@ -1,7 +1,7 @@
-"""Add is_best_seller field to products
+"""Add is_best_seller field to products and clear old featured
 
-Revision ID: 015
-Revises: 014
+Revision ID: 019
+Revises: 018
 Create Date: 2026-02-09
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '015'
-down_revision = '014'
+revision = '019'
+down_revision = '018'
 branch_labels = None
 depends_on = None
 
@@ -24,7 +24,7 @@ def upgrade():
             sa.Boolean(),
             nullable=False,
             server_default=sa.false(),
-            comment='Lo más vendido'
+            comment='Lo mas vendido'
         )
     )
     op.create_index(
@@ -32,6 +32,14 @@ def upgrade():
         'products',
         ['is_best_seller']
     )
+
+    # Remove "Nuevo" badge from products NOT scraped today
+    op.execute("""
+        UPDATE products
+        SET is_featured = false
+        WHERE is_featured = true
+          AND (last_scraped_at IS NULL OR last_scraped_at::date < CURRENT_DATE)
+    """)
 
 
 def downgrade():
