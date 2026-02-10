@@ -12,7 +12,7 @@ import logging
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
 from app.models.product import Product, ProductImage
 from app.models.stock import StockPurchase
-from app.models.sale import Sale
+from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
 from app.scrapers.registry import ScraperRegistry
