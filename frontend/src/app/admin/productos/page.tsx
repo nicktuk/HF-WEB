@@ -14,6 +14,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
@@ -21,6 +22,7 @@ import type { StockPreviewResponse } from '@/types';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
+  const queryClient = useQueryClient();
 
   // Use persistent filters from store
   const {
@@ -91,8 +93,7 @@ export default function ProductsPage() {
       const result = await adminApi.removeBadgeBulk(apiKey, badge, productIds);
       showToast(result.message, 'success');
       setSelectedIds([]);
-      // Refetch products
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     } catch (error) {
       showToast('Error al quitar marca', 'error');
     } finally {
@@ -110,7 +111,7 @@ export default function ProductsPage() {
       const result = await adminApi.markNewByDate(apiKey, markNewDate);
       showToast(result.message, 'success');
       setMarkNewDate('');
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     } catch (error) {
       showToast('Error al marcar productos', 'error');
     } finally {
@@ -122,9 +123,9 @@ export default function ProductsPage() {
     try {
       const result = await adminApi.calculateBestSellers(apiKey, 5);
       showToast(result.message, 'success');
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     } catch (error) {
-      showToast('Error al calcular mÃ¡s vendidos', 'error');
+      showToast('Error al calcular mas vendidos', 'error');
     }
   };
 
