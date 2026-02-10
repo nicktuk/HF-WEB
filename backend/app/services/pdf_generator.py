@@ -18,6 +18,7 @@ from reportlab.platypus.frames import Frame
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
 
 from app.models.product import Product
+from app.config import settings
 
 
 # Brand colors
@@ -25,7 +26,14 @@ BRAND_PRIMARY = '#2563eb'  # Blue
 BRAND_SECONDARY = '#1e40af'  # Darker blue
 BRAND_ACCENT = '#16a34a'  # Green for prices
 WHATSAPP_GREEN = '#25D366'
-WHATSAPP_NUMBER = "+54 9 11 3324-0285"
+
+
+def _format_whatsapp_display(number: str) -> str:
+    """Format WhatsApp number for display in PDF."""
+    # Format: 5492274402761 -> +54 9 2274 40-2761
+    if number.startswith("549"):
+        return f"+54 9 {number[3:7]} {number[7:9]}-{number[9:]}"
+    return number
 
 
 def _header_footer(canvas, doc):
@@ -64,7 +72,7 @@ def _header_footer(canvas, doc):
     # WhatsApp number
     canvas.setFillColor(colors.white)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawString(whatsapp_x + 0.9*cm, whatsapp_y + 0.28*cm, WHATSAPP_NUMBER)
+    canvas.drawString(whatsapp_x + 0.9*cm, whatsapp_y + 0.28*cm, _format_whatsapp_display(settings.WHATSAPP_NUMBER))
 
     # ===== FOOTER =====
     # Footer accent line
@@ -80,7 +88,7 @@ def _header_footer(canvas, doc):
     # WhatsApp reminder in footer
     canvas.setFillColor(colors.HexColor(WHATSAPP_GREEN))
     canvas.setFont('Helvetica-Bold', 10)
-    canvas.drawCentredString(page_width / 2, 0.9*cm, f"WhatsApp: {WHATSAPP_NUMBER}")
+    canvas.drawCentredString(page_width / 2, 0.9*cm, f"WhatsApp: {_format_whatsapp_display(settings.WHATSAPP_NUMBER)}")
 
     # Date - small on the left
     today = datetime.now().strftime("%d/%m/%Y")

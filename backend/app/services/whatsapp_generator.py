@@ -3,10 +3,7 @@ from typing import List, Optional
 from urllib.parse import quote
 from sqlalchemy.orm import Session
 from app.models.product import Product
-
-# Configuración
-WHATSAPP_NUMBER = "5491133240285"
-CATALOG_URL = "https://www.hefaproductos.com.ar"
+from app.config import settings
 
 
 class WhatsAppMessageGenerator:
@@ -48,9 +45,9 @@ class WhatsAppMessageGenerator:
         message = f"Hola! Me interesa el producto: {product_name}"
         if price:
             message += f" (${price:,.0f})".replace(",", ".")
-        message += f"\n\nVi el producto en: {CATALOG_URL}/producto/{slug}"
+        message += f"\n\nVi el producto en: {settings.CATALOG_URL}/producto/{slug}"
         encoded_message = quote(message)
-        return f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded_message}"
+        return f"https://wa.me/{settings.WHATSAPP_NUMBER}?text={encoded_message}"
 
     def generate_message(
         self,

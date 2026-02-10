@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
     ALLOWED_IMAGE_TYPES_STR: str = "image/jpeg,image/png,image/webp,image/gif"
 
+    # WhatsApp / Contact
+    WHATSAPP_NUMBER: str = "5492274402761"
+    CATALOG_URL: str = "https://www.hefaproductos.com.ar"
+
     @property
     def ALLOWED_IMAGE_TYPES(self) -> List[str]:
         """Parse ALLOWED_IMAGE_TYPES from string."""
