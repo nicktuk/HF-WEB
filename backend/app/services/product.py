@@ -1630,12 +1630,30 @@ class ProductService:
             .scalar()
         )
 
+        # Subtract value of items in pending delivery sales (already sold but not delivered)
+        pending_delivery_value = (
+            self.db.query(
+                func.coalesce(
+                    func.sum(
+                        SaleItem.quantity * func.coalesce(Product.original_price, 0)
+                    ),
+                    0,
+                )
+            )
+            .join(Sale, SaleItem.sale_id == Sale.id)
+            .join(Product, SaleItem.product_id == Product.id)
+            .filter(Sale.delivered.is_(False))
+            .scalar()
+        )
+
+        stock_value_available = float(stock_value_cost or 0) - float(pending_delivery_value or 0)
+
         return {
             "total_purchased": float(total_purchased or 0),
             "total_collected": float(total_collected or 0),
             "total_pending_delivery": float(total_pending_delivery or 0),
             "total_pending_payment": float(total_pending_payment or 0),
-            "stock_value_cost": float(stock_value_cost or 0),
+            "stock_value_cost": stock_value_available,
         }
 
     def bulk_remove_badge(
