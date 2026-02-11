@@ -695,6 +695,82 @@ export const adminApi = {
     }, apiKey);
   },
 
+  // ============================================
+  // Stock Purchases with Payments
+  // ============================================
+
+  /**
+   * Get all stock purchases with filters and pagination
+   */
+  async getAllStockPurchases(
+    apiKey: string,
+    params: {
+      page?: number;
+      limit?: number;
+      payer?: string;
+      date_from?: string;
+      date_to?: string;
+      product_id?: number;
+    } = {}
+  ): Promise<{
+    items: any[];
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.payer) searchParams.set('payer', params.payer);
+    if (params.date_from) searchParams.set('date_from', params.date_from);
+    if (params.date_to) searchParams.set('date_to', params.date_to);
+    if (params.product_id) searchParams.set('product_id', params.product_id.toString());
+
+    const query = searchParams.toString();
+    return fetchAPI(`/admin/stock/purchases/all${query ? `?${query}` : ''}`, {}, apiKey);
+  },
+
+  /**
+   * Get stock purchase detail with payments
+   */
+  async getStockPurchaseDetail(apiKey: string, purchaseId: number): Promise<any> {
+    return fetchAPI(`/admin/stock/purchases/${purchaseId}/detail`, {}, apiKey);
+  },
+
+  /**
+   * Add payments to a stock purchase
+   */
+  async addPaymentsToPurchase(
+    apiKey: string,
+    purchaseId: number,
+    payments: Array<{ payer: 'Facu' | 'Heber'; amount: number; payment_method: string }>
+  ): Promise<any> {
+    return fetchAPI(`/admin/stock/purchases/${purchaseId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify({ payments }),
+    }, apiKey);
+  },
+
+  /**
+   * Delete a payment from a stock purchase
+   */
+  async deletePayment(apiKey: string, purchaseId: number, paymentId: number): Promise<MessageResponse> {
+    return fetchAPI(`/admin/stock/purchases/${purchaseId}/payments/${paymentId}`, {
+      method: 'DELETE',
+    }, apiKey);
+  },
+
+  /**
+   * Get purchases grouped by payer for dashboard
+   */
+  async getPurchasesByPayer(apiKey: string): Promise<{
+    by_payer: Array<{ payer: string; total_amount: number; payment_count: number }>;
+    without_payment: number;
+  }> {
+    return fetchAPI('/admin/stats/purchases-by-payer', {}, apiKey);
+  },
+
   // WhatsApp Message Generator
 
   /**

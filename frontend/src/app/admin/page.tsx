@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, usePurchasesByPayer } from '@/hooks/useProducts';
 import { useQuery } from '@tanstack/react-query';
 
 interface PriceRangeProduct {
@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   const apiKey = useApiKey();
   const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
   const [showSellerStats, setShowSellerStats] = useState(false);
+  const [showPayerStats, setShowPayerStats] = useState(false);
 
   // Get counts for enabled/disabled
   const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
@@ -113,6 +114,8 @@ export default function AdminDashboard() {
     },
     enabled: !!apiKey,
   });
+
+  const { data: purchasesByPayer } = usePurchasesByPayer(apiKey || '');
 
   const enabledCount = enabledData?.total || 0;
   const disabledCount = disabledData?.total || 0;
@@ -341,16 +344,22 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Total comprado - no clickeable */}
-              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wide">
-                  <DollarSign className="h-4 w-4" />
-                  Total comprado
+              {/* Total comprado - clickeable para ver por pagador */}
+              <button
+                onClick={() => setShowPayerStats(!showPayerStats)}
+                className="rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm hover:shadow-md hover:from-slate-100 hover:to-slate-150 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wide">
+                    <DollarSign className="h-4 w-4" />
+                    Total comprado
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
                 </div>
                 <p className="text-2xl font-bold text-slate-900 mt-1">
                   {formatPrice(financialStats.total_purchased)}
                 </p>
-              </div>
+              </button>
 
               {/* Total cobrado - clickeable */}
               <button
@@ -456,6 +465,56 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stats by Payer - Collapsible */}
+            {purchasesByPayer && showPayerStats && (
+              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Detalle por pagador (compras)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {purchasesByPayer.by_payer.map((item) => (
+                    <div key={item.payer} className="rounded-lg border bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          item.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                        }`}>
+                          {item.payer[0]}
+                        </div>
+                        <span className="font-semibold text-gray-900">{item.payer}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Total pagado</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(item.total_amount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500 text-xs">Pagos registrados</span>
+                          <span className="text-gray-700">{item.payment_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {purchasesByPayer.without_payment > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
+                          ?
+                        </div>
+                        <span className="font-semibold text-amber-900">Sin asignar</span>
+                      </div>
+                      <div className="text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-amber-700">Compras pendientes de pago</span>
+                          <span className="font-semibold text-amber-900">{formatPrice(purchasesByPayer.without_payment)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

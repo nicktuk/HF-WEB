@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useRef, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
-import type { StockPreviewResponse } from '@/types';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
@@ -60,16 +59,6 @@ export default function ProductsPage() {
   const [bulkSubcategory, setBulkSubcategory] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingWholesale, setIsExportingWholesale] = useState(false);
-  const [isImportingStock, setIsImportingStock] = useState(false);
-  const [stockImportResult, setStockImportResult] = useState<{
-    created: number;
-    skipped: number;
-    errors: string[];
-    touched_products: number;
-  } | null>(null);
-  const [stockPreview, setStockPreview] = useState<StockPreviewResponse | null>(null);
-  const [stockPreviewPage, setStockPreviewPage] = useState(1);
-  const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showPendingPriceModal, setShowPendingPriceModal] = useState(false);
   const [pendingPriceModalOpened, setPendingPriceModalOpened] = useState(false);
@@ -77,7 +66,6 @@ export default function ProductsPage() {
   const [isRemovingBadge, setIsRemovingBadge] = useState(false);
   const [isMarkingNew, setIsMarkingNew] = useState(false);
   const [markNewDate, setMarkNewDate] = useState('');
-  const stockFileInputRef = useRef<HTMLInputElement>(null);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
@@ -168,69 +156,6 @@ export default function ProductsPage() {
     }
   };
 
-  const handleImportStockClick = () => {
-    stockFileInputRef.current?.click();
-  };
-
-  const handleImportStockFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImportingStock(true);
-    try {
-      const preview = await adminApi.previewStockCsv(apiKey, file);
-      setStockPreview(preview);
-      setStockPreviewPage(1);
-      setStockPreviewFile(file);
-    } catch (error) {
-      setStockImportResult({
-        created: 0,
-        skipped: 0,
-        errors: [error instanceof Error ? error.message : 'Error al importar stock'],
-        touched_products: 0,
-      });
-    } finally {
-      setIsImportingStock(false);
-      if (stockFileInputRef.current) {
-        stockFileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleConfirmImport = async () => {
-    if (!stockPreviewFile) return;
-    setIsImportingStock(true);
-    try {
-      const result = await adminApi.importStockCsv(apiKey, stockPreviewFile);
-      setStockImportResult(result);
-      setStockPreview(null);
-      setStockPreviewFile(null);
-    } catch (error) {
-      setStockImportResult({
-        created: 0,
-        skipped: 0,
-        errors: [error instanceof Error ? error.message : 'Error al importar stock'],
-        touched_products: 0,
-      });
-    } finally {
-      setIsImportingStock(false);
-    }
-  };
-
-  const handleDownloadErrors = () => {
-    if (!stockImportResult?.errors?.length) return;
-    const content = stockImportResult.errors.join('\n');
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'errores-importacion-stock.txt';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  };
-
   const { data, isLoading } = useAdminProducts(apiKey, {
     page,
     limit,
@@ -309,19 +234,8 @@ export default function ProductsPage() {
             </Button>
             <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
               <button
-                onClick={handleImportStockClick}
-                disabled={isImportingStock}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
-              >
-                <FileDown className="h-4 w-4" />
-                <div>
-                  <p className="font-medium">Importar stock (CSV)</p>
-                  <p className="text-xs text-gray-500">Carga compras y marca entrega inmediata</p>
-                </div>
-              </button>
-              <button
                 onClick={() => setShowBulkMarkupModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
               >
                 <Percent className="h-4 w-4" />
                 <div>
@@ -733,178 +647,6 @@ export default function ProductsPage() {
         onSelectionChange={setSelectedIds}
         categories={categories || []}
       />
-
-      <input
-        ref={stockFileInputRef}
-        type="file"
-        accept=".csv"
-        className="hidden"
-        onChange={handleImportStockFile}
-      />
-
-      <Modal
-        isOpen={!!stockPreview || !!stockImportResult}
-        onClose={() => {
-          setStockPreview(null);
-          setStockImportResult(null);
-          setStockPreviewFile(null);
-        }}
-        title={stockPreview ? 'PrevisualizaciÃ³n de importaciÃ³n de stock' : 'Resumen de importaciÃ³n de stock'}
-        size="xl"
-      >
-        <ModalContent className="space-y-4">
-          {stockPreview && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Total</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.total}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">OK</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.ok}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Duplicados</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.duplicate}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Errores</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.error}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Sin match</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.unmatched}</p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fila</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">CÃƒÂ³digo</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Errores</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {stockPreview.rows
-                      .slice((stockPreviewPage - 1) * 50, stockPreviewPage * 50)
-                      .map((row) => (
-                        <tr key={row.row_number} className="hover:bg-gray-50">
-                          <td className="px-3 py-2">{row.row_number}</td>
-                          <td className="px-3 py-2">{row.product_name || row.description || '-'}</td>
-                          <td className="px-3 py-2">
-                            {row.code || '-'}
-                            {row.derived_code ? <span className="ml-1 text-xs text-gray-400">(derivado)</span> : null}
-                          </td>
-                          <td className="px-3 py-2 text-right">{row.quantity ?? '-'}</td>
-                          <td className="px-3 py-2 text-right">{row.unit_price ?? '-'}</td>
-                          <td className="px-3 py-2 text-right">{row.total_amount ?? '-'}</td>
-                          <td className="px-3 py-2">
-                            {row.status === 'ok' && <span className="text-emerald-700 font-medium">OK</span>}
-                            {row.status === 'duplicate' && <span className="text-amber-700 font-medium">Duplicado</span>}
-                            {row.status === 'error' && <span className="text-red-600 font-medium">Error</span>}
-                            {row.status === 'unmatched' && <span className="text-slate-600 font-medium">Sin match</span>}
-                          </td>
-                          <td className="px-3 py-2 text-xs text-gray-600">
-                            {row.errors?.length ? row.errors.join('; ') : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">
-                  PÃ¡gina {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStockPreviewPage(Math.max(1, stockPreviewPage - 1))}
-                    disabled={stockPreviewPage === 1}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setStockPreviewPage(Math.min(Math.ceil(stockPreview.rows.length / 50), stockPreviewPage + 1))}
-                    disabled={stockPreviewPage >= Math.ceil(stockPreview.rows.length / 50)}
-                  >
-                    Siguiente
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {stockImportResult && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Creados</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockImportResult.created}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Omitidos</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockImportResult.skipped}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-gray-500 uppercase">Errores</p>
-                  <p className="text-xl font-semibold text-gray-900">{stockImportResult.errors?.length || 0}</p>
-                </div>
-              </div>
-
-              {stockImportResult.errors?.length > 0 && (
-                <div className="border rounded-lg">
-                  <div className="px-3 py-2 border-b bg-gray-50 text-sm font-medium text-gray-700">
-                    Detalle de errores
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {stockImportResult.errors.map((err, idx) => (
-                      <div key={idx} className="px-3 py-2 text-sm text-gray-700 border-b last:border-b-0">
-                        {err}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          {stockPreview ? (
-            <>
-              <Button variant="outline" onClick={() => setStockPreview(null)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmImport}
-                disabled={(stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 || isImportingStock}
-                isLoading={isImportingStock}
-              >
-                Confirmar importaciÃ³n
-              </Button>
-            </>
-          ) : (
-            <>
-              {stockImportResult?.errors?.length ? (
-                <Button variant="outline" onClick={handleDownloadErrors}>
-                  Descargar errores
-                </Button>
-              ) : null}
-              <Button onClick={() => setStockImportResult(null)}>Cerrar</Button>
-            </>
-          )}
-        </ModalFooter>
-      </Modal>
 
       <Modal
         isOpen={showPendingPriceModal}

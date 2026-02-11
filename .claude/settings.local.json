@@ -62,7 +62,10 @@
       "WebFetch(domain:www.protrade.com.ar)",
       "Bash(npm run dev:*)",
       "Bash(timeout /t 5 /nobreak)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep:*)",
+      "Bash(echo:*)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

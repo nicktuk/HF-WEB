@@ -21,9 +21,24 @@ class StockPurchase(Base):
     total_amount = Column(Numeric(12, 2), nullable=False)
     out_quantity = Column(Integer, nullable=False, default=0, comment="Cantidad salida (OUT) para este lote")
 
-    # RelaciÃ³n
+    # Relaciones
     product = relationship("Product")
+    payments = relationship("StockPurchasePayment", back_populates="stock_purchase", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_stock_purchases_product_date", "product_id", "purchase_date"),
     )
+
+
+class StockPurchasePayment(Base):
+    """Pago asociado a una compra de stock."""
+    __tablename__ = "stock_purchase_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_purchase_id = Column(Integer, ForeignKey("stock_purchases.id", ondelete="CASCADE"), nullable=False, index=True)
+    payer = Column(String(20), nullable=False)  # "Facu" o "Heber"
+    amount = Column(Numeric(12, 2), nullable=False)
+    payment_method = Column(String(50), nullable=False)  # "Efectivo", "Transferencia", etc.
+
+    # Relación
+    stock_purchase = relationship("StockPurchase", back_populates="payments")

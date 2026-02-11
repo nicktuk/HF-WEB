@@ -16,6 +16,8 @@ import {
   Scale,
   DollarSign,
   MessageCircle,
+  ShoppingCart,
+  PackageX,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -31,7 +33,8 @@ const navigation = [
 const configSubmenu = [
   { name: 'Categorías', href: '/admin/categorias', icon: Tags },
   { name: 'Subcategorías', href: '/admin/subcategorias', icon: FolderTree },
-  { name: 'Stock', href: '/admin/stock', icon: Package },
+  { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
+  { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
 ];
 

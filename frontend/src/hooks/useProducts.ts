@@ -452,3 +452,75 @@ export function useSourceWebsites(apiKey: string) {
     enabled: !!apiKey,
   });
 }
+
+// ============================================
+// Stock Purchases with Payments Hooks
+// ============================================
+
+export function useAllStockPurchases(
+  apiKey: string,
+  params: {
+    page?: number;
+    limit?: number;
+    payer?: string;
+    date_from?: string;
+    date_to?: string;
+    product_id?: number;
+  } = {}
+) {
+  return useQuery({
+    queryKey: ['all-stock-purchases', params],
+    queryFn: () => adminApi.getAllStockPurchases(apiKey, params),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useStockPurchaseDetail(apiKey: string, purchaseId: number | null) {
+  return useQuery({
+    queryKey: ['stock-purchase-detail', purchaseId],
+    queryFn: () => adminApi.getStockPurchaseDetail(apiKey, purchaseId!),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && !!purchaseId,
+  });
+}
+
+export function useAddPaymentsToPurchase(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      purchaseId,
+      payments,
+    }: {
+      purchaseId: number;
+      payments: Array<{ payer: 'Facu' | 'Heber'; amount: number; payment_method: string }>;
+    }) => adminApi.addPaymentsToPurchase(apiKey, purchaseId, payments),
+    onSuccess: (_, { purchaseId }) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-purchase-detail', purchaseId] });
+      queryClient.invalidateQueries({ queryKey: ['all-stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
+    },
+  });
+}
+
+export function useDeletePayment(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ purchaseId, paymentId }: { purchaseId: number; paymentId: number }) =>
+      adminApi.deletePayment(apiKey, purchaseId, paymentId),
+    onSuccess: (_, { purchaseId }) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-purchase-detail', purchaseId] });
+      queryClient.invalidateQueries({ queryKey: ['all-stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
+    },
+  });
+}
+
+export function usePurchasesByPayer(apiKey: string) {
+  return useQuery({
+    queryKey: ['purchases-by-payer'],
+    queryFn: () => adminApi.getPurchasesByPayer(apiKey),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}

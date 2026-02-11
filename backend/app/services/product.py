@@ -1774,3 +1774,135 @@ class ProductService:
         logger.info(f"Marked {count} products as best sellers (threshold: {threshold})")
 
         return count
+
+    # ==========================================
+    # Stock Purchase Payments Methods
+    # ==========================================
+
+    def get_purchase_detail(self, purchase_id: int) -> StockPurchase:
+        """Get a stock purchase with payments and product name."""
+        from app.models.stock import StockPurchasePayment
+        purchase = (
+            self.db.query(StockPurchase)
+            .filter(StockPurchase.id == purchase_id)
+            .first()
+        )
+        if not purchase:
+            raise NotFoundError("StockPurchase", str(purchase_id))
+        return purchase
+
+    def add_payments_to_purchase(self, purchase_id: int, payments: list) -> StockPurchase:
+        """Add payments to a stock purchase."""
+        from app.models.stock import StockPurchasePayment
+
+        purchase = self.db.query(StockPurchase).filter(StockPurchase.id == purchase_id).first()
+        if not purchase:
+            raise NotFoundError("StockPurchase", str(purchase_id))
+
+        for payment_data in payments:
+            payment = StockPurchasePayment(
+                stock_purchase_id=purchase_id,
+                payer=payment_data.payer,
+                amount=payment_data.amount,
+                payment_method=payment_data.payment_method,
+            )
+            self.db.add(payment)
+
+        self.db.commit()
+        self.db.refresh(purchase)
+        return purchase
+
+    def delete_payment(self, payment_id: int) -> None:
+        """Delete a payment from a stock purchase."""
+        from app.models.stock import StockPurchasePayment
+
+        payment = self.db.query(StockPurchasePayment).filter(StockPurchasePayment.id == payment_id).first()
+        if not payment:
+            raise NotFoundError("StockPurchasePayment", str(payment_id))
+
+        self.db.delete(payment)
+        self.db.commit()
+
+    def get_all_purchases(
+        self,
+        page: int = 1,
+        limit: int = 50,
+        payer: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        product_id: Optional[int] = None,
+    ) -> Tuple[List[StockPurchase], int]:
+        """Get all stock purchases with filters and pagination."""
+        from app.models.stock import StockPurchasePayment
+
+        query = self.db.query(StockPurchase)
+
+        if product_id is not None:
+            query = query.filter(StockPurchase.product_id == product_id)
+
+        if date_from:
+            query = query.filter(StockPurchase.purchase_date >= date_from)
+
+        if date_to:
+            query = query.filter(StockPurchase.purchase_date <= date_to)
+
+        if payer:
+            # Filter purchases that have at least one payment from this payer
+            query = query.filter(
+                StockPurchase.id.in_(
+                    self.db.query(StockPurchasePayment.stock_purchase_id)
+                    .filter(StockPurchasePayment.payer == payer)
+                )
+            )
+
+        total = query.count()
+
+        purchases = (
+            query
+            .order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
+
+        return purchases, total
+
+    def get_purchases_by_payer(self) -> dict:
+        """Get total purchases grouped by payer for dashboard."""
+        from app.models.stock import StockPurchasePayment
+
+        # Total without payments assigned
+        total_without_payment = (
+            self.db.query(func.coalesce(func.sum(StockPurchase.total_amount), 0))
+            .filter(
+                ~StockPurchase.id.in_(
+                    self.db.query(StockPurchasePayment.stock_purchase_id).distinct()
+                )
+            )
+            .scalar()
+        )
+
+        # Total by payer
+        by_payer = (
+            self.db.query(
+                StockPurchasePayment.payer,
+                func.sum(StockPurchasePayment.amount).label("total_amount"),
+                func.count(StockPurchasePayment.id).label("payment_count"),
+            )
+            .group_by(StockPurchasePayment.payer)
+            .all()
+        )
+
+        result = {
+            "by_payer": [
+                {
+                    "payer": row.payer,
+                    "total_amount": float(row.total_amount or 0),
+                    "payment_count": row.payment_count,
+                }
+                for row in by_payer
+            ],
+            "without_payment": float(total_without_payment or 0),
+        }
+
+        return result
