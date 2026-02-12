@@ -65,7 +65,8 @@
       "WebSearch",
       "Bash(grep:*)",
       "Bash(echo:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(alembic current:*)"
     ]
   }
 }

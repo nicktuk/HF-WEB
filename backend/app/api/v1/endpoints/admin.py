@@ -46,14 +46,17 @@ from app.services.whatsapp_generator import WhatsAppMessageGenerator
 from app.models.product import Product
 from app.schemas.stock import (
     StockPurchaseResponse,
-    StockPurchaseDetailResponse,
-    StockPurchasePaymentResponse,
     StockImportResponse,
     StockPreviewResponse,
     StockPurchaseUpdate,
     StockSummaryRequest,
     StockSummaryResponse,
+    PurchaseResponse,
+    PurchaseDetailResponse,
+    PurchasePaymentResponse,
+    StockPurchaseItemResponse,
     AddPaymentRequest,
+    StockImportRequest,
 )
 from app.schemas.sales import (
     SaleCreate,
@@ -209,15 +212,16 @@ async def preview_stock_csv(
 )
 async def import_stock_csv(
     file: UploadFile = File(...),
+    supplier: str = Query(..., min_length=1, description="Nombre del mayorista"),
     service: ProductService = Depends(get_product_service),
 ):
-    """Import stock purchases from CSV."""
+    """Import stock purchases from CSV, creating a Purchase for the supplier."""
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="El archivo debe ser un CSV.")
 
     contents = await file.read()
     try:
-        result = service.import_stock_csv(contents)
+        result = service.import_stock_csv(contents, supplier=supplier)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -270,20 +274,21 @@ async def update_stock_purchase(
 
 
 @router.get(
-    "/stock/purchases/all",
+    "/purchases",
     dependencies=[Depends(verify_admin)]
 )
-async def get_all_stock_purchases(
+async def get_purchases(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
-    payer: Optional[str] = Query(default=None),
+    supplier: Optional[str] = Query(default=None),
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),
     product_id: Optional[int] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
-    """Get all stock purchases with filters and pagination."""
+    """Get all purchases with filters and pagination."""
     from datetime import datetime
+    from decimal import Decimal
 
     date_from_parsed = None
     date_to_parsed = None
@@ -292,10 +297,10 @@ async def get_all_stock_purchases(
     if date_to:
         date_to_parsed = datetime.strptime(date_to, "%Y-%m-%d").date()
 
-    purchases, total = service.get_all_purchases(
+    purchases, total = service.get_purchases(
         page=page,
         limit=limit,
-        payer=payer,
+        supplier=supplier,
         date_from=date_from_parsed,
         date_to=date_to_parsed,
         product_id=product_id,
@@ -305,34 +310,15 @@ async def get_all_stock_purchases(
 
     items = []
     for p in purchases:
-        product_name = None
-        if p.product:
-            product_name = p.product.custom_name or p.product.original_name
-
-        payments = [
-            StockPurchasePaymentResponse(
-                id=pay.id,
-                payer=pay.payer,
-                amount=pay.amount,
-                payment_method=pay.payment_method,
-            )
-            for pay in p.payments
-        ]
-
         items.append({
             "id": p.id,
-            "product_id": p.product_id,
-            "description": p.description,
-            "code": p.code,
+            "supplier": p.supplier,
             "purchase_date": p.purchase_date,
-            "unit_price": p.unit_price,
-            "quantity": p.quantity,
-            "total_amount": p.total_amount,
-            "out_quantity": p.out_quantity,
+            "notes": p.notes,
+            "total_amount": Decimal(str(p.total_amount)),
+            "total_paid": Decimal(str(p.total_paid)),
+            "item_count": len(p.items),
             "created_at": p.created_at,
-            "updated_at": p.updated_at,
-            "product_name": product_name,
-            "payments": payments,
         })
 
     return {
@@ -345,88 +331,136 @@ async def get_all_stock_purchases(
 
 
 @router.get(
-    "/stock/purchases/{purchase_id}/detail",
-    response_model=StockPurchaseDetailResponse,
+    "/purchases/suppliers",
     dependencies=[Depends(verify_admin)]
 )
-async def get_stock_purchase_detail(
+async def get_suppliers(
+    service: ProductService = Depends(get_product_service),
+):
+    """Get unique list of suppliers."""
+    return {"suppliers": service.get_suppliers()}
+
+
+@router.get(
+    "/purchases/{purchase_id}",
+    response_model=PurchaseDetailResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_purchase_detail(
     purchase_id: int,
     service: ProductService = Depends(get_product_service),
 ):
-    """Get stock purchase detail with payments."""
+    """Get purchase detail with items and payments."""
+    from decimal import Decimal
     purchase = service.get_purchase_detail(purchase_id)
-    product_name = None
-    if purchase.product:
-        product_name = purchase.product.custom_name or purchase.product.original_name
 
-    return StockPurchaseDetailResponse(
+    items = []
+    for item in purchase.items:
+        product_name = None
+        if item.product:
+            product_name = item.product.custom_name or item.product.original_name
+        items.append(StockPurchaseItemResponse(
+            id=item.id,
+            product_id=item.product_id,
+            product_name=product_name,
+            description=item.description,
+            code=item.code,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+            total_amount=item.total_amount,
+        ))
+
+    payments = [
+        PurchasePaymentResponse(
+            id=p.id,
+            payer=p.payer,
+            amount=p.amount,
+            payment_method=p.payment_method,
+            created_at=p.created_at,
+        )
+        for p in purchase.payments
+    ]
+
+    return PurchaseDetailResponse(
         id=purchase.id,
-        product_id=purchase.product_id,
-        description=purchase.description,
-        code=purchase.code,
+        supplier=purchase.supplier,
         purchase_date=purchase.purchase_date,
-        unit_price=purchase.unit_price,
-        quantity=purchase.quantity,
-        total_amount=purchase.total_amount,
-        out_quantity=purchase.out_quantity,
+        notes=purchase.notes,
+        total_amount=Decimal(str(purchase.total_amount)),
+        total_paid=Decimal(str(purchase.total_paid)),
         created_at=purchase.created_at,
-        updated_at=purchase.updated_at,
-        product_name=product_name,
-        payments=[
-            StockPurchasePaymentResponse(
-                id=p.id,
-                payer=p.payer,
-                amount=p.amount,
-                payment_method=p.payment_method,
-            )
-            for p in purchase.payments
-        ],
+        items=items,
+        payments=payments,
     )
 
 
 @router.post(
-    "/stock/purchases/{purchase_id}/payments",
-    response_model=StockPurchaseDetailResponse,
+    "/purchases/{purchase_id}/payments",
+    response_model=PurchaseDetailResponse,
     dependencies=[Depends(verify_admin)]
 )
-async def add_payments_to_purchase(
+async def add_payment_to_purchase(
     purchase_id: int,
     data: AddPaymentRequest,
     service: ProductService = Depends(get_product_service),
 ):
-    """Add payments to a stock purchase."""
-    purchase = service.add_payments_to_purchase(purchase_id, data.payments)
-    product_name = None
-    if purchase.product:
-        product_name = purchase.product.custom_name or purchase.product.original_name
+    """Add a payment to a purchase."""
+    from decimal import Decimal
+    # Add each payment
+    purchase = None
+    for payment_data in data.payments:
+        purchase = service.add_payment_to_purchase(
+            purchase_id,
+            payer=payment_data.payer,
+            amount=payment_data.amount,
+            payment_method=payment_data.payment_method,
+        )
 
-    return StockPurchaseDetailResponse(
+    if not purchase:
+        purchase = service.get_purchase_detail(purchase_id)
+
+    items = []
+    for item in purchase.items:
+        product_name = None
+        if item.product:
+            product_name = item.product.custom_name or item.product.original_name
+        items.append(StockPurchaseItemResponse(
+            id=item.id,
+            product_id=item.product_id,
+            product_name=product_name,
+            description=item.description,
+            code=item.code,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+            total_amount=item.total_amount,
+        ))
+
+    payments = [
+        PurchasePaymentResponse(
+            id=p.id,
+            payer=p.payer,
+            amount=p.amount,
+            payment_method=p.payment_method,
+            created_at=p.created_at,
+        )
+        for p in purchase.payments
+    ]
+
+    return PurchaseDetailResponse(
         id=purchase.id,
-        product_id=purchase.product_id,
-        description=purchase.description,
-        code=purchase.code,
+        supplier=purchase.supplier,
         purchase_date=purchase.purchase_date,
-        unit_price=purchase.unit_price,
-        quantity=purchase.quantity,
-        total_amount=purchase.total_amount,
-        out_quantity=purchase.out_quantity,
+        notes=purchase.notes,
+        total_amount=Decimal(str(purchase.total_amount)),
+        total_paid=Decimal(str(purchase.total_paid)),
         created_at=purchase.created_at,
-        updated_at=purchase.updated_at,
-        product_name=product_name,
-        payments=[
-            StockPurchasePaymentResponse(
-                id=p.id,
-                payer=p.payer,
-                amount=p.amount,
-                payment_method=p.payment_method,
-            )
-            for p in purchase.payments
-        ],
+        items=items,
+        payments=payments,
     )
 
 
 @router.delete(
-    "/stock/purchases/{purchase_id}/payments/{payment_id}",
+    "/purchases/{purchase_id}/payments/{payment_id}",
     response_model=MessageResponse,
     dependencies=[Depends(verify_admin)]
 )
@@ -435,7 +469,7 @@ async def delete_payment(
     payment_id: int,
     service: ProductService = Depends(get_product_service),
 ):
-    """Delete a payment from a stock purchase."""
+    """Delete a payment from a purchase."""
     service.delete_payment(payment_id)
     return MessageResponse(message="Pago eliminado")
 

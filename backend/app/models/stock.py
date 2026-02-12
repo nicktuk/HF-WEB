@@ -1,16 +1,44 @@
 """
-Stock models - compras de stock por producto.
+Stock models - compras y pagos.
 """
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index, Text, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.models.base import Base
 
 
+class Purchase(Base):
+    """Una compra/factura completa a un mayorista."""
+    __tablename__ = "purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    supplier = Column(String(200), nullable=False, index=True)  # Mayorista
+    purchase_date = Column(Date, nullable=False, index=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relaciones
+    items = relationship("StockPurchase", back_populates="purchase", cascade="all, delete-orphan")
+    payments = relationship("PurchasePayment", back_populates="purchase", cascade="all, delete-orphan")
+
+    @property
+    def total_amount(self):
+        """Calcula el total sumando todos los items."""
+        return sum(float(item.total_amount or 0) for item in self.items)
+
+    @property
+    def total_paid(self):
+        """Calcula el total pagado sumando todos los pagos."""
+        return sum(float(payment.amount or 0) for payment in self.payments)
+
+
 class StockPurchase(Base):
-    """Compra/lote de stock asociado a un producto."""
+    """Item/producto dentro de una compra."""
     __tablename__ = "stock_purchases"
 
     id = Column(Integer, primary_key=True, index=True)
+    purchase_id = Column(Integer, ForeignKey("purchases.id", ondelete="CASCADE"), nullable=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True)
 
     description = Column(String(500), nullable=True)
@@ -22,23 +50,24 @@ class StockPurchase(Base):
     out_quantity = Column(Integer, nullable=False, default=0, comment="Cantidad salida (OUT) para este lote")
 
     # Relaciones
+    purchase = relationship("Purchase", back_populates="items")
     product = relationship("Product")
-    payments = relationship("StockPurchasePayment", back_populates="stock_purchase", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_stock_purchases_product_date", "product_id", "purchase_date"),
     )
 
 
-class StockPurchasePayment(Base):
-    """Pago asociado a una compra de stock."""
-    __tablename__ = "stock_purchase_payments"
+class PurchasePayment(Base):
+    """Pago asociado a una compra."""
+    __tablename__ = "purchase_payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    stock_purchase_id = Column(Integer, ForeignKey("stock_purchases.id", ondelete="CASCADE"), nullable=False, index=True)
+    purchase_id = Column(Integer, ForeignKey("purchases.id", ondelete="CASCADE"), nullable=False, index=True)
     payer = Column(String(20), nullable=False)  # "Facu" o "Heber"
     amount = Column(Numeric(12, 2), nullable=False)
-    payment_method = Column(String(50), nullable=False)  # "Efectivo", "Transferencia", etc.
+    payment_method = Column(String(50), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     # Relación
-    stock_purchase = relationship("StockPurchase", back_populates="payments")
+    purchase = relationship("Purchase", back_populates="payments")

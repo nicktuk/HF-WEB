@@ -696,18 +696,18 @@ export const adminApi = {
   },
 
   // ============================================
-  // Stock Purchases with Payments
+  // Purchases with Payments
   // ============================================
 
   /**
-   * Get all stock purchases with filters and pagination
+   * Get all purchases with filters and pagination
    */
-  async getAllStockPurchases(
+  async getPurchases(
     apiKey: string,
     params: {
       page?: number;
       limit?: number;
-      payer?: string;
+      supplier?: string;
       date_from?: string;
       date_to?: string;
       product_id?: number;
@@ -722,41 +722,48 @@ export const adminApi = {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', params.page.toString());
     if (params.limit) searchParams.set('limit', params.limit.toString());
-    if (params.payer) searchParams.set('payer', params.payer);
+    if (params.supplier) searchParams.set('supplier', params.supplier);
     if (params.date_from) searchParams.set('date_from', params.date_from);
     if (params.date_to) searchParams.set('date_to', params.date_to);
     if (params.product_id) searchParams.set('product_id', params.product_id.toString());
 
     const query = searchParams.toString();
-    return fetchAPI(`/admin/stock/purchases/all${query ? `?${query}` : ''}`, {}, apiKey);
+    return fetchAPI(`/admin/purchases${query ? `?${query}` : ''}`, {}, apiKey);
   },
 
   /**
-   * Get stock purchase detail with payments
+   * Get unique list of suppliers
    */
-  async getStockPurchaseDetail(apiKey: string, purchaseId: number): Promise<any> {
-    return fetchAPI(`/admin/stock/purchases/${purchaseId}/detail`, {}, apiKey);
+  async getSuppliers(apiKey: string): Promise<{ suppliers: string[] }> {
+    return fetchAPI('/admin/purchases/suppliers', {}, apiKey);
   },
 
   /**
-   * Add payments to a stock purchase
+   * Get purchase detail with items and payments
    */
-  async addPaymentsToPurchase(
+  async getPurchaseDetail(apiKey: string, purchaseId: number): Promise<any> {
+    return fetchAPI(`/admin/purchases/${purchaseId}`, {}, apiKey);
+  },
+
+  /**
+   * Add payment to a purchase
+   */
+  async addPaymentToPurchase(
     apiKey: string,
     purchaseId: number,
-    payments: Array<{ payer: 'Facu' | 'Heber'; amount: number; payment_method: string }>
+    payment: { payer: 'Facu' | 'Heber'; amount: number; payment_method: string }
   ): Promise<any> {
-    return fetchAPI(`/admin/stock/purchases/${purchaseId}/payments`, {
+    return fetchAPI(`/admin/purchases/${purchaseId}/payments`, {
       method: 'POST',
-      body: JSON.stringify({ payments }),
+      body: JSON.stringify({ payments: [payment] }),
     }, apiKey);
   },
 
   /**
-   * Delete a payment from a stock purchase
+   * Delete a payment from a purchase
    */
   async deletePayment(apiKey: string, purchaseId: number, paymentId: number): Promise<MessageResponse> {
-    return fetchAPI(`/admin/stock/purchases/${purchaseId}/payments/${paymentId}`, {
+    return fetchAPI(`/admin/purchases/${purchaseId}/payments/${paymentId}`, {
       method: 'DELETE',
     }, apiKey);
   },
@@ -769,6 +776,33 @@ export const adminApi = {
     without_payment: number;
   }> {
     return fetchAPI('/admin/stats/purchases-by-payer', {}, apiKey);
+  },
+
+  /**
+   * Import stock CSV with supplier
+   */
+  async importStockCsvWithSupplier(
+    apiKey: string,
+    file: File,
+    supplier: string
+  ): Promise<{ purchase_id: number; created: number; skipped: number; errors: string[]; touched_products: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_URL}/admin/stock/import?supplier=${encodeURIComponent(supplier)}`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-API-Key': apiKey,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al importar stock' }));
+      throw new Error(error.detail || error.message || 'Error al importar stock');
+    }
+
+    return response.json();
   },
 
   // WhatsApp Message Generator

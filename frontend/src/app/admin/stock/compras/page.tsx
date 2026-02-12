@@ -1,20 +1,22 @@
 'use client';
 
 import { useState, useRef, type ChangeEvent } from 'react';
-import { FileDown, X, Plus, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { FileDown, X, Plus, Trash2, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
 import {
-  useAllStockPurchases,
-  useAddPaymentsToPurchase,
+  usePurchases,
+  useSuppliers,
+  usePurchaseDetail,
+  useAddPaymentToPurchase,
   useDeletePayment,
+  useImportStockWithSupplier,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
 import type { StockPreviewResponse } from '@/types';
-import { useQueryClient } from '@tanstack/react-query';
 
 const PAYMENT_METHODS = [
   'Efectivo',
@@ -24,19 +26,57 @@ const PAYMENT_METHODS = [
   'MercadoPago',
 ];
 
+interface Purchase {
+  id: number;
+  supplier: string;
+  purchase_date: string;
+  notes: string | null;
+  total_amount: number;
+  total_paid: number;
+  item_count: number;
+  created_at: string;
+}
+
+interface PurchaseDetail {
+  id: number;
+  supplier: string;
+  purchase_date: string;
+  notes: string | null;
+  total_amount: number;
+  total_paid: number;
+  created_at: string;
+  items: Array<{
+    id: number;
+    product_id: number | null;
+    product_name: string | null;
+    description: string | null;
+    code: string | null;
+    quantity: number;
+    unit_price: number;
+    total_amount: number;
+  }>;
+  payments: Array<{
+    id: number;
+    payer: string;
+    amount: number;
+    payment_method: string;
+    created_at: string;
+  }>;
+}
+
 export default function ComprasPage() {
   const apiKey = useApiKey() || '';
-  const queryClient = useQueryClient();
 
   // Filters
   const [page, setPage] = useState(1);
-  const [payer, setPayer] = useState<string>('');
+  const [supplier, setSupplier] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   // Import state
   const [isImportingStock, setIsImportingStock] = useState(false);
   const [stockImportResult, setStockImportResult] = useState<{
+    purchase_id: number;
     created: number;
     skipped: number;
     errors: string[];
@@ -45,40 +85,34 @@ export default function ComprasPage() {
   const [stockPreview, setStockPreview] = useState<StockPreviewResponse | null>(null);
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
   const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
+  const [importSupplier, setImportSupplier] = useState('');
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
   const stockFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Multi-selection state
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [showBulkPaymentModal, setShowBulkPaymentModal] = useState(false);
-  const [isAddingBulkPayment, setIsAddingBulkPayment] = useState(false);
+  // Detail modal state
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Payment form state
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState(PAYMENT_METHODS[0]);
 
-  // Expanded rows for inline view
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-
   // Data hooks
-  const { data: purchasesData, isLoading } = useAllStockPurchases(apiKey, {
+  const { data: purchasesData, isLoading } = usePurchases(apiKey, {
     page,
-    limit: 50,
-    payer: payer || undefined,
+    limit: 20,
+    supplier: supplier || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
   });
 
+  const { data: suppliersData } = useSuppliers(apiKey);
+  const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchaseDetail(apiKey, selectedPurchaseId);
+  const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
-
-  // Calculate selected totals
-  const selectedPurchases = purchasesData?.items.filter((p: any) => selectedIds.includes(p.id)) || [];
-  const selectedTotal = selectedPurchases.reduce((sum: number, p: any) => sum + parseFloat(p.total_amount), 0);
-  const selectedPaidTotal = selectedPurchases.reduce((sum: number, p: any) => {
-    const paid = p.payments?.reduce((s: number, pay: any) => s + parseFloat(pay.amount), 0) || 0;
-    return sum + paid;
-  }, 0);
-  const selectedPending = selectedTotal - selectedPaidTotal;
+  const importStock = useImportStockWithSupplier(apiKey);
 
   // Import handlers
   const handleImportStockClick = () => {
@@ -95,8 +129,10 @@ export default function ComprasPage() {
       setStockPreview(preview);
       setStockPreviewPage(1);
       setStockPreviewFile(file);
+      setShowSupplierModal(true);
     } catch (error) {
       setStockImportResult({
+        purchase_id: 0,
         created: 0,
         skipped: 0,
         errors: [error instanceof Error ? error.message : 'Error al importar stock'],
@@ -111,15 +147,21 @@ export default function ComprasPage() {
   };
 
   const handleConfirmImport = async () => {
-    if (!stockPreviewFile) return;
+    if (!stockPreviewFile || !importSupplier.trim()) return;
     setIsImportingStock(true);
     try {
-      const result = await adminApi.importStockCsv(apiKey, stockPreviewFile);
+      const result = await importStock.mutateAsync({
+        file: stockPreviewFile,
+        supplier: importSupplier.trim(),
+      });
       setStockImportResult(result);
       setStockPreview(null);
       setStockPreviewFile(null);
+      setShowSupplierModal(false);
+      setImportSupplier('');
     } catch (error) {
       setStockImportResult({
+        purchase_id: 0,
         created: 0,
         skipped: 0,
         errors: [error instanceof Error ? error.message : 'Error al importar stock'],
@@ -144,88 +186,61 @@ export default function ComprasPage() {
     document.body.removeChild(a);
   };
 
-  const handleAddBulkPayment = async () => {
-    if (selectedIds.length === 0 || !newPaymentAmount) return;
-    const totalAmount = parseFloat(newPaymentAmount);
-    if (isNaN(totalAmount) || totalAmount <= 0) return;
+  const handleAddPayment = async () => {
+    if (!selectedPurchaseId || !newPaymentAmount) return;
+    const amount = parseFloat(newPaymentAmount);
+    if (isNaN(amount) || amount <= 0) return;
 
-    setIsAddingBulkPayment(true);
     try {
-      // Distribute payment proportionally across selected purchases
-      for (const purchase of selectedPurchases) {
-        const purchaseTotal = parseFloat(purchase.total_amount);
-        const proportion = purchaseTotal / selectedTotal;
-        const paymentAmount = Math.round(totalAmount * proportion * 100) / 100;
-
-        if (paymentAmount > 0) {
-          await adminApi.addPaymentsToPurchase(apiKey, purchase.id, [
-            {
-              payer: newPaymentPayer,
-              amount: paymentAmount,
-              payment_method: newPaymentMethod,
-            },
-          ]);
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['all-stock-purchases'] });
-      queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
-      setShowBulkPaymentModal(false);
-      setSelectedIds([]);
+      await addPayment.mutateAsync({
+        purchaseId: selectedPurchaseId,
+        payment: {
+          payer: newPaymentPayer,
+          amount,
+          payment_method: newPaymentMethod,
+        },
+      });
+      setShowPaymentForm(false);
       setNewPaymentAmount('');
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al agregar pagos');
-    } finally {
-      setIsAddingBulkPayment(false);
+      alert(error instanceof Error ? error.message : 'Error al agregar pago');
     }
   };
 
-  const handleDeletePayment = async (purchaseId: number, paymentId: number) => {
-    if (!confirm('¿Eliminar este pago?')) return;
-    await deletePayment.mutateAsync({ purchaseId, paymentId });
+  const handleDeletePayment = async (paymentId: number) => {
+    if (!selectedPurchaseId || !confirm('¿Eliminar este pago?')) return;
+    await deletePayment.mutateAsync({ purchaseId: selectedPurchaseId, paymentId });
   };
 
-  const toggleSelection = (purchaseId: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(purchaseId)
-        ? prev.filter((id) => id !== purchaseId)
-        : [...prev, purchaseId]
-    );
+  const openDetailModal = (purchaseId: number) => {
+    setSelectedPurchaseId(purchaseId);
+    setShowDetailModal(true);
+    setShowPaymentForm(false);
   };
 
-  const toggleSelectAll = () => {
-    if (!purchasesData) return;
-    const allIds = purchasesData.items.map((p: any) => p.id);
-    if (selectedIds.length === allIds.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(allIds);
-    }
-  };
-
-  const toggleRowExpand = (purchaseId: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(purchaseId)) {
-      newExpanded.delete(purchaseId);
-    } else {
-      newExpanded.add(purchaseId);
-    }
-    setExpandedRows(newExpanded);
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedPurchaseId(null);
+    setShowPaymentForm(false);
+    setNewPaymentAmount('');
   };
 
   const clearFilters = () => {
-    setPayer('');
+    setSupplier('');
     setDateFrom('');
     setDateTo('');
     setPage(1);
   };
 
+  const detail = purchaseDetail as PurchaseDetail | undefined;
+  const remaining = detail ? detail.total_amount - detail.total_paid : 0;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Compras de Stock</h1>
-          <p className="text-gray-600">Importa compras desde CSV y registra pagos.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Compras</h1>
+          <p className="text-gray-600">Importa compras desde CSV y registra pagos por mayorista.</p>
         </div>
         <Button onClick={handleImportStockClick} disabled={isImportingStock}>
           <FileDown className="mr-2 h-4 w-4" />
@@ -245,18 +260,21 @@ export default function ComprasPage() {
       <div className="bg-white rounded-lg border p-4">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pagador</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mayorista</label>
             <select
-              value={payer}
+              value={supplier}
               onChange={(e) => {
-                setPayer(e.target.value);
+                setSupplier(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500 min-w-[150px]"
             >
               <option value="">Todos</option>
-              <option value="Facu">Facu</option>
-              <option value="Heber">Heber</option>
+              {suppliersData?.suppliers.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -283,7 +301,7 @@ export default function ComprasPage() {
               className="w-40"
             />
           </div>
-          {(payer || dateFrom || dateTo) && (
+          {(supplier || dateFrom || dateTo) && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="h-4 w-4 mr-1" />
               Limpiar
@@ -291,47 +309,6 @@ export default function ComprasPage() {
           )}
         </div>
       </div>
-
-      {/* Selection bar */}
-      {selectedIds.length > 0 && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-blue-900">
-                <Check className="h-5 w-5" />
-                <span className="font-medium">{selectedIds.length} compras seleccionadas</span>
-              </div>
-              <div className="text-sm text-blue-700">
-                <span>Total: <strong>{formatPrice(selectedTotal)}</strong></span>
-                <span className="mx-2">|</span>
-                <span>Pagado: <strong className="text-green-700">{formatPrice(selectedPaidTotal)}</strong></span>
-                <span className="mx-2">|</span>
-                <span>Pendiente: <strong className={selectedPending > 0 ? 'text-red-600' : 'text-gray-600'}>{formatPrice(selectedPending)}</strong></span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => {
-                  setNewPaymentAmount(selectedPending > 0 ? selectedPending.toFixed(2) : '');
-                  setShowBulkPaymentModal(true);
-                }}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Registrar pago
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedIds([])}
-                className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Purchases table */}
       <div className="bg-white rounded-lg border">
@@ -352,165 +329,54 @@ export default function ComprasPage() {
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left w-10">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === purchasesData.items.length && purchasesData.items.length > 0}
-                      onChange={toggleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-8"></th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pagos</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mayorista</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pendiente</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {purchasesData.items.map((purchase) => {
-                  const isExpanded = expandedRows.has(purchase.id);
-                  const isSelected = selectedIds.includes(purchase.id);
-                  const totalPaid = purchase.payments?.reduce(
-                    (sum: number, p: any) => sum + parseFloat(p.amount),
-                    0
-                  ) || 0;
-                  const remaining = parseFloat(purchase.total_amount) - totalPaid;
-
+                {purchasesData.items.map((purchase: Purchase) => {
+                  const pendingAmount = purchase.total_amount - purchase.total_paid;
                   return (
-                    <>
-                      <tr
-                        key={purchase.id}
-                        className={`hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelection(purchase.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-3 py-2" onClick={() => toggleRowExpand(purchase.id)}>
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </td>
-                        <td className="px-3 py-2" onClick={() => toggleRowExpand(purchase.id)}>{formatDate(purchase.purchase_date)}</td>
-                        <td className="px-3 py-2" onClick={() => toggleRowExpand(purchase.id)}>
-                          <div className="font-medium text-gray-900 line-clamp-1">
-                            {purchase.product_name || purchase.description || '-'}
-                          </div>
-                          <div className="text-xs text-gray-500">{purchase.code || '-'}</div>
-                        </td>
-                        <td className="px-3 py-2 text-right" onClick={() => toggleRowExpand(purchase.id)}>{purchase.quantity}</td>
-                        <td className="px-3 py-2 text-right" onClick={() => toggleRowExpand(purchase.id)}>
-                          <div className="font-medium">{formatPrice(purchase.total_amount)}</div>
-                          {remaining > 0 && remaining < parseFloat(purchase.total_amount) && (
-                            <div className="text-xs text-amber-600">Pend: {formatPrice(remaining)}</div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2" onClick={() => toggleRowExpand(purchase.id)}>
-                          {purchase.payments?.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {purchase.payments.map((p: any) => (
-                                <span
-                                  key={p.id}
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    p.payer === 'Facu'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-green-100 text-green-800'
-                                  }`}
-                                >
-                                  {p.payer}: {formatPrice(p.amount)}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">Sin pagos</span>
-                          )}
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr key={`${purchase.id}-detail`}>
-                          <td colSpan={8} className="bg-gray-50 px-6 py-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Purchase info */}
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Detalle de compra</h4>
-                                <dl className="text-sm space-y-1">
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Precio unitario:</dt>
-                                    <dd className="font-medium">{formatPrice(purchase.unit_price)}</dd>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Cantidad:</dt>
-                                    <dd className="font-medium">{purchase.quantity}</dd>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Total:</dt>
-                                    <dd className="font-medium">{formatPrice(purchase.total_amount)}</dd>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Pagado:</dt>
-                                    <dd className="font-medium text-green-600">{formatPrice(totalPaid)}</dd>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Pendiente:</dt>
-                                    <dd className={`font-medium ${remaining > 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                      {formatPrice(remaining)}
-                                    </dd>
-                                  </div>
-                                </dl>
-                              </div>
-                              {/* Payments */}
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Pagos registrados</h4>
-                                {purchase.payments?.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {purchase.payments.map((p: any) => (
-                                      <div
-                                        key={p.id}
-                                        className="flex items-center justify-between bg-white rounded-lg border px-3 py-2"
-                                      >
-                                        <div>
-                                          <span
-                                            className={`font-medium ${
-                                              p.payer === 'Facu' ? 'text-blue-700' : 'text-green-700'
-                                            }`}
-                                          >
-                                            {p.payer}
-                                          </span>
-                                          <span className="mx-2 text-gray-400">-</span>
-                                          <span className="text-gray-600">{p.payment_method}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-semibold">{formatPrice(p.amount)}</span>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeletePayment(purchase.id, p.id);
-                                            }}
-                                            className="text-red-500 hover:text-red-700"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-500">No hay pagos registrados.</p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
+                    <tr key={purchase.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">{formatDate(purchase.purchase_date)}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-gray-900">{purchase.supplier}</span>
+                        {purchase.notes && (
+                          <p className="text-xs text-gray-500 truncate max-w-xs">{purchase.notes}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <Package className="h-3 w-3 mr-1" />
+                          {purchase.item_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">{formatPrice(purchase.total_amount)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={purchase.total_paid > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                          {formatPrice(purchase.total_paid)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={pendingAmount > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                          {formatPrice(pendingAmount)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDetailModal(purchase.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -541,137 +407,251 @@ export default function ComprasPage() {
         )}
       </div>
 
-      {/* Bulk payment modal */}
+      {/* Purchase detail modal */}
       <Modal
-        isOpen={showBulkPaymentModal}
-        onClose={() => {
-          setShowBulkPaymentModal(false);
-          setNewPaymentAmount('');
-        }}
-        title="Registrar pago"
-        size="md"
+        isOpen={showDetailModal}
+        onClose={closeDetailModal}
+        title="Detalle de compra"
+        size="xl"
       >
         <ModalContent className="space-y-4">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-sm text-blue-800 space-y-2">
-              <div className="flex justify-between">
-                <span>Compras seleccionadas:</span>
-                <span className="font-semibold">{selectedIds.length}</span>
+          {isLoadingDetail ? (
+            <div className="py-8 text-center text-gray-500">Cargando...</div>
+          ) : detail ? (
+            <>
+              {/* Header info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Mayorista</p>
+                    <p className="font-semibold text-gray-900">{detail.supplier}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Fecha</p>
+                    <p className="font-semibold text-gray-900">{formatDate(detail.purchase_date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Total</p>
+                    <p className="font-semibold text-gray-900">{formatPrice(detail.total_amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Pendiente</p>
+                    <p className={`font-semibold ${remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatPrice(remaining)}
+                    </p>
+                  </div>
+                </div>
+                {detail.notes && (
+                  <p className="mt-3 text-sm text-gray-600 border-t pt-3">{detail.notes}</p>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span>Total de compras:</span>
-                <span className="font-semibold">{formatPrice(selectedTotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Ya pagado:</span>
-                <span className="font-semibold text-green-700">{formatPrice(selectedPaidTotal)}</span>
-              </div>
-              <div className="flex justify-between border-t border-blue-200 pt-2">
-                <span>Pendiente:</span>
-                <span className={`font-bold ${selectedPending > 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                  {formatPrice(selectedPending)}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          <p className="text-sm text-gray-600">
-            El monto ingresado se distribuirá proporcionalmente entre las compras seleccionadas.
-          </p>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Pagador</label>
-              <select
-                value={newPaymentPayer}
-                onChange={(e) => setNewPaymentPayer(e.target.value as 'Facu' | 'Heber')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="Facu">Facu</option>
-                <option value="Heber">Heber</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Monto total</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={newPaymentAmount}
-                onChange={(e) => setNewPaymentAmount(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Método</label>
-              <select
-                value={newPaymentMethod}
-                onChange={(e) => setNewPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-              >
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Preview distribution */}
-          {newPaymentAmount && parseFloat(newPaymentAmount) > 0 && (
-            <div className="border rounded-lg">
-              <div className="px-3 py-2 border-b bg-gray-50 text-sm font-medium text-gray-700">
-                Vista previa de distribución
+              {/* Items */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Items ({detail.items.length})</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P.Unit</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {detail.items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-3 py-2">
+                            <div className="font-medium text-gray-900">
+                              {item.product_name || item.description || '-'}
+                            </div>
+                            {item.code && (
+                              <div className="text-xs text-gray-500">{item.code}</div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right">{item.quantity}</td>
+                          <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                          <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="max-h-48 overflow-y-auto">
-                {selectedPurchases.map((purchase: any) => {
-                  const proportion = parseFloat(purchase.total_amount) / selectedTotal;
-                  const paymentAmount = Math.round(parseFloat(newPaymentAmount) * proportion * 100) / 100;
-                  return (
-                    <div key={purchase.id} className="px-3 py-2 text-sm border-b last:border-b-0 flex justify-between">
-                      <span className="text-gray-600 truncate max-w-[60%]">
-                        {purchase.product_name || purchase.description || `Compra #${purchase.id}`}
-                      </span>
-                      <span className="font-medium">{formatPrice(paymentAmount)}</span>
+
+              {/* Payments */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Pagos</h3>
+                  {!showPaymentForm && (
+                    <Button size="sm" variant="outline" onClick={() => setShowPaymentForm(true)}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar pago
+                    </Button>
+                  )}
+                </div>
+
+                {/* Payment form */}
+                {showPaymentForm && (
+                  <div className="border rounded-lg p-4 mb-3 bg-blue-50">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Pagador</label>
+                        <select
+                          value={newPaymentPayer}
+                          onChange={(e) => setNewPaymentPayer(e.target.value as 'Facu' | 'Heber')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                        >
+                          <option value="Facu">Facu</option>
+                          <option value="Heber">Heber</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder={remaining > 0 ? remaining.toFixed(2) : '0.00'}
+                          value={newPaymentAmount}
+                          onChange={(e) => setNewPaymentAmount(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Método</label>
+                        <select
+                          value={newPaymentMethod}
+                          onChange={(e) => setNewPaymentMethod(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                        >
+                          {PAYMENT_METHODS.map((method) => (
+                            <option key={method} value={method}>
+                              {method}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  );
-                })}
+                    <div className="flex justify-end gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowPaymentForm(false);
+                          setNewPaymentAmount('');
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleAddPayment}
+                        disabled={!newPaymentAmount || addPayment.isPending}
+                        isLoading={addPayment.isPending}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payments list */}
+                {detail.payments.length > 0 ? (
+                  <div className="space-y-2">
+                    {detail.payments.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between bg-white rounded-lg border px-4 py-3"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              p.payer === 'Facu'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {p.payer}
+                          </span>
+                          <span className="text-gray-600 text-sm">{p.payment_method}</span>
+                          <span className="text-xs text-gray-400">{formatDate(p.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-gray-900">{formatPrice(p.amount)}</span>
+                          <button
+                            onClick={() => handleDeletePayment(p.id)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            disabled={deletePayment.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 py-4 text-center border rounded-lg bg-gray-50">
+                    No hay pagos registrados.
+                  </p>
+                )}
+
+                {/* Summary */}
+                <div className="mt-4 pt-4 border-t flex justify-end gap-6 text-sm">
+                  <div>
+                    <span className="text-gray-500">Total pagado:</span>
+                    <span className="ml-2 font-semibold text-green-600">{formatPrice(detail.total_paid)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Pendiente:</span>
+                    <span className={`ml-2 font-semibold ${remaining > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                      {formatPrice(remaining)}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+            </>
+          ) : (
+            <div className="py-8 text-center text-gray-500">Error al cargar la compra.</div>
           )}
         </ModalContent>
         <ModalFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowBulkPaymentModal(false);
-              setNewPaymentAmount('');
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleAddBulkPayment}
-            disabled={!newPaymentAmount || isAddingBulkPayment}
-            isLoading={isAddingBulkPayment}
-          >
-            Registrar pago
+          <Button variant="outline" onClick={closeDetailModal}>
+            Cerrar
           </Button>
         </ModalFooter>
       </Modal>
 
-      {/* Import preview / result modal */}
+      {/* Supplier input modal (before confirming import) */}
       <Modal
-        isOpen={!!stockPreview || !!stockImportResult}
+        isOpen={showSupplierModal && !!stockPreview}
         onClose={() => {
+          setShowSupplierModal(false);
           setStockPreview(null);
-          setStockImportResult(null);
           setStockPreviewFile(null);
+          setImportSupplier('');
         }}
-        title={stockPreview ? 'Previsualización de importación de stock' : 'Resumen de importación de stock'}
+        title="Importar compra"
         size="xl"
       >
         <ModalContent className="space-y-4">
+          {/* Supplier input */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre del mayorista *
+            </label>
+            <Input
+              type="text"
+              placeholder="Ej: Distribuidora XYZ"
+              value={importSupplier}
+              onChange={(e) => setImportSupplier(e.target.value)}
+              className="max-w-md"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Este nombre se usará para agrupar todos los items de esta importación.
+            </p>
+          </div>
+
+          {/* Preview summary */}
           {stockPreview && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -708,7 +688,6 @@ export default function ComprasPage() {
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Errores</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -731,41 +710,75 @@ export default function ComprasPage() {
                             {row.status === 'error' && <span className="text-red-600 font-medium">Error</span>}
                             {row.status === 'unmatched' && <span className="text-slate-600 font-medium">Sin match</span>}
                           </td>
-                          <td className="px-3 py-2 text-xs text-gray-600">
-                            {row.errors?.length ? row.errors.join('; ') : '-'}
-                          </td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">
-                  Página {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStockPreviewPage(Math.max(1, stockPreviewPage - 1))}
-                    disabled={stockPreviewPage === 1}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setStockPreviewPage(Math.min(Math.ceil(stockPreview.rows.length / 50), stockPreviewPage + 1))
-                    }
-                    disabled={stockPreviewPage >= Math.ceil(stockPreview.rows.length / 50)}
-                  >
-                    Siguiente
-                  </Button>
+              {stockPreview.rows.length > 50 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    Página {stockPreviewPage} de {Math.max(1, Math.ceil(stockPreview.rows.length / 50))}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStockPreviewPage(Math.max(1, stockPreviewPage - 1))}
+                      disabled={stockPreviewPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setStockPreviewPage(Math.min(Math.ceil(stockPreview.rows.length / 50), stockPreviewPage + 1))
+                      }
+                      disabled={stockPreviewPage >= Math.ceil(stockPreview.rows.length / 50)}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowSupplierModal(false);
+              setStockPreview(null);
+              setStockPreviewFile(null);
+              setImportSupplier('');
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmImport}
+            disabled={
+              !importSupplier.trim() ||
+              !stockPreview ||
+              (stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 ||
+              isImportingStock
+            }
+            isLoading={isImportingStock}
+          >
+            Confirmar importación
+          </Button>
+        </ModalFooter>
+      </Modal>
 
+      {/* Import result modal */}
+      <Modal
+        isOpen={!!stockImportResult}
+        onClose={() => setStockImportResult(null)}
+        title="Resumen de importación"
+        size="md"
+      >
+        <ModalContent className="space-y-4">
           {stockImportResult && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -782,6 +795,26 @@ export default function ComprasPage() {
                   <p className="text-xl font-semibold text-gray-900">{stockImportResult.errors?.length || 0}</p>
                 </div>
               </div>
+
+              {stockImportResult.purchase_id > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <p className="text-green-700">
+                    Compra creada con ID: <strong>#{stockImportResult.purchase_id}</strong>
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      openDetailModal(stockImportResult.purchase_id);
+                      setStockImportResult(null);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver compra
+                  </Button>
+                </div>
+              )}
 
               {stockImportResult.errors?.length > 0 && (
                 <div className="border rounded-lg">
@@ -801,29 +834,12 @@ export default function ComprasPage() {
           )}
         </ModalContent>
         <ModalFooter>
-          {stockPreview ? (
-            <>
-              <Button variant="outline" onClick={() => setStockPreview(null)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmImport}
-                disabled={(stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 || isImportingStock}
-                isLoading={isImportingStock}
-              >
-                Confirmar importación
-              </Button>
-            </>
-          ) : (
-            <>
-              {stockImportResult?.errors?.length ? (
-                <Button variant="outline" onClick={handleDownloadErrors}>
-                  Descargar errores
-                </Button>
-              ) : null}
-              <Button onClick={() => setStockImportResult(null)}>Cerrar</Button>
-            </>
-          )}
+          {stockImportResult?.errors?.length ? (
+            <Button variant="outline" onClick={handleDownloadErrors}>
+              Descargar errores
+            </Button>
+          ) : null}
+          <Button onClick={() => setStockImportResult(null)}>Cerrar</Button>
         </ModalFooter>
       </Modal>
     </div>

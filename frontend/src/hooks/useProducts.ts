@@ -454,50 +454,59 @@ export function useSourceWebsites(apiKey: string) {
 }
 
 // ============================================
-// Stock Purchases with Payments Hooks
+// Purchases with Payments Hooks
 // ============================================
 
-export function useAllStockPurchases(
+export function usePurchases(
   apiKey: string,
   params: {
     page?: number;
     limit?: number;
-    payer?: string;
+    supplier?: string;
     date_from?: string;
     date_to?: string;
     product_id?: number;
   } = {}
 ) {
   return useQuery({
-    queryKey: ['all-stock-purchases', params],
-    queryFn: () => adminApi.getAllStockPurchases(apiKey, params),
+    queryKey: ['purchases', params],
+    queryFn: () => adminApi.getPurchases(apiKey, params),
     staleTime: 30 * 1000,
     enabled: !!apiKey,
   });
 }
 
-export function useStockPurchaseDetail(apiKey: string, purchaseId: number | null) {
+export function useSuppliers(apiKey: string) {
   return useQuery({
-    queryKey: ['stock-purchase-detail', purchaseId],
-    queryFn: () => adminApi.getStockPurchaseDetail(apiKey, purchaseId!),
+    queryKey: ['suppliers'],
+    queryFn: () => adminApi.getSuppliers(apiKey),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function usePurchaseDetail(apiKey: string, purchaseId: number | null) {
+  return useQuery({
+    queryKey: ['purchase-detail', purchaseId],
+    queryFn: () => adminApi.getPurchaseDetail(apiKey, purchaseId!),
     staleTime: 30 * 1000,
     enabled: !!apiKey && !!purchaseId,
   });
 }
 
-export function useAddPaymentsToPurchase(apiKey: string) {
+export function useAddPaymentToPurchase(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       purchaseId,
-      payments,
+      payment,
     }: {
       purchaseId: number;
-      payments: Array<{ payer: 'Facu' | 'Heber'; amount: number; payment_method: string }>;
-    }) => adminApi.addPaymentsToPurchase(apiKey, purchaseId, payments),
+      payment: { payer: 'Facu' | 'Heber'; amount: number; payment_method: string };
+    }) => adminApi.addPaymentToPurchase(apiKey, purchaseId, payment),
     onSuccess: (_, { purchaseId }) => {
-      queryClient.invalidateQueries({ queryKey: ['stock-purchase-detail', purchaseId] });
-      queryClient.invalidateQueries({ queryKey: ['all-stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-detail', purchaseId] });
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
     },
   });
@@ -509,8 +518,8 @@ export function useDeletePayment(apiKey: string) {
     mutationFn: ({ purchaseId, paymentId }: { purchaseId: number; paymentId: number }) =>
       adminApi.deletePayment(apiKey, purchaseId, paymentId),
     onSuccess: (_, { purchaseId }) => {
-      queryClient.invalidateQueries({ queryKey: ['stock-purchase-detail', purchaseId] });
-      queryClient.invalidateQueries({ queryKey: ['all-stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-detail', purchaseId] });
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
     },
   });
@@ -522,5 +531,19 @@ export function usePurchasesByPayer(apiKey: string) {
     queryFn: () => adminApi.getPurchasesByPayer(apiKey),
     staleTime: 30 * 1000,
     enabled: !!apiKey,
+  });
+}
+
+export function useImportStockWithSupplier(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ file, supplier }: { file: File; supplier: string }) =>
+      adminApi.importStockCsvWithSupplier(apiKey, file, supplier),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
   });
 }

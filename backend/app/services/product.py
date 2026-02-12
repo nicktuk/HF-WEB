@@ -242,13 +242,33 @@ class ProductService:
             .first()
         )
 
-    def import_stock_csv(self, csv_bytes: bytes) -> dict:
-        """Import stock purchases from CSV bytes."""
+    def import_stock_csv(self, csv_bytes: bytes, supplier: str) -> dict:
+        """Import stock purchases from CSV bytes, creating a Purchase."""
+        from app.models.stock import Purchase
+
         rows = self.preview_stock_csv(csv_bytes)["rows"]
         created = 0
         skipped = 0
         errors: list[str] = []
         touched_products: set[int] = set()
+
+        # Get common purchase date from first valid row
+        purchase_date = None
+        for row in rows:
+            if row.get("purchase_date"):
+                purchase_date = row["purchase_date"]
+                break
+
+        if not purchase_date:
+            purchase_date = date.today()
+
+        # Create the Purchase first
+        purchase = Purchase(
+            supplier=supplier,
+            purchase_date=purchase_date,
+        )
+        self.db.add(purchase)
+        self.db.flush()  # Get the ID
 
         for row in rows:
             if row["status"] == "duplicate":
@@ -258,17 +278,18 @@ class ProductService:
                 errors.append(f"Fila {row['row_number']}: {', '.join(row['errors'])}")
                 continue
 
-            purchase = StockPurchase(
+            item = StockPurchase(
+                purchase_id=purchase.id,
                 product_id=row["product_id"],
                 description=row.get("description") or None,
                 code=row.get("code"),
-                purchase_date=row["purchase_date"],
+                purchase_date=row["purchase_date"] or purchase_date,
                 unit_price=row["unit_price"],
                 quantity=row["quantity"],
                 total_amount=row["total_amount"],
                 out_quantity=0,
             )
-            self.db.add(purchase)
+            self.db.add(item)
             if row["product_id"]:
                 touched_products.add(row["product_id"])
             created += 1
@@ -291,6 +312,7 @@ class ProductService:
             cache.invalidate_all_products()
 
         return {
+            "purchase_id": purchase.id,
             "created": created,
             "skipped": skipped,
             "errors": errors,
@@ -1776,82 +1798,39 @@ class ProductService:
         return count
 
     # ==========================================
-    # Stock Purchase Payments Methods
+    # Purchase & Payment Methods
     # ==========================================
 
-    def get_purchase_detail(self, purchase_id: int) -> StockPurchase:
-        """Get a stock purchase with payments and product name."""
-        from app.models.stock import StockPurchasePayment
-        purchase = (
-            self.db.query(StockPurchase)
-            .filter(StockPurchase.id == purchase_id)
-            .first()
-        )
-        if not purchase:
-            raise NotFoundError("StockPurchase", str(purchase_id))
-        return purchase
-
-    def add_payments_to_purchase(self, purchase_id: int, payments: list) -> StockPurchase:
-        """Add payments to a stock purchase."""
-        from app.models.stock import StockPurchasePayment
-
-        purchase = self.db.query(StockPurchase).filter(StockPurchase.id == purchase_id).first()
-        if not purchase:
-            raise NotFoundError("StockPurchase", str(purchase_id))
-
-        for payment_data in payments:
-            payment = StockPurchasePayment(
-                stock_purchase_id=purchase_id,
-                payer=payment_data.payer,
-                amount=payment_data.amount,
-                payment_method=payment_data.payment_method,
-            )
-            self.db.add(payment)
-
-        self.db.commit()
-        self.db.refresh(purchase)
-        return purchase
-
-    def delete_payment(self, payment_id: int) -> None:
-        """Delete a payment from a stock purchase."""
-        from app.models.stock import StockPurchasePayment
-
-        payment = self.db.query(StockPurchasePayment).filter(StockPurchasePayment.id == payment_id).first()
-        if not payment:
-            raise NotFoundError("StockPurchasePayment", str(payment_id))
-
-        self.db.delete(payment)
-        self.db.commit()
-
-    def get_all_purchases(
+    def get_purchases(
         self,
         page: int = 1,
         limit: int = 50,
-        payer: Optional[str] = None,
+        supplier: Optional[str] = None,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
         product_id: Optional[int] = None,
-    ) -> Tuple[List[StockPurchase], int]:
-        """Get all stock purchases with filters and pagination."""
-        from app.models.stock import StockPurchasePayment
+    ) -> Tuple[list, int]:
+        """Get all purchases with filters and pagination."""
+        from app.models.stock import Purchase
 
-        query = self.db.query(StockPurchase)
+        query = self.db.query(Purchase)
 
-        if product_id is not None:
-            query = query.filter(StockPurchase.product_id == product_id)
+        if supplier:
+            query = query.filter(Purchase.supplier.ilike(f"%{supplier}%"))
 
         if date_from:
-            query = query.filter(StockPurchase.purchase_date >= date_from)
+            query = query.filter(Purchase.purchase_date >= date_from)
 
         if date_to:
-            query = query.filter(StockPurchase.purchase_date <= date_to)
+            query = query.filter(Purchase.purchase_date <= date_to)
 
-        if payer:
-            # Filter purchases that have at least one payment from this payer
+        if product_id:
+            # Filter purchases that contain this product
             query = query.filter(
-                StockPurchase.id.in_(
-                    self.db.query(StockPurchasePayment.stock_purchase_id)
-                    .filter(StockPurchasePayment.payer == payer)
+                Purchase.id.in_(
+                    self.db.query(StockPurchase.purchase_id)
+                    .filter(StockPurchase.product_id == product_id)
+                    .distinct()
                 )
             )
 
@@ -1859,7 +1838,7 @@ class ProductService:
 
         purchases = (
             query
-            .order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc())
+            .order_by(Purchase.purchase_date.desc(), Purchase.id.desc())
             .offset((page - 1) * limit)
             .limit(limit)
             .all()
@@ -1867,29 +1846,73 @@ class ProductService:
 
         return purchases, total
 
+    def get_purchase_detail(self, purchase_id: int):
+        """Get a purchase with items and payments."""
+        from app.models.stock import Purchase
+
+        purchase = (
+            self.db.query(Purchase)
+            .filter(Purchase.id == purchase_id)
+            .first()
+        )
+        if not purchase:
+            raise NotFoundError("Purchase", str(purchase_id))
+        return purchase
+
+    def add_payment_to_purchase(self, purchase_id: int, payer: str, amount: Decimal, payment_method: str):
+        """Add a payment to a purchase."""
+        from app.models.stock import Purchase, PurchasePayment
+
+        purchase = self.db.query(Purchase).filter(Purchase.id == purchase_id).first()
+        if not purchase:
+            raise NotFoundError("Purchase", str(purchase_id))
+
+        payment = PurchasePayment(
+            purchase_id=purchase_id,
+            payer=payer,
+            amount=amount,
+            payment_method=payment_method,
+        )
+        self.db.add(payment)
+        self.db.commit()
+        self.db.refresh(purchase)
+        return purchase
+
+    def delete_payment(self, payment_id: int) -> None:
+        """Delete a payment from a purchase."""
+        from app.models.stock import PurchasePayment
+
+        payment = self.db.query(PurchasePayment).filter(PurchasePayment.id == payment_id).first()
+        if not payment:
+            raise NotFoundError("PurchasePayment", str(payment_id))
+
+        self.db.delete(payment)
+        self.db.commit()
+
     def get_purchases_by_payer(self) -> dict:
         """Get total purchases grouped by payer for dashboard."""
-        from app.models.stock import StockPurchasePayment
+        from app.models.stock import Purchase, PurchasePayment
 
-        # Total without payments assigned
-        total_without_payment = (
+        # Total of all purchases
+        total_purchases = (
             self.db.query(func.coalesce(func.sum(StockPurchase.total_amount), 0))
-            .filter(
-                ~StockPurchase.id.in_(
-                    self.db.query(StockPurchasePayment.stock_purchase_id).distinct()
-                )
-            )
+            .scalar()
+        )
+
+        # Total paid
+        total_paid = (
+            self.db.query(func.coalesce(func.sum(PurchasePayment.amount), 0))
             .scalar()
         )
 
         # Total by payer
         by_payer = (
             self.db.query(
-                StockPurchasePayment.payer,
-                func.sum(StockPurchasePayment.amount).label("total_amount"),
-                func.count(StockPurchasePayment.id).label("payment_count"),
+                PurchasePayment.payer,
+                func.sum(PurchasePayment.amount).label("total_amount"),
+                func.count(PurchasePayment.id).label("payment_count"),
             )
-            .group_by(StockPurchasePayment.payer)
+            .group_by(PurchasePayment.payer)
             .all()
         )
 
@@ -1902,7 +1925,19 @@ class ProductService:
                 }
                 for row in by_payer
             ],
-            "without_payment": float(total_without_payment or 0),
+            "without_payment": float(total_purchases or 0) - float(total_paid or 0),
         }
 
         return result
+
+    def get_suppliers(self) -> List[str]:
+        """Get unique list of suppliers."""
+        from app.models.stock import Purchase
+
+        suppliers = (
+            self.db.query(Purchase.supplier)
+            .distinct()
+            .order_by(Purchase.supplier)
+            .all()
+        )
+        return [s[0] for s in suppliers]
