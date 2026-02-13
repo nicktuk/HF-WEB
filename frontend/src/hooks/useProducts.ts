@@ -201,13 +201,12 @@ export function useUpdateSale(apiKey: string) {
       data: {
         delivered?: boolean;
         paid?: boolean;
-        delivered_amount?: number;
         paid_amount?: number;
         customer_name?: string;
         notes?: string;
         installments?: number;
         seller?: 'Facu' | 'Heber';
-        items?: Array<{ product_id: number; quantity: number; unit_price: number }>;
+        items?: Array<{ product_id: number; quantity: number; unit_price: number; delivered_quantity?: number }>;
       };
     }) =>
       adminApi.updateSale(apiKey, saleId, data),

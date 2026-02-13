@@ -303,6 +303,7 @@ export interface SaleItemCreate {
   product_id: number;
   quantity: number;
   unit_price: number;
+  delivered_quantity?: number;
 }
 
 export interface SaleCreateForm {
@@ -312,7 +313,6 @@ export interface SaleCreateForm {
   seller: 'Facu' | 'Heber';
   delivered: boolean;
   paid: boolean;
-  delivered_amount?: number;
   paid_amount?: number;
   items: SaleItemCreate[];
 }

@@ -1,5 +1,5 @@
 """Service for Sales operations."""
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -79,16 +79,20 @@ class SalesService:
         if remaining > 0:
             raise ValidationError("No se pudo revertir el stock completo")
 
-    def _normalize_items(self, raw_items) -> tuple[list[dict], Decimal]:
+    def _normalize_items(self, raw_items, force_delivered: bool | None = None) -> tuple[list[dict], Decimal]:
         if not raw_items:
             raise ValidationError("La venta debe tener items")
 
         items: list[dict] = []
         total_amount = Decimal("0")
+        seen_products: set[int] = set()
         for item in raw_items:
             product = self.db.query(Product).filter(Product.id == item.product_id).first()
             if not product:
                 raise NotFoundError("Product", str(item.product_id))
+            if product.id in seen_products:
+                raise ValidationError("No se permite repetir el mismo producto en la venta")
+            seen_products.add(product.id)
 
             qty = int(item.quantity)
             if qty <= 0:
@@ -97,10 +101,15 @@ class SalesService:
             if unit_price <= 0:
                 raise ValidationError("El precio unitario debe ser mayor a 0")
             total_price = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
+            delivered_qty_raw = item.delivered_quantity if getattr(item, "delivered_quantity", None) is not None else None
+            delivered_qty = qty if force_delivered is True else 0 if force_delivered is False else int(delivered_qty_raw or 0)
+            if delivered_qty < 0 or delivered_qty > qty:
+                raise ValidationError("La cantidad entregada debe estar entre 0 y la cantidad del item")
 
             items.append({
                 "product_id": product.id,
                 "quantity": qty,
+                "delivered_quantity": delivered_qty,
                 "unit_price": unit_price,
                 "total_price": total_price,
             })
@@ -115,35 +124,30 @@ class SalesService:
             return total
         return amount.quantize(Decimal("0.01"))
 
-    def _build_delivery_targets(self, sale: Sale, requested_amount: Decimal) -> tuple[dict[int, int], Decimal]:
-        items = list(sale.items)
-        total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
-        target_amount = self._clamp_amount(requested_amount, total)
-        remaining = target_amount
-        targets: dict[int, int] = {}
-        actual_amount = Decimal("0.00")
-
-        for item in items:
-            unit_price = Decimal(str(item.unit_price or 0))
-            if unit_price <= 0:
-                targets[item.id] = 0
-                continue
-            max_qty = int(item.quantity or 0)
-            affordable = int((remaining / unit_price).to_integral_value(rounding=ROUND_DOWN))
-            qty = min(max_qty, max(0, affordable))
-            targets[item.id] = qty
-            line_amount = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
-            actual_amount += line_amount
-            remaining -= line_amount
-
-        return targets, actual_amount.quantize(Decimal("0.01"))
-
-    def _apply_delivery_amount(self, sale: Sale, requested_amount: Decimal) -> None:
-        targets, effective_amount = self._build_delivery_targets(sale, requested_amount)
+    def _sync_delivery_state(self, sale: Sale) -> None:
+        delivered_amount = Decimal("0.00")
+        delivered_all = True
+        has_items = False
 
         for item in sale.items:
+            has_items = True
+            delivered_qty = int(item.delivered_quantity or 0)
+            qty = int(item.quantity or 0)
+            if delivered_qty < qty:
+                delivered_all = False
+            line = (Decimal(str(item.unit_price or 0)) * Decimal(delivered_qty)).quantize(Decimal("0.01"))
+            delivered_amount += line
+
+        sale.delivered_amount = delivered_amount.quantize(Decimal("0.01"))
+        sale.delivered = has_items and delivered_all
+
+    def _apply_delivered_quantities(self, sale: Sale, targets_by_product: dict[int, int]) -> None:
+        for item in sale.items:
             current_qty = int(item.delivered_quantity or 0)
-            target_qty = targets.get(item.id, 0)
+            target_qty = int(targets_by_product.get(item.product_id, current_qty))
+            max_qty = int(item.quantity or 0)
+            if target_qty < 0 or target_qty > max_qty:
+                raise ValidationError("La cantidad entregada debe estar entre 0 y la cantidad del item")
             delta = target_qty - current_qty
             if delta > 0:
                 self._deduct_stock(item.product_id, delta)
@@ -151,9 +155,7 @@ class SalesService:
                 self._restore_stock(item.product_id, -delta)
             item.delivered_quantity = target_qty
 
-        sale.delivered_amount = effective_amount
-        total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
-        sale.delivered = total > 0 and effective_amount >= total
+        self._sync_delivery_state(sale)
 
     def _apply_paid_amount(self, sale: Sale, requested_amount: Decimal) -> None:
         total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
@@ -162,7 +164,10 @@ class SalesService:
         sale.paid = total > 0 and effective_amount >= total
 
     def create_sale(self, data) -> Sale:
-        items, total_amount = self._normalize_items(data.items)
+        items, total_amount = self._normalize_items(
+            data.items,
+            force_delivered=True if data.delivered else None,
+        )
 
         # Create sale
         sale = Sale(
@@ -185,22 +190,17 @@ class SalesService:
                 sale_id=sale.id,
                 product_id=item["product_id"],
                 quantity=item["quantity"],
-                delivered_quantity=0,
+                delivered_quantity=item["delivered_quantity"],
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
             )
             self.db.add(sale_item)
 
         self.db.flush()
-
-        # Delivery state
-        if data.delivered_amount is not None:
-            delivery_target = Decimal(str(data.delivered_amount))
-        elif data.delivered:
-            delivery_target = total_amount
-        else:
-            delivery_target = Decimal("0.00")
-        self._apply_delivery_amount(sale, delivery_target)
+        self._apply_delivered_quantities(
+            sale,
+            {item["product_id"]: item["delivered_quantity"] for item in items},
+        )
 
         # Payment state
         if data.paid_amount is not None:
@@ -240,7 +240,6 @@ class SalesService:
         notes: str | None = None,
         installments: int | None = None,
         seller: str | None = None,
-        delivered_amount: Decimal | None = None,
         paid_amount: Decimal | None = None,
         items: list | None = None,
     ) -> Sale:
@@ -258,7 +257,10 @@ class SalesService:
             sale.seller = seller
 
         if items is not None:
-            normalized_items, new_total = self._normalize_items(items)
+            normalized_items, new_total = self._normalize_items(
+                items,
+                force_delivered=True if delivered is True else None,
+            )
 
             # Return already delivered stock before rebuilding items.
             for current_item in sale.items:
@@ -274,21 +276,24 @@ class SalesService:
                     sale_id=sale.id,
                     product_id=item["product_id"],
                     quantity=item["quantity"],
-                    delivered_quantity=0,
+                    delivered_quantity=item["delivered_quantity"],
                     unit_price=item["unit_price"],
                     total_price=item["total_price"],
                 ))
             sale.total_amount = new_total
             self.db.flush()
-
-        # Delivery target amount takes precedence over boolean if both are sent.
-        if delivered_amount is not None:
-            delivery_target = Decimal(str(delivered_amount))
+            self._apply_delivered_quantities(
+                sale,
+                {item["product_id"]: item["delivered_quantity"] for item in normalized_items},
+            )
         elif delivered is not None:
-            delivery_target = Decimal(str(sale.total_amount)) if delivered else Decimal("0.00")
+            targets = {
+                item.product_id: int(item.quantity if delivered else 0)
+                for item in sale.items
+            }
+            self._apply_delivered_quantities(sale, targets)
         else:
-            delivery_target = Decimal(str(sale.delivered_amount or 0))
-        self._apply_delivery_amount(sale, delivery_target)
+            self._sync_delivery_state(sale)
 
         # Paid target amount takes precedence over boolean if both are sent.
         if paid_amount is not None:

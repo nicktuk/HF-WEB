@@ -35,7 +35,6 @@ export default function VentasPage() {
   const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
   const [delivered, setDelivered] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [deliveredAmount, setDeliveredAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
 
   const createSale = useCreateSale(apiKey);
@@ -103,7 +102,6 @@ export default function VentasPage() {
       unit_price: item.unit_price,
     }));
 
-    const deliveredAmountValue = deliveredAmount ? Number(deliveredAmount) : undefined;
     const paidAmountValue = paidAmount ? Number(paidAmount) : undefined;
 
     await createSale.mutateAsync({
@@ -113,7 +111,6 @@ export default function VentasPage() {
       seller,
       delivered,
       paid,
-      delivered_amount: deliveredAmountValue ?? (delivered ? totalAmount : undefined),
       paid_amount: paidAmountValue ?? (paid ? totalAmount : undefined),
       items,
     });
@@ -124,7 +121,6 @@ export default function VentasPage() {
     setInstallments('');
     setDelivered(false);
     setPaid(false);
-    setDeliveredAmount('');
     setPaidAmount('');
   };
 
@@ -345,26 +341,15 @@ export default function VentasPage() {
                 </label>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                label="Monto entregado"
-                type="number"
-                min="0"
-                step="0.01"
-                value={deliveredAmount}
-                onChange={(e) => setDeliveredAmount(e.target.value)}
-                placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
-              />
-              <Input
-                label="Monto pagado"
-                type="number"
-                min="0"
-                step="0.01"
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(e.target.value)}
-                placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
-              />
-            </div>
+            <Input
+              label="Monto pagado"
+              type="number"
+              min="0"
+              step="0.01"
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+              placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>

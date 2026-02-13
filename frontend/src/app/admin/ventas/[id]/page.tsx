@@ -35,7 +35,6 @@ export default function SaleDetailPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editInstallments, setEditInstallments] = useState('');
   const [editSeller, setEditSeller] = useState<'Facu' | 'Heber'>('Facu');
-  const [editDeliveredAmount, setEditDeliveredAmount] = useState('');
   const [editPaidAmount, setEditPaidAmount] = useState('');
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -52,7 +51,6 @@ export default function SaleDetailPage() {
     setEditNotes(sale.notes || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
     setEditSeller(sale.seller);
-    setEditDeliveredAmount(String(Number(sale.delivered_amount || 0)));
     setEditPaidAmount(String(Number(sale.paid_amount || 0)));
     setEditItems(
       sale.items.map((item) => ({
@@ -121,16 +119,19 @@ export default function SaleDetailPage() {
 
   const handleSave = async () => {
     if (!sale) return;
-    const items = editItems
-      .map((item) => ({
-        product_id: item.product_id,
-        quantity: Math.max(0, Number(item.quantity || 0)),
-        unit_price: Math.max(0, Number(item.unit_price || 0)),
-      }))
-      .filter((item) => item.quantity > 0 && item.unit_price > 0);
+    const items = editItems.map((item) => ({
+      product_id: item.product_id,
+      quantity: Math.max(0, Number(item.quantity || 0)),
+      unit_price: Math.max(0, Number(item.unit_price || 0)),
+      delivered_quantity: Math.max(0, Number(item.delivered_quantity || 0)),
+    }));
 
-    if (!items.length) {
+    if (!items.length || items.some((item) => item.quantity <= 0 || item.unit_price <= 0)) {
       alert('La venta debe tener al menos un item.');
+      return;
+    }
+    if (items.some((item) => (item.delivered_quantity || 0) > item.quantity)) {
+      alert('La cantidad entregada no puede superar la cantidad del item.');
       return;
     }
 
@@ -141,7 +142,6 @@ export default function SaleDetailPage() {
         notes: editNotes || undefined,
         installments: editInstallments ? Number(editInstallments) : undefined,
         seller: editSeller,
-        delivered_amount: Math.max(0, Number(editDeliveredAmount || 0)),
         paid_amount: Math.max(0, Number(editPaidAmount || 0)),
         items,
       },
@@ -272,7 +272,22 @@ export default function SaleDetailPage() {
                             item.quantity
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right">{item.delivered_quantity || 0}</td>
+                        <td className="px-3 py-2 text-right">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.quantity}
+                              className="w-20 px-2 py-1 border rounded text-right"
+                              value={item.delivered_quantity}
+                              onChange={(e) =>
+                                updateEditItem(item.product_id, { delivered_quantity: Number(e.target.value) })
+                              }
+                            />
+                          ) : (
+                            item.delivered_quantity || 0
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-right">
                           {isEditing ? (
                             <input
@@ -356,17 +371,7 @@ export default function SaleDetailPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Entregado</span>
-                {isEditing ? (
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editDeliveredAmount}
-                    onChange={(e) => setEditDeliveredAmount(e.target.value)}
-                  />
-                ) : (
-                  <span className="font-medium">{formatPrice(sale.delivered_amount)}</span>
-                )}
+                <span className="font-medium">{formatPrice(sale.delivered_amount)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Pagado</span>

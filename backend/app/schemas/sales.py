@@ -8,6 +8,7 @@ class SaleItemCreate(BaseModel):
     product_id: int
     quantity: int = Field(..., gt=0)
     unit_price: Decimal = Field(..., gt=0)
+    delivered_quantity: Optional[int] = Field(default=None, ge=0)
 
 
 class SaleCreate(BaseModel):
@@ -17,7 +18,6 @@ class SaleCreate(BaseModel):
     seller: str = Field(default="Facu", pattern="^(Facu|Heber)$")
     delivered: bool = False
     paid: bool = False
-    delivered_amount: Optional[Decimal] = Field(default=None, ge=0)
     paid_amount: Optional[Decimal] = Field(default=None, ge=0)
     items: List[SaleItemCreate]
 
@@ -29,7 +29,6 @@ class SaleUpdate(BaseModel):
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
     seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
-    delivered_amount: Optional[Decimal] = Field(default=None, ge=0)
     paid_amount: Optional[Decimal] = Field(default=None, ge=0)
     items: Optional[List[SaleItemCreate]] = None
 
