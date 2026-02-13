@@ -312,6 +312,8 @@ export interface SaleCreateForm {
   seller: 'Facu' | 'Heber';
   delivered: boolean;
   paid: boolean;
+  delivered_amount?: number;
+  paid_amount?: number;
   items: SaleItemCreate[];
 }
 
@@ -320,6 +322,7 @@ export interface SaleItem {
   product_id: number;
   product_name?: string;
   quantity: number;
+  delivered_quantity: number;
   unit_price: number;
   total_price: number;
 }
@@ -333,6 +336,8 @@ export interface Sale {
   delivered: boolean;
   paid: boolean;
   total_amount: number;
+  delivered_amount: number;
+  paid_amount: number;
   items: SaleItem[];
 }
 

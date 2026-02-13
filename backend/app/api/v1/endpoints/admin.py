@@ -1454,7 +1454,7 @@ async def update_sale(
     data: SaleUpdate,
     service = Depends(get_sales_service),
 ):
-    """Update sale status (delivered/paid)."""
+    """Update sale data, items and partial delivery/payment amounts."""
     return service.update_sale(
         sale_id,
         data.delivered,
@@ -1463,6 +1463,9 @@ async def update_sale(
         data.notes,
         data.installments,
         data.seller,
+        data.delivered_amount,
+        data.paid_amount,
+        data.items,
     )
 
 

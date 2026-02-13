@@ -1640,20 +1640,32 @@ class ProductService:
         )
 
         total_collected = (
-            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-            .filter(Sale.paid.is_(True))
+            self.db.query(func.coalesce(func.sum(Sale.paid_amount), 0))
             .scalar()
         )
 
         total_pending_delivery = (
-            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-            .filter(Sale.delivered.is_(False))
+            self.db.query(
+                func.coalesce(
+                    func.sum(func.greatest(Sale.total_amount - func.coalesce(Sale.delivered_amount, 0), 0)),
+                    0,
+                )
+            )
             .scalar()
         )
 
         total_pending_payment = (
-            self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-            .filter(Sale.delivered.is_(True), Sale.paid.is_(False))
+            self.db.query(
+                func.coalesce(
+                    func.sum(
+                        func.greatest(
+                            func.coalesce(Sale.delivered_amount, 0) - func.coalesce(Sale.paid_amount, 0),
+                            0,
+                        )
+                    ),
+                    0,
+                )
+            )
             .scalar()
         )
 
@@ -1694,18 +1706,33 @@ class ProductService:
         by_seller = {}
         for seller in sellers:
             collected = (
-                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-                .filter(Sale.paid.is_(True), Sale.seller == seller)
+                self.db.query(func.coalesce(func.sum(Sale.paid_amount), 0))
+                .filter(Sale.seller == seller)
                 .scalar()
             )
             pending_delivery = (
-                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-                .filter(Sale.delivered.is_(False), Sale.seller == seller)
+                self.db.query(
+                    func.coalesce(
+                        func.sum(func.greatest(Sale.total_amount - func.coalesce(Sale.delivered_amount, 0), 0)),
+                        0,
+                    )
+                )
+                .filter(Sale.seller == seller)
                 .scalar()
             )
             pending_payment = (
-                self.db.query(func.coalesce(func.sum(Sale.total_amount), 0))
-                .filter(Sale.delivered.is_(True), Sale.paid.is_(False), Sale.seller == seller)
+                self.db.query(
+                    func.coalesce(
+                        func.sum(
+                            func.greatest(
+                                func.coalesce(Sale.delivered_amount, 0) - func.coalesce(Sale.paid_amount, 0),
+                                0,
+                            )
+                        ),
+                        0,
+                    )
+                )
+                .filter(Sale.seller == seller)
                 .scalar()
             )
             by_seller[seller] = {

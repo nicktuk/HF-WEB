@@ -17,6 +17,8 @@ class Sale(Base):
     delivered = Column(Boolean, default=False, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
     total_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    delivered_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
 
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
 
@@ -28,6 +30,7 @@ class SaleItem(Base):
     sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
+    delivered_quantity = Column(Integer, nullable=False, default=0)
     unit_price = Column(Numeric(10, 2), nullable=False)
     total_price = Column(Numeric(12, 2), nullable=False)
 

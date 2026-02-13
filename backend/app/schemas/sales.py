@@ -17,6 +17,8 @@ class SaleCreate(BaseModel):
     seller: str = Field(default="Facu", pattern="^(Facu|Heber)$")
     delivered: bool = False
     paid: bool = False
+    delivered_amount: Optional[Decimal] = Field(default=None, ge=0)
+    paid_amount: Optional[Decimal] = Field(default=None, ge=0)
     items: List[SaleItemCreate]
 
 
@@ -27,6 +29,9 @@ class SaleUpdate(BaseModel):
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
     seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
+    delivered_amount: Optional[Decimal] = Field(default=None, ge=0)
+    paid_amount: Optional[Decimal] = Field(default=None, ge=0)
+    items: Optional[List[SaleItemCreate]] = None
 
 
 class SaleItemResponse(BaseModel):
@@ -34,6 +39,7 @@ class SaleItemResponse(BaseModel):
     product_id: int
     product_name: Optional[str] = None
     quantity: int
+    delivered_quantity: int
     unit_price: Decimal
     total_price: Decimal
 
@@ -50,6 +56,8 @@ class SaleResponse(BaseModel):
     delivered: bool
     paid: bool
     total_amount: Decimal
+    delivered_amount: Decimal
+    paid_amount: Decimal
     items: List[SaleItemResponse]
 
     class Config:

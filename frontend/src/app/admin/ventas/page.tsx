@@ -35,6 +35,8 @@ export default function VentasPage() {
   const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
   const [delivered, setDelivered] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [deliveredAmount, setDeliveredAmount] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
 
   const createSale = useCreateSale(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
@@ -101,6 +103,9 @@ export default function VentasPage() {
       unit_price: item.unit_price,
     }));
 
+    const deliveredAmountValue = deliveredAmount ? Number(deliveredAmount) : undefined;
+    const paidAmountValue = paidAmount ? Number(paidAmount) : undefined;
+
     await createSale.mutateAsync({
       customer_name: customerName || undefined,
       notes: notes || undefined,
@@ -108,6 +113,8 @@ export default function VentasPage() {
       seller,
       delivered,
       paid,
+      delivered_amount: deliveredAmountValue ?? (delivered ? totalAmount : undefined),
+      paid_amount: paidAmountValue ?? (paid ? totalAmount : undefined),
       items,
     });
 
@@ -117,6 +124,8 @@ export default function VentasPage() {
     setInstallments('');
     setDelivered(false);
     setPaid(false);
+    setDeliveredAmount('');
+    setPaidAmount('');
   };
 
   const handleToggleSale = async (saleId: number, field: 'delivered' | 'paid', value: boolean) => {
@@ -161,14 +170,15 @@ export default function VentasPage() {
         if (sale.delivered) return false;
         return sale.items.some((item) => {
           const available = stockMap.get(item.product_id) ?? 0;
-          return item.quantity > available;
+          const pendingQty = Math.max(0, item.quantity - (item.delivered_quantity || 0));
+          return pendingQty > available;
         });
       });
     }, [filteredSales, stockMap]);
 
-  const getShortageQty = (productId: number, quantity: number) => {
+  const getShortageQty = (productId: number, pendingQuantity: number) => {
     const available = stockMap.get(productId) ?? 0;
-    return Math.max(0, quantity - available);
+    return Math.max(0, pendingQuantity - available);
   };
 
   const groupedSales = useMemo(() => {
@@ -312,7 +322,7 @@ export default function VentasPage() {
                   <option value="Heber">Heber</option>
                 </select>
               </div>
-              <div className="flex items-center gap-3 mt-6 md:mt-7">
+              <div className="flex items-center gap-3 mt-6 md:mt-7 flex-wrap">
                 <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                   <input
                     type="checkbox"
@@ -334,6 +344,26 @@ export default function VentasPage() {
                   Pagado
                 </label>
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                label="Monto entregado"
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliveredAmount}
+                onChange={(e) => setDeliveredAmount(e.target.value)}
+                placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
+              />
+              <Input
+                label="Monto pagado"
+                type="number"
+                min="0"
+                step="0.01"
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
+              />
             </div>
 
             <div>
@@ -620,7 +650,8 @@ export default function VentasPage() {
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                       {sale.items.map((item) => {
-                                        const shortage = getShortageQty(item.product_id, item.quantity);
+                                        const pendingQty = Math.max(0, item.quantity - (item.delivered_quantity || 0));
+                                        const shortage = getShortageQty(item.product_id, pendingQty);
                                         return (
                                           <tr key={item.id} className={shortage > 0 ? 'bg-amber-50' : undefined}>
                                             <td className="px-3 py-2 text-gray-900">
@@ -636,7 +667,14 @@ export default function VentasPage() {
                                                 )}
                                               </div>
                                             </td>
-                                            <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                            <td className="px-3 py-2 text-right">
+                                              {item.quantity}
+                                              {item.delivered_quantity > 0 && (
+                                                <span className="ml-1 text-xs text-gray-500">
+                                                  ({item.delivered_quantity} entreg.)
+                                                </span>
+                                              )}
+                                            </td>
                                             <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
                                             <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
                                           </tr>

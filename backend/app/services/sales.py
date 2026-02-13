@@ -1,5 +1,5 @@
 """Service for Sales operations."""
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -79,21 +79,24 @@ class SalesService:
         if remaining > 0:
             raise ValidationError("No se pudo revertir el stock completo")
 
-    def create_sale(self, data) -> Sale:
-        if not data.items:
+    def _normalize_items(self, raw_items) -> tuple[list[dict], Decimal]:
+        if not raw_items:
             raise ValidationError("La venta debe tener items")
 
-        # Validate products and stock
-        items = []
+        items: list[dict] = []
         total_amount = Decimal("0")
-        for item in data.items:
+        for item in raw_items:
             product = self.db.query(Product).filter(Product.id == item.product_id).first()
             if not product:
                 raise NotFoundError("Product", str(item.product_id))
 
             qty = int(item.quantity)
+            if qty <= 0:
+                raise ValidationError("La cantidad debe ser mayor a 0")
             unit_price = Decimal(str(item.unit_price))
-            total_price = unit_price * Decimal(qty)
+            if unit_price <= 0:
+                raise ValidationError("El precio unitario debe ser mayor a 0")
+            total_price = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
 
             items.append({
                 "product_id": product.id,
@@ -102,6 +105,64 @@ class SalesService:
                 "total_price": total_price,
             })
             total_amount += total_price
+
+        return items, total_amount.quantize(Decimal("0.01"))
+
+    def _clamp_amount(self, amount: Decimal, total: Decimal) -> Decimal:
+        if amount < 0:
+            return Decimal("0.00")
+        if amount > total:
+            return total
+        return amount.quantize(Decimal("0.01"))
+
+    def _build_delivery_targets(self, sale: Sale, requested_amount: Decimal) -> tuple[dict[int, int], Decimal]:
+        items = list(sale.items)
+        total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
+        target_amount = self._clamp_amount(requested_amount, total)
+        remaining = target_amount
+        targets: dict[int, int] = {}
+        actual_amount = Decimal("0.00")
+
+        for item in items:
+            unit_price = Decimal(str(item.unit_price or 0))
+            if unit_price <= 0:
+                targets[item.id] = 0
+                continue
+            max_qty = int(item.quantity or 0)
+            affordable = int((remaining / unit_price).to_integral_value(rounding=ROUND_DOWN))
+            qty = min(max_qty, max(0, affordable))
+            targets[item.id] = qty
+            line_amount = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
+            actual_amount += line_amount
+            remaining -= line_amount
+
+        return targets, actual_amount.quantize(Decimal("0.01"))
+
+    def _apply_delivery_amount(self, sale: Sale, requested_amount: Decimal) -> None:
+        targets, effective_amount = self._build_delivery_targets(sale, requested_amount)
+
+        for item in sale.items:
+            current_qty = int(item.delivered_quantity or 0)
+            target_qty = targets.get(item.id, 0)
+            delta = target_qty - current_qty
+            if delta > 0:
+                self._deduct_stock(item.product_id, delta)
+            elif delta < 0:
+                self._restore_stock(item.product_id, -delta)
+            item.delivered_quantity = target_qty
+
+        sale.delivered_amount = effective_amount
+        total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
+        sale.delivered = total > 0 and effective_amount >= total
+
+    def _apply_paid_amount(self, sale: Sale, requested_amount: Decimal) -> None:
+        total = Decimal(str(sale.total_amount or 0)).quantize(Decimal("0.01"))
+        effective_amount = self._clamp_amount(requested_amount, total)
+        sale.paid_amount = effective_amount
+        sale.paid = total > 0 and effective_amount >= total
+
+    def create_sale(self, data) -> Sale:
+        items, total_amount = self._normalize_items(data.items)
 
         # Create sale
         sale = Sale(
@@ -112,6 +173,8 @@ class SalesService:
             delivered=data.delivered,
             paid=data.paid,
             total_amount=total_amount,
+            delivered_amount=Decimal("0.00"),
+            paid_amount=Decimal("0.00"),
         )
         self.db.add(sale)
         self.db.flush()
@@ -122,15 +185,31 @@ class SalesService:
                 sale_id=sale.id,
                 product_id=item["product_id"],
                 quantity=item["quantity"],
+                delivered_quantity=0,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
             )
             self.db.add(sale_item)
 
-        # Deduct stock if delivered
-        if sale.delivered:
-            for item in items:
-                self._deduct_stock(item["product_id"], item["quantity"])
+        self.db.flush()
+
+        # Delivery state
+        if data.delivered_amount is not None:
+            delivery_target = Decimal(str(data.delivered_amount))
+        elif data.delivered:
+            delivery_target = total_amount
+        else:
+            delivery_target = Decimal("0.00")
+        self._apply_delivery_amount(sale, delivery_target)
+
+        # Payment state
+        if data.paid_amount is not None:
+            paid_target = Decimal(str(data.paid_amount))
+        elif data.paid:
+            paid_target = total_amount
+        else:
+            paid_target = Decimal("0.00")
+        self._apply_paid_amount(sale, paid_target)
 
         self.db.commit()
         self.db.refresh(sale)
@@ -161,21 +240,14 @@ class SalesService:
         notes: str | None = None,
         installments: int | None = None,
         seller: str | None = None,
+        delivered_amount: Decimal | None = None,
+        paid_amount: Decimal | None = None,
+        items: list | None = None,
     ) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
 
-        if delivered is not None and delivered and not sale.delivered:
-            # Deduct stock when switching to delivered
-            items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
-            for item in items:
-                self._deduct_stock(item.product_id, item.quantity)
-
-        if delivered is not None:
-            sale.delivered = delivered
-        if paid is not None:
-            sale.paid = paid
         if customer_name is not None:
             sale.customer_name = customer_name
         if notes is not None:
@@ -184,6 +256,48 @@ class SalesService:
             sale.installments = installments
         if seller is not None:
             sale.seller = seller
+
+        if items is not None:
+            normalized_items, new_total = self._normalize_items(items)
+
+            # Return already delivered stock before rebuilding items.
+            for current_item in sale.items:
+                delivered_qty = int(current_item.delivered_quantity or 0)
+                if delivered_qty > 0:
+                    self._restore_stock(current_item.product_id, delivered_qty)
+
+            self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).delete(synchronize_session=False)
+            self.db.flush()
+
+            for item in normalized_items:
+                self.db.add(SaleItem(
+                    sale_id=sale.id,
+                    product_id=item["product_id"],
+                    quantity=item["quantity"],
+                    delivered_quantity=0,
+                    unit_price=item["unit_price"],
+                    total_price=item["total_price"],
+                ))
+            sale.total_amount = new_total
+            self.db.flush()
+
+        # Delivery target amount takes precedence over boolean if both are sent.
+        if delivered_amount is not None:
+            delivery_target = Decimal(str(delivered_amount))
+        elif delivered is not None:
+            delivery_target = Decimal(str(sale.total_amount)) if delivered else Decimal("0.00")
+        else:
+            delivery_target = Decimal(str(sale.delivered_amount or 0))
+        self._apply_delivery_amount(sale, delivery_target)
+
+        # Paid target amount takes precedence over boolean if both are sent.
+        if paid_amount is not None:
+            paid_target = Decimal(str(paid_amount))
+        elif paid is not None:
+            paid_target = Decimal(str(sale.total_amount)) if paid else Decimal("0.00")
+        else:
+            paid_target = Decimal(str(sale.paid_amount or 0))
+        self._apply_paid_amount(sale, paid_target)
 
         self.db.commit()
         self.db.refresh(sale)
@@ -200,10 +314,11 @@ class SalesService:
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
 
-        if sale.delivered:
-            items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
-            for item in items:
-                self._restore_stock(item.product_id, item.quantity)
+        items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
+        for item in items:
+            delivered_qty = int(item.delivered_quantity or 0)
+            if delivered_qty > 0:
+                self._restore_stock(item.product_id, delivered_qty)
 
         self.db.delete(sale)
         self.db.commit()

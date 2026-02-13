@@ -198,7 +198,17 @@ export function useUpdateSale(apiKey: string) {
       data,
     }: {
       saleId: number;
-      data: { delivered?: boolean; paid?: boolean; customer_name?: string; notes?: string; installments?: number; seller?: 'Facu' | 'Heber' };
+      data: {
+        delivered?: boolean;
+        paid?: boolean;
+        delivered_amount?: number;
+        paid_amount?: number;
+        customer_name?: string;
+        notes?: string;
+        installments?: number;
+        seller?: 'Facu' | 'Heber';
+        items?: Array<{ product_id: number; quantity: number; unit_price: number }>;
+      };
     }) =>
       adminApi.updateSale(apiKey, saleId, data),
     onSuccess: () => {
