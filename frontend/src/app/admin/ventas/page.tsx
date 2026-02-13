@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useCreateSale, useSales, useUpdateSale, useStockSummary } from '@/hooks/useProducts';
+import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleItemCreate } from '@/types';
 
@@ -36,6 +37,7 @@ export default function VentasPage() {
   const [delivered, setDelivered] = useState(false);
   const [paid, setPaid] = useState(false);
   const [paidAmount, setPaidAmount] = useState('');
+  const [isReconcilingStock, setIsReconcilingStock] = useState(false);
 
   const createSale = useCreateSale(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
@@ -227,6 +229,31 @@ export default function VentasPage() {
       },
     });
     setEditingSaleId(null);
+  };
+
+  const handleReconcileDeliveredStock = async () => {
+    if (!confirm('Esto recalcula todos los descuentos de stock según unidades entregadas. ¿Continuar?')) return;
+    setIsReconcilingStock(true);
+    try {
+      const result = await adminApi.reconcileDeliveredStock(apiKey);
+      const lines = [
+        `Ventas procesadas: ${result.sales_processed}`,
+        `Unidades a descontar: ${result.units_requested}`,
+        `Unidades descontadas: ${result.units_deducted}`,
+      ];
+      if (result.shortages?.length) {
+        lines.push('', 'Faltantes:');
+        lines.push(...result.shortages.slice(0, 20));
+        if (result.shortages.length > 20) {
+          lines.push(`... y ${result.shortages.length - 20} más`);
+        }
+      }
+      alert(lines.join('\n'));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al reconciliar stock');
+    } finally {
+      setIsReconcilingStock(false);
+    }
   };
 
   return (
@@ -450,9 +477,19 @@ export default function VentasPage() {
                 El stock se descuenta al marcar una venta como Entregada.
               </p>
             </div>
-            <span className="text-xs text-gray-500">
-              {filteredSales.length} ventas
-            </span>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReconcileDeliveredStock}
+                isLoading={isReconcilingStock}
+              >
+                Reconciliar stock entregado
+              </Button>
+              <span className="text-xs text-gray-500">
+                {filteredSales.length} ventas
+              </span>
+            </div>
           </div>
           {deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

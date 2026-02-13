@@ -327,3 +327,69 @@ class SalesService:
 
         self.db.delete(sale)
         self.db.commit()
+
+    def reconcile_delivered_stock(self) -> dict:
+        """
+        Rebuild StockPurchase.out_quantity from delivered sale units.
+
+        Strategy:
+        - Reset out_quantity to 0 for all stock purchases.
+        - Replay delivered units from sales in chronological order using FIFO.
+        """
+        # 1) Reset all current deductions
+        self.db.query(StockPurchase).update(
+            {StockPurchase.out_quantity: 0},
+            synchronize_session=False,
+        )
+        self.db.flush()
+
+        sales = (
+            self.db.query(Sale)
+            .order_by(Sale.created_at.asc(), Sale.id.asc())
+            .all()
+        )
+
+        total_units_requested = 0
+        total_units_deducted = 0
+        shortages: list[str] = []
+
+        for sale in sales:
+            for item in sale.items:
+                # Full-delivered sales imply all units delivered.
+                requested = int(item.quantity if sale.delivered else (item.delivered_quantity or 0))
+                if requested <= 0:
+                    continue
+
+                remaining = requested
+                total_units_requested += requested
+
+                purchases = (
+                    self.db.query(StockPurchase)
+                    .filter(StockPurchase.product_id == item.product_id)
+                    .order_by(StockPurchase.purchase_date.asc(), StockPurchase.id.asc())
+                    .all()
+                )
+
+                for purchase in purchases:
+                    if remaining <= 0:
+                        break
+                    available = int((purchase.quantity or 0) - (purchase.out_quantity or 0))
+                    if available <= 0:
+                        continue
+                    deduct = min(available, remaining)
+                    purchase.out_quantity = int((purchase.out_quantity or 0) + deduct)
+                    remaining -= deduct
+                    total_units_deducted += deduct
+
+                if remaining > 0:
+                    shortages.append(
+                        f"Venta #{sale.id}, producto #{item.product_id}: faltan {remaining} unidades para descontar"
+                    )
+
+        self.db.commit()
+        return {
+            "sales_processed": len(sales),
+            "units_requested": total_units_requested,
+            "units_deducted": total_units_deducted,
+            "shortages": shortages,
+        }

@@ -667,6 +667,20 @@ export const adminApi = {
     }, apiKey);
   },
 
+  /**
+   * Rebuild stock deductions from delivered sale units
+   */
+  async reconcileDeliveredStock(apiKey: string): Promise<{
+    sales_processed: number;
+    units_requested: number;
+    units_deducted: number;
+    shortages: string[];
+  }> {
+    return fetchAPI('/admin/sales/reconcile-delivered-stock', {
+      method: 'POST',
+    }, apiKey);
+  },
+
   // Badge Management
 
   /**

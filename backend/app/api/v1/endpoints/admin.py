@@ -1468,6 +1468,21 @@ async def update_sale(
     )
 
 
+@router.post(
+    "/sales/reconcile-delivered-stock",
+    dependencies=[Depends(verify_admin)]
+)
+async def reconcile_delivered_stock(
+    request: Request,
+    service=Depends(get_sales_service),
+):
+    """
+    Rebuild stock deductions from delivered sale units (full + partial).
+    """
+    result = service.reconcile_delivered_stock()
+    return result
+
+
 @router.get(
     "/price-comparator",
     dependencies=[Depends(verify_admin)]
