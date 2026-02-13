@@ -85,7 +85,6 @@ export default function ComprasPage() {
   const [stockPreview, setStockPreview] = useState<StockPreviewResponse | null>(null);
   const [stockPreviewPage, setStockPreviewPage] = useState(1);
   const [stockPreviewFile, setStockPreviewFile] = useState<File | null>(null);
-  const [importSupplier, setImportSupplier] = useState('');
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const stockFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,18 +146,16 @@ export default function ComprasPage() {
   };
 
   const handleConfirmImport = async () => {
-    if (!stockPreviewFile || !importSupplier.trim()) return;
+    if (!stockPreviewFile) return;
     setIsImportingStock(true);
     try {
       const result = await importStock.mutateAsync({
         file: stockPreviewFile,
-        supplier: importSupplier.trim(),
       });
       setStockImportResult(result);
       setStockPreview(null);
       setStockPreviewFile(null);
       setShowSupplierModal(false);
-      setImportSupplier('');
     } catch (error) {
       setStockImportResult({
         purchase_id: 0,
@@ -628,29 +625,11 @@ export default function ComprasPage() {
           setShowSupplierModal(false);
           setStockPreview(null);
           setStockPreviewFile(null);
-          setImportSupplier('');
         }}
         title="Importar compra"
         size="xl"
       >
         <ModalContent className="space-y-4">
-          {/* Supplier input */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre del mayorista *
-            </label>
-            <Input
-              type="text"
-              placeholder="Ej: Distribuidora XYZ"
-              value={importSupplier}
-              onChange={(e) => setImportSupplier(e.target.value)}
-              className="max-w-md"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Este nombre se usará para agrupar todos los items de esta importación.
-            </p>
-          </div>
-
           {/* Preview summary */}
           {stockPreview && (
             <>
@@ -688,6 +667,7 @@ export default function ComprasPage() {
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mayorista</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -710,6 +690,7 @@ export default function ComprasPage() {
                             {row.status === 'error' && <span className="text-red-600 font-medium">Error</span>}
                             {row.status === 'unmatched' && <span className="text-slate-600 font-medium">Sin match</span>}
                           </td>
+                          <td className="px-3 py-2">{row.supplier || '-'}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -751,7 +732,6 @@ export default function ComprasPage() {
               setShowSupplierModal(false);
               setStockPreview(null);
               setStockPreviewFile(null);
-              setImportSupplier('');
             }}
           >
             Cancelar
@@ -759,7 +739,6 @@ export default function ComprasPage() {
           <Button
             onClick={handleConfirmImport}
             disabled={
-              !importSupplier.trim() ||
               !stockPreview ||
               (stockPreview.summary.ok + stockPreview.summary.unmatched) === 0 ||
               isImportingStock
@@ -845,3 +824,4 @@ export default function ComprasPage() {
     </div>
   );
 }
+

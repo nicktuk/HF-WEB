@@ -122,6 +122,7 @@ class StockPreviewRow(BaseModel):
     row_number: int
     description: str | None = None
     code: str | None = None
+    supplier: str | None = None
     derived_code: bool = False
     purchase_date: date | None = None
     unit_price: Decimal | None = None

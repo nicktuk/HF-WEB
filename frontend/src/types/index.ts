@@ -91,6 +91,7 @@ export interface StockPreviewRow {
   row_number: number;
   description?: string;
   code?: string;
+  supplier?: string | null;
   derived_code?: boolean;
   purchase_date?: string | null;
   unit_price?: number | null;

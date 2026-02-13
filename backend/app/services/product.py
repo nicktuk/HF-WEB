@@ -242,7 +242,7 @@ class ProductService:
             .first()
         )
 
-    def import_stock_csv(self, csv_bytes: bytes, supplier: str) -> dict:
+    def import_stock_csv(self, csv_bytes: bytes) -> dict:
         """Import stock purchases from CSV bytes, creating a Purchase."""
         from app.models.stock import Purchase
 
@@ -251,6 +251,20 @@ class ProductService:
         skipped = 0
         errors: list[str] = []
         touched_products: set[int] = set()
+        valid_suppliers = sorted({
+            (row.get("supplier") or "").strip()
+            for row in rows
+            if row["status"] in ("ok", "unmatched", "duplicate") and (row.get("supplier") or "").strip()
+        })
+
+        if not valid_suppliers:
+            raise ValueError("No se encontró mayorista válido en el CSV.")
+        if len(valid_suppliers) > 1:
+            raise ValueError(
+                "El CSV contiene múltiples mayoristas. Importá un mayorista por archivo. "
+                f"Detectados: {', '.join(valid_suppliers)}"
+            )
+        supplier = valid_suppliers[0]
 
         # Get common purchase date from first valid row
         purchase_date = None
@@ -381,6 +395,7 @@ class ProductService:
             errors: list[str] = []
             description = get_field(row, "producto", "descripcion", "descripcin", "description")
             code = get_field(row, "codigo", "cdigo", "code")
+            supplier = get_field(row, "mayorista", "supplier", "proveedor", "distribuidor")
             derived_code = False
             if not code:
                 digits = "".join(re.findall(r"\d", description or ""))
@@ -407,6 +422,9 @@ class ProductService:
             if not product:
                 # No error: allow import without product association
                 pass
+
+            if not supplier:
+                errors.append("Mayorista requerido (columna: mayorista)")
 
             purchase_date = None
             unit_price = None
@@ -484,6 +502,7 @@ class ProductService:
                 "row_number": idx,
                 "description": description or None,
                 "code": code or None,
+                "supplier": supplier or None,
                 "derived_code": derived_code,
                 "purchase_date": purchase_date,
                 "unit_price": unit_price,

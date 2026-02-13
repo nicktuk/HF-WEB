@@ -212,16 +212,15 @@ async def preview_stock_csv(
 )
 async def import_stock_csv(
     file: UploadFile = File(...),
-    supplier: str = Query(..., min_length=1, description="Nombre del mayorista"),
     service: ProductService = Depends(get_product_service),
 ):
-    """Import stock purchases from CSV, creating a Purchase for the supplier."""
+    """Import stock purchases from CSV, creating a Purchase from CSV supplier column."""
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="El archivo debe ser un CSV.")
 
     contents = await file.read()
     try:
-        result = service.import_stock_csv(contents, supplier=supplier)
+        result = service.import_stock_csv(contents)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

@@ -537,8 +537,8 @@ export function usePurchasesByPayer(apiKey: string) {
 export function useImportStockWithSupplier(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, supplier }: { file: File; supplier: string }) =>
-      adminApi.importStockCsvWithSupplier(apiKey, file, supplier),
+    mutationFn: ({ file }: { file: File }) =>
+      adminApi.importStockCsvWithSupplier(apiKey, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });

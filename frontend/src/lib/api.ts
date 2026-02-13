@@ -779,17 +779,16 @@ export const adminApi = {
   },
 
   /**
-   * Import stock CSV with supplier
+   * Import stock CSV (supplier is read from CSV row column)
    */
   async importStockCsvWithSupplier(
     apiKey: string,
-    file: File,
-    supplier: string
+    file: File
   ): Promise<{ purchase_id: number; created: number; skipped: number; errors: string[]; touched_products: number }> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_URL}/admin/stock/import?supplier=${encodeURIComponent(supplier)}`, {
+    const response = await fetch(`${API_URL}/admin/stock/import`, {
       method: 'POST',
       headers: {
         'X-Admin-API-Key': apiKey,
