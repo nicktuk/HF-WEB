@@ -191,6 +191,44 @@ function HomePageContent() {
     });
   })();
 
+  const showGroupedByCategory = !selectedCategory && !showFeatured && !showImmediate;
+
+  const groupedProducts = useMemo(() => {
+    if (!showGroupedByCategory) {
+      return [];
+    }
+
+    const categoryMeta = new Map(
+      orderedCategories.map((category, index) => [
+        category.name,
+        {
+          order: Number.isFinite(category.display_order) ? category.display_order : index,
+          color: category.color || '#6b7280',
+        },
+      ]),
+    );
+
+    const grouped = new Map<string, typeof sortedProducts>();
+    sortedProducts.forEach((product) => {
+      const categoryName = (product.category || '').trim() || 'Sin categoria';
+      const current = grouped.get(categoryName) || [];
+      current.push(product);
+      grouped.set(categoryName, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([name, products], index) => {
+        const meta = categoryMeta.get(name);
+        return {
+          name,
+          color: meta?.color || '#6b7280',
+          order: meta?.order ?? (1000 + index),
+          products,
+        };
+      })
+      .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'es'));
+  }, [showGroupedByCategory, orderedCategories, sortedProducts]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -685,7 +723,35 @@ function HomePageContent() {
               </div>
             </div>
           )}
-          <ProductGrid products={sortedProducts} isLoading={isLoading} />
+          {showGroupedByCategory ? (
+            groupedProducts.length === 0 ? (
+              <ProductGrid products={[]} isLoading={isLoading} />
+            ) : (
+              <div className="space-y-8">
+                {groupedProducts.map((group) => (
+                  <section key={group.name} className="space-y-4">
+                    <div
+                      className="w-full rounded-xl border px-4 py-2"
+                      style={{
+                        backgroundColor: `${group.color}1A`,
+                        borderColor: `${group.color}66`,
+                      }}
+                    >
+                      <p
+                        className="text-sm font-semibold uppercase tracking-wide"
+                        style={{ color: group.color }}
+                      >
+                        {group.name}
+                      </p>
+                    </div>
+                    <ProductGrid products={group.products} />
+                  </section>
+                ))}
+              </div>
+            )
+          ) : (
+            <ProductGrid products={sortedProducts} isLoading={isLoading} />
+          )}
         </div>
       </main>
 
