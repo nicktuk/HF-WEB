@@ -52,7 +52,7 @@ export default function VentasPage() {
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
     page: 1,
-    limit: 1000,
+    limit: 100,
     search: search || undefined,
   });
 
@@ -359,16 +359,16 @@ export default function VentasPage() {
         title="Nueva venta"
         size="xl"
       >
-        <ModalContent className="space-y-4 max-h-[85vh] overflow-y-auto">
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <ModalContent className="space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Left: Stock list */}
         <div className="bg-white rounded-lg border">
           <div className="px-4 py-3 border-b flex items-center gap-3">
-            <div className="relative flex-1">
+            <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="search"
-                placeholder="Buscar en stock..."
+                placeholder="Buscar producto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -378,7 +378,7 @@ export default function VentasPage() {
               {productsData?.items.length || 0} productos
             </span>
           </div>
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div>
             {isLoading ? (
               <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
             ) : !productsData || productsData.items.length === 0 ? (
