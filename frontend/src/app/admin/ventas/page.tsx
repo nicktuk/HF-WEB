@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,11 +130,32 @@ export default function VentasPage() {
     setInstallments('');
   };
 
-  const handleToggleSale = async (saleId: number, field: 'delivered' | 'paid', value: boolean) => {
-    await updateSale.mutateAsync({
-      saleId,
-      data: { [field]: value },
-    });
+  const getProgressStatus = (total: number, amount: number): 'none' | 'partial' | 'full' => {
+    if (total <= 0 || amount <= 0) return 'none';
+    if (amount >= total - 0.01) return 'full';
+    return 'partial';
+  };
+
+  const renderProgressCheck = (status: 'none' | 'partial' | 'full') => {
+    if (status === 'full') {
+      return (
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+          <Check className="h-4 w-4" />
+        </span>
+      );
+    }
+
+    if (status === 'partial') {
+      return (
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-white">
+          <Check className="h-4 w-4" />
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white" />
+    );
   };
 
   const filteredSales = useMemo(() => {
@@ -633,28 +654,20 @@ export default function VentasPage() {
                             </td>
                             <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
                             <td className="px-3 py-2 text-center">
-                              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={sale.delivered}
-                                  onChange={(e) => handleToggleSale(sale.id, 'delivered', e.target.checked)}
-                                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                                  disabled={updateSale.isPending}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </label>
+                              {renderProgressCheck(
+                                getProgressStatus(
+                                  Number(sale.total_amount || 0),
+                                  Number(sale.delivered_amount || 0),
+                                ),
+                              )}
                             </td>
                             <td className="px-3 py-2 text-center">
-                              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={sale.paid}
-                                  onChange={(e) => handleToggleSale(sale.id, 'paid', e.target.checked)}
-                                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                                  disabled={updateSale.isPending}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </label>
+                              {renderProgressCheck(
+                                getProgressStatus(
+                                  Number(sale.total_amount || 0),
+                                  Number(sale.paid_amount || 0),
+                                ),
+                              )}
                             </td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex justify-end gap-3">
