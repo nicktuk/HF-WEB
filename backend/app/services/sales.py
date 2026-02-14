@@ -190,7 +190,7 @@ class SalesService:
                 sale_id=sale.id,
                 product_id=item["product_id"],
                 quantity=item["quantity"],
-                delivered_quantity=item["delivered_quantity"],
+                delivered_quantity=0,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
             )
@@ -276,7 +276,7 @@ class SalesService:
                     sale_id=sale.id,
                     product_id=item["product_id"],
                     quantity=item["quantity"],
-                    delivered_quantity=item["delivered_quantity"],
+                    delivered_quantity=0,
                     unit_price=item["unit_price"],
                     total_price=item["total_price"],
                 ))
