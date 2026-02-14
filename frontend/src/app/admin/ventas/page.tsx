@@ -21,8 +21,9 @@ export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
   const [salesSearch, setSalesSearch] = useState('');
-  const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no'>('all');
-  const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
+  const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
+  const [showPartials, setShowPartials] = useState(false);
   const [stockShortageOnly, setStockShortageOnly] = useState(false);
   const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
@@ -136,17 +137,35 @@ export default function VentasPage() {
   const filteredSales = useMemo(() => {
     if (!salesData) return [];
     return salesData.filter((sale) => {
+      const total = Number(sale.total_amount || 0);
+      const deliveredAmount = Number(sale.delivered_amount || 0);
+      const paidAmount = Number(sale.paid_amount || 0);
+      const isDeliveredPartial = total > 0 && deliveredAmount > 0 && deliveredAmount < total;
+      const isPaidPartial = total > 0 && paidAmount > 0 && paidAmount < total;
+
       if (deliveredFilter !== 'all') {
-        if (deliveredFilter === 'yes' && !sale.delivered) return false;
-        if (deliveredFilter === 'no' && sale.delivered) return false;
+        if (deliveredFilter === 'yes') {
+          if (!sale.delivered && !(showPartials && isDeliveredPartial)) return false;
+        }
+        if (deliveredFilter === 'no') {
+          if (sale.delivered) return false;
+          if (!showPartials && isDeliveredPartial) return false;
+        }
+        if (deliveredFilter === 'partial' && !isDeliveredPartial) return false;
       }
       if (paidFilter !== 'all') {
-        if (paidFilter === 'yes' && !sale.paid) return false;
-        if (paidFilter === 'no' && sale.paid) return false;
+        if (paidFilter === 'yes') {
+          if (!sale.paid && !(showPartials && isPaidPartial)) return false;
+        }
+        if (paidFilter === 'no') {
+          if (sale.paid) return false;
+          if (!showPartials && isPaidPartial) return false;
+        }
+        if (paidFilter === 'partial' && !isPaidPartial) return false;
       }
       return true;
     });
-  }, [salesData, deliveredFilter, paidFilter]);
+  }, [salesData, deliveredFilter, paidFilter, showPartials]);
 
   const saleProductIds = useMemo(() => {
     const ids = new Set<number>();
@@ -491,7 +510,7 @@ export default function VentasPage() {
               </span>
             </div>
           </div>
-          {deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && (
+          {deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && !showPartials && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-gray-500 uppercase">Ventas totales</p>
@@ -507,7 +526,7 @@ export default function VentasPage() {
               </div>
             </div>
           )}
-          {(deliveredFilter !== 'all' || paidFilter !== 'all' || salesSearch) && (
+          {(deliveredFilter !== 'all' || paidFilter !== 'all' || salesSearch || showPartials) && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 bg-gray-50">
                 <p className="text-xs text-gray-500 uppercase">Ventas filtradas</p>
@@ -538,26 +557,37 @@ export default function VentasPage() {
               <label className="text-xs text-gray-500">Entregado</label>
               <select
                 value={deliveredFilter}
-                onChange={(e) => setDeliveredFilter(e.target.value as 'all' | 'yes' | 'no')}
+                onChange={(e) => setDeliveredFilter(e.target.value as 'all' | 'yes' | 'no' | 'partial')}
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Todos</option>
                 <option value="yes">SÃ­</option>
                 <option value="no">No</option>
+                <option value="partial">Parcial</option>
               </select>
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500">Pagado</label>
               <select
                 value={paidFilter}
-                onChange={(e) => setPaidFilter(e.target.value as 'all' | 'yes' | 'no')}
+                onChange={(e) => setPaidFilter(e.target.value as 'all' | 'yes' | 'no' | 'partial')}
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Todos</option>
                 <option value="yes">SÃ­</option>
                 <option value="no">No</option>
+                <option value="partial">Parcial</option>
               </select>
             </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={showPartials}
+                onChange={(e) => setShowPartials(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600"
+              />
+              Mostrar parciales
+            </label>
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
@@ -787,3 +817,4 @@ export default function VentasPage() {
     </div>
   );
 }
+
