@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { CheckCircle, CreditCard, Plus, Search, X, ExternalLink, Edit2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ interface CartItem {
   product: ProductAdmin;
   quantity: number;
   unit_price: number;
+  delivered: boolean;
+  paid: boolean;
 }
 
 export default function VentasPage() {
@@ -35,9 +37,6 @@ export default function VentasPage() {
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
   const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
-  const [delivered, setDelivered] = useState(false);
-  const [paid, setPaid] = useState(false);
-  const [paidAmount, setPaidAmount] = useState('');
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
 
   const createSale = useCreateSale(apiKey);
@@ -66,7 +65,7 @@ export default function VentasPage() {
             : item
         );
       }
-      return [...prev, { product, quantity: 1, unit_price: defaultPrice || 0 }];
+      return [...prev, { product, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
     });
   };
 
@@ -94,6 +93,16 @@ export default function VentasPage() {
     setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
+  const updateItemCheck = (productId: number, field: 'delivered' | 'paid', value: boolean) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.product.id === productId
+          ? { ...item, [field]: value }
+          : item
+      )
+    );
+  };
+
   const totalAmount = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + item.quantity * item.unit_price, 0);
   }, [cartItems]);
@@ -103,18 +112,15 @@ export default function VentasPage() {
       product_id: item.product.id,
       quantity: item.quantity,
       unit_price: item.unit_price,
+      delivered: item.delivered,
+      paid: item.paid,
     }));
-
-    const paidAmountValue = paidAmount ? Number(paidAmount) : undefined;
 
     await createSale.mutateAsync({
       customer_name: customerName || undefined,
       notes: notes || undefined,
       installments: installments ? Number(installments) : undefined,
       seller,
-      delivered,
-      paid,
-      paid_amount: paidAmountValue ?? (paid ? totalAmount : undefined),
       items,
     });
 
@@ -122,9 +128,6 @@ export default function VentasPage() {
     setCustomerName('');
     setNotes('');
     setInstallments('');
-    setDelivered(false);
-    setPaid(false);
-    setPaidAmount('');
   };
 
   const handleToggleSale = async (saleId: number, field: 'delivered' | 'paid', value: boolean) => {
@@ -187,7 +190,8 @@ export default function VentasPage() {
         if (sale.delivered) return false;
         return sale.items.some((item) => {
           const available = stockMap.get(item.product_id) ?? 0;
-          const pendingQty = Math.max(0, item.quantity - (item.delivered_quantity || 0));
+          const deliveredQty = item.delivered ? item.quantity : 0;
+          const pendingQty = Math.max(0, item.quantity - deliveredQty);
           return pendingQty > available;
         });
       });
@@ -364,38 +368,8 @@ export default function VentasPage() {
                   <option value="Heber">Heber</option>
                 </select>
               </div>
-              <div className="flex items-center gap-3 mt-6 md:mt-7 flex-wrap">
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={delivered}
-                    onChange={(e) => setDelivered(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                  />
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                  Entregado
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={paid}
-                    onChange={(e) => setPaid(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                  />
-                  <CreditCard className="h-4 w-4 text-blue-600" />
-                  Pagado
-                </label>
-              </div>
+              <div />
             </div>
-            <Input
-              label="Monto pagado"
-              type="number"
-              min="0"
-              step="0.01"
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
-              placeholder={totalAmount > 0 ? totalAmount.toFixed(2) : '0.00'}
-            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
@@ -420,6 +394,8 @@ export default function VentasPage() {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase"></th>
@@ -440,6 +416,22 @@ export default function VentasPage() {
                             className="w-20 px-2 py-1 border rounded text-right"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(item.product.id, Number(e.target.value))}
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.delivered}
+                            onChange={(e) => updateItemCheck(item.product.id, 'delivered', e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.paid}
+                            onChange={(e) => updateItemCheck(item.product.id, 'paid', e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
                           />
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -493,7 +485,7 @@ export default function VentasPage() {
             <div>
               <h2 className="text-lg font-semibold">Ventas existentes</h2>
               <p className="text-sm text-gray-500">
-                El stock se descuenta al marcar una venta como Entregada.
+                El stock se descuenta al marcar items como Entregados.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -697,15 +689,16 @@ export default function VentasPage() {
                                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. pedida</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. entregada</th>
+                                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                       {sale.items.map((item) => {
-                                        const effectiveDeliveredQty = sale.delivered
+                                        const effectiveDeliveredQty = item.delivered
                                           ? item.quantity
-                                          : (item.delivered_quantity || 0);
+                                          : 0;
                                         const pendingQty = Math.max(0, item.quantity - effectiveDeliveredQty);
                                         const shortage = getShortageQty(item.product_id, pendingQty);
                                         return (
@@ -725,6 +718,7 @@ export default function VentasPage() {
                                             </td>
                                             <td className="px-3 py-2 text-right">{item.quantity}</td>
                                             <td className="px-3 py-2 text-right">{effectiveDeliveredQty}</td>
+                                            <td className="px-3 py-2 text-center">{item.paid ? 'Si' : 'No'}</td>
                                             <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
                                             <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
                                           </tr>

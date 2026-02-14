@@ -17,7 +17,8 @@ interface EditItem {
   product_name: string;
   quantity: number;
   unit_price: number;
-  delivered_quantity: number;
+  delivered: boolean;
+  paid: boolean;
 }
 
 export default function SaleDetailPage() {
@@ -35,7 +36,6 @@ export default function SaleDetailPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editInstallments, setEditInstallments] = useState('');
   const [editSeller, setEditSeller] = useState<'Facu' | 'Heber'>('Facu');
-  const [editPaidAmount, setEditPaidAmount] = useState('');
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
 
@@ -51,14 +51,14 @@ export default function SaleDetailPage() {
     setEditNotes(sale.notes || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
     setEditSeller(sale.seller);
-    setEditPaidAmount(String(Number(sale.paid_amount || 0)));
     setEditItems(
       sale.items.map((item) => ({
         product_id: item.product_id,
         product_name: item.product_name || `Producto #${item.product_id}`,
         quantity: item.quantity,
         unit_price: Number(item.unit_price || 0),
-        delivered_quantity: sale.delivered ? item.quantity : (item.delivered_quantity || 0),
+        delivered: !!item.delivered,
+        paid: !!item.paid,
       }))
     );
   }, [sale]);
@@ -80,9 +80,10 @@ export default function SaleDetailPage() {
       product_name: item.product_name || `Producto #${item.product_id}`,
       quantity: item.quantity,
       unit_price: Number(item.unit_price || 0),
-      delivered_quantity: sale?.delivered ? item.quantity : (item.delivered_quantity || 0),
+      delivered: !!item.delivered,
+      paid: !!item.paid,
     }));
-  }, [isEditing, editItems, sale?.items, sale?.delivered]);
+  }, [isEditing, editItems, sale?.items]);
 
   const handleDelete = async () => {
     if (!sale) return;
@@ -112,7 +113,8 @@ export default function SaleDetailPage() {
           product_name: product.custom_name || product.original_name,
           quantity: 1,
           unit_price: Number(defaultPrice || 0),
-          delivered_quantity: 0,
+          delivered: false,
+          paid: false,
         },
       ];
     });
@@ -136,15 +138,12 @@ export default function SaleDetailPage() {
       product_id: item.product_id,
       quantity: Math.max(0, Number(item.quantity || 0)),
       unit_price: Math.max(0, Number(item.unit_price || 0)),
-      delivered_quantity: Math.max(0, Number(item.delivered_quantity || 0)),
+      delivered: !!item.delivered,
+      paid: !!item.paid,
     }));
 
     if (!items.length || items.some((item) => item.quantity <= 0 || item.unit_price <= 0)) {
       alert('La venta debe tener al menos un item.');
-      return;
-    }
-    if (items.some((item) => (item.delivered_quantity || 0) > item.quantity)) {
-      alert('La cantidad entregada no puede superar la cantidad del item.');
       return;
     }
 
@@ -155,7 +154,6 @@ export default function SaleDetailPage() {
         notes: editNotes || undefined,
         installments: editInstallments ? Number(editInstallments) : undefined,
         seller: editSeller,
-        paid_amount: Math.max(0, Number(editPaidAmount || 0)),
         items,
       },
     });
@@ -260,7 +258,8 @@ export default function SaleDetailPage() {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Entregada</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       {isEditing && <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>}
@@ -285,21 +284,23 @@ export default function SaleDetailPage() {
                             item.quantity
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.quantity}
-                              className="w-20 px-2 py-1 border rounded text-right"
-                              value={item.delivered_quantity}
-                              onChange={(e) =>
-                                updateEditItem(item.product_id, { delivered_quantity: Number(e.target.value) })
-                              }
-                            />
-                          ) : (
-                            item.delivered_quantity || 0
-                          )}
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.delivered}
+                            onChange={(e) => updateEditItem(item.product_id, { delivered: e.target.checked })}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                            disabled={!isEditing}
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.paid}
+                            onChange={(e) => updateEditItem(item.product_id, { paid: e.target.checked })}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                            disabled={!isEditing}
+                          />
                         </td>
                         <td className="px-3 py-2 text-right">
                           {isEditing ? (
@@ -388,17 +389,7 @@ export default function SaleDetailPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Pagado</span>
-                {isEditing ? (
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editPaidAmount}
-                    onChange={(e) => setEditPaidAmount(e.target.value)}
-                  />
-                ) : (
-                  <span className="font-medium">{formatPrice(sale.paid_amount)}</span>
-                )}
+                <span className="font-medium">{formatPrice(sale.paid_amount)}</span>
               </div>
               {!isEditing && (
                 <>

@@ -644,12 +644,11 @@ export const adminApi = {
     data: {
       delivered?: boolean;
       paid?: boolean;
-      paid_amount?: number;
       customer_name?: string;
       notes?: string;
       installments?: number;
       seller?: 'Facu' | 'Heber';
-      items?: Array<{ product_id: number; quantity: number; unit_price: number; delivered_quantity?: number }>;
+      items?: Array<{ product_id: number; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
     }
   ): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {

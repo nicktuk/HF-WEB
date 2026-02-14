@@ -31,6 +31,7 @@ class SaleItem(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
     delivered_quantity = Column(Integer, nullable=False, default=0)
+    is_paid = Column(Boolean, nullable=False, default=False)
     unit_price = Column(Numeric(10, 2), nullable=False)
     total_price = Column(Numeric(12, 2), nullable=False)
 
@@ -42,6 +43,17 @@ class SaleItem(Base):
         if not self.product:
             return None
         return self.product.custom_name or self.product.original_name
+
+    @property
+    def delivered(self) -> bool:
+        qty = int(self.quantity or 0)
+        if qty <= 0:
+            return False
+        return int(self.delivered_quantity or 0) >= qty
+
+    @property
+    def paid(self) -> bool:
+        return bool(self.is_paid)
 
     __table_args__ = (
         Index("ix_sale_items_sale_product", "sale_id", "product_id"),
