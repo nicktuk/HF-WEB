@@ -28,7 +28,8 @@ class SaleItem(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=False, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True, index=True)
+    manual_product_name = Column(String(500), nullable=True)
     quantity = Column(Integer, nullable=False)
     delivered_quantity = Column(Integer, nullable=False, default=0)
     is_paid = Column(Boolean, nullable=False, default=False)
@@ -40,9 +41,9 @@ class SaleItem(Base):
 
     @property
     def product_name(self) -> str | None:
-        if not self.product:
-            return None
-        return self.product.custom_name or self.product.original_name
+        if self.product:
+            return self.product.custom_name or self.product.original_name
+        return self.manual_product_name
 
     @property
     def delivered(self) -> bool:

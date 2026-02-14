@@ -13,7 +13,8 @@ import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin } from '@/types';
 
 interface EditItem {
-  product_id: number;
+  line_id: string;
+  product_id?: number;
   product_name: string;
   quantity: number;
   unit_price: number;
@@ -53,8 +54,9 @@ export default function SaleDetailPage() {
     setEditSeller(sale.seller);
     setEditItems(
       sale.items.map((item) => ({
+        line_id: `sale-item-${item.id}`,
         product_id: item.product_id,
-        product_name: item.product_name || `Producto #${item.product_id}`,
+        product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
         quantity: item.quantity,
         unit_price: Number(item.unit_price || 0),
         delivered: !!item.delivered,
@@ -76,8 +78,9 @@ export default function SaleDetailPage() {
       return editItems;
     }
     return (sale?.items || []).map((item) => ({
+      line_id: `sale-item-${item.id}`,
       product_id: item.product_id,
-      product_name: item.product_name || `Producto #${item.product_id}`,
+      product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
       quantity: item.quantity,
       unit_price: Number(item.unit_price || 0),
       delivered: !!item.delivered,
@@ -109,6 +112,7 @@ export default function SaleDetailPage() {
       return [
         ...prev,
         {
+          line_id: `new-product-${product.id}`,
           product_id: product.id,
           product_name: product.custom_name || product.original_name,
           quantity: 1,
@@ -120,22 +124,23 @@ export default function SaleDetailPage() {
     });
   };
 
-  const updateEditItem = (productId: number, patch: Partial<EditItem>) => {
+  const updateEditItem = (lineId: string, patch: Partial<EditItem>) => {
     setEditItems((prev) =>
       prev
-        .map((item) => (item.product_id === productId ? { ...item, ...patch } : item))
+        .map((item) => (item.line_id === lineId ? { ...item, ...patch } : item))
         .filter((item) => item.quantity > 0)
     );
   };
 
-  const removeEditItem = (productId: number) => {
-    setEditItems((prev) => prev.filter((item) => item.product_id !== productId));
+  const removeEditItem = (lineId: string) => {
+    setEditItems((prev) => prev.filter((item) => item.line_id !== lineId));
   };
 
   const handleSave = async () => {
     if (!sale) return;
     const items = editItems.map((item) => ({
       product_id: item.product_id,
+      product_name: item.product_id ? undefined : item.product_name,
       quantity: Math.max(0, Number(item.quantity || 0)),
       unit_price: Math.max(0, Number(item.unit_price || 0)),
       delivered: !!item.delivered,
@@ -267,7 +272,7 @@ export default function SaleDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {visibleItems.map((item) => (
-                      <tr key={item.product_id} className="hover:bg-gray-50">
+                      <tr key={item.line_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2">
                           <div className="font-medium text-gray-900">{item.product_name}</div>
                         </td>
@@ -278,7 +283,7 @@ export default function SaleDetailPage() {
                               min="1"
                               className="w-20 px-2 py-1 border rounded text-right"
                               value={item.quantity}
-                              onChange={(e) => updateEditItem(item.product_id, { quantity: Number(e.target.value) })}
+                              onChange={(e) => updateEditItem(item.line_id, { quantity: Number(e.target.value) })}
                             />
                           ) : (
                             item.quantity
@@ -288,7 +293,7 @@ export default function SaleDetailPage() {
                           <input
                             type="checkbox"
                             checked={item.delivered}
-                            onChange={(e) => updateEditItem(item.product_id, { delivered: e.target.checked })}
+                            onChange={(e) => updateEditItem(item.line_id, { delivered: e.target.checked })}
                             className="h-4 w-4 rounded border-gray-300 text-primary-600"
                             disabled={!isEditing}
                           />
@@ -297,7 +302,7 @@ export default function SaleDetailPage() {
                           <input
                             type="checkbox"
                             checked={item.paid}
-                            onChange={(e) => updateEditItem(item.product_id, { paid: e.target.checked })}
+                            onChange={(e) => updateEditItem(item.line_id, { paid: e.target.checked })}
                             className="h-4 w-4 rounded border-gray-300 text-primary-600"
                             disabled={!isEditing}
                           />
@@ -310,7 +315,7 @@ export default function SaleDetailPage() {
                               step="0.01"
                               className="w-28 px-2 py-1 border rounded text-right"
                               value={item.unit_price}
-                              onChange={(e) => updateEditItem(item.product_id, { unit_price: Number(e.target.value) })}
+                              onChange={(e) => updateEditItem(item.line_id, { unit_price: Number(e.target.value) })}
                             />
                           ) : (
                             formatPrice(item.unit_price)
@@ -321,7 +326,7 @@ export default function SaleDetailPage() {
                         </td>
                         {isEditing && (
                           <td className="px-3 py-2 text-right">
-                            <Button variant="ghost" size="sm" onClick={() => removeEditItem(item.product_id)}>
+                            <Button variant="ghost" size="sm" onClick={() => removeEditItem(item.line_id)}>
                               <X className="h-4 w-4" />
                             </Button>
                           </td>

@@ -5,7 +5,8 @@ from pydantic import BaseModel, Field
 
 
 class SaleItemCreate(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
     quantity: int = Field(..., gt=0)
     unit_price: Decimal = Field(..., gt=0)
     delivered: Optional[bool] = None
@@ -35,7 +36,7 @@ class SaleUpdate(BaseModel):
 
 class SaleItemResponse(BaseModel):
     id: int
-    product_id: int
+    product_id: Optional[int] = None
     product_name: Optional[str] = None
     quantity: int
     delivered_quantity: int

@@ -301,7 +301,8 @@ export interface ProductCreateManualForm {
 // Sales Types
 
 export interface SaleItemCreate {
-  product_id: number;
+  product_id?: number;
+  product_name?: string;
   quantity: number;
   unit_price: number;
   delivered?: boolean;
@@ -318,7 +319,7 @@ export interface SaleCreateForm {
 
 export interface SaleItem {
   id: number;
-  product_id: number;
+  product_id?: number;
   product_name?: string;
   quantity: number;
   delivered_quantity: number;

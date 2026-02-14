@@ -14,7 +14,9 @@ class SalesService:
     def __init__(self, db: Session):
         self.db = db
 
-    def _get_available_stock(self, product_id: int) -> int:
+    def _get_available_stock(self, product_id: int | None) -> int:
+        if product_id is None:
+            return 0
         qty = (
             self.db.query(
                 func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0)
@@ -24,9 +26,11 @@ class SalesService:
         )
         return int(qty or 0)
 
-    def _deduct_stock(self, product_id: int, quantity: int) -> None:
+    def _deduct_stock(self, product_id: int | None, quantity: int) -> None:
         """Deduct stock from purchases (FIFO)."""
         if quantity <= 0:
+            return
+        if product_id is None:
             return
 
         available = self._get_available_stock(product_id)
@@ -54,9 +58,11 @@ class SalesService:
         if remaining > 0:
             raise ValidationError("No se pudo descontar el stock completo")
 
-    def _restore_stock(self, product_id: int, quantity: int) -> None:
+    def _restore_stock(self, product_id: int | None, quantity: int) -> None:
         """Restore stock to purchases by decreasing out_quantity (LIFO)."""
         if quantity <= 0:
+            return
+        if product_id is None:
             return
 
         remaining = quantity
@@ -90,14 +96,27 @@ class SalesService:
 
         items: list[dict] = []
         total_amount = Decimal("0")
-        seen_products: set[int] = set()
+        seen_item_refs: set[str] = set()
         for item in raw_items:
-            product = self.db.query(Product).filter(Product.id == item.product_id).first()
-            if not product:
-                raise NotFoundError("Product", str(item.product_id))
-            if product.id in seen_products:
+            product_id = getattr(item, "product_id", None)
+            product_name = (getattr(item, "product_name", None) or "").strip()
+            product = None
+            manual_product_name = None
+
+            if product_id is not None:
+                product = self.db.query(Product).filter(Product.id == product_id).first()
+                if not product:
+                    raise NotFoundError("Product", str(product_id))
+                item_ref = f"product:{product.id}"
+            else:
+                if not product_name:
+                    raise ValidationError("El item manual requiere nombre de producto")
+                manual_product_name = product_name
+                item_ref = f"manual:{manual_product_name.lower()}"
+
+            if item_ref in seen_item_refs:
                 raise ValidationError("No se permite repetir el mismo producto en la venta")
-            seen_products.add(product.id)
+            seen_item_refs.add(item_ref)
 
             qty = int(item.quantity)
             if qty <= 0:
@@ -129,7 +148,9 @@ class SalesService:
             delivered_qty = qty if delivered_flag else 0
 
             items.append({
-                "product_id": product.id,
+                "item_ref": item_ref,
+                "product_id": product.id if product else None,
+                "manual_product_name": manual_product_name,
                 "quantity": qty,
                 "delivered_quantity": delivered_qty,
                 "is_paid": paid_flag,
@@ -169,14 +190,15 @@ class SalesService:
     def _apply_item_states(
         self,
         sale: Sale,
-        delivery_targets_by_product: dict[int, bool] | None = None,
-        paid_targets_by_product: dict[int, bool] | None = None,
+        delivery_targets_by_ref: dict[str, bool] | None = None,
+        paid_targets_by_ref: dict[str, bool] | None = None,
     ) -> None:
         for item in sale.items:
+            item_ref = f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"
             current_qty = int(item.delivered_quantity or 0)
             qty = int(item.quantity or 0)
             current_delivered = qty > 0 and current_qty >= qty
-            target_delivered = delivery_targets_by_product.get(item.product_id, current_delivered) if delivery_targets_by_product is not None else current_delivered
+            target_delivered = delivery_targets_by_ref.get(item_ref, current_delivered) if delivery_targets_by_ref is not None else current_delivered
             target_qty = qty if target_delivered else 0
             delta = target_qty - current_qty
             if delta > 0:
@@ -185,8 +207,8 @@ class SalesService:
                 self._restore_stock(item.product_id, -delta)
             item.delivered_quantity = target_qty
 
-            if paid_targets_by_product is not None:
-                item.is_paid = bool(paid_targets_by_product.get(item.product_id, item.is_paid))
+            if paid_targets_by_ref is not None:
+                item.is_paid = bool(paid_targets_by_ref.get(item_ref, item.is_paid))
 
         self._sync_sale_state(sale)
 
@@ -217,6 +239,7 @@ class SalesService:
             sale_item = SaleItem(
                 sale_id=sale.id,
                 product_id=item["product_id"],
+                manual_product_name=item["manual_product_name"],
                 quantity=item["quantity"],
                 delivered_quantity=0,
                 is_paid=False,
@@ -228,8 +251,8 @@ class SalesService:
         self.db.flush()
         self._apply_item_states(
             sale,
-            {item["product_id"]: item["delivered_quantity"] > 0 for item in items},
-            {item["product_id"]: item["is_paid"] for item in items},
+            {item["item_ref"]: item["delivered_quantity"] > 0 for item in items},
+            {item["item_ref"]: item["is_paid"] for item in items},
         )
 
         self.db.commit()
@@ -247,6 +270,7 @@ class SalesService:
                     Sale.customer_name.ilike(search_term),
                     Product.custom_name.ilike(search_term),
                     Product.original_name.ilike(search_term),
+                    SaleItem.manual_product_name.ilike(search_term),
                 )
             ).distinct()
 
@@ -299,6 +323,7 @@ class SalesService:
                 self.db.add(SaleItem(
                     sale_id=sale.id,
                     product_id=item["product_id"],
+                    manual_product_name=item["manual_product_name"],
                     quantity=item["quantity"],
                     delivered_quantity=0,
                     is_paid=False,
@@ -310,17 +335,23 @@ class SalesService:
             self.db.refresh(sale, attribute_names=["items"])
             self._apply_item_states(
                 sale,
-                {item["product_id"]: item["delivered_quantity"] > 0 for item in normalized_items},
-                {item["product_id"]: item["is_paid"] for item in normalized_items},
+                {item["item_ref"]: item["delivered_quantity"] > 0 for item in normalized_items},
+                {item["item_ref"]: item["is_paid"] for item in normalized_items},
             )
         elif delivered is not None or paid is not None:
             delivery_targets = (
-                {item.product_id: bool(delivered) for item in sale.items}
+                {
+                    (f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(delivered)
+                    for item in sale.items
+                }
                 if delivered is not None
                 else None
             )
             paid_targets = (
-                {item.product_id: bool(paid) for item in sale.items}
+                {
+                    (f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(paid)
+                    for item in sale.items
+                }
                 if paid is not None
                 else None
             )
@@ -379,6 +410,8 @@ class SalesService:
 
         for sale in sales:
             for item in sale.items:
+                if item.product_id is None:
+                    continue
                 # Full-delivered sales imply all units delivered.
                 requested = int(item.delivered_quantity or 0)
                 if requested <= 0:

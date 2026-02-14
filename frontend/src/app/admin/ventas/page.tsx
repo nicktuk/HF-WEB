@@ -5,6 +5,7 @@ import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle, Check } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useCreateSale, useSales, useUpdateSale, useStockSummary } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
@@ -12,7 +13,9 @@ import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleItemCreate } from '@/types';
 
 interface CartItem {
-  product: ProductAdmin;
+  id: string;
+  product: ProductAdmin | null;
+  manualName?: string;
   quantity: number;
   unit_price: number;
   delivered: boolean;
@@ -26,6 +29,7 @@ export default function VentasPage() {
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
   const [showPartials, setShowPartials] = useState(false);
+  const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
   const [stockShortageOnly, setStockShortageOnly] = useState(false);
   const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
@@ -37,6 +41,9 @@ export default function VentasPage() {
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
   const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
+  const [manualProductName, setManualProductName] = useState('');
+  const [manualProductPrice, setManualProductPrice] = useState('');
+  const [manualProductQty, setManualProductQty] = useState('1');
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
 
   const createSale = useCreateSale(apiKey);
@@ -45,8 +52,7 @@ export default function VentasPage() {
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
     page: 1,
-    limit: 100,
-    in_stock: true,
+    limit: 1000,
     search: search || undefined,
   });
 
@@ -54,49 +60,79 @@ export default function VentasPage() {
 
   const addToCart = (product: ProductAdmin) => {
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find((item) => item.product?.id === product.id);
       const defaultPrice = Number(
         product.custom_price ?? product.original_price ?? 0
       ) * (1 + Number(product.markup_percentage ?? 0) / 100);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
+          item.product?.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prev, { product, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
+      return [...prev, { id: `p-${product.id}`, product, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
     });
   };
 
-  const updateQuantity = (productId: number, quantity: number) => {
+  const addManualToCart = () => {
+    const name = manualProductName.trim();
+    const qty = Math.max(1, Number(manualProductQty || 1));
+    const price = Math.max(0, Number(manualProductPrice || 0));
+    if (!name) {
+      alert('Ingresá el nombre del producto manual.');
+      return;
+    }
+    if (price <= 0) {
+      alert('Ingresá un precio mayor a 0 para el producto manual.');
+      return;
+    }
+
+    setCartItems((prev) => [
+      ...prev,
+      {
+        id: `m-${Date.now()}-${prev.length}`,
+        product: null,
+        manualName: name,
+        quantity: qty,
+        unit_price: price,
+        delivered: false,
+        paid: false,
+      },
+    ]);
+    setManualProductName('');
+    setManualProductPrice('');
+    setManualProductQty('1');
+  };
+
+  const updateQuantity = (itemId: string, quantity: number) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId
+        item.id === itemId
           ? { ...item, quantity: Math.max(0, quantity) }
           : item
       ).filter((item) => item.quantity > 0)
     );
   };
 
-  const updateUnitPrice = (productId: number, price: number) => {
+  const updateUnitPrice = (itemId: string, price: number) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId
+        item.id === itemId
           ? { ...item, unit_price: Math.max(0, price) }
           : item
       )
     );
   };
 
-  const removeItem = (productId: number) => {
-    setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeItem = (itemId: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
-  const updateItemCheck = (productId: number, field: 'delivered' | 'paid', value: boolean) => {
+  const updateItemCheck = (itemId: string, field: 'delivered' | 'paid', value: boolean) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId
+        item.id === itemId
           ? { ...item, [field]: value }
           : item
       )
@@ -109,7 +145,8 @@ export default function VentasPage() {
 
   const handleCreateSale = async () => {
     const items: SaleItemCreate[] = cartItems.map((item) => ({
-      product_id: item.product.id,
+      product_id: item.product?.id,
+      product_name: item.product ? undefined : item.manualName,
       quantity: item.quantity,
       unit_price: item.unit_price,
       delivered: item.delivered,
@@ -128,6 +165,7 @@ export default function VentasPage() {
     setCustomerName('');
     setNotes('');
     setInstallments('');
+    setShowCreateSaleModal(false);
   };
 
   const getProgressStatus = (total: number, amount: number): 'none' | 'partial' | 'full' => {
@@ -194,7 +232,9 @@ export default function VentasPage() {
   const saleProductIds = useMemo(() => {
     const ids = new Set<number>();
     (salesData || []).forEach((sale) => {
-      sale.items.forEach((item) => ids.add(item.product_id));
+      sale.items.forEach((item) => {
+        if (item.product_id) ids.add(item.product_id);
+      });
     });
     return Array.from(ids);
   }, [salesData]);
@@ -210,6 +250,7 @@ export default function VentasPage() {
       return filteredSales.filter((sale) => {
         if (sale.delivered) return false;
         return sale.items.some((item) => {
+          if (!item.product_id) return false;
           const available = stockMap.get(item.product_id) ?? 0;
           const deliveredQty = item.delivered ? item.quantity : 0;
           const pendingQty = Math.max(0, item.quantity - deliveredQty);
@@ -218,7 +259,8 @@ export default function VentasPage() {
       });
     }, [filteredSales, stockMap]);
 
-  const getShortageQty = (productId: number, pendingQuantity: number) => {
+  const getShortageQty = (productId: number | undefined, pendingQuantity: number) => {
+    if (!productId) return 0;
     const available = stockMap.get(productId) ?? 0;
     return Math.max(0, pendingQuantity - available);
   };
@@ -239,7 +281,7 @@ export default function VentasPage() {
   const totals = useMemo(() => {
     const totalSales = salesData?.length || 0;
     const totalItems = (salesData || []).reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-    const totalAmount = (salesData || []).reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    const totalAmount = (salesData || []).reduce((acc, sale) => acc + Number(sale.delivered_amount || 0), 0);
     return { totalSales, totalItems, totalAmount };
   }, [salesData]);
 
@@ -247,7 +289,7 @@ export default function VentasPage() {
     const base = stockShortageOnly ? salesWithStockShortage : filteredSales;
     const totalSales = base.length;
     const totalItems = base.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-    const totalAmount = base.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    const totalAmount = base.reduce((acc, sale) => acc + Number(sale.delivered_amount || 0), 0);
     return { totalSales, totalItems, totalAmount };
   }, [filteredSales, salesWithStockShortage, stockShortageOnly]);
 
@@ -304,9 +346,20 @@ export default function VentasPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Ventas</h1>
-        <p className="text-gray-600">Productos en stock y armado de venta.</p>
+        <p className="text-gray-600">GestiÃ³n de ventas y seguimiento de entregas/pagos.</p>
       </div>
 
+      <div className="flex justify-end">
+        <Button onClick={() => setShowCreateSaleModal(true)}>Nueva venta</Button>
+      </div>
+
+      <Modal
+        isOpen={showCreateSaleModal}
+        onClose={() => setShowCreateSaleModal(false)}
+        title="Nueva venta"
+        size="xl"
+      >
+        <ModalContent className="space-y-4 max-h-[85vh] overflow-y-auto">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Left: Stock list */}
         <div className="bg-white rounded-lg border">
@@ -329,7 +382,7 @@ export default function VentasPage() {
             {isLoading ? (
               <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
             ) : !productsData || productsData.items.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500">No hay productos en stock.</div>
+              <div className="p-4 text-sm text-gray-500">No hay productos.</div>
             ) : (
               <div className="divide-y">
                 {productsData.items.map((product) => (
@@ -338,7 +391,7 @@ export default function VentasPage() {
                       <div className="font-medium text-gray-900 line-clamp-1">
                         {product.custom_name || product.original_name}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className={`text-xs ${Number(product.stock_qty || 0) > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
                         Stock: {product.stock_qty || 0} · Precio: {formatPrice(
                           (product.custom_price ?? product.original_price ?? 0) * (1 + Number(product.markup_percentage ?? 0) / 100)
                         )}
@@ -392,6 +445,39 @@ export default function VentasPage() {
               <div />
             </div>
 
+            <div className="border rounded-lg p-3 bg-gray-50 space-y-3">
+              <p className="text-sm font-medium text-gray-700">Agregar producto manual</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <Input
+                  label="Nombre"
+                  value={manualProductName}
+                  onChange={(e) => setManualProductName(e.target.value)}
+                  placeholder="Ej: Producto especial"
+                />
+                <Input
+                  label="Cantidad"
+                  type="number"
+                  min="1"
+                  value={manualProductQty}
+                  onChange={(e) => setManualProductQty(e.target.value)}
+                />
+                <Input
+                  label="Precio"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualProductPrice}
+                  onChange={(e) => setManualProductPrice(e.target.value)}
+                />
+                <div className="flex items-end">
+                  <Button type="button" variant="outline" className="w-full" onClick={addManualToCart}>
+                    Agregar manual
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-amber-700">Los productos manuales no descuentan stock.</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
               <textarea
@@ -424,10 +510,15 @@ export default function VentasPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {cartItems.map((item) => (
-                      <tr key={item.product.id}>
+                      <tr key={item.id}>
                         <td className="px-3 py-2">
                           <div className="font-medium text-gray-900 line-clamp-1">
-                            {item.product.custom_name || item.product.original_name}
+                            {item.product ? (item.product.custom_name || item.product.original_name) : (item.manualName || 'Producto manual')}
+                          </div>
+                          <div className={`text-xs ${item.product && Number(item.product.stock_qty || 0) > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
+                            {item.product
+                              ? `Stock disponible: ${item.product.stock_qty || 0}${Number(item.product.stock_qty || 0) <= 0 ? ' (Sin unidades)' : ''}`
+                              : 'Producto manual sin stock'}
                           </div>
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -436,14 +527,14 @@ export default function VentasPage() {
                             min="0"
                             className="w-20 px-2 py-1 border rounded text-right"
                             value={item.quantity}
-                            onChange={(e) => updateQuantity(item.product.id, Number(e.target.value))}
+                            onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
                           />
                         </td>
                         <td className="px-3 py-2 text-center">
                           <input
                             type="checkbox"
                             checked={item.delivered}
-                            onChange={(e) => updateItemCheck(item.product.id, 'delivered', e.target.checked)}
+                            onChange={(e) => updateItemCheck(item.id, 'delivered', e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300 text-primary-600"
                           />
                         </td>
@@ -451,7 +542,7 @@ export default function VentasPage() {
                           <input
                             type="checkbox"
                             checked={item.paid}
-                            onChange={(e) => updateItemCheck(item.product.id, 'paid', e.target.checked)}
+                            onChange={(e) => updateItemCheck(item.id, 'paid', e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300 text-primary-600"
                           />
                         </td>
@@ -461,14 +552,14 @@ export default function VentasPage() {
                             min="0"
                             className="w-28 px-2 py-1 border rounded text-right"
                             value={item.unit_price}
-                            onChange={(e) => updateUnitPrice(item.product.id, Number(e.target.value))}
+                            onChange={(e) => updateUnitPrice(item.id, Number(e.target.value))}
                           />
                         </td>
                         <td className="px-3 py-2 text-right font-medium">
                           {formatPrice(item.quantity * item.unit_price)}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <Button variant="ghost" size="sm" onClick={() => removeItem(item.product.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
                             <X className="h-4 w-4" />
                           </Button>
                         </td>
@@ -499,6 +590,11 @@ export default function VentasPage() {
           </div>
         </div>
       </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setShowCreateSaleModal(false)}>Cerrar</Button>
+        </ModalFooter>
+      </Modal>
 
       <div className="bg-white rounded-lg border">
         <div className="px-4 py-3 border-b space-y-3">
@@ -534,7 +630,7 @@ export default function VentasPage() {
                 <p className="text-2xl font-bold text-gray-900">{totals.totalItems}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-gray-500 uppercase">Valorizado</p>
+                <p className="text-xs text-gray-500 uppercase">Valorizado entregado</p>
                 <p className="text-2xl font-bold text-gray-900">{formatPrice(totals.totalAmount)}</p>
               </div>
             </div>
@@ -550,7 +646,7 @@ export default function VentasPage() {
                 <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalItems}</p>
               </div>
               <div className="rounded-lg border p-3 bg-gray-50">
-                <p className="text-xs text-gray-500 uppercase">Valorizado</p>
+                <p className="text-xs text-gray-500 uppercase">Valorizado entregado</p>
                 <p className="text-2xl font-bold text-gray-900">{formatPrice(filteredTotals.totalAmount)}</p>
               </div>
             </div>
@@ -721,7 +817,7 @@ export default function VentasPage() {
                                                 {shortage > 0 && (
                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                                                 )}
-                                                <span>{item.product_name || `Producto #${item.product_id}`}</span>
+                                                <span>{item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual')}</span>
                                                 {shortage > 0 && (
                                                   <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                                                     Faltan {shortage}
@@ -827,4 +923,5 @@ export default function VentasPage() {
     </div>
   );
 }
+
 
