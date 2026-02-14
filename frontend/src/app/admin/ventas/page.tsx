@@ -703,7 +703,10 @@ export default function VentasPage() {
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                       {sale.items.map((item) => {
-                                        const pendingQty = Math.max(0, item.quantity - (item.delivered_quantity || 0));
+                                        const effectiveDeliveredQty = sale.delivered
+                                          ? item.quantity
+                                          : (item.delivered_quantity || 0);
+                                        const pendingQty = Math.max(0, item.quantity - effectiveDeliveredQty);
                                         const shortage = getShortageQty(item.product_id, pendingQty);
                                         return (
                                           <tr key={item.id} className={shortage > 0 ? 'bg-amber-50' : undefined}>
@@ -721,7 +724,7 @@ export default function VentasPage() {
                                               </div>
                                             </td>
                                             <td className="px-3 py-2 text-right">{item.quantity}</td>
-                                            <td className="px-3 py-2 text-right">{item.delivered_quantity || 0}</td>
+                                            <td className="px-3 py-2 text-right">{effectiveDeliveredQty}</td>
                                             <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
                                             <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
                                           </tr>

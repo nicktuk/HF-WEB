@@ -135,7 +135,12 @@ class SalesService:
             qty = int(item.quantity or 0)
             if delivered_qty < qty:
                 delivered_all = False
-            line = (Decimal(str(item.unit_price or 0)) * Decimal(delivered_qty)).quantize(Decimal("0.01"))
+            # Value delivered using the price stored on the sale line.
+            if qty > 0:
+                line_total = Decimal(str(item.total_price or 0))
+                line = ((line_total / Decimal(qty)) * Decimal(delivered_qty)).quantize(Decimal("0.01"))
+            else:
+                line = Decimal("0.00")
             delivered_amount += line
 
         sale.delivered_amount = delivered_amount.quantize(Decimal("0.01"))
@@ -389,6 +394,9 @@ class SalesService:
                     shortages.append(
                         f"Venta #{sale.id}, producto #{item.product_id}: faltan {remaining} unidades para descontar"
                     )
+
+            # Keep delivered flags/amounts consistent with delivered quantities.
+            self._sync_delivery_state(sale)
 
         self.db.commit()
         return {
