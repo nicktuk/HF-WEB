@@ -146,11 +146,18 @@ function HomePageContent() {
 
   const { data: categories } = useCategories();
   const orderedCategories = useMemo(() => {
-    return [...(categories || [])].sort((a, b) => {
-      const byOrder = (a.display_order ?? 0) - (b.display_order ?? 0);
-      if (byOrder !== 0) return byOrder;
-      return a.name.localeCompare(b.name, 'es');
-    });
+    return (categories || [])
+      .map((category, index) => ({ category, index }))
+      .sort((a, b) => {
+        const aOrder = Number.isFinite(a.category.display_order) ? a.category.display_order : null;
+        const bOrder = Number.isFinite(b.category.display_order) ? b.category.display_order : null;
+        if (aOrder !== null && bOrder !== null && aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        // Fallback: preserve backend response order.
+        return a.index - b.index;
+      })
+      .map(({ category }) => category);
   }, [categories]);
   // Load subcategories for the selected category (URL) or temp category (drill-down menu)
   const { data: subcategories } = useSubcategories(selectedCategory);
