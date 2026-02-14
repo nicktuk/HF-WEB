@@ -57,6 +57,12 @@ class StockPurchase(Base):
         Index("ix_stock_purchases_product_date", "product_id", "purchase_date"),
     )
 
+    @property
+    def product_name(self) -> str | None:
+        if self.product:
+            return self.product.custom_name or self.product.original_name
+        return self.description
+
 
 class PurchasePayment(Base):
     """Pago asociado a una compra."""

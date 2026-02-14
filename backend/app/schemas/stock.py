@@ -34,6 +34,7 @@ class StockPurchaseResponse(BaseModel):
     id: int
     purchase_id: int | None = None
     product_id: int | None = None
+    product_name: str | None = None
     description: str | None = None
     code: str | None = None
     purchase_date: date

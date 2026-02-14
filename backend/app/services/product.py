@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 import csv
 import io
 import re
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func
 import logging
 
@@ -178,7 +178,7 @@ class ProductService:
 
     def get_stock_purchases(self, product_id: Optional[int] = None, unmatched: Optional[bool] = None) -> List[StockPurchase]:
         """Get stock purchases, optionally filtered by product or unmatched."""
-        query = self.db.query(StockPurchase)
+        query = self.db.query(StockPurchase).options(joinedload(StockPurchase.product))
         if product_id is not None:
             query = query.filter(StockPurchase.product_id == product_id)
         if unmatched is True:

@@ -70,7 +70,8 @@ export interface PendingPriceChange {
 
 export interface StockPurchase {
   id: number;
-  product_id: number;
+  product_id: number | null;
+  product_name?: string;
   description?: string;
   code?: string;
   purchase_date: string;

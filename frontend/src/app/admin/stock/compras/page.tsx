@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, type ChangeEvent } from 'react';
 import { FileDown, X, Plus, Trash2, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   useAddPaymentToPurchase,
   useDeletePayment,
   useImportStockWithSupplier,
+  useStockPurchases,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
@@ -108,6 +109,7 @@ export default function ComprasPage() {
   });
 
   const { data: suppliersData } = useSuppliers(apiKey);
+  const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
   const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchaseDetail(apiKey, selectedPurchaseId);
   const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
@@ -231,6 +233,28 @@ export default function ComprasPage() {
 
   const detail = purchaseDetail as PurchaseDetail | undefined;
   const remaining = detail ? detail.total_amount - detail.total_paid : 0;
+  const stockRows = useMemo(() => {
+    const stockByProduct = (stockPurchases || []).reduce(
+      (acc, item) => {
+        const key = item.product_id ?? -item.id;
+        const name = item.product_name || item.description || `Producto #${item.product_id || 'N/A'}`;
+        if (!acc[key]) {
+          acc[key] = {
+            key,
+            name,
+            purchased: 0,
+            out: 0,
+          };
+        }
+        acc[key].purchased += Number(item.quantity || 0);
+        acc[key].out += Number(item.out_quantity || 0);
+        return acc;
+      },
+      {} as Record<number, { key: number; name: string; purchased: number; out: number }>,
+    );
+
+    return Object.values(stockByProduct).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }, [stockPurchases]);
 
   return (
     <div className="space-y-6">
@@ -402,6 +426,39 @@ export default function ComprasPage() {
             </Button>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-lg border">
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Stock por compras</h2>
+          <span className="text-sm text-gray-500">{stockRows.length} productos</span>
+        </div>
+        <div className="overflow-x-auto">
+          {!stockPurchases ? (
+            <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
+          ) : stockRows.length === 0 ? (
+            <div className="p-4 text-sm text-gray-500">No hay movimientos de stock asociados a productos.</div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad comprada</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad salida</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {stockRows.map((row) => (
+                  <tr key={row.key} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900">{row.name}</td>
+                    <td className="px-4 py-3 text-right">{row.purchased}</td>
+                    <td className="px-4 py-3 text-right">{row.out}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {/* Purchase detail modal */}

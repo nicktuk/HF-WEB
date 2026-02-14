@@ -130,10 +130,10 @@ export function useStockSummary(apiKey: string, productIds: number[]) {
   });
 }
 
-export function useStockPurchases(apiKey: string, productId?: number) {
+export function useStockPurchases(apiKey: string, productId?: number, unmatched?: boolean) {
   return useQuery({
-    queryKey: ['stock-purchases', productId],
-    queryFn: () => adminApi.getStockPurchases(apiKey, productId),
+    queryKey: ['stock-purchases', productId, unmatched],
+    queryFn: () => adminApi.getStockPurchases(apiKey, productId, unmatched),
     staleTime: 30 * 1000,
     enabled: !!apiKey,
   });
