@@ -665,7 +665,8 @@ export default function VentasPage() {
                                     <thead className="bg-gray-100">
                                       <tr>
                                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. pedida</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. entregada</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                                       </tr>
@@ -689,14 +690,8 @@ export default function VentasPage() {
                                                 )}
                                               </div>
                                             </td>
-                                            <td className="px-3 py-2 text-right">
-                                              {item.quantity}
-                                              {item.delivered_quantity > 0 && (
-                                                <span className="ml-1 text-xs text-gray-500">
-                                                  ({item.delivered_quantity} entreg.)
-                                                </span>
-                                              )}
-                                            </td>
+                                            <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                            <td className="px-3 py-2 text-right">{item.delivered_quantity || 0}</td>
                                             <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
                                             <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
                                           </tr>

@@ -71,6 +71,19 @@ export default function SaleDetailPage() {
     return editItems.reduce((acc, item) => acc + item.quantity * item.unit_price, 0);
   }, [editItems]);
 
+  const visibleItems = useMemo(() => {
+    if (isEditing) {
+      return editItems;
+    }
+    return sale.items.map((item) => ({
+      product_id: item.product_id,
+      product_name: item.product_name || `Producto #${item.product_id}`,
+      quantity: item.quantity,
+      unit_price: Number(item.unit_price || 0),
+      delivered_quantity: item.delivered_quantity || 0,
+    }));
+  }, [isEditing, editItems, sale.items]);
+
   const handleDelete = async () => {
     if (!sale) return;
     if (!confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
@@ -238,7 +251,7 @@ export default function SaleDetailPage() {
               </div>
             )}
 
-            {editItems.length === 0 ? (
+            {visibleItems.length === 0 ? (
               <p className="text-sm text-gray-500">No hay items.</p>
             ) : (
               <div className="overflow-x-auto border rounded-lg">
@@ -254,7 +267,7 @@ export default function SaleDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {editItems.map((item) => (
+                    {visibleItems.map((item) => (
                       <tr key={item.product_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2">
                           <div className="font-medium text-gray-900">{item.product_name}</div>

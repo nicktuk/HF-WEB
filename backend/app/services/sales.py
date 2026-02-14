@@ -263,12 +263,15 @@ class SalesService:
             )
 
             # Return already delivered stock before rebuilding items.
-            for current_item in sale.items:
+            current_items = list(sale.items)
+            for current_item in current_items:
                 delivered_qty = int(current_item.delivered_quantity or 0)
                 if delivered_qty > 0:
                     self._restore_stock(current_item.product_id, delivered_qty)
 
-            self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).delete(synchronize_session=False)
+            # Remove existing ORM-linked items explicitly so sale.items is in sync.
+            for current_item in current_items:
+                self.db.delete(current_item)
             self.db.flush()
 
             for item in normalized_items:
@@ -282,6 +285,7 @@ class SalesService:
                 ))
             sale.total_amount = new_total
             self.db.flush()
+            self.db.refresh(sale, attribute_names=["items"])
             self._apply_delivered_quantities(
                 sale,
                 {item["product_id"]: item["delivered_quantity"] for item in normalized_items},
