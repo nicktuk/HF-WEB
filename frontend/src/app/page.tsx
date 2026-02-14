@@ -166,13 +166,28 @@ function HomePageContent() {
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
     const items = data?.items || [];
-    if (!selectedCategory || showFeatured || showImmediate) {
+    if (showFeatured || showImmediate) {
       return items;
     }
+
+    const categoryOrder = new Map(
+      orderedCategories.map((category, index) => [category.name, category.display_order ?? index]),
+    );
+
     return [...items].sort((a, b) => {
+      const aCategoryOrder = categoryOrder.get(a.category || '') ?? Number.POSITIVE_INFINITY;
+      const bCategoryOrder = categoryOrder.get(b.category || '') ?? Number.POSITIVE_INFINITY;
+      if (aCategoryOrder !== bCategoryOrder) {
+        return aCategoryOrder - bCategoryOrder;
+      }
+
       const aPrice = a.price ?? Number.POSITIVE_INFINITY;
       const bPrice = b.price ?? Number.POSITIVE_INFINITY;
-      return aPrice - bPrice;
+      if (aPrice !== bPrice) {
+        return aPrice - bPrice;
+      }
+
+      return a.name.localeCompare(b.name, 'es');
     });
   })();
 
