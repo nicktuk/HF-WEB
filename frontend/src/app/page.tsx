@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useState, useEffect } from 'react';
+import { Suspense, useCallback, useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Star, Zap, Menu, X, ChevronLeft, Lightbulb } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
@@ -145,6 +145,13 @@ function HomePageContent() {
   });
 
   const { data: categories } = useCategories();
+  const orderedCategories = useMemo(() => {
+    return [...(categories || [])].sort((a, b) => {
+      const byOrder = (a.display_order ?? 0) - (b.display_order ?? 0);
+      if (byOrder !== 0) return byOrder;
+      return a.name.localeCompare(b.name, 'es');
+    });
+  }, [categories]);
   // Load subcategories for the selected category (URL) or temp category (drill-down menu)
   const { data: subcategories } = useSubcategories(selectedCategory);
   const { data: tempSubcategories } = useSubcategories(tempCategory || undefined);
@@ -156,9 +163,9 @@ function HomePageContent() {
       return items;
     }
     return [...items].sort((a, b) => {
-      const aImmediate = a.is_immediate_delivery ? 1 : 0;
-      const bImmediate = b.is_immediate_delivery ? 1 : 0;
-      return bImmediate - aImmediate;
+      const aPrice = a.price ?? Number.POSITIVE_INFINITY;
+      const bPrice = b.price ?? Number.POSITIVE_INFINITY;
+      return aPrice - bPrice;
     });
   })();
 
@@ -239,7 +246,7 @@ function HomePageContent() {
                   <span
                     className="px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5"
                     style={{
-                      backgroundColor: categories?.find(c => c.name === selectedCategory)?.color || '#3b82f6'
+                      backgroundColor: orderedCategories.find(c => c.name === selectedCategory)?.color || '#3b82f6'
                     }}
                   >
                     {selectedCategory}
@@ -317,7 +324,7 @@ function HomePageContent() {
               Inmediata
             </button>
             {/* Category pills for show_in_menu categories - only when no category selected */}
-            {!selectedCategory && categories?.filter(c => c.show_in_menu).map((category, index) => (
+            {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
               <button
                 key={category.name}
                 onClick={() => {
@@ -366,7 +373,7 @@ function HomePageContent() {
           </div>
 
           {/* Mobile Dropdown Menu */}
-          {mobileMenuOpen && categories && categories.length > 0 && (
+          {mobileMenuOpen && orderedCategories.length > 0 && (
             <div className="md:hidden bg-white border rounded-lg shadow-lg p-4 space-y-2">
               {mobileMenuMode === 'categories' ? (
                 <>
@@ -412,7 +419,7 @@ function HomePageContent() {
                   </button>
                   <div className="border-t pt-2 mt-2">
                     <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
-                    {categories.map((category) => (
+                    {orderedCategories.map((category) => (
                       <button
                         key={category.name}
                         onClick={() => {
@@ -459,16 +466,16 @@ function HomePageContent() {
                     <div
                       className="px-3 py-2 rounded-lg mb-2 flex items-center gap-2"
                       style={{
-                        backgroundColor: `${categories.find(c => c.name === tempCategory)?.color}20`,
+                        backgroundColor: `${orderedCategories.find(c => c.name === tempCategory)?.color}20`,
                       }}
                     >
                       <span
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: categories.find(c => c.name === tempCategory)?.color }}
+                        style={{ backgroundColor: orderedCategories.find(c => c.name === tempCategory)?.color }}
                       />
                       <span
                         className="text-sm font-semibold"
-                        style={{ color: categories.find(c => c.name === tempCategory)?.color }}
+                        style={{ color: orderedCategories.find(c => c.name === tempCategory)?.color }}
                       >
                         {tempCategory}
                       </span>
@@ -532,7 +539,7 @@ function HomePageContent() {
           )}
 
           {/* Desktop Categories */}
-          {categories && categories.length > 0 && (
+          {orderedCategories.length > 0 && (
             <div className="hidden md:flex flex-wrap gap-2">
               <button
                 onClick={() => {
@@ -572,7 +579,7 @@ function HomePageContent() {
                 <Zap className="h-3.5 w-3.5" />
                 Entrega inmediata
               </button>
-              {categories.map((category) => (
+              {orderedCategories.map((category) => (
                 <button
                   key={category.name}
                   onClick={() => {

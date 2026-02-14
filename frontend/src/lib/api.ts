@@ -102,7 +102,7 @@ export const publicApi = {
   /**
    * Get list of categories
    */
-  async getCategories(): Promise<{ name: string; color: string; show_in_menu: boolean }[]> {
+  async getCategories(): Promise<{ name: string; color: string; show_in_menu: boolean; display_order: number }[]> {
     return fetchAPI('/public/categories');
   },
 

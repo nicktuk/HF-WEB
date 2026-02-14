@@ -1100,6 +1100,7 @@ class ProductService:
                 "name": cat.name,
                 "color": cat.color or "#6b7280",
                 "show_in_menu": cat.show_in_menu or False,
+                "display_order": cat.display_order,
             }
             for cat in categories
         ]
