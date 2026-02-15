@@ -731,18 +731,32 @@ function HomePageContent() {
                 {groupedProducts.map((group) => (
                   <section key={group.name} className="space-y-4">
                     <div
-                      className="w-full rounded-xl border px-4 py-2"
+                      className="w-full rounded-xl border-2 px-3 py-2 shadow-sm"
                       style={{
-                        backgroundColor: `${group.color}1A`,
-                        borderColor: `${group.color}66`,
+                        backgroundColor: `${group.color}14`,
+                        borderColor: `${group.color}88`,
                       }}
                     >
-                      <p
-                        className="text-sm font-semibold uppercase tracking-wide"
-                        style={{ color: group.color }}
-                      >
-                        {group.name}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="h-0.5 flex-1 rounded-full"
+                          style={{ backgroundColor: `${group.color}99` }}
+                        />
+                        <p
+                          className="shrink-0 rounded-full border px-4 py-1 text-center text-sm font-semibold uppercase tracking-wide"
+                          style={{
+                            color: group.color,
+                            borderColor: `${group.color}88`,
+                            backgroundColor: '#ffffff',
+                          }}
+                        >
+                          {group.name}
+                        </p>
+                        <span
+                          className="h-0.5 flex-1 rounded-full"
+                          style={{ backgroundColor: `${group.color}99` }}
+                        />
+                      </div>
                     </div>
                     <ProductGrid products={group.products} />
                   </section>
