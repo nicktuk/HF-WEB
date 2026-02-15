@@ -445,6 +445,7 @@ export default function ComprasPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad comprada</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad salida</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -453,6 +454,9 @@ export default function ComprasPage() {
                     <td className="px-4 py-3 text-gray-900">{row.name}</td>
                     <td className="px-4 py-3 text-right">{row.purchased}</td>
                     <td className="px-4 py-3 text-right">{row.out}</td>
+                    <td className={`px-4 py-3 text-right font-medium ${row.purchased - row.out < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                      {row.purchased - row.out}
+                    </td>
                   </tr>
                 ))}
               </tbody>
