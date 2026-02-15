@@ -73,11 +73,16 @@ class ProductService:
 
     def get_public_product(self, slug: str) -> ProductPublicResponse:
         """Get a single enabled product for public view."""
-        # Note: Need to search across all source websites
-        products = self.db.query(Product).filter(
-            Product.slug == slug,
-            Product.enabled == True
-        ).all()
+        products = (
+            self.db.query(Product)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .filter(
+                Product.slug == slug,
+                Product.enabled == True,
+                or_(Product.category_id.is_(None), Category.is_active == True),
+            )
+            .all()
+        )
 
         if not products:
             raise NotFoundError("Product", slug)

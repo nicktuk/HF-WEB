@@ -53,10 +53,12 @@ class ProductRepository(BaseRepository[Product]):
             self.db.query(Product)
             .options(joinedload(Product.images), joinedload(Product.category_ref))
             .filter(Product.enabled == True)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .filter(or_(Product.category_id.is_(None), Category.is_active == True))
         )
 
         if category:
-            query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
+            query = query.filter(Category.name == category)
 
         if subcategory:
             query = query.filter(Product.subcategory == subcategory)
@@ -101,10 +103,17 @@ class ProductRepository(BaseRepository[Product]):
         immediate_delivery: Optional[bool] = None
     ) -> int:
         """Count enabled products."""
-        query = self.db.query(Product).filter(Product.enabled == True)
+        query = (
+            self.db.query(Product)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .filter(
+                Product.enabled == True,
+                or_(Product.category_id.is_(None), Category.is_active == True),
+            )
+        )
 
         if category:
-            query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
+            query = query.filter(Category.name == category)
 
         if subcategory:
             query = query.filter(Product.subcategory == subcategory)
