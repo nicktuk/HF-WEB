@@ -163,9 +163,14 @@ export default function ProductsPage() {
   const { data: sourceWebsites } = useSourceWebsites(apiKey);
   const { data: adminCategories } = useAdminCategories();
   const categories = adminCategories as Category[] | undefined;
+  const isWithoutCategory = categoryFilter === '__none__';
   const selectedCategoryId =
-    categoryFilter && categoryFilter !== '__none__'
+    categoryFilter && !isWithoutCategory
       ? categories?.find(c => c.name === categoryFilter || String(c.id) === categoryFilter)?.id
+      : undefined;
+  const selectedCategoryName =
+    categoryFilter && !isWithoutCategory
+      ? categories?.find(c => c.name === categoryFilter || String(c.id) === categoryFilter)?.name
       : undefined;
 
   const { data, isLoading } = useAdminProducts(apiKey, {
@@ -175,7 +180,8 @@ export default function ProductsPage() {
     source_website_id: sourceFilter,
     search: search || undefined,
     category_id: selectedCategoryId,
-    category: categoryFilter,
+    category: selectedCategoryName,
+    without_category: isWithoutCategory ? true : undefined,
     subcategory: subcategoryFilter,
     is_featured: featuredFilter,
     in_stock: inStockFilter,

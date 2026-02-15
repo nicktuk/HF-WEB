@@ -133,6 +133,7 @@ export const adminApi = {
       search?: string;
       category_id?: number;
       category?: string;
+      without_category?: boolean;
       subcategory?: string;
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
@@ -147,11 +148,8 @@ export const adminApi = {
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
     if (params.category_id !== undefined) searchParams.set('category_id', params.category_id.toString());
-    if (params.category === '__none__') {
-      searchParams.set('without_category', 'true');
-    } else if (params.category) {
-      searchParams.set('category', params.category);
-    }
+    if (params.without_category !== undefined) searchParams.set('without_category', params.without_category.toString());
+    if (params.category) searchParams.set('category', params.category);
     if (params.subcategory) searchParams.set('subcategory', params.subcategory);
     if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
     if (params.is_immediate_delivery !== undefined) {

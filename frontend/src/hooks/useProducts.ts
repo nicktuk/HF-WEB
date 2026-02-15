@@ -77,6 +77,7 @@ export function useAdminProducts(
       search?: string;
       category_id?: number;
       category?: string;
+      without_category?: boolean;
       subcategory?: string;
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
