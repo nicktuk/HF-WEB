@@ -1,7 +1,7 @@
 """add category mapping and category fk
 
 Revision ID: 025_add_category_mapping_and_category_fk
-Revises: 024_allow_manual_sale_items
+Revises: 024
 Create Date: 2026-02-15
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "025_add_category_mapping_and_category_fk"
-down_revision = "024_allow_manual_sale_items"
+down_revision = "024"
 branch_labels = None
 depends_on = None
 
