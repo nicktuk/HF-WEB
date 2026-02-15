@@ -22,6 +22,15 @@ interface EditItem {
   paid: boolean;
 }
 
+const getProductSaleUnitPrice = (product: ProductAdmin): number => {
+  const customPrice = Number(product.custom_price ?? 0);
+  if (customPrice > 0) return customPrice;
+  const originalPrice = Number(product.original_price ?? 0);
+  if (originalPrice <= 0) return 0;
+  const markup = Number(product.markup_percentage ?? 0);
+  return Number((originalPrice * (1 + markup / 100)).toFixed(2));
+};
+
 export default function SaleDetailPage() {
   const params = useParams();
   const saleId = parseInt(params.id as string, 10);
@@ -96,9 +105,7 @@ export default function SaleDetailPage() {
   };
 
   const addProductToEdit = (product: ProductAdmin) => {
-    const defaultPrice =
-      Number(product.custom_price ?? product.original_price ?? 0) *
-      (1 + Number(product.markup_percentage ?? 0) / 100);
+    const defaultPrice = getProductSaleUnitPrice(product);
 
     setEditItems((prev) => {
       const exists = prev.find((item) => item.product_id === product.id);

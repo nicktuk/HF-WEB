@@ -22,6 +22,15 @@ interface CartItem {
   paid: boolean;
 }
 
+const getProductSaleUnitPrice = (product: ProductAdmin): number => {
+  const customPrice = Number(product.custom_price ?? 0);
+  if (customPrice > 0) return customPrice;
+  const originalPrice = Number(product.original_price ?? 0);
+  if (originalPrice <= 0) return 0;
+  const markup = Number(product.markup_percentage ?? 0);
+  return Number((originalPrice * (1 + markup / 100)).toFixed(2));
+};
+
 export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
@@ -61,9 +70,7 @@ export default function VentasPage() {
   const addToCart = (product: ProductAdmin) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.product?.id === product.id);
-      const defaultPrice = Number(
-        product.custom_price ?? product.original_price ?? 0
-      ) * (1 + Number(product.markup_percentage ?? 0) / 100);
+      const defaultPrice = getProductSaleUnitPrice(product);
       if (existing) {
         return prev.map((item) =>
           item.product?.id === product.id
@@ -346,7 +353,7 @@ export default function VentasPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Ventas</h1>
-        <p className="text-gray-600">GestiÃ³n de ventas y seguimiento de entregas/pagos.</p>
+        <p className="text-gray-600">Gestión de ventas y seguimiento de entregas/pagos.</p>
       </div>
 
       <div className="flex justify-end">
@@ -393,7 +400,7 @@ export default function VentasPage() {
                       </div>
                       <div className={`text-xs ${Number(product.stock_qty || 0) > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
                         Stock: {product.stock_qty || 0} · Precio: {formatPrice(
-                          (product.custom_price ?? product.original_price ?? 0) * (1 + Number(product.markup_percentage ?? 0) / 100)
+                          getProductSaleUnitPrice(product)
                         )}
                       </div>
                     </div>
@@ -670,7 +677,7 @@ export default function VentasPage() {
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Todos</option>
-                <option value="yes">SÃ­</option>
+                <option value="yes">Sí</option>
                 <option value="no">No</option>
                 <option value="partial">Parcial</option>
               </select>
@@ -683,7 +690,7 @@ export default function VentasPage() {
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Todos</option>
-                <option value="yes">SÃ­</option>
+                <option value="yes">Sí</option>
                 <option value="no">No</option>
                 <option value="partial">Parcial</option>
               </select>
@@ -933,5 +940,3 @@ export default function VentasPage() {
     </div>
   );
 }
-
-
