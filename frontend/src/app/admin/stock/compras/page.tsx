@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type ChangeEvent } from 'react';
+import { Fragment, useMemo, useState, useRef, type ChangeEvent } from 'react';
 import { FileDown, X, Plus, Trash2, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   useAddPaymentToPurchase,
   useDeletePayment,
   useImportStockWithSupplier,
+  useStockPurchases,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
@@ -98,6 +99,7 @@ export default function ComprasPage() {
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [showPurchaseItems, setShowPurchaseItems] = useState(false);
   // Data hooks
   const { data: purchasesData, isLoading } = usePurchases(apiKey, {
     page,
@@ -108,6 +110,7 @@ export default function ComprasPage() {
   });
 
   const { data: suppliersData } = useSuppliers(apiKey);
+  const { data: stockPurchases } = useStockPurchases(apiKey);
   const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchaseDetail(apiKey, selectedPurchaseId);
   const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
@@ -231,24 +234,116 @@ export default function ComprasPage() {
 
   const detail = purchaseDetail as PurchaseDetail | undefined;
   const remaining = detail ? detail.total_amount - detail.total_paid : 0;
+  const purchaseItemsById = useMemo(() => {
+    const map = new Map<number, Array<{
+      id: number;
+      description: string;
+      code: string;
+      quantity: number;
+      unit_price: number;
+      total_amount: number;
+    }>>();
+
+    (stockPurchases || []).forEach((item) => {
+      if (!item.purchase_id) return;
+      const list = map.get(item.purchase_id) || [];
+      list.push({
+        id: item.id,
+        description: item.product_name || item.description || '-',
+        code: item.code || '',
+        quantity: Number(item.quantity || 0),
+        unit_price: Number(item.unit_price || 0),
+        total_amount: Number(item.total_amount || 0),
+      });
+      map.set(item.purchase_id, list);
+    });
+
+    return map;
+  }, [stockPurchases]);
   const handleExportPurchasesCsv = () => {
     if (!purchasesData?.items?.length) return;
-    const rows = purchasesData.items.map((purchase: Purchase) => {
+    if (!showPurchaseItems) {
+      const rows = purchasesData.items.map((purchase: Purchase) => {
+        const pending = Number(purchase.total_amount || 0) - Number(purchase.total_paid || 0);
+        return [
+          purchase.id,
+          formatDate(purchase.purchase_date),
+          purchase.supplier,
+          purchase.item_count,
+          Number(purchase.total_amount || 0).toFixed(2),
+          Number(purchase.total_paid || 0).toFixed(2),
+          pending.toFixed(2),
+          purchase.notes || '',
+        ];
+      });
+      downloadCsv(
+        `compras_pagina_${page}.csv`,
+        ['ID', 'Fecha', 'Mayorista', 'Items', 'Total', 'Pagado', 'Pendiente', 'Notas'],
+        rows,
+      );
+      return;
+    }
+
+    const rows: Array<Array<string | number>> = [];
+    purchasesData.items.forEach((purchase: Purchase) => {
       const pending = Number(purchase.total_amount || 0) - Number(purchase.total_paid || 0);
-      return [
-        purchase.id,
-        formatDate(purchase.purchase_date),
-        purchase.supplier,
-        purchase.item_count,
-        Number(purchase.total_amount || 0).toFixed(2),
-        Number(purchase.total_paid || 0).toFixed(2),
-        pending.toFixed(2),
-        purchase.notes || '',
-      ];
+      const purchaseItems = purchaseItemsById.get(purchase.id) || [];
+
+      if (!purchaseItems.length) {
+        rows.push([
+          purchase.id,
+          formatDate(purchase.purchase_date),
+          purchase.supplier,
+          purchase.item_count,
+          Number(purchase.total_amount || 0).toFixed(2),
+          Number(purchase.total_paid || 0).toFixed(2),
+          pending.toFixed(2),
+          purchase.notes || '',
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+        return;
+      }
+
+      purchaseItems.forEach((item) => {
+        rows.push([
+          purchase.id,
+          formatDate(purchase.purchase_date),
+          purchase.supplier,
+          purchase.item_count,
+          Number(purchase.total_amount || 0).toFixed(2),
+          Number(purchase.total_paid || 0).toFixed(2),
+          pending.toFixed(2),
+          purchase.notes || '',
+          item.description,
+          item.code,
+          item.quantity,
+          item.unit_price.toFixed(2),
+          item.total_amount.toFixed(2),
+        ]);
+      });
     });
+
     downloadCsv(
-      `compras_pagina_${page}.csv`,
-      ['ID', 'Fecha', 'Mayorista', 'Items', 'Total', 'Pagado', 'Pendiente', 'Notas'],
+      `compras_con_items_pagina_${page}.csv`,
+      [
+        'ID compra',
+        'Fecha',
+        'Mayorista',
+        'Items compra',
+        'Total compra',
+        'Pagado compra',
+        'Pendiente compra',
+        'Notas compra',
+        'Item descripcion',
+        'Item codigo',
+        'Item cantidad',
+        'Item precio unitario',
+        'Item total',
+      ],
       rows,
     );
   };
@@ -386,6 +481,15 @@ export default function ComprasPage() {
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <h2 className="text-lg font-semibold">Listado de compras</h2>
           <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={showPurchaseItems}
+                onChange={(e) => setShowPurchaseItems(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600"
+              />
+              Mostrar items
+            </label>
             {purchasesData && (
               <span className="text-sm text-gray-500">
                 {purchasesData.total} compras
@@ -423,42 +527,79 @@ export default function ComprasPage() {
               <tbody className="divide-y divide-gray-200">
                 {purchasesData.items.map((purchase: Purchase) => {
                   const pendingAmount = purchase.total_amount - purchase.total_paid;
+                  const purchaseItems = purchaseItemsById.get(purchase.id) || [];
                   return (
-                    <tr key={purchase.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">{formatDate(purchase.purchase_date)}</td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-gray-900">{purchase.supplier}</span>
-                        {purchase.notes && (
-                          <p className="text-xs text-gray-500 truncate max-w-xs">{purchase.notes}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          <Package className="h-3 w-3 mr-1" />
-                          {purchase.item_count}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">{formatPrice(purchase.total_amount)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={purchase.total_paid > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                          {formatPrice(purchase.total_paid)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={pendingAmount > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
-                          {formatPrice(pendingAmount)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDetailModal(purchase.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
+                    <Fragment key={purchase.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-4 py-3">{formatDate(purchase.purchase_date)}</td>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-gray-900">{purchase.supplier}</span>
+                          {purchase.notes && (
+                            <p className="text-xs text-gray-500 truncate max-w-xs">{purchase.notes}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            <Package className="h-3 w-3 mr-1" />
+                            {purchase.item_count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">{formatPrice(purchase.total_amount)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={purchase.total_paid > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                            {formatPrice(purchase.total_paid)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={pendingAmount > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                            {formatPrice(pendingAmount)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDetailModal(purchase.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                      {showPurchaseItems && (
+                        <tr key={`items-${purchase.id}`} className="bg-gray-50/70">
+                          <td colSpan={7} className="px-4 py-3">
+                            {purchaseItems.length === 0 ? (
+                              <p className="text-xs text-gray-500">Sin items cargados para esta compra.</p>
+                            ) : (
+                              <div className="overflow-x-auto border rounded-lg bg-white">
+                                <table className="min-w-full text-xs">
+                                  <thead className="bg-gray-100">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Producto</th>
+                                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Código</th>
+                                      <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase">Cant.</th>
+                                      <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase">P.Unit</th>
+                                      <th className="px-3 py-2 text-right font-medium text-gray-500 uppercase">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-200">
+                                    {purchaseItems.map((item) => (
+                                      <tr key={item.id}>
+                                        <td className="px-3 py-2 text-gray-900">{item.description}</td>
+                                        <td className="px-3 py-2 text-gray-600">{item.code || '-'}</td>
+                                        <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                        <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                        <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_amount)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
