@@ -81,7 +81,7 @@ async def create_category(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"La categoría '{data.name}' ya existe",
+            detail=f"La categoria '{data.name}' ya existe",
         )
 
     category = Category(**data.model_dump())
@@ -114,7 +114,7 @@ async def update_category(
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Categoría no encontrada",
+            detail="Categoria no encontrada",
         )
 
     if data.name and data.name != category.name:
@@ -122,7 +122,7 @@ async def update_category(
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"La categoría '{data.name}' ya existe",
+                detail=f"La categoria '{data.name}' ya existe",
             )
 
     update_data = data.model_dump(exclude_unset=True)
@@ -161,7 +161,7 @@ async def delete_category(
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Categoría no encontrada",
+            detail="Categoria no encontrada",
         )
 
     db.query(Product).filter(Product.category_id == category.id).update(
@@ -172,7 +172,7 @@ async def delete_category(
     db.delete(category)
     db.commit()
 
-    return {"message": f"Categoría '{category.name}' eliminada"}
+    return {"message": f"Categoria '{category.name}' eliminada"}
 
 
 @router.get("/unmapped-sources", response_model=List[UnmappedCategoryResponse], dependencies=[Depends(verify_admin)])
@@ -236,12 +236,12 @@ async def list_category_mappings(db: Session = Depends(get_db)):
 async def create_or_update_category_mapping(data: CategoryMappingCreate, db: Session = Depends(get_db)):
     category = db.query(Category).filter(Category.id == data.category_id).first()
     if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoría no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
 
     source_name = data.source_name.strip()
     source_key = normalize_source_category(source_name)
     if not source_key:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="source_name inválido")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="source_name invalido")
 
     mapping = db.query(CategoryMapping).filter(CategoryMapping.source_key == source_key).first()
     if mapping:
