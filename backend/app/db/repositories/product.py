@@ -133,6 +133,7 @@ class ProductRepository(BaseRepository[Product]):
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
+        category_id: Optional[int] = None,
         category: Optional[str] = None,
         without_category: Optional[bool] = None,
         subcategory: Optional[str] = None,
@@ -176,6 +177,8 @@ class ProductRepository(BaseRepository[Product]):
 
         if without_category:
             query = query.filter(Product.category_id.is_(None))
+        elif category_id is not None:
+            query = query.filter(Product.category_id == category_id)
         elif category:
             if category == "__none__":
                 query = query.filter(Product.category_id.is_(None))
@@ -266,6 +269,7 @@ class ProductRepository(BaseRepository[Product]):
         enabled: Optional[bool] = None,
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
+        category_id: Optional[int] = None,
         category: Optional[str] = None,
         without_category: Optional[bool] = None,
         subcategory: Optional[str] = None,
@@ -301,6 +305,8 @@ class ProductRepository(BaseRepository[Product]):
 
         if without_category:
             query = query.filter(Product.category_id.is_(None))
+        elif category_id is not None:
+            query = query.filter(Product.category_id == category_id)
         elif category:
             if category == "__none__":
                 query = query.filter(Product.category_id.is_(None))

@@ -162,6 +162,9 @@ export default function ProductsPage() {
     enabled: enabledFilter,
     source_website_id: sourceFilter,
     search: search || undefined,
+    category_id: categoryFilter && categoryFilter !== '__none__'
+      ? categories?.find(c => c.name === categoryFilter || String(c.id) === categoryFilter)?.id
+      : undefined,
     category: categoryFilter,
     subcategory: subcategoryFilter,
     is_featured: featuredFilter,
@@ -196,7 +199,9 @@ export default function ProductsPage() {
   const categories = adminCategories as Category[] | undefined;
 
   // Get subcategories for the selected category
-  const selectedCategoryObj = categories?.find(c => c.name === categoryFilter);
+  const selectedCategoryObj = categories?.find(
+    c => c.name === categoryFilter || String(c.id) === categoryFilter
+  );
   const { data: adminSubcategories } = useAdminSubcategories(selectedCategoryObj?.id);
   const subcategories = adminSubcategories as Subcategory[] | undefined;
   // Get subcategories for bulk change modal
@@ -549,7 +554,7 @@ export default function ProductsPage() {
             <option value="">Todas las categorias</option>
             <option value="__none__">Sin categorÃ­a</option>
             {categories.map((category) => (
-              <option key={category.name} value={category.name}>
+              <option key={category.id} value={String(category.id)}>
                 {category.name} ({category.enabled_product_count}/{category.product_count})
               </option>
             ))}

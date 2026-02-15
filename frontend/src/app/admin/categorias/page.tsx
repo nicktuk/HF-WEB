@@ -362,93 +362,97 @@ export default function CategoriasPage() {
         </Card>
       )}
 
-      {/* Source Mapping */}
+      {/* Source Mapping Header */}
       <Card>
-        <CardContent className="p-4 space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Mapeador de categorías origen</h2>
-            <p className="text-sm text-gray-600">
-              Vincula nombres que llegan de mayoristas con tu categoría maestra.
-            </p>
-          </div>
+        <CardContent className="p-4">
+          <h2 className="text-lg font-semibold text-gray-900">Mapeador de categorías origen</h2>
+          <p className="text-sm text-gray-600">
+            Vincula nombres que llegan de mayoristas con tu categoría maestra.
+          </p>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-700">Categorías no mapeadas</h3>
-            {!unmappedSources || unmappedSources.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay categorías pendientes de mapear.</p>
-            ) : (
-              <div className="border rounded-lg divide-y">
-                {unmappedSources.map((item) => (
-                  <div key={item.source_name} className="p-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{item.source_name}</p>
-                      <p className="text-xs text-gray-500">{item.product_count} productos</p>
-                    </div>
-                    <select
-                      value={mapTargets[item.source_name] || categories?.[0]?.id || ''}
-                      onChange={(e) =>
-                        setMapTargets((prev) => ({ ...prev, [item.source_name]: Number(e.target.value) }))
-                      }
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px]"
-                    >
-                      {(categories || []).map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openSourceProductsModal(item.source_name)}
-                      disabled={mapMutation.isPending}
-                    >
-                      Ver productos
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        mapMutation.mutate({
-                          sourceName: item.source_name,
-                          categoryId: mapTargets[item.source_name] || categories?.[0]?.id || 0,
-                        })
-                      }
-                      disabled={!categories?.length || mapMutation.isPending}
-                    >
-                      Mapear
-                    </Button>
+      {/* Unmapped Source Categories */}
+      <Card>
+        <CardContent className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">No asignadas</h3>
+          {!unmappedSources || unmappedSources.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay categorías pendientes de mapear.</p>
+          ) : (
+            <div className="border rounded-lg divide-y">
+              {unmappedSources.map((item) => (
+                <div key={item.source_name} className="p-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{item.source_name}</p>
+                    <p className="text-xs text-gray-500">{item.product_count} productos</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <select
+                    value={mapTargets[item.source_name] || categories?.[0]?.id || ''}
+                    onChange={(e) =>
+                      setMapTargets((prev) => ({ ...prev, [item.source_name]: Number(e.target.value) }))
+                    }
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px]"
+                  >
+                    {(categories || []).map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openSourceProductsModal(item.source_name)}
+                    disabled={mapMutation.isPending}
+                  >
+                    Ver productos
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      mapMutation.mutate({
+                        sourceName: item.source_name,
+                        categoryId: mapTargets[item.source_name] || categories?.[0]?.id || 0,
+                      })
+                    }
+                    disabled={!categories?.length || mapMutation.isPending}
+                  >
+                    Asignar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-700">Mapeos existentes</h3>
-            {!mappings || mappings.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay mapeos creados.</p>
-            ) : (
-              <div className="border rounded-lg divide-y">
-                {mappings.map((mapping) => (
-                  <div key={mapping.id} className="p-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-gray-900">
-                        <span className="font-medium">{mapping.source_name}</span> → {mapping.category_name}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteMapMutation.mutate(mapping.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+      {/* Mapped Source Categories */}
+      <Card>
+        <CardContent className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">Asignadas</h3>
+          {!mappings || mappings.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay mapeos creados.</p>
+          ) : (
+            <div className="border rounded-lg divide-y">
+              {mappings.map((mapping) => (
+                <div key={mapping.id} className="p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">{mapping.source_name}</span> → {mapping.category_name}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteMapMutation.mutate(mapping.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -131,6 +131,7 @@ export const adminApi = {
       enabled?: boolean;
       source_website_id?: number;
       search?: string;
+      category_id?: number;
       category?: string;
       subcategory?: string;
       is_featured?: boolean;
@@ -145,6 +146,7 @@ export const adminApi = {
     if (params.enabled !== undefined) searchParams.set('enabled', params.enabled.toString());
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
+    if (params.category_id !== undefined) searchParams.set('category_id', params.category_id.toString());
     if (params.category === '__none__') {
       searchParams.set('without_category', 'true');
     } else if (params.category) {

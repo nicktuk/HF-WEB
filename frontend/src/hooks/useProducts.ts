@@ -69,17 +69,18 @@ export function useAdminCategories() {
 
 export function useAdminProducts(
   apiKey: string,
-  params: {
-    page?: number;
-    limit?: number;
-    enabled?: boolean;
-    source_website_id?: number;
-    search?: string;
-    category?: string;
-    subcategory?: string;
-    is_featured?: boolean;
-    is_immediate_delivery?: boolean;
-    in_stock?: boolean;
+    params: {
+      page?: number;
+      limit?: number;
+      enabled?: boolean;
+      source_website_id?: number;
+      search?: string;
+      category_id?: number;
+      category?: string;
+      subcategory?: string;
+      is_featured?: boolean;
+      is_immediate_delivery?: boolean;
+      in_stock?: boolean;
     price_range?: string;
   } = {}
 ) {
