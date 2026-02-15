@@ -96,6 +96,7 @@ class ProductResponse(BaseModel):
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
     category: Optional[str] = None
+    category_id: Optional[int] = None
     subcategory: Optional[str] = None
     enabled: bool
     is_featured: bool = False
@@ -136,6 +137,7 @@ class ProductPublicResponse(BaseModel):
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
     category: Optional[str] = None
+    category_id: Optional[int] = None
     subcategory: Optional[str] = None
     is_featured: bool = False
     is_immediate_delivery: bool = False

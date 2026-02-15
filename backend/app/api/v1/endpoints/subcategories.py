@@ -12,14 +12,14 @@ from app.schemas.subcategory import SubcategoryCreate, SubcategoryUpdate, Subcat
 router = APIRouter()
 
 
-def get_product_counts(db: Session, category_name: str, subcategory_name: str) -> tuple[int, int]:
+def get_product_counts(db: Session, category_id: int, subcategory_name: str) -> tuple[int, int]:
     """Get count of products in a subcategory (total, enabled)."""
     total = db.query(Product).filter(
-        Product.category == category_name,
+        Product.category_id == category_id,
         Product.subcategory == subcategory_name
     ).count()
     enabled = db.query(Product).filter(
-        Product.category == category_name,
+        Product.category_id == category_id,
         Product.subcategory == subcategory_name,
         Product.enabled == True
     ).count()
@@ -55,8 +55,8 @@ async def list_subcategories(
         category_name = category.name if category else None
 
         total, enabled = (0, 0)
-        if category_name:
-            total, enabled = get_product_counts(db, category_name, sub.name)
+        if category:
+            total, enabled = get_product_counts(db, category.id, sub.name)
 
         sub_dict = {
             "id": sub.id,
@@ -136,8 +136,7 @@ async def update_subcategory(
         )
 
     old_name = subcategory.name
-    old_category = db.query(Category).filter(Category.id == subcategory.category_id).first()
-    old_category_name = old_category.name if old_category else None
+    old_category_id = subcategory.category_id
 
     # Get target category
     target_category_id = data.category_id if data.category_id else subcategory.category_id
@@ -168,20 +167,20 @@ async def update_subcategory(
         setattr(subcategory, field, value)
 
     # If name changed, update all products with this subcategory (in the same category)
-    if data.name and data.name != old_name and old_category_name:
+    if data.name and data.name != old_name:
         db.query(Product).filter(
-            Product.category == old_category_name,
+            Product.category_id == old_category_id,
             Product.subcategory == old_name
         ).update(
             {Product.subcategory: data.name},
             synchronize_session=False
         )
 
-    # If category changed, we need to update products' category too or clear subcategory
-    if data.category_id and data.category_id != subcategory.category_id and old_category_name:
+    # If category changed, clear previous subcategory assignations on old category
+    if data.category_id and data.category_id != old_category_id:
         # Clear subcategory from products that had this subcategory (since category changed)
         db.query(Product).filter(
-            Product.category == old_category_name,
+            Product.category_id == old_category_id,
             Product.subcategory == old_name
         ).update(
             {Product.subcategory: None},
@@ -191,7 +190,7 @@ async def update_subcategory(
     db.commit()
     db.refresh(subcategory)
 
-    total, enabled = get_product_counts(db, target_category.name, subcategory.name)
+    total, enabled = get_product_counts(db, target_category.id, subcategory.name)
     return SubcategoryResponse(
         id=subcategory.id,
         name=subcategory.name,
@@ -225,18 +224,14 @@ async def delete_subcategory(
         )
 
     # Get category name
-    category = db.query(Category).filter(Category.id == subcategory.category_id).first()
-    category_name = category.name if category else None
-
     # Clear subcategory from products
-    if category_name:
-        db.query(Product).filter(
-            Product.category == category_name,
-            Product.subcategory == subcategory.name
-        ).update(
-            {Product.subcategory: None},
-            synchronize_session=False
-        )
+    db.query(Product).filter(
+        Product.category_id == subcategory.category_id,
+        Product.subcategory == subcategory.name
+    ).update(
+        {Product.subcategory: None},
+        synchronize_session=False
+    )
 
     db.delete(subcategory)
     db.commit()

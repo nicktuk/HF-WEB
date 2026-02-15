@@ -37,3 +37,27 @@ class CategoryResponse(CategoryBase):
 
     class Config:
         from_attributes = True
+
+
+class CategoryMappingCreate(BaseModel):
+    source_name: str = Field(..., min_length=1, max_length=100)
+    category_id: int
+    apply_existing: bool = True
+
+
+class CategoryMappingResponse(BaseModel):
+    id: int
+    source_name: str
+    source_key: str
+    category_id: int
+    category_name: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UnmappedCategoryResponse(BaseModel):
+    source_name: str
+    product_count: int

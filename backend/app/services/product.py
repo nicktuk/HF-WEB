@@ -11,6 +11,8 @@ import logging
 
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
 from app.models.product import Product, ProductImage
+from app.models.category import Category
+from app.models.category_mapping import CategoryMapping
 from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
@@ -97,7 +99,8 @@ class ProductService:
             currency=product.original_currency,
             short_description=product.short_description,
             brand=product.brand,
-            category=product.category,
+            category=product.category_ref.name if product.category_ref else None,
+            category_id=product.category_id,
             subcategory=product.subcategory,
             is_featured=product.is_featured,
             is_immediate_delivery=product.is_immediate_delivery,
@@ -106,6 +109,23 @@ class ProductService:
             images=images,
             source_url=product.source_url,
         )
+
+    @staticmethod
+    def _normalize_source_category(value: Optional[str]) -> str:
+        raw = (value or "").strip().lower()
+        return re.sub(r"\s+", " ", raw)
+
+    def _get_category_by_name(self, category_name: Optional[str]) -> Optional[Category]:
+        if not category_name:
+            return None
+        return self.db.query(Category).filter(Category.name == category_name).first()
+
+    def _get_category_id_from_source(self, source_category: Optional[str]) -> Optional[int]:
+        key = self._normalize_source_category(source_category)
+        if not key:
+            return None
+        mapping = self.db.query(CategoryMapping).filter(CategoryMapping.source_key == key).first()
+        return mapping.category_id if mapping else None
 
     # Admin methods
 
@@ -640,7 +660,16 @@ class ProductService:
             config=source_website.scraper_config
         )
 
+        target_category = self._get_category_by_name(data.category) if data.category else None
+        if data.category and target_category is None:
+            from app.core.exceptions import ValidationError
+            raise ValidationError(f"Categoría no encontrada: {data.category}")
+
         # Create product
+        if data.category and target_category is None:
+            from app.core.exceptions import ValidationError
+            raise ValidationError(f"Categoría no encontrada: {data.category}")
+
         product = Product(
             source_website_id=data.source_website_id,
             slug=data.slug,
@@ -656,7 +685,13 @@ class ProductService:
             enabled=data.enabled,
             is_featured=True,  # Mark new scraped products as "Nuevo"
             markup_percentage=data.markup_percentage,
-            category=data.category or (scraped.categories[0] if scraped.categories else None),
+            source_category=scraped.categories[0] if scraped.categories else None,
+            category=scraped.categories[0] if scraped.categories else None,
+            category_id=(
+                target_category.id
+                if target_category
+                else self._get_category_id_from_source(scraped.categories[0] if scraped.categories else None)
+            ),
             last_scraped_at=datetime.utcnow(),
         )
 
@@ -737,9 +772,14 @@ class ProductService:
         if data.display_order is not None:
             product.display_order = data.display_order
         if data.category is not None:
-            product.category = data.category if data.category else None
-            # Clear subcategory when category changes (subcategory no longer valid)
-            if data.category != product.category:
+            old_category_id = product.category_id
+            target_category = self._get_category_by_name(data.category) if data.category else None
+            if data.category and target_category is None:
+                from app.core.exceptions import ValidationError
+                raise ValidationError(f"Categoría no encontrada: {data.category}")
+            product.category_id = target_category.id if target_category else None
+            # Clear subcategory when category changed
+            if old_category_id != product.category_id:
                 product.subcategory = None
         if data.subcategory is not None:
             product.subcategory = data.subcategory if data.subcategory else None
@@ -810,6 +850,12 @@ class ProductService:
             product.sku = scraped.sku or product.sku
             product.min_purchase_qty = scraped.min_purchase_qty or product.min_purchase_qty
             product.kit_content = scraped.kit_content or product.kit_content
+            if scraped.categories:
+                product.source_category = scraped.categories[0]
+                if product.category_id is None:
+                    product.category_id = self._get_category_id_from_source(scraped.categories[0])
+                # Keep legacy text column aligned with source
+                product.category = scraped.categories[0]
             product.last_scraped_at = datetime.utcnow()
             product.scrape_error_count = 0
             product.scrape_last_error = None
@@ -884,6 +930,11 @@ class ProductService:
         base_slug = re.sub(r'[^a-z0-9]+', '-', data.name.lower()).strip('-')
         slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
 
+        target_category = self._get_category_by_name(data.category) if data.category else None
+        if data.category and target_category is None:
+            from app.core.exceptions import ValidationError
+            raise ValidationError(f"Categoria no encontrada: {data.category}")
+
         # Create product
         original_price = None
         custom_price = data.price
@@ -906,7 +957,10 @@ class ProductService:
             is_featured=data.is_featured,
             is_immediate_delivery=data.is_immediate_delivery,
             markup_percentage=Decimal("0"),
+            category_id=target_category.id if target_category else None,
+            source_category=None,
             category=data.category,
+            subcategory=data.subcategory,
             last_scraped_at=None,
         )
 
@@ -1024,7 +1078,11 @@ class ProductService:
             Product.markup_percentage: markup_percentage
         }
         if category:
-            update_data[Product.category] = category
+            cat = self._get_category_by_name(category)
+            if cat is None:
+                from app.core.exceptions import ValidationError
+                raise ValidationError(f"Categoría no encontrada: {category}")
+            update_data[Product.category_id] = cat.id if cat else None
         if subcategory:
             update_data[Product.subcategory] = subcategory
 
@@ -1056,10 +1114,14 @@ class ProductService:
 
         Returns the number of products updated.
         """
+        cat = self._get_category_by_name(category)
+        if cat is None:
+            from app.core.exceptions import ValidationError
+            raise ValidationError(f"Categoría no encontrada: {category}")
         count = self.db.query(Product).filter(
             Product.id.in_(product_ids)
         ).update(
-            {Product.category: category, Product.subcategory: None},
+            {Product.category_id: (cat.id if cat else None), Product.subcategory: None},
             synchronize_session=False
         )
         self.db.commit()
@@ -1202,8 +1264,10 @@ class ProductService:
         for sub in subcategories:
             cat = self.db.query(CategoryModel).filter(CategoryModel.id == sub.category_id).first()
             # Only include subcategories that have enabled products
+            if not cat:
+                continue
             product_count = self.db.query(Product).filter(
-                Product.category == cat.name if cat else None,
+                Product.category_id == cat.id,
                 Product.subcategory == sub.name,
                 Product.enabled == True
             ).count()
@@ -1220,7 +1284,7 @@ class ProductService:
         """Get all enabled products with images for PDF export."""
         return self.db.query(Product).filter(
             Product.enabled == True
-        ).order_by(Product.category, Product.original_name).all()
+        ).order_by(Product.category_id, Product.original_name).all()
 
     async def scrape_all_from_source(
         self,
@@ -1292,7 +1356,9 @@ class ProductService:
                         enabled=False,  # Disabled by default - admin enables manually
                         is_featured=True,  # Mark new scraped products as "Nuevo"
                         markup_percentage=Decimal("0"),
+                        source_category=scraped.categories[0] if scraped.categories else None,
                         category=scraped.categories[0] if scraped.categories else None,
+                        category_id=self._get_category_id_from_source(scraped.categories[0] if scraped.categories else None),
                         last_scraped_at=datetime.utcnow(),
                     )
 
@@ -1473,11 +1539,12 @@ class ProductService:
         stats_query = (
             self.db.query(
                 Product.source_website_id,
-                Product.category,
+                Category.name.label("category_name"),
                 func.count(Product.id).label('total'),
                 func.sum(case((Product.enabled == True, 1), else_=0)).label('enabled')
             )
-            .group_by(Product.source_website_id, Product.category)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .group_by(Product.source_website_id, Category.name)
             .all()
         )
 
@@ -1487,7 +1554,7 @@ class ProductService:
 
         for row in stats_query:
             source_id = row.source_website_id
-            category = row.category or "Sin categoría"
+            category = row.category_name or "Sin categoría"
             categories_set.add(category)
 
             stats.append({
@@ -1607,7 +1674,7 @@ class ProductService:
         """
         rows = (
             self.db.query(
-                Product.category,
+                Category.name.label("category_name"),
                 func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
                 func.coalesce(
                     func.sum(
@@ -1617,7 +1684,8 @@ class ProductService:
                 ).label("stock_value"),
             )
             .join(StockPurchase, StockPurchase.product_id == Product.id)
-            .group_by(Product.category)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .group_by(Category.name)
             .all()
         )
 
@@ -1625,7 +1693,7 @@ class ProductService:
         total_qty = 0
         total_value = 0
         for row in rows:
-            category = row.category or "Sin categoría"
+            category = row.category_name or "Sin categoría"
             qty = int(row.stock_qty or 0)
             value = float(row.stock_value or 0)
             total_qty += qty
@@ -2053,3 +2121,4 @@ class ProductService:
             .all()
         )
         return [s[0] for s in suppliers]
+

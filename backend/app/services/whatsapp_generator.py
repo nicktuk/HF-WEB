@@ -3,6 +3,7 @@ from typing import List, Optional
 from urllib.parse import quote
 from sqlalchemy.orm import Session
 from app.models.product import Product
+from app.models.category import Category
 from app.config import settings
 
 
@@ -31,7 +32,7 @@ class WhatsAppMessageGenerator:
         if is_best_seller is not None:
             query = query.filter(Product.is_best_seller == is_best_seller)
         if category:
-            query = query.filter(Product.category == category)
+            query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
         if subcategory:
             query = query.filter(Product.subcategory == subcategory)
 

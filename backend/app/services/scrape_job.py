@@ -16,6 +16,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.models.product import Product, ProductImage
+from app.models.category_mapping import CategoryMapping
 from app.models.source_website import SourceWebsite
 from app.scrapers.base import ScrapedProduct
 from app.scrapers.registry import ScraperRegistry
@@ -225,6 +226,13 @@ class ScrapeJobManager:
 
     def _save_product(self, db: Session, source_website_id: int, scraped: ScrapedProduct):
         """Save a scraped product to the database."""
+        def resolve_category_id(source_category: Optional[str]) -> Optional[int]:
+            if not source_category:
+                return None
+            source_key = " ".join(source_category.strip().lower().split())
+            mapping = db.query(CategoryMapping).filter(CategoryMapping.source_key == source_key).first()
+            return mapping.category_id if mapping else None
+
         # Check if exists
         existing = db.query(Product).filter(
             Product.source_website_id == source_website_id,
@@ -249,7 +257,11 @@ class ScrapeJobManager:
             if scraped.sku:
                 existing.sku = scraped.sku
             if scraped.categories:
-                existing.category = scraped.categories[0]
+                source_category = scraped.categories[0]
+                existing.source_category = source_category
+                existing.category = source_category
+                if existing.category_id is None:
+                    existing.category_id = resolve_category_id(source_category)
             if scraped.brand:
                 existing.brand = scraped.brand
             if scraped.min_purchase_qty:
@@ -278,7 +290,9 @@ class ScrapeJobManager:
             enabled=False,
             is_featured=True,
             markup_percentage=Decimal("0"),
+            source_category=scraped.categories[0] if scraped.categories else None,
             category=scraped.categories[0] if scraped.categories else None,
+            category_id=resolve_category_id(scraped.categories[0] if scraped.categories else None),
             last_scraped_at=datetime.utcnow(),
         )
 

@@ -10,7 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import type { Category, CategoryCreateForm } from '@/types';
+import type { Category, CategoryCreateForm, CategoryMapping, UnmappedSourceCategory } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -35,12 +35,29 @@ async function fetchCategories(apiKey: string): Promise<Category[]> {
   return res.json();
 }
 
+async function fetchCategoryMappings(apiKey: string): Promise<CategoryMapping[]> {
+  const res = await fetch(`${API_URL}/categories/mappings`, {
+    headers: { 'X-Admin-API-Key': apiKey },
+  });
+  if (!res.ok) throw new Error('Error al cargar mapeos');
+  return res.json();
+}
+
+async function fetchUnmappedSources(apiKey: string): Promise<UnmappedSourceCategory[]> {
+  const res = await fetch(`${API_URL}/categories/unmapped-sources`, {
+    headers: { 'X-Admin-API-Key': apiKey },
+  });
+  if (!res.ok) throw new Error('Error al cargar categorias no mapeadas');
+  return res.json();
+}
+
 export default function CategoriasPage() {
   const apiKey = useApiKey() || '';
   const queryClient = useQueryClient();
 
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
   const [formData, setFormData] = useState<CategoryCreateForm>({
     name: '',
     is_active: true,
@@ -52,6 +69,18 @@ export default function CategoriasPage() {
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories', apiKey],
     queryFn: () => fetchCategories(apiKey),
+    enabled: !!apiKey,
+  });
+
+  const { data: mappings } = useQuery({
+    queryKey: ['category-mappings', apiKey],
+    queryFn: () => fetchCategoryMappings(apiKey),
+    enabled: !!apiKey,
+  });
+
+  const { data: unmappedSources } = useQuery({
+    queryKey: ['category-unmapped-sources', apiKey],
+    queryFn: () => fetchUnmappedSources(apiKey),
     enabled: !!apiKey,
   });
 
@@ -110,6 +139,49 @@ export default function CategoriasPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+
+  const mapMutation = useMutation({
+    mutationFn: async ({ sourceName, categoryId }: { sourceName: string; categoryId: number }) => {
+      const res = await fetch(`${API_URL}/categories/mappings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+          source_name: sourceName,
+          category_id: categoryId,
+          apply_existing: true,
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Error al mapear categoría');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-mappings'] });
+      queryClient.invalidateQueries({ queryKey: ['category-unmapped-sources'] });
+    },
+  });
+
+  const deleteMapMutation = useMutation({
+    mutationFn: async (mappingId: number) => {
+      const res = await fetch(`${API_URL}/categories/mappings/${mappingId}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-API-Key': apiKey },
+      });
+      if (!res.ok) throw new Error('Error al eliminar mapeo');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category-mappings'] });
+      queryClient.invalidateQueries({ queryKey: ['category-unmapped-sources'] });
     },
   });
 
@@ -261,6 +333,88 @@ export default function CategoriasPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Source Mapping */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Mapeador de categorías origen</h2>
+            <p className="text-sm text-gray-600">
+              Vincula nombres que llegan de mayoristas con tu categoría maestra.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">Categorías no mapeadas</h3>
+            {!unmappedSources || unmappedSources.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay categorías pendientes de mapear.</p>
+            ) : (
+              <div className="border rounded-lg divide-y">
+                {unmappedSources.map((item) => (
+                  <div key={item.source_name} className="p-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{item.source_name}</p>
+                      <p className="text-xs text-gray-500">{item.product_count} productos</p>
+                    </div>
+                    <select
+                      value={mapTargets[item.source_name] || categories?.[0]?.id || ''}
+                      onChange={(e) =>
+                        setMapTargets((prev) => ({ ...prev, [item.source_name]: Number(e.target.value) }))
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px]"
+                    >
+                      {(categories || []).map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        mapMutation.mutate({
+                          sourceName: item.source_name,
+                          categoryId: mapTargets[item.source_name] || categories?.[0]?.id || 0,
+                        })
+                      }
+                      disabled={!categories?.length || mapMutation.isPending}
+                    >
+                      Mapear
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">Mapeos existentes</h3>
+            {!mappings || mappings.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay mapeos creados.</p>
+            ) : (
+              <div className="border rounded-lg divide-y">
+                {mappings.map((mapping) => (
+                  <div key={mapping.id} className="p-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-medium">{mapping.source_name}</span> → {mapping.category_name}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteMapMutation.mutate(mapping.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Create/Edit Modal */}
       <Modal

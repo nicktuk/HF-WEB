@@ -7,6 +7,7 @@ from sqlalchemy import and_, or_, case, func
 from app.db.repositories.base import BaseRepository
 from app.models.product import Product, ProductImage
 from app.models.stock import StockPurchase
+from app.models.category import Category
 
 
 class ProductRepository(BaseRepository[Product]):
@@ -50,12 +51,12 @@ class ProductRepository(BaseRepository[Product]):
         """Get enabled products for public catalog."""
         query = (
             self.db.query(Product)
-            .options(joinedload(Product.images))
+            .options(joinedload(Product.images), joinedload(Product.category_ref))
             .filter(Product.enabled == True)
         )
 
         if category:
-            query = query.filter(Product.category == category)
+            query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 
         if subcategory:
             query = query.filter(Product.subcategory == subcategory)
@@ -103,7 +104,7 @@ class ProductRepository(BaseRepository[Product]):
         query = self.db.query(Product).filter(Product.enabled == True)
 
         if category:
-            query = query.filter(Product.category == category)
+            query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 
         if subcategory:
             query = query.filter(Product.subcategory == subcategory)
@@ -145,7 +146,8 @@ class ProductRepository(BaseRepository[Product]):
             .options(
                 joinedload(Product.images),
                 joinedload(Product.source_website),
-                joinedload(Product.market_price_stats)
+                joinedload(Product.market_price_stats),
+                joinedload(Product.category_ref),
             )
         )
 
@@ -173,9 +175,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             if category == "__none__":
-                query = query.filter(Product.category == None)
+                query = query.filter(Product.category_id == None)
             else:
-                query = query.filter(Product.category == category)
+                query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 
         if subcategory:
             if subcategory == "__none__":
@@ -238,7 +240,7 @@ class ProductRepository(BaseRepository[Product]):
 
     def get_categories(self, only_enabled: bool = True) -> List[str]:
         """Get list of unique categories from enabled products."""
-        query = self.db.query(Product.category).filter(Product.category != None)
+        query = self.db.query(Category.name).join(Product, Product.category_id == Category.id)
 
         if only_enabled:
             query = query.filter(Product.enabled == True)
@@ -295,9 +297,9 @@ class ProductRepository(BaseRepository[Product]):
 
         if category:
             if category == "__none__":
-                query = query.filter(Product.category == None)
+                query = query.filter(Product.category_id == None)
             else:
-                query = query.filter(Product.category == category)
+                query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 
         if subcategory:
             if subcategory == "__none__":

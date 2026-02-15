@@ -16,6 +16,7 @@ export interface ProductPublic {
   short_description?: string;
   brand?: string;
   category?: string;
+  category_id?: number;
   subcategory?: string;
   is_featured: boolean;
   is_immediate_delivery: boolean;
@@ -140,6 +141,21 @@ export interface CategoryCreateForm {
   display_order: number;
   color: string;
   show_in_menu: boolean;
+}
+
+export interface CategoryMapping {
+  id: number;
+  source_name: string;
+  source_key: string;
+  category_id: number;
+  category_name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UnmappedSourceCategory {
+  source_name: string;
+  product_count: number;
 }
 
 // Subcategory Types
@@ -269,6 +285,7 @@ export interface ProductUpdateForm {
   custom_price?: number;
   display_order?: number;
   category?: string;
+  category_id?: number;
   subcategory?: string;
   description?: string;
   short_description?: string;

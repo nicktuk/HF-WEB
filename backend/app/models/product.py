@@ -54,7 +54,12 @@ class Product(Base):
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")
 
-    # CategorÃ­a local (opcional, para organizaciÃ³n propia)
+    # Categorias
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True, comment="Categoria maestra local")
+    category_ref = relationship("Category", foreign_keys=[category_id])
+    source_category = Column(String(100), nullable=True, index=True, comment="Categoria original del mayorista")
+
+    # Subcategoria local (texto, asociada a category_id)
     category = Column(String(100), nullable=True, index=True)
     subcategory = Column(String(100), nullable=True, index=True)
 
