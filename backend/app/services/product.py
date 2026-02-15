@@ -1722,37 +1722,26 @@ class ProductService:
             .scalar()
         )
 
-        stock_value_cost = (
-            self.db.query(
-                func.coalesce(
-                    func.sum(
-                        (StockPurchase.quantity - StockPurchase.out_quantity)
-                        * func.coalesce(Product.original_price, 0)
-                    ),
-                    0,
-                )
+        # Keep dashboard "Stock a costo" aligned with stock view card "$ STOCK":
+        # value = sum(max(stock_qty - reserved_qty, 0) * original_price)
+        product_ids_with_stock = [
+            int(pid)
+            for (pid,) in (
+                self.db.query(StockPurchase.product_id)
+                .filter(StockPurchase.product_id.isnot(None))
+                .distinct()
+                .all()
             )
-            .join(Product, StockPurchase.product_id == Product.id)
-            .scalar()
-        )
-
-        # Subtract value of items in pending delivery sales (already sold but not delivered)
-        pending_delivery_value = (
-            self.db.query(
-                func.coalesce(
-                    func.sum(
-                        SaleItem.quantity * func.coalesce(Product.original_price, 0)
-                    ),
-                    0,
-                )
+            if pid is not None
+        ]
+        stock_summary = self.get_stock_summary_detailed(product_ids_with_stock)
+        stock_value_available = float(
+            sum(
+                max(int(values["stock_qty"]) - int(values["reserved_qty"]), 0)
+                * float(values["original_price"] or 0)
+                for values in stock_summary.values()
             )
-            .join(Sale, SaleItem.sale_id == Sale.id)
-            .join(Product, SaleItem.product_id == Product.id)
-            .filter(Sale.delivered.is_(False))
-            .scalar()
         )
-
-        stock_value_available = float(stock_value_cost or 0) - float(pending_delivery_value or 0)
 
         # Stats by seller
         sellers = ["Facu", "Heber"]
