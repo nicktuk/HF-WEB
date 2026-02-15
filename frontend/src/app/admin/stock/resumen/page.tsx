@@ -60,12 +60,14 @@ export default function StockResumenPage() {
     const q = search.trim().toLowerCase();
     const base = q ? rows.filter((row) => row.name.toLowerCase().includes(q)) : rows;
     return [...base].sort((a, b) => {
-      const diffA = a.purchased - a.out;
-      const diffB = b.purchased - b.out;
+      const reservedA = Number((a.key > 0 ? summaryMap.get(a.key)?.reserved_qty : 0) || 0);
+      const reservedB = Number((b.key > 0 ? summaryMap.get(b.key)?.reserved_qty : 0) || 0);
+      const diffA = a.purchased - a.out - reservedA;
+      const diffB = b.purchased - b.out - reservedB;
       if (diffA !== diffB) return diffB - diffA;
       return a.name.localeCompare(b.name, 'es');
     });
-  }, [rows, search]);
+  }, [rows, search, summaryMap]);
 
   const cards = useMemo(() => {
     return rows.reduce(
@@ -94,7 +96,7 @@ export default function StockResumenPage() {
       const reservedQty = Number(summary?.reserved_qty || 0);
       const originalPrice = Number(summary?.original_price || 0);
       const reservedSoldValue = Number(summary?.reserved_sale_value || 0);
-      const diff = row.purchased - row.out;
+      const diff = row.purchased - row.out - reservedQty;
       const reservedCostValue = reservedQty * originalPrice;
       return [
         row.name,
@@ -186,7 +188,7 @@ export default function StockResumenPage() {
                 {filteredRows.map((row) => {
                   const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
                   const reservedQty = Number(summary?.reserved_qty || 0);
-                  const diff = row.purchased - row.out;
+                  const diff = row.purchased - row.out - reservedQty;
                   return (
                     <tr key={row.key} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-900">{row.name}</td>
