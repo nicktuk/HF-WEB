@@ -158,6 +158,17 @@ export interface UnmappedSourceCategory {
   product_count: number;
 }
 
+export interface SourceCategoryProduct {
+  id: number;
+  slug: string;
+  name: string;
+  enabled: boolean;
+  source_category: string;
+  source_website_name?: string;
+  mapped_category_id?: number;
+  mapped_category_name?: string;
+}
+
 // Subcategory Types
 
 export interface Subcategory {

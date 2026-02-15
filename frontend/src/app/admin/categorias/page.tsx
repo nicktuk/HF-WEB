@@ -10,7 +10,13 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import type { Category, CategoryCreateForm, CategoryMapping, UnmappedSourceCategory } from '@/types';
+import type {
+  Category,
+  CategoryCreateForm,
+  CategoryMapping,
+  SourceCategoryProduct,
+  UnmappedSourceCategory,
+} from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -51,13 +57,24 @@ async function fetchUnmappedSources(apiKey: string): Promise<UnmappedSourceCateg
   return res.json();
 }
 
+async function fetchSourceCategoryProducts(apiKey: string, sourceName: string): Promise<SourceCategoryProduct[]> {
+  const params = new URLSearchParams({ source_name: sourceName, limit: '500' });
+  const res = await fetch(`${API_URL}/categories/source-products?${params.toString()}`, {
+    headers: { 'X-Admin-API-Key': apiKey },
+  });
+  if (!res.ok) throw new Error('Error al cargar productos de categoria origen');
+  return res.json();
+}
+
 export default function CategoriasPage() {
   const apiKey = useApiKey() || '';
   const queryClient = useQueryClient();
 
   const [showModal, setShowModal] = useState(false);
+  const [showSourceProductsModal, setShowSourceProductsModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
+  const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
   const [formData, setFormData] = useState<CategoryCreateForm>({
     name: '',
     is_active: true,
@@ -82,6 +99,12 @@ export default function CategoriasPage() {
     queryKey: ['category-unmapped-sources', apiKey],
     queryFn: () => fetchUnmappedSources(apiKey),
     enabled: !!apiKey,
+  });
+
+  const { data: sourceProducts, isLoading: isLoadingSourceProducts } = useQuery({
+    queryKey: ['source-category-products', apiKey, selectedSourceName],
+    queryFn: () => fetchSourceCategoryProducts(apiKey, selectedSourceName || ''),
+    enabled: !!apiKey && !!selectedSourceName && showSourceProductsModal,
   });
 
   const createMutation = useMutation({
@@ -231,6 +254,11 @@ export default function CategoriasPage() {
     });
   };
 
+  const openSourceProductsModal = (sourceName: string) => {
+    setSelectedSourceName(sourceName);
+    setShowSourceProductsModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -370,6 +398,14 @@ export default function CategoriasPage() {
                       ))}
                     </select>
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openSourceProductsModal(item.source_name)}
+                      disabled={mapMutation.isPending}
+                    >
+                      Ver productos
+                    </Button>
+                    <Button
                       size="sm"
                       onClick={() =>
                         mapMutation.mutate({
@@ -415,6 +451,68 @@ export default function CategoriasPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Modal
+        isOpen={showSourceProductsModal}
+        onClose={() => {
+          setShowSourceProductsModal(false);
+          setSelectedSourceName(null);
+        }}
+        title={selectedSourceName ? `Productos de origen: ${selectedSourceName}` : 'Productos por categoria origen'}
+        size="xl"
+      >
+        <ModalContent className="p-0">
+          {isLoadingSourceProducts ? (
+            <div className="p-4 space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
+            </div>
+          ) : !sourceProducts || sourceProducts.length === 0 ? (
+            <div className="p-6 text-sm text-gray-500">No hay productos para esta categoria origen.</div>
+          ) : (
+            <div className="max-h-[65vh] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Producto</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Slug</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Source</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Estado</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Categoria actual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sourceProducts.map((product) => (
+                    <tr key={product.id} className="border-b last:border-b-0">
+                      <td className="px-3 py-2 text-gray-900">{product.name}</td>
+                      <td className="px-3 py-2 text-gray-600">{product.slug}</td>
+                      <td className="px-3 py-2 text-gray-600">{product.source_website_name || '-'}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs border ${product.enabled ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                          {product.enabled ? 'Habilitado' : 'Deshabilitado'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">{product.mapped_category_name || 'Sin mapear'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowSourceProductsModal(false);
+              setSelectedSourceName(null);
+            }}
+          >
+            Cerrar
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       {/* Create/Edit Modal */}
       <Modal

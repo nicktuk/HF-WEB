@@ -1,6 +1,6 @@
 """Category management endpoints."""
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -14,6 +14,7 @@ from app.schemas.category import (
     CategoryResponse,
     CategoryMappingCreate,
     CategoryMappingResponse,
+    SourceCategoryProductResponse,
     UnmappedCategoryResponse,
 )
 
@@ -207,6 +208,44 @@ async def get_unmapped_source_categories(db: Session = Depends(get_db)):
 
     result.sort(key=lambda x: (-x.product_count, x.source_name.lower()))
     return result
+
+
+@router.get(
+    "/source-products",
+    response_model=List[SourceCategoryProductResponse],
+    dependencies=[Depends(verify_admin)],
+)
+async def get_source_category_products(
+    source_name: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+):
+    """List products that belong to a given source category (normalized match)."""
+    source_key = normalize_source_category(source_name)
+    if not source_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="source_name invalido")
+
+    products = (
+        db.query(Product)
+        .filter(func.lower(func.trim(func.coalesce(Product.source_category, Product.category))) == source_key)
+        .order_by(Product.enabled.desc(), Product.original_name.asc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        SourceCategoryProductResponse(
+            id=p.id,
+            slug=p.slug,
+            name=p.custom_name or p.original_name,
+            enabled=bool(p.enabled),
+            source_category=(p.source_category or p.category or ""),
+            source_website_name=p.source_website.display_name if p.source_website else None,
+            mapped_category_id=p.category_id,
+            mapped_category_name=p.category_ref.name if p.category_ref else None,
+        )
+        for p in products
+    ]
 
 
 @router.get("/mappings", response_model=List[CategoryMappingResponse], dependencies=[Depends(verify_admin)])

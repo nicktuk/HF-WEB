@@ -61,3 +61,14 @@ class CategoryMappingResponse(BaseModel):
 class UnmappedCategoryResponse(BaseModel):
     source_name: str
     product_count: int
+
+
+class SourceCategoryProductResponse(BaseModel):
+    id: int
+    slug: str
+    name: str
+    enabled: bool
+    source_category: str
+    source_website_name: Optional[str] = None
+    mapped_category_id: Optional[int] = None
+    mapped_category_name: Optional[str] = None
