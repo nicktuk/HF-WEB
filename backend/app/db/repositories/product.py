@@ -134,6 +134,7 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        without_category: Optional[bool] = None,
         subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
@@ -173,9 +174,11 @@ class ProductRepository(BaseRepository[Product]):
         if source_website_id:
             query = query.filter(Product.source_website_id == source_website_id)
 
-        if category:
+        if without_category:
+            query = query.filter(Product.category_id.is_(None))
+        elif category:
             if category == "__none__":
-                query = query.filter(Product.category_id == None)
+                query = query.filter(Product.category_id.is_(None))
             else:
                 query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 
@@ -264,6 +267,7 @@ class ProductRepository(BaseRepository[Product]):
         source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        without_category: Optional[bool] = None,
         subcategory: Optional[str] = None,
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
@@ -295,9 +299,11 @@ class ProductRepository(BaseRepository[Product]):
         if source_website_id:
             query = query.filter(Product.source_website_id == source_website_id)
 
-        if category:
+        if without_category:
+            query = query.filter(Product.category_id.is_(None))
+        elif category:
             if category == "__none__":
-                query = query.filter(Product.category_id == None)
+                query = query.filter(Product.category_id.is_(None))
             else:
                 query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
 

@@ -145,7 +145,11 @@ export const adminApi = {
     if (params.enabled !== undefined) searchParams.set('enabled', params.enabled.toString());
     if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
-    if (params.category) searchParams.set('category', params.category);
+    if (params.category === '__none__') {
+      searchParams.set('without_category', 'true');
+    } else if (params.category) {
+      searchParams.set('category', params.category);
+    }
     if (params.subcategory) searchParams.set('subcategory', params.subcategory);
     if (params.is_featured !== undefined) searchParams.set('is_featured', params.is_featured.toString());
     if (params.is_immediate_delivery !== undefined) {
