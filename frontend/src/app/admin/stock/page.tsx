@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { useApiKey } from '@/hooks/useAuth';
 import { useUnmatchedStockPurchases, useUpdateStockPurchase, useAdminProducts } from '@/hooks/useProducts';
+import { downloadCsv } from '@/lib/csv';
 import { formatDate, formatPrice } from '@/lib/utils';
 
 export default function StockUnmatchedPage() {
@@ -27,6 +28,24 @@ export default function StockUnmatchedPage() {
   });
 
   const selectedPurchase = purchases?.find(p => p.id === selectedPurchaseId) || null;
+
+  const handleExportUnmatchedCsv = () => {
+    if (!purchases?.length) return;
+    const rows = purchases.map((purchase) => [
+      purchase.id,
+      formatDate(purchase.purchase_date),
+      purchase.description || '',
+      purchase.code || '',
+      purchase.quantity,
+      Number(purchase.unit_price || 0).toFixed(2),
+      Number(purchase.total_amount || 0).toFixed(2),
+    ]);
+    downloadCsv(
+      'compras_sin_match.csv',
+      ['ID', 'Fecha', 'Descripcion', 'Codigo', 'Cantidad', 'Precio unitario', 'Total'],
+      rows,
+    );
+  };
 
   const handleAssociate = async (productId: number) => {
     if (!selectedPurchase) return;
@@ -53,8 +72,17 @@ export default function StockUnmatchedPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Unmatched purchases */}
         <div className="bg-white rounded-lg border">
-          <div className="px-4 py-3 border-b">
+          <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Compras sin producto</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportUnmatchedCsv}
+              disabled={!purchases?.length}
+            >
+              <FileDown className="h-4 w-4 mr-1.5" />
+              Exportar CSV
+            </Button>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
             {isLoading ? (

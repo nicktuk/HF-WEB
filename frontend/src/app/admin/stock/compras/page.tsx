@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, type ChangeEvent } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { FileDown, X, Plus, Trash2, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,9 @@ import {
   useAddPaymentToPurchase,
   useDeletePayment,
   useImportStockWithSupplier,
-  useStockPurchases,
-  useStockSummary,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import { formatDate, formatPrice } from '@/lib/utils';
 import type { StockPreviewResponse } from '@/types';
 
@@ -99,8 +98,6 @@ export default function ComprasPage() {
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState(PAYMENT_METHODS[0]);
-  const [stockSearch, setStockSearch] = useState('');
-
   // Data hooks
   const { data: purchasesData, isLoading } = usePurchases(apiKey, {
     page,
@@ -111,19 +108,6 @@ export default function ComprasPage() {
   });
 
   const { data: suppliersData } = useSuppliers(apiKey);
-  const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
-  const stockProductIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (stockPurchases || [])
-            .map((item) => item.product_id)
-            .filter((id): id is number => typeof id === 'number'),
-        ),
-      ),
-    [stockPurchases],
-  );
-  const { data: stockSummary } = useStockSummary(apiKey, stockProductIds);
   const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchaseDetail(apiKey, selectedPurchaseId);
   const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
@@ -247,76 +231,80 @@ export default function ComprasPage() {
 
   const detail = purchaseDetail as PurchaseDetail | undefined;
   const remaining = detail ? detail.total_amount - detail.total_paid : 0;
-  const stockRows = useMemo(() => {
-    const stockByProduct = (stockPurchases || []).reduce(
-      (acc, item) => {
-        const key = item.product_id ?? -item.id;
-        const name = item.product_name || item.description || `Producto #${item.product_id || 'N/A'}`;
-        if (!acc[key]) {
-          acc[key] = {
-            key,
-            name,
-            purchased: 0,
-            out: 0,
-          };
-        }
-        acc[key].purchased += Number(item.quantity || 0);
-        acc[key].out += Number(item.out_quantity || 0);
-        return acc;
-      },
-      {} as Record<number, { key: number; name: string; purchased: number; out: number }>,
-    );
-
-    return Object.values(stockByProduct);
-  }, [stockPurchases]);
-
-  const filteredStockRows = useMemo(() => {
-    const q = stockSearch.trim().toLowerCase();
-    const rows = q
-      ? stockRows.filter((row) => row.name.toLowerCase().includes(q))
-      : stockRows;
-
-    return [...rows].sort((a, b) => {
-      const aDiff = a.purchased - a.out;
-      const bDiff = b.purchased - b.out;
-      if (aDiff !== bDiff) {
-        return bDiff - aDiff;
-      }
-      return a.name.localeCompare(b.name, 'es');
+  const handleExportPurchasesCsv = () => {
+    if (!purchasesData?.items?.length) return;
+    const rows = purchasesData.items.map((purchase: Purchase) => {
+      const pending = Number(purchase.total_amount || 0) - Number(purchase.total_paid || 0);
+      return [
+        purchase.id,
+        formatDate(purchase.purchase_date),
+        purchase.supplier,
+        purchase.item_count,
+        Number(purchase.total_amount || 0).toFixed(2),
+        Number(purchase.total_paid || 0).toFixed(2),
+        pending.toFixed(2),
+        purchase.notes || '',
+      ];
     });
-  }, [stockRows, stockSearch]);
-
-  const stockSummaryMap = useMemo(() => {
-    const map = new Map<number, { reserved_qty: number; original_price: number; reserved_sale_value: number }>();
-    (stockSummary?.items || []).forEach((item) => {
-      map.set(item.product_id, {
-        reserved_qty: Number(item.reserved_qty || 0),
-        original_price: Number(item.original_price || 0),
-        reserved_sale_value: Number(item.reserved_sale_value || 0),
-      });
-    });
-    return map;
-  }, [stockSummary]);
-
-  const stockCards = useMemo(() => {
-    return stockRows.reduce(
-      (acc, row) => {
-        if (row.key <= 0) return acc;
-        const summary = stockSummaryMap.get(row.key);
-        const reservedQty = Number(summary?.reserved_qty || 0);
-        const originalPrice = Number(summary?.original_price || 0);
-        const existence = row.purchased - row.out;
-        const availableNoReserved = Math.max(0, existence - reservedQty);
-        const reservedSaleValue = Number(summary?.reserved_sale_value || 0);
-
-        acc.stockValue += availableNoReserved * originalPrice;
-        acc.reservedValue += reservedQty * originalPrice;
-        acc.reservedSoldValue += reservedSaleValue;
-        return acc;
-      },
-      { stockValue: 0, reservedValue: 0, reservedSoldValue: 0 },
+    downloadCsv(
+      `compras_pagina_${page}.csv`,
+      ['ID', 'Fecha', 'Mayorista', 'Items', 'Total', 'Pagado', 'Pendiente', 'Notas'],
+      rows,
     );
-  }, [stockRows, stockSummaryMap]);
+  };
+
+  const handleExportPurchaseDetailItemsCsv = () => {
+    if (!detail?.items?.length) return;
+    const rows = detail.items.map((item) => [
+      item.id,
+      item.product_name || item.description || '',
+      item.code || '',
+      item.quantity,
+      Number(item.unit_price || 0).toFixed(2),
+      Number(item.total_amount || 0).toFixed(2),
+    ]);
+    downloadCsv(
+      `compra_${detail.id}_items.csv`,
+      ['ID', 'Producto', 'Codigo', 'Cantidad', 'Precio unitario', 'Total'],
+      rows,
+    );
+  };
+
+  const handleExportPurchaseDetailPaymentsCsv = () => {
+    if (!detail?.payments?.length) return;
+    const rows = detail.payments.map((payment) => [
+      payment.id,
+      payment.payer,
+      payment.payment_method,
+      Number(payment.amount || 0).toFixed(2),
+      formatDate(payment.created_at),
+    ]);
+    downloadCsv(
+      `compra_${detail.id}_pagos.csv`,
+      ['ID', 'Pagador', 'Metodo', 'Monto', 'Fecha'],
+      rows,
+    );
+  };
+
+  const handleExportPreviewCsv = () => {
+    if (!stockPreview?.rows?.length) return;
+    const rows = stockPreview.rows.map((row) => [
+      row.row_number,
+      row.product_name || row.description || '',
+      row.code || '',
+      row.quantity ?? '',
+      row.unit_price ?? '',
+      row.total_amount ?? '',
+      row.status,
+      row.supplier || '',
+      (row.errors || []).join(' | '),
+    ]);
+    downloadCsv(
+      'preview_importacion_compras.csv',
+      ['Fila', 'Producto', 'Codigo', 'Cantidad', 'Precio', 'Total', 'Estado', 'Mayorista', 'Errores'],
+      rows,
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -397,11 +385,22 @@ export default function ComprasPage() {
       <div className="bg-white rounded-lg border">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <h2 className="text-lg font-semibold">Listado de compras</h2>
-          {purchasesData && (
-            <span className="text-sm text-gray-500">
-              {purchasesData.total} compras
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {purchasesData && (
+              <span className="text-sm text-gray-500">
+                {purchasesData.total} compras
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPurchasesCsv}
+              disabled={!purchasesData?.items?.length}
+            >
+              <FileDown className="h-4 w-4 mr-1" />
+              Exportar CSV
+            </Button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {isLoading ? (
@@ -490,76 +489,6 @@ export default function ComprasPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg border">
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Stock por compras</h2>
-          <span className="text-sm text-gray-500">{filteredStockRows.length} productos</span>
-        </div>
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.stockValue)}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (costo)</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.reservedValue)}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (vendido)</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.reservedSoldValue)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <div className="w-full max-w-sm">
-            <Input
-              type="search"
-              placeholder="Buscar producto..."
-              value={stockSearch}
-              onChange={(e) => setStockSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          {!stockPurchases ? (
-            <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
-          ) : filteredStockRows.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">No hay movimientos de stock asociados a productos.</div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad comprada</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad salida</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Reservado</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredStockRows.map((row) => {
-                  const summary = row.key > 0 ? stockSummaryMap.get(row.key) : undefined;
-                  const reservedQty = Number(summary?.reserved_qty || 0);
-                  const diff = row.purchased - row.out;
-                  return (
-                    <tr key={row.key} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-900">{row.name}</td>
-                      <td className="px-4 py-3 text-right">{row.purchased}</td>
-                      <td className="px-4 py-3 text-right">{row.out}</td>
-                      <td className="px-4 py-3 text-right">{reservedQty}</td>
-                      <td className={`px-4 py-3 text-right font-medium ${diff < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                        {diff}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
       {/* Purchase detail modal */}
       <Modal
         isOpen={showDetailModal}
@@ -601,7 +530,18 @@ export default function ComprasPage() {
 
               {/* Items */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Items ({detail.items.length})</h3>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Items ({detail.items.length})</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleExportPurchaseDetailItemsCsv}
+                    disabled={!detail.items.length}
+                  >
+                    <FileDown className="h-4 w-4 mr-1" />
+                    Exportar CSV
+                  </Button>
+                </div>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
@@ -637,12 +577,23 @@ export default function ComprasPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-gray-700">Pagos</h3>
-                  {!showPaymentForm && (
-                    <Button size="sm" variant="outline" onClick={() => setShowPaymentForm(true)}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Agregar pago
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleExportPurchaseDetailPaymentsCsv}
+                      disabled={!detail.payments.length}
+                    >
+                      <FileDown className="h-4 w-4 mr-1" />
+                      Exportar CSV
                     </Button>
-                  )}
+                    {!showPaymentForm && (
+                      <Button size="sm" variant="outline" onClick={() => setShowPaymentForm(true)}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Agregar pago
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Payment form */}
@@ -810,6 +761,13 @@ export default function ComprasPage() {
                   <p className="text-xs text-gray-500 uppercase">Sin match</p>
                   <p className="text-xl font-semibold text-gray-900">{stockPreview.summary.unmatched}</p>
                 </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleExportPreviewCsv} disabled={!stockPreview.rows.length}>
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Exportar CSV preview
+                </Button>
               </div>
 
               <div className="overflow-x-auto border rounded-lg">

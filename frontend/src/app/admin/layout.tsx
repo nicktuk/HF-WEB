@@ -34,6 +34,7 @@ const navigation = [
 
 const stockSubmenu = [
   { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
+  { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
 ];
 
