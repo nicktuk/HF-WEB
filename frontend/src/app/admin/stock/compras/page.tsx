@@ -287,11 +287,12 @@ export default function ComprasPage() {
   }, [stockRows, stockSearch]);
 
   const stockSummaryMap = useMemo(() => {
-    const map = new Map<number, { reserved_qty: number; original_price: number }>();
+    const map = new Map<number, { reserved_qty: number; original_price: number; reserved_sale_value: number }>();
     (stockSummary?.items || []).forEach((item) => {
       map.set(item.product_id, {
         reserved_qty: Number(item.reserved_qty || 0),
         original_price: Number(item.original_price || 0),
+        reserved_sale_value: Number(item.reserved_sale_value || 0),
       });
     });
     return map;
@@ -306,12 +307,14 @@ export default function ComprasPage() {
         const originalPrice = Number(summary?.original_price || 0);
         const existence = row.purchased - row.out;
         const availableNoReserved = Math.max(0, existence - reservedQty);
+        const reservedSaleValue = Number(summary?.reserved_sale_value || 0);
 
         acc.stockValue += availableNoReserved * originalPrice;
         acc.reservedValue += reservedQty * originalPrice;
+        acc.reservedSoldValue += reservedSaleValue;
         return acc;
       },
-      { stockValue: 0, reservedValue: 0 },
+      { stockValue: 0, reservedValue: 0, reservedSoldValue: 0 },
     );
   }, [stockRows, stockSummaryMap]);
 
@@ -493,14 +496,18 @@ export default function ComprasPage() {
           <span className="text-sm text-gray-500">{filteredStockRows.length} productos</span>
         </div>
         <div className="px-4 py-3 border-b bg-gray-50">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-lg border bg-white p-3">
               <p className="text-xs text-gray-500 uppercase">$ STOCK</p>
               <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.stockValue)}</p>
             </div>
             <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado</p>
+              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (costo)</p>
               <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.reservedValue)}</p>
+            </div>
+            <div className="rounded-lg border bg-white p-3">
+              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (vendido)</p>
+              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.reservedSoldValue)}</p>
             </div>
           </div>
         </div>

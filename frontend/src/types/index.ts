@@ -88,6 +88,7 @@ export interface StockSummaryItem {
   stock_qty: number;
   reserved_qty?: number;
   original_price?: number;
+  reserved_sale_value?: number;
 }
 
 export interface StockPreviewRow {

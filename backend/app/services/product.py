@@ -177,7 +177,7 @@ class ProductService:
         return {row.product_id: int(row.stock_qty or 0) for row in rows}
 
     def get_stock_summary_detailed(self, product_ids: List[int]) -> dict[int, dict]:
-        """Get stock, reserved and original price summary for products."""
+        """Get stock, reserved qty, reserved sold value and original price summary for products."""
         if not product_ids:
             return {}
 
@@ -212,6 +212,29 @@ class ProductService:
         )
         reserved_map = {int(row.product_id): int(row.reserved_qty or 0) for row in reserved_rows if row.product_id is not None}
 
+        reserved_sales_rows = (
+            self.db.query(
+                SaleItem.product_id,
+                func.coalesce(
+                    func.sum(
+                        func.greatest(SaleItem.quantity - func.coalesce(SaleItem.delivered_quantity, 0), 0)
+                        * func.coalesce(SaleItem.unit_price, 0)
+                    ),
+                    0,
+                ).label("reserved_sale_value"),
+            )
+            .filter(
+                SaleItem.product_id.in_(unique_ids),
+            )
+            .group_by(SaleItem.product_id)
+            .all()
+        )
+        reserved_sale_map = {
+            int(row.product_id): float(row.reserved_sale_value or 0)
+            for row in reserved_sales_rows
+            if row.product_id is not None
+        }
+
         price_rows = (
             self.db.query(Product.id, Product.original_price)
             .filter(Product.id.in_(unique_ids))
@@ -224,6 +247,7 @@ class ProductService:
                 "stock_qty": stock_map.get(pid, 0),
                 "reserved_qty": reserved_map.get(pid, 0),
                 "original_price": price_map.get(pid, 0.0),
+                "reserved_sale_value": reserved_sale_map.get(pid, 0.0),
             }
             for pid in unique_ids
         }

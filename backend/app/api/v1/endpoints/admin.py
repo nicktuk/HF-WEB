@@ -258,6 +258,7 @@ async def get_stock_summary(
             "stock_qty": values["stock_qty"],
             "reserved_qty": values["reserved_qty"],
             "original_price": values["original_price"],
+            "reserved_sale_value": values["reserved_sale_value"],
         }
         for pid, values in summary.items()
     ]

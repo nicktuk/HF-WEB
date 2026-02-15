@@ -157,6 +157,7 @@ class StockSummaryItemResponse(BaseModel):
     stock_qty: int
     reserved_qty: int = 0
     original_price: Decimal = Decimal("0")
+    reserved_sale_value: Decimal = Decimal("0")
 
 
 class StockSummaryResponse(BaseModel):
