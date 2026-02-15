@@ -176,6 +176,58 @@ class ProductService:
         )
         return {row.product_id: int(row.stock_qty or 0) for row in rows}
 
+    def get_stock_summary_detailed(self, product_ids: List[int]) -> dict[int, dict]:
+        """Get stock, reserved and original price summary for products."""
+        if not product_ids:
+            return {}
+
+        unique_ids = sorted({int(pid) for pid in product_ids if pid is not None})
+        if not unique_ids:
+            return {}
+
+        stock_rows = (
+            self.db.query(
+                StockPurchase.product_id,
+                func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+            )
+            .filter(StockPurchase.product_id.in_(unique_ids))
+            .group_by(StockPurchase.product_id)
+            .all()
+        )
+        stock_map = {int(row.product_id): int(row.stock_qty or 0) for row in stock_rows}
+
+        reserved_rows = (
+            self.db.query(
+                SaleItem.product_id,
+                func.coalesce(
+                    func.sum(func.greatest(SaleItem.quantity - func.coalesce(SaleItem.delivered_quantity, 0), 0)),
+                    0,
+                ).label("reserved_qty"),
+            )
+            .filter(
+                SaleItem.product_id.in_(unique_ids),
+            )
+            .group_by(SaleItem.product_id)
+            .all()
+        )
+        reserved_map = {int(row.product_id): int(row.reserved_qty or 0) for row in reserved_rows if row.product_id is not None}
+
+        price_rows = (
+            self.db.query(Product.id, Product.original_price)
+            .filter(Product.id.in_(unique_ids))
+            .all()
+        )
+        price_map = {int(row.id): float(row.original_price or 0) for row in price_rows}
+
+        return {
+            pid: {
+                "stock_qty": stock_map.get(pid, 0),
+                "reserved_qty": reserved_map.get(pid, 0),
+                "original_price": price_map.get(pid, 0.0),
+            }
+            for pid in unique_ids
+        }
+
     def get_stock_purchases(self, product_id: Optional[int] = None, unmatched: Optional[bool] = None) -> List[StockPurchase]:
         """Get stock purchases, optionally filtered by product or unmatched."""
         query = self.db.query(StockPurchase).options(joinedload(StockPurchase.product))

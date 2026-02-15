@@ -14,6 +14,7 @@ import {
   useDeletePayment,
   useImportStockWithSupplier,
   useStockPurchases,
+  useStockSummary,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
@@ -98,6 +99,7 @@ export default function ComprasPage() {
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [stockSearch, setStockSearch] = useState('');
 
   // Data hooks
   const { data: purchasesData, isLoading } = usePurchases(apiKey, {
@@ -110,6 +112,18 @@ export default function ComprasPage() {
 
   const { data: suppliersData } = useSuppliers(apiKey);
   const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
+  const stockProductIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (stockPurchases || [])
+            .map((item) => item.product_id)
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      ),
+    [stockPurchases],
+  );
+  const { data: stockSummary } = useStockSummary(apiKey, stockProductIds);
   const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchaseDetail(apiKey, selectedPurchaseId);
   const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
@@ -253,8 +267,53 @@ export default function ComprasPage() {
       {} as Record<number, { key: number; name: string; purchased: number; out: number }>,
     );
 
-    return Object.values(stockByProduct).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    return Object.values(stockByProduct);
   }, [stockPurchases]);
+
+  const filteredStockRows = useMemo(() => {
+    const q = stockSearch.trim().toLowerCase();
+    const rows = q
+      ? stockRows.filter((row) => row.name.toLowerCase().includes(q))
+      : stockRows;
+
+    return [...rows].sort((a, b) => {
+      const aDiff = a.purchased - a.out;
+      const bDiff = b.purchased - b.out;
+      if (aDiff !== bDiff) {
+        return bDiff - aDiff;
+      }
+      return a.name.localeCompare(b.name, 'es');
+    });
+  }, [stockRows, stockSearch]);
+
+  const stockSummaryMap = useMemo(() => {
+    const map = new Map<number, { reserved_qty: number; original_price: number }>();
+    (stockSummary?.items || []).forEach((item) => {
+      map.set(item.product_id, {
+        reserved_qty: Number(item.reserved_qty || 0),
+        original_price: Number(item.original_price || 0),
+      });
+    });
+    return map;
+  }, [stockSummary]);
+
+  const stockCards = useMemo(() => {
+    return stockRows.reduce(
+      (acc, row) => {
+        if (row.key <= 0) return acc;
+        const summary = stockSummaryMap.get(row.key);
+        const reservedQty = Number(summary?.reserved_qty || 0);
+        const originalPrice = Number(summary?.original_price || 0);
+        const existence = row.purchased - row.out;
+        const availableNoReserved = Math.max(0, existence - reservedQty);
+
+        acc.stockValue += availableNoReserved * originalPrice;
+        acc.reservedValue += reservedQty * originalPrice;
+        return acc;
+      },
+      { stockValue: 0, reservedValue: 0 },
+    );
+  }, [stockRows, stockSummaryMap]);
 
   return (
     <div className="space-y-6">
@@ -431,12 +490,34 @@ export default function ComprasPage() {
       <div className="bg-white rounded-lg border">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <h2 className="text-lg font-semibold">Stock por compras</h2>
-          <span className="text-sm text-gray-500">{stockRows.length} productos</span>
+          <span className="text-sm text-gray-500">{filteredStockRows.length} productos</span>
+        </div>
+        <div className="px-4 py-3 border-b bg-gray-50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-lg border bg-white p-3">
+              <p className="text-xs text-gray-500 uppercase">$ STOCK</p>
+              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.stockValue)}</p>
+            </div>
+            <div className="rounded-lg border bg-white p-3">
+              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado</p>
+              <p className="text-xl font-semibold text-gray-900">{formatPrice(stockCards.reservedValue)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 py-3 border-b bg-gray-50">
+          <div className="w-full max-w-sm">
+            <Input
+              type="search"
+              placeholder="Buscar producto..."
+              value={stockSearch}
+              onChange={(e) => setStockSearch(e.target.value)}
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           {!stockPurchases ? (
             <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
-          ) : stockRows.length === 0 ? (
+          ) : filteredStockRows.length === 0 ? (
             <div className="p-4 text-sm text-gray-500">No hay movimientos de stock asociados a productos.</div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -445,20 +526,27 @@ export default function ComprasPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad comprada</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad salida</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Reservado</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {stockRows.map((row) => (
-                  <tr key={row.key} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-900">{row.name}</td>
-                    <td className="px-4 py-3 text-right">{row.purchased}</td>
-                    <td className="px-4 py-3 text-right">{row.out}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${row.purchased - row.out < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                      {row.purchased - row.out}
-                    </td>
-                  </tr>
-                ))}
+                {filteredStockRows.map((row) => {
+                  const summary = row.key > 0 ? stockSummaryMap.get(row.key) : undefined;
+                  const reservedQty = Number(summary?.reserved_qty || 0);
+                  const diff = row.purchased - row.out;
+                  return (
+                    <tr key={row.key} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-900">{row.name}</td>
+                      <td className="px-4 py-3 text-right">{row.purchased}</td>
+                      <td className="px-4 py-3 text-right">{row.out}</td>
+                      <td className="px-4 py-3 text-right">{reservedQty}</td>
+                      <td className={`px-4 py-3 text-right font-medium ${diff < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                        {diff}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

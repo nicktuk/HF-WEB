@@ -86,6 +86,8 @@ export interface StockPurchase {
 export interface StockSummaryItem {
   product_id: number;
   stock_qty: number;
+  reserved_qty?: number;
+  original_price?: number;
 }
 
 export interface StockPreviewRow {

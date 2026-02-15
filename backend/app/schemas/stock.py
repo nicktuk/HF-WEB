@@ -152,8 +152,15 @@ class StockSummaryRequest(BaseModel):
     product_ids: List[int]
 
 
+class StockSummaryItemResponse(BaseModel):
+    product_id: int
+    stock_qty: int
+    reserved_qty: int = 0
+    original_price: Decimal = Decimal("0")
+
+
 class StockSummaryResponse(BaseModel):
-    items: List[dict]
+    items: List[StockSummaryItemResponse]
 
 
 class AddPaymentRequest(BaseModel):

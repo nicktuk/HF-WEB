@@ -251,8 +251,16 @@ async def get_stock_summary(
     service: ProductService = Depends(get_product_service),
 ):
     """Get stock summary for a list of product IDs."""
-    summary = service.get_stock_summary(data.product_ids)
-    items = [{"product_id": pid, "stock_qty": qty} for pid, qty in summary.items()]
+    summary = service.get_stock_summary_detailed(data.product_ids)
+    items = [
+        {
+            "product_id": pid,
+            "stock_qty": values["stock_qty"],
+            "reserved_qty": values["reserved_qty"],
+            "original_price": values["original_price"],
+        }
+        for pid, values in summary.items()
+    ]
     return {"items": items}
 
 
