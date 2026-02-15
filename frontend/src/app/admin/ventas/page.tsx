@@ -730,7 +730,9 @@ export default function VentasPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          {showPartials ? 'Total entregado' : 'Total'}
+                        </th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -748,7 +750,9 @@ export default function VentasPage() {
                             <td className="px-3 py-2 text-right text-gray-700">
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
                             </td>
-                            <td className="px-3 py-2 text-right font-medium">{formatPrice(sale.total_amount)}</td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {formatPrice(showPartials ? sale.delivered_amount : sale.total_amount)}
+                            </td>
                             <td className="px-3 py-2 text-center">
                               {renderProgressCheck(
                                 getProgressStatus(
@@ -848,7 +852,13 @@ export default function VentasPage() {
                           {group.items.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0)}
                         </td>
                         <td className="px-3 py-2 text-right text-gray-900">
-                          {formatPrice(group.items.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0))}
+                          {formatPrice(
+                            group.items.reduce(
+                              (acc, sale) =>
+                                acc + Number(showPartials ? sale.delivered_amount || 0 : sale.total_amount || 0),
+                              0,
+                            ),
+                          )}
                         </td>
                         <td className="px-3 py-2" />
                         <td className="px-3 py-2" />
