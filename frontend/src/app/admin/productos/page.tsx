@@ -156,25 +156,31 @@ export default function ProductsPage() {
     }
   };
 
+  const { data: pendingPriceChanges } = usePendingPriceChanges(apiKey);
+  const approvePendingPrices = useApprovePendingPriceChanges(apiKey);
+  const rejectPendingPrices = useRejectPendingPriceChanges(apiKey);
+
+  const { data: sourceWebsites } = useSourceWebsites(apiKey);
+  const { data: adminCategories } = useAdminCategories();
+  const categories = adminCategories as Category[] | undefined;
+  const selectedCategoryId =
+    categoryFilter && categoryFilter !== '__none__'
+      ? categories?.find(c => c.name === categoryFilter || String(c.id) === categoryFilter)?.id
+      : undefined;
+
   const { data, isLoading } = useAdminProducts(apiKey, {
     page,
     limit,
     enabled: enabledFilter,
     source_website_id: sourceFilter,
     search: search || undefined,
-    category_id: categoryFilter && categoryFilter !== '__none__'
-      ? categories?.find(c => c.name === categoryFilter || String(c.id) === categoryFilter)?.id
-      : undefined,
+    category_id: selectedCategoryId,
     category: categoryFilter,
     subcategory: subcategoryFilter,
     is_featured: featuredFilter,
     in_stock: inStockFilter,
     price_range: priceRangeFilter,
   });
-
-  const { data: pendingPriceChanges } = usePendingPriceChanges(apiKey);
-  const approvePendingPrices = useApprovePendingPriceChanges(apiKey);
-  const rejectPendingPrices = useRejectPendingPriceChanges(apiKey);
 
   useEffect(() => {
     if (pendingPriceModalOpened) return;
@@ -193,10 +199,6 @@ export default function ProductsPage() {
       // ignore storage errors
     }
   }, [data?.items]);
-
-  const { data: sourceWebsites } = useSourceWebsites(apiKey);
-  const { data: adminCategories } = useAdminCategories();
-  const categories = adminCategories as Category[] | undefined;
 
   // Get subcategories for the selected category
   const selectedCategoryObj = categories?.find(
