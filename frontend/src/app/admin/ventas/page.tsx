@@ -312,8 +312,41 @@ export default function VentasPage() {
   }, [salesData]);
 
   const getVisibleSaleAmount = (sale: NonNullable<typeof salesData>[number]) => {
-    return Number(showPartials ? sale.delivered_amount || 0 : sale.total_amount || 0);
+    const total = Number(sale.total_amount || 0);
+    const delivered = Number(sale.delivered_amount || 0);
+    const pending = Math.max(0, total - delivered);
+
+    if (deliveredFilter === 'no') {
+      return showPartials ? pending : total;
+    }
+    if (deliveredFilter === 'yes') {
+      return showPartials ? delivered : total;
+    }
+    if (deliveredFilter === 'partial') {
+      return pending;
+    }
+    return showPartials ? delivered : total;
   };
+
+  const amountColumnLabel = useMemo(() => {
+    if (deliveredFilter === 'no' || deliveredFilter === 'partial') {
+      return 'Total pendiente';
+    }
+    if (showPartials) {
+      return 'Total entregado';
+    }
+    return 'Total';
+  }, [deliveredFilter, showPartials]);
+
+  const filteredAmountCardLabel = useMemo(() => {
+    if (deliveredFilter === 'no' || deliveredFilter === 'partial') {
+      return 'Valorizado pendiente';
+    }
+    if (showPartials) {
+      return 'Valorizado entregado';
+    }
+    return 'Valorizado total';
+  }, [deliveredFilter, showPartials]);
 
   const filteredTotals = useMemo(() => {
     const base = stockShortageOnly ? salesWithStockShortage : filteredSales;
@@ -321,7 +354,7 @@ export default function VentasPage() {
     const totalItems = base.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
     const totalAmount = base.reduce((acc, sale) => acc + getVisibleSaleAmount(sale), 0);
     return { totalSales, totalItems, totalAmount };
-  }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials]);
+  }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials, deliveredFilter]);
 
   const openEditModal = (saleId: number) => {
     const sale = salesData?.find((s) => s.id === saleId);
@@ -676,7 +709,7 @@ export default function VentasPage() {
                 <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalItems}</p>
               </div>
               <div className="rounded-lg border p-3 bg-gray-50">
-                <p className="text-xs text-gray-500 uppercase">Valorizado del filtro</p>
+                <p className="text-xs text-gray-500 uppercase">{filteredAmountCardLabel}</p>
                 <p className="text-2xl font-bold text-gray-900">{formatPrice(filteredTotals.totalAmount)}</p>
               </div>
             </div>
@@ -761,7 +794,7 @@ export default function VentasPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                          {showPartials ? 'Total entregado' : 'Total'}
+                          {amountColumnLabel}
                         </th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
@@ -781,7 +814,7 @@ export default function VentasPage() {
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
                             </td>
                             <td className="px-3 py-2 text-right font-medium">
-                              {formatPrice(showPartials ? sale.delivered_amount : sale.total_amount)}
+                              {formatPrice(getVisibleSaleAmount(sale))}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {renderProgressCheck(
@@ -885,7 +918,7 @@ export default function VentasPage() {
                           {formatPrice(
                             group.items.reduce(
                               (acc, sale) =>
-                                acc + Number(showPartials ? sale.delivered_amount || 0 : sale.total_amount || 0),
+                                acc + getVisibleSaleAmount(sale),
                               0,
                             ),
                           )}
