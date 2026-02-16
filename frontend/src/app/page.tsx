@@ -210,7 +210,10 @@ function HomePageContent() {
 
     const grouped = new Map<string, typeof sortedProducts>();
     sortedProducts.forEach((product) => {
-      const categoryName = (product.category || '').trim() || 'Sin categoria';
+      const categoryName = (product.category || '').trim();
+      if (!categoryName || !categoryMeta.has(categoryName)) {
+        return;
+      }
       const current = grouped.get(categoryName) || [];
       current.push(product);
       grouped.set(categoryName, current);

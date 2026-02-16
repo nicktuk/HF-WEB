@@ -75,11 +75,11 @@ class ProductService:
         """Get a single enabled product for public view."""
         products = (
             self.db.query(Product)
-            .outerjoin(Category, Product.category_id == Category.id)
+            .join(Category, Product.category_id == Category.id)
             .filter(
                 Product.slug == slug,
                 Product.enabled == True,
-                or_(Product.category_id.is_(None), Category.is_active == True),
+                Category.is_active == True,
             )
             .all()
         )
@@ -1239,7 +1239,10 @@ class ProductService:
 
         categories = (
             self.db.query(CategoryModel)
+            .join(Product, Product.category_id == CategoryModel.id)
             .filter(CategoryModel.is_active == True)
+            .filter(Product.enabled == True)
+            .distinct()
             .order_by(CategoryModel.display_order, CategoryModel.name)
             .all()
         )
