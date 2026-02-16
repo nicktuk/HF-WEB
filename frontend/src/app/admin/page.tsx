@@ -398,135 +398,112 @@ export default function AdminDashboard() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Total comprado - clickeable para ver por pagador */}
-              <button
-                onClick={() => setShowPayerStats(!showPayerStats)}
-                className="rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm hover:shadow-md hover:from-slate-100 hover:to-slate-150 transition-all text-left group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wide">
-                    <DollarSign className="h-4 w-4" />
-                    Total comprado
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
-                </div>
-                <p className="text-2xl font-bold text-slate-900 mt-1">
-                  {formatPrice(financialStats.total_purchased)}
-                </p>
-              </button>
-
-              {/* Total cobrado - clickeable */}
-              <button
-                onClick={() => setShowSellerStats(!showSellerStats)}
-                className="rounded-xl border bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 shadow-sm hover:shadow-md hover:from-emerald-100 hover:to-emerald-150 transition-all text-left group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 uppercase tracking-wide">
-                    <CreditCard className="h-4 w-4" />
-                    Total cobrado
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
-                </div>
-                <p className="text-2xl font-bold text-emerald-700 mt-1">
-                  {formatPrice(financialStats.total_collected)}
-                </p>
-              </button>
-
-              {/* Pendiente entrega - clickeable */}
-              <button
-                onClick={() => setShowSellerStats(!showSellerStats)}
-                className="rounded-xl border bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm hover:shadow-md hover:from-amber-100 hover:to-amber-150 transition-all text-left group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-amber-600 uppercase tracking-wide">
-                    <Truck className="h-4 w-4" />
-                    Pend. entrega
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
-                </div>
-                <p className="text-2xl font-bold text-amber-700 mt-1">
-                  {formatPrice(financialStats.total_pending_delivery)}
-                </p>
-              </button>
-
-              {/* Pendiente cobro - clickeable */}
-              <button
-                onClick={() => setShowSellerStats(!showSellerStats)}
-                className="rounded-xl border bg-gradient-to-br from-rose-50 to-rose-100 p-4 shadow-sm hover:shadow-md hover:from-rose-100 hover:to-rose-150 transition-all text-left group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-rose-600 uppercase tracking-wide">
-                    <Clock className="h-4 w-4" />
-                    Pend. cobro
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-rose-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
-                </div>
-                <p className="text-2xl font-bold text-rose-700 mt-1">
-                  {formatPrice(financialStats.total_pending_payment)}
-                </p>
-              </button>
-
-              {/* Stock a costo - no clickeable */}
-              <div className="rounded-xl border bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-xs text-blue-600 uppercase tracking-wide">
-                  <Boxes className="h-4 w-4" />
-                  Stock a costo
-                </div>
-                <p className="text-2xl font-bold text-blue-700 mt-1">
-                  {formatPrice(financialStats.stock_value_cost)}
-                </p>
-              </div>
-            </div>
-
-            {projections && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl border bg-white p-4 shadow-sm">
-                  <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    {formatPrice(projections.totalSales)}
-                  </p>
-                  <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
-                  </p>
-                </div>
-
-                <div className="rounded-xl border bg-white p-4 shadow-sm">
-                  <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
-                  <div className="mt-2 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">A costo</span>
-                      <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm space-y-4">
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Inversion + Stock</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowPayerStats(!showPayerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-slate-500 uppercase">Total comprado</p>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">A +50%</span>
-                      <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">A +70%</span>
-                      <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
-                    </div>
+                    <p className="text-xl font-bold text-slate-900 mt-1">{formatPrice(financialStats.total_purchased)}</p>
+                  </button>
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-blue-600 uppercase">Stock a costo</p>
+                    <p className="text-xl font-bold text-blue-700 mt-1">{formatPrice(financialStats.stock_value_cost)}</p>
                   </div>
                 </div>
 
-                <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm lg:col-span-2">
-                  <p className="text-xs text-gray-500 uppercase">Ventas + stock vs inversión</p>
-                  <div className="mt-3 space-y-2">
-                    {projections.scenarios.map((scenario) => (
-                      <div key={scenario.key} className="rounded-lg border bg-white px-3 py-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-700">{scenario.label}</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                {projections && (
+                  <>
+                    <div className="rounded-lg border bg-white p-3">
+                      <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
+                      <div className="mt-2 space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A costo</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
                         </div>
-                        <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          Diferencia vs inversión: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A +50%</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A +70%</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
                         </div>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="rounded-lg border bg-white p-3">
+                      <p className="text-xs text-gray-500 uppercase">Ventas + stock vs inversion</p>
+                      <div className="mt-2 space-y-2">
+                        {projections.scenarios.map((scenario) => (
+                          <div key={scenario.key} className="rounded border px-2 py-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-700">{scenario.label}</span>
+                              <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                            </div>
+                            <div className={`text-xs mt-0.5 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              Dif.: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm space-y-4">
+                <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Ventas y Estadios</h3>
+                {projections && (
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatPrice(projections.totalSales)}</p>
+                    <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
+                    </p>
                   </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setShowSellerStats(!showSellerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-emerald-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-emerald-600 uppercase">Total cobrado</p>
+                      <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xl font-bold text-emerald-700 mt-1">{formatPrice(financialStats.total_collected)}</p>
+                  </button>
+                  <button
+                    onClick={() => setShowSellerStats(!showSellerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-amber-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-amber-600 uppercase">Pend. entrega</p>
+                      <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xl font-bold text-amber-700 mt-1">{formatPrice(financialStats.total_pending_delivery)}</p>
+                  </button>
+                  <button
+                    onClick={() => setShowSellerStats(!showSellerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-rose-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-rose-600 uppercase">Pend. cobro</p>
+                      <ChevronDown className={`h-4 w-4 text-rose-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xl font-bold text-rose-700 mt-1">{formatPrice(financialStats.total_pending_payment)}</p>
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Stats by Seller - Collapsible */}
             {financialStats.by_seller && showSellerStats && (
