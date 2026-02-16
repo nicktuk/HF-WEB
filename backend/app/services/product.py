@@ -1,12 +1,12 @@
 """Service for Product operations."""
 from typing import Optional, List, Tuple
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 import csv
 import io
 import re
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case
 import logging
 
 from app.db.repositories import ProductRepository, SourceWebsiteRepository
@@ -16,6 +16,7 @@ from app.models.category_mapping import CategoryMapping
 from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
+from app.models.analytics_event import AnalyticsEvent
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
 from app.scrapers.registry import ScraperRegistry
 from app.scrapers.base import ScrapedProduct
@@ -1896,6 +1897,138 @@ class ProductService:
             "total_pending_payment": float(total_pending_payment or 0),
             "stock_value_cost": stock_value_available,
             "by_seller": by_seller,
+        }
+
+    def get_public_analytics_summary(self, days: int = 7) -> dict:
+        """Get summary metrics from public analytics events."""
+        safe_days = max(1, min(days, 90))
+        since = datetime.utcnow() - timedelta(days=safe_days)
+
+        base_query = self.db.query(AnalyticsEvent).filter(AnalyticsEvent.created_at >= since)
+
+        event_rows = (
+            self.db.query(
+                AnalyticsEvent.event_name,
+                func.count(AnalyticsEvent.id).label("count"),
+            )
+            .filter(AnalyticsEvent.created_at >= since)
+            .group_by(AnalyticsEvent.event_name)
+            .all()
+        )
+
+        event_counts = {row.event_name: int(row.count or 0) for row in event_rows}
+
+        sessions_count = int(
+            base_query.with_entities(func.count(func.distinct(AnalyticsEvent.session_id))).scalar() or 0
+        )
+
+        page_views = event_counts.get("page_view", 0)
+        searches = event_counts.get("search", 0)
+        product_clicks = event_counts.get("product_click", 0)
+        whatsapp_clicks = event_counts.get("whatsapp_click", 0)
+
+        top_search_rows = (
+            self.db.query(
+                func.lower(func.trim(AnalyticsEvent.search_query)).label("query"),
+                func.count(AnalyticsEvent.id).label("count"),
+            )
+            .filter(
+                AnalyticsEvent.created_at >= since,
+                AnalyticsEvent.event_name == "search",
+                AnalyticsEvent.search_query.isnot(None),
+                func.length(func.trim(AnalyticsEvent.search_query)) > 0,
+            )
+            .group_by(func.lower(func.trim(AnalyticsEvent.search_query)))
+            .order_by(func.count(AnalyticsEvent.id).desc())
+            .limit(10)
+            .all()
+        )
+
+        top_category_rows = (
+            self.db.query(
+                AnalyticsEvent.category,
+                func.count(AnalyticsEvent.id).label("count"),
+            )
+            .filter(
+                AnalyticsEvent.created_at >= since,
+                AnalyticsEvent.event_name == "category_click",
+                AnalyticsEvent.category.isnot(None),
+            )
+            .group_by(AnalyticsEvent.category)
+            .order_by(func.count(AnalyticsEvent.id).desc())
+            .limit(10)
+            .all()
+        )
+
+        top_product_rows = (
+            self.db.query(
+                AnalyticsEvent.product_slug,
+                func.max(AnalyticsEvent.product_id).label("product_id"),
+                func.count(AnalyticsEvent.id).label("count"),
+            )
+            .filter(
+                AnalyticsEvent.created_at >= since,
+                AnalyticsEvent.event_name == "product_click",
+                AnalyticsEvent.product_slug.isnot(None),
+            )
+            .group_by(AnalyticsEvent.product_slug)
+            .order_by(func.count(AnalyticsEvent.id).desc())
+            .limit(10)
+            .all()
+        )
+
+        daily_rows = (
+            self.db.query(
+                func.date(AnalyticsEvent.created_at).label("day"),
+                func.sum(case((AnalyticsEvent.event_name == "page_view", 1), else_=0)).label("page_views"),
+                func.sum(case((AnalyticsEvent.event_name == "search", 1), else_=0)).label("searches"),
+                func.sum(case((AnalyticsEvent.event_name == "product_click", 1), else_=0)).label("product_clicks"),
+                func.sum(case((AnalyticsEvent.event_name == "whatsapp_click", 1), else_=0)).label("whatsapp_clicks"),
+            )
+            .filter(AnalyticsEvent.created_at >= since)
+            .group_by(func.date(AnalyticsEvent.created_at))
+            .order_by(func.date(AnalyticsEvent.created_at).asc())
+            .all()
+        )
+
+        return {
+            "window_days": safe_days,
+            "from_date": since.date().isoformat(),
+            "totals": {
+                "sessions": sessions_count,
+                "page_views": page_views,
+                "searches": searches,
+                "product_clicks": product_clicks,
+                "whatsapp_clicks": whatsapp_clicks,
+                "product_ctr": round((product_clicks / page_views) * 100, 2) if page_views else 0.0,
+                "whatsapp_from_product_ctr": round((whatsapp_clicks / product_clicks) * 100, 2) if product_clicks else 0.0,
+            },
+            "top_searches": [
+                {"query": row.query, "count": int(row.count or 0)}
+                for row in top_search_rows
+            ],
+            "top_categories": [
+                {"category": row.category, "count": int(row.count or 0)}
+                for row in top_category_rows
+            ],
+            "top_products": [
+                {
+                    "product_id": int(row.product_id) if row.product_id is not None else None,
+                    "product_slug": row.product_slug,
+                    "count": int(row.count or 0),
+                }
+                for row in top_product_rows
+            ],
+            "daily": [
+                {
+                    "date": row.day.isoformat() if row.day else None,
+                    "page_views": int(row.page_views or 0),
+                    "searches": int(row.searches or 0),
+                    "product_clicks": int(row.product_clicks or 0),
+                    "whatsapp_clicks": int(row.whatsapp_clicks or 0),
+                }
+                for row in daily_rows
+            ],
         }
 
     def mark_new_by_scrape_date(self, scrape_date: str) -> int:

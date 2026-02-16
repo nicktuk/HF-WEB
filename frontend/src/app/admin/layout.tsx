@@ -16,6 +16,7 @@ import {
   Scale,
   DollarSign,
   MessageCircle,
+  LineChart,
   ShoppingCart,
   PackageX,
   Menu,
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Productos', href: '/admin/productos', icon: Package },
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
+  { name: 'Analitica', href: '/admin/analytics', icon: LineChart },
   { name: 'Comparador', href: '/admin/comparador', icon: Scale },
 ];
 

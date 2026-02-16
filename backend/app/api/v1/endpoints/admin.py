@@ -1557,6 +1557,19 @@ async def get_stats_by_price_range(
     return service.get_stats_by_price_range()
 
 
+@router.get(
+    "/stats/public-analytics",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_public_analytics(
+    request: Request,
+    days: int = Query(default=7, ge=1, le=90, description="Time window in days"),
+    service: ProductService = Depends(get_product_service),
+):
+    """Get public frontend navigation analytics summary."""
+    return service.get_public_analytics_summary(days=days)
+
+
 # ============================================
 # Badge Management
 # ============================================
