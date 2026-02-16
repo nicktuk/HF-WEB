@@ -205,30 +205,49 @@ export default function VentasPage() {
 
   const filteredSales = useMemo(() => {
     if (!salesData) return [];
+    const EPS = 0.01;
     return salesData.filter((sale) => {
       const total = Number(sale.total_amount || 0);
       const deliveredAmount = Number(sale.delivered_amount || 0);
       const paidAmount = Number(sale.paid_amount || 0);
-      const isDeliveredPartial = total > 0 && deliveredAmount > 0 && deliveredAmount < total;
-      const isPaidPartial = total > 0 && paidAmount > 0 && paidAmount < total;
+      const isDeliveredFull = total > 0 && deliveredAmount >= (total - EPS);
+      const isDeliveredNone = deliveredAmount <= EPS;
+      const isDeliveredPartial = total > 0 && !isDeliveredNone && !isDeliveredFull;
+      const isPaidFull = total > 0 && paidAmount >= (total - EPS);
+      const isPaidNone = paidAmount <= EPS;
+      const isPaidPartial = total > 0 && !isPaidNone && !isPaidFull;
 
       if (deliveredFilter !== 'all') {
         if (deliveredFilter === 'yes') {
-          if (!sale.delivered && !(showPartials && isDeliveredPartial)) return false;
+          if (showPartials) {
+            if (isDeliveredNone) return false;
+          } else {
+            if (!isDeliveredFull) return false;
+          }
         }
         if (deliveredFilter === 'no') {
-          if (sale.delivered) return false;
-          if (!showPartials && isDeliveredPartial) return false;
+          if (showPartials) {
+            if (isDeliveredFull) return false;
+          } else {
+            if (!isDeliveredNone) return false;
+          }
         }
         if (deliveredFilter === 'partial' && !isDeliveredPartial) return false;
       }
       if (paidFilter !== 'all') {
         if (paidFilter === 'yes') {
-          if (!sale.paid && !(showPartials && isPaidPartial)) return false;
+          if (showPartials) {
+            if (isPaidNone) return false;
+          } else {
+            if (!isPaidFull) return false;
+          }
         }
         if (paidFilter === 'no') {
-          if (sale.paid) return false;
-          if (!showPartials && isPaidPartial) return false;
+          if (showPartials) {
+            if (isPaidFull) return false;
+          } else {
+            if (!isPaidNone) return false;
+          }
         }
         if (paidFilter === 'partial' && !isPaidPartial) return false;
       }
