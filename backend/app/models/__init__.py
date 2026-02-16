@@ -8,6 +8,7 @@ from app.models.category_mapping import CategoryMapping
 from app.models.subcategory import Subcategory
 from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
+from app.models.analytics_event import AnalyticsEvent
 
 __all__ = [
     "Base",
@@ -23,4 +24,5 @@ __all__ = [
     "StockPurchase",
     "Sale",
     "SaleItem",
+    "AnalyticsEvent",
 ]

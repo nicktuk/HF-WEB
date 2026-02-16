@@ -1,5 +1,7 @@
 """Public API endpoints - No authentication required."""
 from typing import Optional
+import json
+import logging
 from fastapi import APIRouter, Depends, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -7,10 +9,13 @@ from slowapi.util import get_remote_address
 from app.api.deps import get_product_service
 from app.services.product import ProductService
 from app.schemas.product import ProductPublicResponse
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import PaginatedResponse, MessageResponse
+from app.schemas.analytics import PublicEventCreate
+from app.models.analytics_event import AnalyticsEvent
 from app.config import settings
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Rate limiter for public endpoints
 limiter = Limiter(key_func=get_remote_address)
@@ -82,3 +87,40 @@ async def get_subcategories(
 ):
     """Get list of available subcategories with their properties."""
     return service.get_public_subcategories(category)
+
+
+@router.post("/events", response_model=MessageResponse)
+@limiter.limit(settings.RATE_LIMIT_PUBLIC)
+async def track_public_event(
+    request: Request,
+    payload: PublicEventCreate,
+    service: ProductService = Depends(get_product_service),
+):
+    """Track anonymous public frontend events for basic navigation analytics."""
+    forwarded_for = request.headers.get("x-forwarded-for")
+    ip_address = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else None)
+
+    event = AnalyticsEvent(
+        event_name=payload.event_name,
+        session_id=payload.session_id,
+        path=payload.path,
+        referrer=payload.referrer,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=ip_address,
+        category=payload.category,
+        subcategory=payload.subcategory,
+        product_id=payload.product_id,
+        product_slug=payload.product_slug,
+        search_query=payload.search_query,
+        metadata_json=json.dumps(payload.metadata, ensure_ascii=False) if payload.metadata else None,
+    )
+
+    try:
+        service.db.add(event)
+        service.db.commit()
+    except Exception:
+        service.db.rollback()
+        logger.exception("Failed to store public analytics event")
+        return MessageResponse(message="Event dropped", success=False)
+
+    return MessageResponse(message="Event tracked", success=True)

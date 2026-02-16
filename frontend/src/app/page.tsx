@@ -9,6 +9,7 @@ import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { Input } from '@/components/ui/input';
 import { usePublicProducts, useCategories, useSubcategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
+import { trackPublicEvent } from '@/lib/analytics';
 
 export default function HomePage() {
   return (
@@ -85,6 +86,12 @@ function HomePageContent() {
     setSearchInput(searchFromUrl);
   }, [searchFromUrl]);
 
+  useEffect(() => {
+    trackPublicEvent('page_view', {
+      metadata: { screen: 'home' },
+    });
+  }, []);
+
   // Debounce search - only update URL after user stops typing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -97,11 +104,19 @@ function HomePageContent() {
         }
         const queryString = params.toString();
         router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
+        const searchTerm = searchInput.trim();
+        if (searchTerm) {
+          trackPublicEvent('search', {
+            search_query: searchTerm,
+            category: selectedCategory,
+            subcategory: selectedSubcategory,
+          });
+        }
       }
     }, 400); // 400ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchInput, searchFromUrl, searchParams, router]);
+  }, [searchInput, searchFromUrl, searchParams, router, selectedCategory, selectedSubcategory]);
 
   // Reset mobile menu mode when menu closes or category filter changes
   useEffect(() => {
@@ -120,6 +135,16 @@ function HomePageContent() {
 
   // Helper to update URL params
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
+    if (updates.category && updates.category !== selectedCategory) {
+      trackPublicEvent('category_click', { category: updates.category });
+    }
+    if (updates.subcategory && updates.subcategory !== selectedSubcategory) {
+      trackPublicEvent('subcategory_click', {
+        category: updates.category ?? selectedCategory,
+        subcategory: updates.subcategory,
+      });
+    }
+
     const params = new URLSearchParams(searchParams.toString());
 
     Object.entries(updates).forEach(([key, value]) => {
@@ -132,7 +157,7 @@ function HomePageContent() {
 
     const queryString = params.toString();
     router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
-  }, [searchParams, router]);
+  }, [searchParams, router, selectedCategory, selectedSubcategory]);
 
   const { data, isLoading } = usePublicProducts({
     page: 1,
@@ -249,6 +274,11 @@ function HomePageContent() {
                 href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  trackPublicEvent('whatsapp_click', {
+                    metadata: { origin: 'home_header_button' },
+                  });
+                }}
                 className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

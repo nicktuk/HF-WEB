@@ -2,6 +2,7 @@
 
 import { MessageCircle } from 'lucide-react';
 import { getWhatsAppUrl, cn } from '@/lib/utils';
+import { trackPublicEvent } from '@/lib/analytics';
 
 interface ContactButtonProps {
   productName: string;
@@ -52,6 +53,16 @@ export function ContactButton({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={() => {
+        trackPublicEvent('whatsapp_click', {
+          product_slug: productSlug,
+          metadata: {
+            origin: 'product_contact_button',
+            product_name: productName,
+            product_price: productPrice ?? null,
+          },
+        });
+      }}
       className={cn(
         baseStyles,
         sizes[size],
@@ -75,6 +86,11 @@ export function FloatingWhatsAppButton() {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={() => {
+        trackPublicEvent('whatsapp_click', {
+          metadata: { origin: 'floating_whatsapp_button' },
+        });
+      }}
       className="fixed bottom-4 right-4 z-40 md:hidden bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors"
       aria-label="Contactar por WhatsApp"
     >

@@ -113,6 +113,27 @@ export const publicApi = {
     const params = category ? `?category=${encodeURIComponent(category)}` : '';
     return fetchAPI(`/public/subcategories${params}`);
   },
+
+  /**
+   * Track anonymous public frontend event
+   */
+  async trackEvent(data: {
+    event_name: 'page_view' | 'search' | 'category_click' | 'subcategory_click' | 'product_click' | 'whatsapp_click';
+    session_id?: string;
+    path?: string;
+    referrer?: string;
+    category?: string;
+    subcategory?: string;
+    product_id?: number;
+    product_slug?: string;
+    search_query?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<MessageResponse> {
+    return fetchAPI('/public/events', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 // ============================================

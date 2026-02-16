@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
+import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductPublic } from '@/types';
 
 interface ProductCardProps {
@@ -15,6 +16,14 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/producto/${product.slug}`}
+      onClick={() => {
+        trackPublicEvent('product_click', {
+          product_id: product.id,
+          product_slug: product.slug,
+          category: product.category || undefined,
+          subcategory: product.subcategory || undefined,
+        });
+      }}
       className="group block bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden relative"
     >
       {/* Nuevo Badge - Corner ribbon */}

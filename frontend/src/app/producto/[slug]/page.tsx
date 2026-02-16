@@ -9,6 +9,7 @@ import { ContactButton } from '@/components/public/ContactButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
+import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductImage } from '@/types';
 
 export default function ProductPage() {
@@ -24,6 +25,17 @@ export default function ProductPage() {
       const primary = product.images.find((img) => img.is_primary) || product.images[0];
       setSelectedImage(primary);
     }
+  }, [product]);
+
+  useEffect(() => {
+    if (!product) return;
+    trackPublicEvent('page_view', {
+      category: product.category || undefined,
+      subcategory: product.subcategory || undefined,
+      product_id: product.id,
+      product_slug: product.slug,
+      metadata: { screen: 'product_detail' },
+    });
   }, [product]);
 
   if (isLoading) {
