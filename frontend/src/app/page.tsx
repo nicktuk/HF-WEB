@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useState, useEffect, useMemo } from 'react';
+import { Suspense, useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Star, Zap, Menu, X, ChevronLeft, Lightbulb } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
@@ -69,6 +69,7 @@ function HomePageContent() {
 
   // Local state for search input (for debouncing)
   const [searchInput, setSearchInput] = useState(searchFromUrl);
+  const lastTrackedSearchRef = useRef<string>('');
 
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -87,6 +88,12 @@ function HomePageContent() {
   }, [searchFromUrl]);
 
   useEffect(() => {
+    if (!searchInput.trim()) {
+      lastTrackedSearchRef.current = '';
+    }
+  }, [searchInput]);
+
+  useEffect(() => {
     trackPublicEvent('page_view', {
       metadata: { screen: 'home' },
     });
@@ -103,17 +110,21 @@ function HomePageContent() {
           params.delete('search');
         }
         const queryString = params.toString();
-        router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
-        const searchTerm = searchInput.trim();
-        if (searchTerm) {
+        // Use replace to avoid polluting history while typing.
+        router.replace(queryString ? `/?${queryString}` : '/', { scroll: false });
+
+        const searchTerm = searchInput.trim().toLowerCase();
+        // Track only meaningful, stable searches (avoid partial keystrokes noise).
+        if (searchTerm.length >= 3 && searchTerm !== lastTrackedSearchRef.current) {
+          lastTrackedSearchRef.current = searchTerm;
           trackPublicEvent('search', {
-            search_query: searchTerm,
+            search_query: searchInput.trim(),
             category: selectedCategory,
             subcategory: selectedSubcategory,
           });
         }
       }
-    }, 400); // 400ms debounce
+    }, 900); // more forgiving debounce for typing
 
     return () => clearTimeout(timeoutId);
   }, [searchInput, searchFromUrl, searchParams, router, selectedCategory, selectedSubcategory]);
