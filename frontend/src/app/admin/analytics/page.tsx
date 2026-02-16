@@ -20,7 +20,7 @@ interface AnalyticsSummary {
   };
   top_searches: Array<{ query: string; count: number }>;
   top_categories: Array<{ category: string; count: number }>;
-  top_products: Array<{ product_id: number | null; product_slug: string; count: number }>;
+  top_products: Array<{ product_id: number | null; product_slug: string; product_name: string; count: number }>;
   daily: Array<{
     date: string | null;
     page_views: number;
@@ -160,9 +160,9 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <SimpleTable
-                  rows={data.top_products.map((item) => [item.product_slug, item.count.toString()])}
+                  rows={data.top_products.map((item) => [item.product_name || item.product_slug, item.count.toString()])}
                   emptyLabel="Sin clicks de producto"
-                  leftHeader="Slug"
+                  leftHeader="Producto"
                   rightHeader="Eventos"
                 />
               </CardContent>

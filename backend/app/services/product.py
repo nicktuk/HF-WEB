@@ -1976,6 +1976,18 @@ class ProductService:
             .limit(10)
             .all()
         )
+        top_product_slugs = [row.product_slug for row in top_product_rows if row.product_slug]
+        product_name_map: dict[str, str] = {}
+        if top_product_slugs:
+            products = (
+                self.db.query(Product.slug, Product.custom_name, Product.original_name)
+                .filter(Product.slug.in_(top_product_slugs))
+                .all()
+            )
+            product_name_map = {
+                row.slug: (row.custom_name or row.original_name or row.slug)
+                for row in products
+            }
 
         daily_rows = (
             self.db.query(
@@ -2015,6 +2027,7 @@ class ProductService:
                 {
                     "product_id": int(row.product_id) if row.product_id is not None else None,
                     "product_slug": row.product_slug,
+                    "product_name": product_name_map.get(row.product_slug, row.product_slug),
                     "count": int(row.count or 0),
                 }
                 for row in top_product_rows
