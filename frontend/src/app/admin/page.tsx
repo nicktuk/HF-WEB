@@ -437,23 +437,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
-
-                    <div className="rounded-lg border bg-white p-3">
-                      <p className="text-xs text-gray-500 uppercase">Ventas + stock vs inversion</p>
-                      <div className="mt-2 space-y-2">
-                        {projections.scenarios.map((scenario) => (
-                          <div key={scenario.key} className="rounded border px-2 py-1.5">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-700">{scenario.label}</span>
-                              <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
-                            </div>
-                            <div className={`text-xs mt-0.5 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                              Dif.: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
@@ -504,6 +487,25 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {projections && (
+              <div className="rounded-xl border bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Proyecciones Ventas + Stock</h3>
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {projections.scenarios.map((scenario) => (
+                    <div key={scenario.key} className="rounded-lg border bg-white p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700">{scenario.label}</span>
+                        <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                      </div>
+                      <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        Diferencia vs inversion: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Stats by Seller - Collapsible */}
             {financialStats.by_seller && showSellerStats && (
