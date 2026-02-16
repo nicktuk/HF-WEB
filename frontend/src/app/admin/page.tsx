@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -139,6 +139,61 @@ export default function AdminDashboard() {
       minimumFractionDigits: 0,
     }).format(price);
   };
+
+  const formatPct = (value: number) => {
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${value.toFixed(1)}%`;
+  };
+
+  const projections = useMemo(() => {
+    if (!financialStats) return null;
+
+    const invested = Number(financialStats.total_purchased || 0);
+    const stockCost = Number(financialStats.stock_value_cost || 0);
+    const totalSales =
+      Number(financialStats.total_collected || 0) +
+      Number(financialStats.total_pending_payment || 0) +
+      Number(financialStats.total_pending_delivery || 0);
+
+    const stock50 = stockCost * 1.5;
+    const stock70 = stockCost * 1.7;
+
+    const gainVsInvested = totalSales - invested;
+    const gainPctVsInvested = invested > 0 ? (gainVsInvested / invested) * 100 : 0;
+
+    const scenarios = [
+      {
+        key: 'costo',
+        label: 'Ventas + Stock costo',
+        total: totalSales + stockCost,
+      },
+      {
+        key: 'm50',
+        label: 'Ventas + Stock +50%',
+        total: totalSales + stock50,
+      },
+      {
+        key: 'm70',
+        label: 'Ventas + Stock +70%',
+        total: totalSales + stock70,
+      },
+    ].map((scenario) => {
+      const diff = scenario.total - invested;
+      const pct = invested > 0 ? (diff / invested) * 100 : 0;
+      return { ...scenario, diff, pct };
+    });
+
+    return {
+      invested,
+      totalSales,
+      stockCost,
+      stock50,
+      stock70,
+      gainVsInvested,
+      gainPctVsInvested,
+      scenarios,
+    };
+  }, [financialStats]);
 
   // Colors for price ranges
   const rangeColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -423,6 +478,55 @@ export default function AdminDashboard() {
                 </p>
               </div>
             </div>
+
+            {projections && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="rounded-xl border bg-white p-4 shadow-sm">
+                  <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                    {formatPrice(projections.totalSales)}
+                  </p>
+                  <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
+                  </p>
+                </div>
+
+                <div className="rounded-xl border bg-white p-4 shadow-sm">
+                  <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">A costo</span>
+                      <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">A +50%</span>
+                      <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">A +70%</span>
+                      <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm lg:col-span-2">
+                  <p className="text-xs text-gray-500 uppercase">Ventas + stock vs inversión</p>
+                  <div className="mt-3 space-y-2">
+                    {projections.scenarios.map((scenario) => (
+                      <div key={scenario.key} className="rounded-lg border bg-white px-3 py-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-700">{scenario.label}</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                        </div>
+                        <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          Diferencia vs inversión: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Stats by Seller - Collapsible */}
             {financialStats.by_seller && showSellerStats && (
