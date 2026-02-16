@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
   const apiKey = useApiKey();
   const [days, setDays] = useState(7);
 
-  const { data, isLoading, isError } = useQuery<AnalyticsSummary>({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery<AnalyticsSummary>({
     queryKey: ['admin-public-analytics', days],
     queryFn: async () => {
       const response = await fetch(
@@ -59,6 +59,17 @@ export default function AnalyticsPage() {
           <p className="text-gray-600">Navegacion del frontend de usuario final</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              isFetching
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-800 text-white hover:bg-gray-700'
+            }`}
+          >
+            {isFetching ? 'Actualizando...' : 'Actualizar'}
+          </button>
           {rangeButtons.map((value) => (
             <button
               key={value}

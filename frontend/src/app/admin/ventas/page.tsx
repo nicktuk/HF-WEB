@@ -308,7 +308,8 @@ export default function VentasPage() {
     const totalSales = salesData?.length || 0;
     const totalItems = (salesData || []).reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
     const totalAmount = (salesData || []).reduce((acc, sale) => acc + Number(sale.delivered_amount || 0), 0);
-    return { totalSales, totalItems, totalAmount };
+    const totalSoldAmount = (salesData || []).reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    return { totalSales, totalItems, totalAmount, totalSoldAmount };
   }, [salesData]);
 
   const getVisibleSaleAmount = (sale: NonNullable<typeof salesData>[number]) => {
@@ -353,7 +354,8 @@ export default function VentasPage() {
     const totalSales = base.length;
     const totalItems = base.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
     const totalAmount = base.reduce((acc, sale) => acc + getVisibleSaleAmount(sale), 0);
-    return { totalSales, totalItems, totalAmount };
+    const totalSoldAmount = base.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
+    return { totalSales, totalItems, totalAmount, totalSoldAmount };
   }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials, deliveredFilter]);
 
   const openEditModal = (saleId: number) => {
@@ -683,7 +685,7 @@ export default function VentasPage() {
             </div>
           </div>
           {deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && !showPartials && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-gray-500 uppercase">Ventas totales</p>
                 <p className="text-2xl font-bold text-gray-900">{totals.totalSales}</p>
@@ -693,13 +695,17 @@ export default function VentasPage() {
                 <p className="text-2xl font-bold text-gray-900">{totals.totalItems}</p>
               </div>
               <div className="rounded-lg border p-3">
+                <p className="text-xs text-gray-500 uppercase">Valorizado vendido</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(totals.totalSoldAmount)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
                 <p className="text-xs text-gray-500 uppercase">Valorizado entregado</p>
                 <p className="text-2xl font-bold text-gray-900">{formatPrice(totals.totalAmount)}</p>
               </div>
             </div>
           )}
           {(deliveredFilter !== 'all' || paidFilter !== 'all' || salesSearch || showPartials) && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="rounded-lg border p-3 bg-gray-50">
                 <p className="text-xs text-gray-500 uppercase">Ventas filtradas</p>
                 <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalSales}</p>
@@ -707,6 +713,10 @@ export default function VentasPage() {
               <div className="rounded-lg border p-3 bg-gray-50">
                 <p className="text-xs text-gray-500 uppercase">Items vendidos</p>
                 <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalItems}</p>
+              </div>
+              <div className="rounded-lg border p-3 bg-gray-50">
+                <p className="text-xs text-gray-500 uppercase">Valorizado vendido</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(filteredTotals.totalSoldAmount)}</p>
               </div>
               <div className="rounded-lg border p-3 bg-gray-50">
                 <p className="text-xs text-gray-500 uppercase">{filteredAmountCardLabel}</p>
