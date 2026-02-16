@@ -292,13 +292,17 @@ export default function VentasPage() {
     return { totalSales, totalItems, totalAmount };
   }, [salesData]);
 
+  const getVisibleSaleAmount = (sale: NonNullable<typeof salesData>[number]) => {
+    return Number(showPartials ? sale.delivered_amount || 0 : sale.total_amount || 0);
+  };
+
   const filteredTotals = useMemo(() => {
     const base = stockShortageOnly ? salesWithStockShortage : filteredSales;
     const totalSales = base.length;
     const totalItems = base.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-    const totalAmount = base.reduce((acc, sale) => acc + Number(sale.delivered_amount || 0), 0);
+    const totalAmount = base.reduce((acc, sale) => acc + getVisibleSaleAmount(sale), 0);
     return { totalSales, totalItems, totalAmount };
-  }, [filteredSales, salesWithStockShortage, stockShortageOnly]);
+  }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials]);
 
   const openEditModal = (saleId: number) => {
     const sale = salesData?.find((s) => s.id === saleId);
@@ -653,7 +657,7 @@ export default function VentasPage() {
                 <p className="text-2xl font-bold text-gray-900">{filteredTotals.totalItems}</p>
               </div>
               <div className="rounded-lg border p-3 bg-gray-50">
-                <p className="text-xs text-gray-500 uppercase">Valorizado entregado</p>
+                <p className="text-xs text-gray-500 uppercase">Valorizado del filtro</p>
                 <p className="text-2xl font-bold text-gray-900">{formatPrice(filteredTotals.totalAmount)}</p>
               </div>
             </div>
