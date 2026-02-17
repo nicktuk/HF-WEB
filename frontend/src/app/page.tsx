@@ -24,7 +24,7 @@ function HomePageSkeleton() {
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="relative h-20 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-24">
+          <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
             <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
                 HE-FA
@@ -273,7 +273,7 @@ function HomePageContent() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="relative h-20 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-24">
+          <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
             <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
                 HE-FA
