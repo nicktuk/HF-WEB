@@ -1,0 +1,12 @@
+
+> catalog-frontend@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+  - Experiments (use with caution):
+    · staleTimes
+
+ ✓ Starting...
+ ✓ Ready in 2.2s

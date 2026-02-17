@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preview Banner HE-FA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .row { position: relative; }
+    .brand {
+      width: 100%;
+      height: 96px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0b1025;
+      color: #fff;
+      text-align: center;
+    }
+    .brand-main {
+      width: 14.5rem;
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-align: center;
+    }
+    .brand-sub {
+      margin-top: 4px;
+      width: 14.5rem;
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: .24em;
+      color: #d1d5db;
+      text-align: center;
+    }
+    .cta {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #22c55e;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+    .placeholder {
+      height: 120px;
+      border-radius: 12px;
+      border: 1px dashed #d1d5db;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+    }
+    @media (max-width: 640px) {
+      .brand { height: 80px; }
+      .brand-main { width: 9.5rem; font-size: 20px; }
+      .brand-sub { width: 9.5rem; font-size: 9px; letter-spacing: .18em; }
+      .cta { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <div class="row">
+        <div class="brand">
+          <span class="brand-main">HE-FA</span>
+          <span class="brand-sub">Productos para el hogar</span>
+        </div>
+        <a class="cta" href="#">Contactar</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="placeholder">Vista de prueba del header con banner</div>
+  </main>
+</body>
+</html>
+
