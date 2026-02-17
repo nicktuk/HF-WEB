@@ -29,7 +29,7 @@ function HomePageSkeleton() {
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
                 HE-FA
               </span>
-              <span className="mt-1 w-[9.5rem] text-center text-[9px] font-normal uppercase tracking-[0.18em] text-gray-200 sm:w-[14.5rem] sm:text-sm sm:tracking-[0.24em]">
+              <span className="mt-1 w-[11.5rem] whitespace-nowrap text-center text-[8px] font-normal uppercase tracking-[0.12em] text-gray-200 sm:w-[16.5rem] sm:text-[11px] sm:tracking-[0.14em]">
                 Productos para el hogar
               </span>
             </div>
@@ -278,7 +278,7 @@ function HomePageContent() {
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
                 HE-FA
               </span>
-              <span className="mt-1 w-[9.5rem] text-center text-[9px] font-normal uppercase tracking-[0.18em] text-gray-200 sm:w-[14.5rem] sm:text-sm sm:tracking-[0.24em]">
+              <span className="mt-1 w-[11.5rem] whitespace-nowrap text-center text-[8px] font-normal uppercase tracking-[0.12em] text-gray-200 sm:w-[16.5rem] sm:text-[11px] sm:tracking-[0.14em]">
                 Productos para el hogar
               </span>
             </div>
