@@ -23,7 +23,7 @@ function HomePageSkeleton() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2">
           <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
             <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
@@ -272,7 +272,7 @@ function HomePageContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2">
           <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
             <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
               <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
@@ -303,10 +303,10 @@ function HomePageContent() {
       </header>
 
       {/* Banner informativo debajo del header */}
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-4 py-1.5">
         <button
           onClick={() => setHowWeWorkOpen(true)}
-          className="w-full text-left text-sm font-semibold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 hover:bg-blue-100 transition-colors flex items-center gap-3"
+          className="w-full text-left text-sm font-semibold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 transition-colors flex items-center gap-3"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-md flex-shrink-0">
             <Lightbulb className="h-4 w-4 animate-pulse" />
@@ -316,9 +316,9 @@ function HomePageContent() {
       </div>
 
       {/* Main */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-3">
         {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-4 space-y-3">
           {/* Search and Mobile Menu Button */}
           <div className="flex gap-2">
             <div className="relative flex-1 max-w-md">
