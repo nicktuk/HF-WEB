@@ -4,6 +4,48 @@
 
 ---
 
+## Sesion 2026-02-23
+
+### Estado real verificado en codigo
+
+**Frontend publico (`frontend/src/app/page.tsx`):**
+- Header tipo banner con texto: `HE-FA` y `Productos para el hogar`.
+- Banner informativo "Primera vez comprando..." activo con modal (`HowWeWorkModal`).
+- Busqueda con debounce de `900ms` (no dispara por cada tecla inmediatamente).
+- Tracking de busqueda solo si termino >= 3 caracteres y evitando duplicados consecutivos.
+- Tracking activo de eventos: `page_view`, `search`, `category_click`, `subcategory_click`, `whatsapp_click`.
+- Ajuste de espaciado vertical aplicado para reducir aire entre header, banner y busqueda:
+  - header container `py-2`
+  - wrapper del banner `py-1.5`
+  - boton del banner `py-2`
+  - main container `py-3`
+  - bloque de busqueda/filtros `mb-4 space-y-3`
+
+**Reglas de categorias/subcategorias en front publico (backend):**
+- `get_public_categories()` (`backend/app/services/product.py`) solo devuelve categorias:
+  - activas (`Category.is_active = true`)
+  - con productos habilitados (`Product.enabled = true`)
+- `get_public_subcategories()` solo devuelve subcategorias:
+  - activas y con categoria activa
+  - con al menos 1 producto habilitado en esa categoria/subcategoria
+- Resultado practico: no se muestran categorias inhabilitadas ni categorias/subcategorias vacias.
+
+**Analitica publica:**
+- Evento anonimo publico en `POST /public/events` (`backend/app/api/v1/endpoints/public.py`).
+- Tabla/modelo de eventos: `analytics_events` (`backend/app/models/analytics_event.py`), migracion `026_create_analytics_events.py`.
+- Resumen admin disponible en `GET /admin/stats/public-analytics` (`backend/app/api/v1/endpoints/admin.py` + `backend/app/services/product.py`).
+- Vista admin: `frontend/src/app/admin/analytics/page.tsx`
+  - boton `Actualizar` (refetch manual)
+  - metrica CTR a producto y CTR a WhatsApp
+  - top productos por `product_name` (no solo slug/codigo)
+
+**Ventas y dashboard admin (estado visible hoy):**
+- Vista ventas (`frontend/src/app/admin/ventas/page.tsx`) muestra tarjeta de `Valorizado vendido` en resumen general y filtrado.
+- Vista dashboard (`frontend/src/app/admin/page.tsx`) organizada en 3 bloques:
+  - `Inversion + Stock`
+  - `Ventas y Estadios`
+  - `Proyecciones Ventas + Stock` (escenarios costo/+50%/+70% vs inversion)
+
 ## Sesion 2026-02-09 (cont.)
 
 ### Nuevo Campo: is_best_seller (Lo mas vendido)

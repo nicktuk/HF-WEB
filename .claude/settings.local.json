@@ -66,7 +66,9 @@
       "Bash(grep:*)",
       "Bash(echo:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(alembic current:*)"
+      "Bash(alembic current:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(npx next build:*)"
     ]
   }
 }

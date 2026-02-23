@@ -9,6 +9,7 @@ from app.models.subcategory import Subcategory
 from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.analytics_event import AnalyticsEvent
+from app.models.order import Order, OrderItem, OrderAttachment
 
 __all__ = [
     "Base",
@@ -25,4 +26,7 @@ __all__ = [
     "Sale",
     "SaleItem",
     "AnalyticsEvent",
+    "Order",
+    "OrderItem",
+    "OrderAttachment",
 ]

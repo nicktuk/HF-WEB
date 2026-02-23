@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users } from 'lucide-react';
+import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites, usePurchasesByPayer } from '@/hooks/useProducts';
 import { useQuery } from '@tanstack/react-query';
+import { adminApi } from '@/lib/api';
+import type { OrderStats } from '@/types';
 
 interface PriceRangeProduct {
   id: number;
@@ -116,6 +118,12 @@ export default function AdminDashboard() {
   });
 
   const { data: purchasesByPayer } = usePurchasesByPayer(apiKey || '');
+
+  const { data: orderStats } = useQuery<OrderStats>({
+    queryKey: ['admin-order-stats'],
+    queryFn: () => adminApi.getOrderStats(apiKey || ''),
+    enabled: !!apiKey,
+  });
 
   const enabledCount = enabledData?.total || 0;
   const disabledCount = disabledData?.total || 0;
@@ -268,6 +276,59 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Order Stats */}
+      {orderStats && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link href="/admin/pedidos?status=active">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-yellow-100 rounded-lg">
+                    <ClipboardList className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Pedidos activos</p>
+                    <p className="text-2xl font-bold text-gray-900">{orderStats.active_count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/pedidos?status=completed_sale">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Convertidos en venta</p>
+                    <p className="text-2xl font-bold text-gray-900">{orderStats.completed_sale_count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/pedidos?status=completed_no_sale">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-red-100 rounded-lg">
+                    <XCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Pedidos perdidos</p>
+                    <p className="text-2xl font-bold text-gray-900">{orderStats.completed_no_sale_count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
 
       {/* Price Range Stats */}
       {priceRangeData && (

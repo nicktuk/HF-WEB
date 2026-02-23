@@ -375,6 +375,68 @@ export interface Sale {
   items: SaleItem[];
 }
 
+// Order Types
+
+export interface OrderItem {
+  id: number;
+  description: string;
+  quantity: number;
+  estimated_price?: number | null;
+}
+
+export interface OrderAttachment {
+  id: number;
+  url: string;
+  type: 'image' | 'link';
+  label?: string | null;
+}
+
+export interface Order {
+  id: number;
+  customer_name: string;
+  notes?: string | null;
+  seller: string;
+  status: 'active' | 'completed_sale' | 'completed_no_sale';
+  linked_sale_id?: number | null;
+  no_sale_reason?: string | null;
+  items: OrderItem[];
+  attachments: OrderAttachment[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrderItemCreate {
+  description: string;
+  quantity: number;
+  estimated_price?: number | null;
+}
+
+export interface OrderAttachmentCreate {
+  url: string;
+  type: 'image' | 'link';
+  label?: string;
+}
+
+export interface OrderCreateForm {
+  customer_name: string;
+  notes?: string;
+  seller: string;
+  items: OrderItemCreate[];
+  attachments: OrderAttachmentCreate[];
+}
+
+export interface OrderClose {
+  action: 'sale' | 'no_sale';
+  linked_sale_id?: number;
+  no_sale_reason?: string;
+}
+
+export interface OrderStats {
+  active_count: number;
+  completed_sale_count: number;
+  completed_no_sale_count: number;
+}
+
 // WhatsApp Types
 
 export interface WhatsAppProductItem {

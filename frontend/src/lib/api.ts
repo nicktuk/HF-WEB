@@ -19,6 +19,11 @@ import type {
   WhatsAppProductItem,
   WhatsAppMessage,
   WhatsAppBulkMessage,
+  Order,
+  OrderCreateForm,
+  OrderClose,
+  OrderStats,
+  OrderAttachment,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -849,6 +854,84 @@ export const adminApi = {
     }
 
     return response.json();
+  },
+
+  // ============================================
+  // Orders (Pedidos)
+  // ============================================
+
+  async createOrder(apiKey: string, data: OrderCreateForm): Promise<Order> {
+    return fetchAPI('/admin/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  async listOrders(apiKey: string, params: { status?: string; search?: string; limit?: number } = {}): Promise<Order[]> {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.set('status', params.status);
+    if (params.search) searchParams.set('search', params.search);
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+    return fetchAPI(`/admin/orders${query ? `?${query}` : ''}`, {}, apiKey);
+  },
+
+  async getOrder(apiKey: string, orderId: number): Promise<Order> {
+    return fetchAPI(`/admin/orders/${orderId}`, {}, apiKey);
+  },
+
+  async updateOrder(apiKey: string, orderId: number, data: Partial<OrderCreateForm>): Promise<Order> {
+    return fetchAPI(`/admin/orders/${orderId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  async closeOrder(apiKey: string, orderId: number, data: OrderClose): Promise<Order> {
+    return fetchAPI(`/admin/orders/${orderId}/close`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  async reopenOrder(apiKey: string, orderId: number): Promise<Order> {
+    return fetchAPI(`/admin/orders/${orderId}/reopen`, {
+      method: 'POST',
+    }, apiKey);
+  },
+
+  async deleteOrder(apiKey: string, orderId: number): Promise<MessageResponse> {
+    return fetchAPI(`/admin/orders/${orderId}`, {
+      method: 'DELETE',
+    }, apiKey);
+  },
+
+  async getOrderStats(apiKey: string): Promise<OrderStats> {
+    return fetchAPI('/admin/orders/stats', {}, apiKey);
+  },
+
+  async uploadOrderAttachment(apiKey: string, orderId: number, files: File[]): Promise<OrderAttachment> {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const response = await fetch(`${API_URL}/admin/orders/${orderId}/attachments`, {
+      method: 'POST',
+      headers: { 'X-Admin-API-Key': apiKey },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Error al subir adjunto' }));
+      throw new Error(error.detail || error.message || 'Error al subir adjunto');
+    }
+
+    return response.json();
+  },
+
+  async deleteOrderAttachment(apiKey: string, orderId: number, attachmentId: number): Promise<MessageResponse> {
+    return fetchAPI(`/admin/orders/${orderId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    }, apiKey);
   },
 
   // WhatsApp Message Generator

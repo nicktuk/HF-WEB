@@ -63,6 +63,14 @@ from app.schemas.sales import (
     SaleUpdate,
     SaleResponse,
 )
+from app.schemas.order import (
+    OrderCreate,
+    OrderUpdate,
+    OrderClose,
+    OrderResponse,
+    OrderStats,
+    OrderAttachmentResponse,
+)
 from app.schemas.market_price import (
     MarketPriceStatsResponse,
     MarketPriceRefreshRequest,
@@ -71,7 +79,8 @@ from app.schemas.market_price import (
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.core.security import verify_admin
 from app.config import settings
-from app.api.deps import get_sales_service
+from app.api.deps import get_sales_service, get_orders_service
+from app.services.orders import OrdersService
 
 router = APIRouter()
 
@@ -1737,3 +1746,170 @@ async def generate_whatsapp_bulk_message(
         custom_text=data.custom_text
     )
     return WhatsAppBulkMessageResponse(**result)
+
+
+# ============================================
+# Orders (Pedidos)
+# ============================================
+
+@router.post(
+    "/orders",
+    response_model=OrderResponse,
+    status_code=201,
+    dependencies=[Depends(verify_admin)]
+)
+async def create_order(
+    data: OrderCreate,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Create a new order."""
+    return service.create_order(data)
+
+
+@router.get(
+    "/orders",
+    response_model=list[OrderResponse],
+    dependencies=[Depends(verify_admin)]
+)
+async def list_orders(
+    status: Optional[str] = Query(default=None, max_length=20),
+    search: Optional[str] = Query(default=None, max_length=100),
+    limit: int = Query(default=50, ge=1, le=200),
+    service: OrdersService = Depends(get_orders_service),
+):
+    """List orders with optional filters."""
+    return service.list_orders(status=status, search=search, limit=limit)
+
+
+@router.get(
+    "/orders/stats",
+    response_model=OrderStats,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_order_stats(
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Get order stats for dashboard."""
+    return service.get_order_stats()
+
+
+@router.get(
+    "/orders/{order_id}",
+    response_model=OrderResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_order(
+    order_id: int,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Get order detail."""
+    return service.get_order(order_id)
+
+
+@router.patch(
+    "/orders/{order_id}",
+    response_model=OrderResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def update_order(
+    order_id: int,
+    data: OrderUpdate,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Update an active order."""
+    return service.update_order(order_id, data)
+
+
+@router.post(
+    "/orders/{order_id}/close",
+    response_model=OrderResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def close_order(
+    order_id: int,
+    data: OrderClose,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Close an order (with sale or without sale)."""
+    return service.close_order(order_id, data)
+
+
+@router.post(
+    "/orders/{order_id}/reopen",
+    response_model=OrderResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def reopen_order(
+    order_id: int,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Reopen a closed order."""
+    return service.reopen_order(order_id)
+
+
+@router.delete(
+    "/orders/{order_id}",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def delete_order(
+    order_id: int,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Delete an order."""
+    service.delete_order(order_id)
+    return MessageResponse(message="Pedido eliminado")
+
+
+@router.post(
+    "/orders/{order_id}/attachments",
+    response_model=OrderAttachmentResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def upload_order_attachment(
+    order_id: int,
+    files: List[UploadFile] = File(...),
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Upload attachment(s) to an order."""
+    uploaded_urls = []
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    last_att = None
+    for file in files:
+        if file.content_type not in settings.ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de archivo no permitido: {file.content_type}"
+            )
+        content = await file.read()
+        if len(content) > settings.MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Archivo demasiado grande. Max: {settings.MAX_UPLOAD_SIZE // (1024*1024)}MB"
+            )
+        ext = file.filename.split('.')[-1] if file.filename and '.' in file.filename else 'jpg'
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = upload_dir / filename
+        with open(filepath, 'wb') as f:
+            f.write(content)
+        url = f"/uploads/{filename}"
+        last_att = service.add_attachment(order_id, url, "image", file.filename)
+
+    return last_att
+
+
+@router.delete(
+    "/orders/{order_id}/attachments/{attachment_id}",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def delete_order_attachment(
+    order_id: int,
+    attachment_id: int,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Delete an attachment from an order."""
+    service.delete_attachment(order_id, attachment_id)
+    return MessageResponse(message="Adjunto eliminado")

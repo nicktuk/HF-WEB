@@ -21,6 +21,7 @@ import {
   PackageX,
   Menu,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos', href: '/admin/productos', icon: Package },
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
+  { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
   { name: 'Analitica', href: '/admin/analytics', icon: LineChart },
   { name: 'Comparador', href: '/admin/comparador', icon: Scale },
