@@ -810,227 +810,127 @@ export default function PedidosPage() {
                         {renderOrderForm(true)}
                       </CardContent>
                     ) : (
-                      <>
-                        {/* Order header - clickable to expand */}
-                        <div
-                          className="px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                  {order.customer_name}
-                                </h3>
-                                {getStatusBadge(order.status)}
-                              </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                                <span>Pedido #{order.id}</span>
-                                <span>Vendedor: {order.seller}</span>
-                                <span>{formatOrderDate(order.created_at)}</span>
-                                <span className="font-medium text-gray-900">
-                                  {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                                  {estimatedTotal > 0 && ` • ${formatPrice(estimatedTotal)}`}
-                                </span>
-                              </div>
-                            </div>
+                      <CardContent className="p-0">
+                        {/* Top row: customer + meta + actions */}
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <h3 className="font-semibold text-gray-900 truncate">{order.customer_name}</h3>
+                            {getStatusBadge(order.status)}
+                            <span className="text-xs text-gray-500 hidden sm:inline">#{order.id}</span>
+                            <span className="text-xs text-gray-500 hidden sm:inline">{order.seller}</span>
+                            <span className="text-xs text-gray-500 hidden sm:inline">{formatOrderDate(order.created_at)}</span>
+                            {estimatedTotal > 0 && (
+                              <span className="text-sm font-semibold text-gray-900">{formatPrice(estimatedTotal)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {order.status === 'active' ? (
+                              <>
+                                <Button size="sm" variant="ghost" onClick={() => startEdit(order)} className="px-2" title="Editar">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setCloseWithSaleModal(order.id)} className="px-2 text-green-600 hover:text-green-700 hover:bg-green-50" title="Atender con venta">
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setCloseNoSaleModal(order.id)} className="px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Atender sin venta">
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirmModal(order.id)} className="px-2 text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => reopenMutation.mutate(order.id)}
+                                  isLoading={reopenMutation.isPending}
+                                  className="px-2 text-xs"
+                                >
+                                  Reabrir
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirmModal(order.id)} className="px-2 text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedOrderId(isExpanded ? null : order.id);
-                              }}
-                              className="flex-shrink-0 p-1 hover:bg-gray-200 rounded"
+                              onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                              className="p-1 hover:bg-gray-200 rounded ml-1"
                             >
-                              {isExpanded ? (
-                                <ChevronUp className="h-5 w-5 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="h-5 w-5 text-gray-500" />
-                              )}
+                              {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                             </button>
                           </div>
                         </div>
 
-                        {/* Expanded content */}
+                        {/* Items always visible */}
+                        <div className="px-4 py-2">
+                          <table className="min-w-full text-sm">
+                            <tbody>
+                              {order.items.map((item) => (
+                                <tr key={item.id} className="border-b border-gray-50 last:border-0">
+                                  <td className="py-1.5 pr-3 text-gray-900 font-medium">{item.description}</td>
+                                  <td className="py-1.5 px-3 text-gray-500 text-center whitespace-nowrap w-16">x{item.quantity}</td>
+                                  <td className="py-1.5 pl-3 text-gray-700 text-right whitespace-nowrap w-28">
+                                    {item.estimated_price ? formatPrice(item.quantity * item.estimated_price) : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {order.items.length === 0 && (
+                            <p className="text-sm text-gray-400 italic py-1">Sin items</p>
+                          )}
+                        </div>
+
+                        {/* Expanded: notes, attachments, close info */}
                         {isExpanded && (
-                          <CardContent className="border-t">
-                            <div className="space-y-4">
-                              {/* Notes */}
-                              {order.notes && (
-                                <div>
-                                  <h4 className="text-sm font-medium text-gray-700 mb-1">Notas</h4>
-                                  <p className="text-sm text-gray-600">{order.notes}</p>
-                                </div>
-                              )}
+                          <div className="px-4 pb-3 space-y-3 border-t border-gray-100 pt-3">
+                            {order.notes && (
+                              <p className="text-sm text-gray-600"><span className="font-medium text-gray-700">Notas:</span> {order.notes}</p>
+                            )}
 
-                              {/* Items table */}
+                            {order.attachments.length > 0 && (
                               <div>
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Items</h4>
-                                <div className="border rounded-lg overflow-hidden">
-                                  <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead className="bg-gray-50">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                          Descripción
-                                        </th>
-                                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
-                                          Cantidad
-                                        </th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                                          Precio est.
-                                        </th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                                          Subtotal
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                      {order.items.map((item) => (
-                                        <tr key={item.id}>
-                                          <td className="px-3 py-2 text-gray-900">{item.description}</td>
-                                          <td className="px-3 py-2 text-center text-gray-900">{item.quantity}</td>
-                                          <td className="px-3 py-2 text-right text-gray-900">
-                                            {formatPrice(item.estimated_price)}
-                                          </td>
-                                          <td className="px-3 py-2 text-right font-medium text-gray-900">
-                                            {formatPrice(item.quantity * (item.estimated_price || 0))}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    {estimatedTotal > 0 && (
-                                      <tfoot className="bg-gray-50">
-                                        <tr>
-                                          <td colSpan={3} className="px-3 py-2 text-right text-sm font-medium text-gray-700">
-                                            Total:
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-sm font-bold text-gray-900">
-                                            {formatPrice(estimatedTotal)}
-                                          </td>
-                                        </tr>
-                                      </tfoot>
-                                    )}
-                                  </table>
+                                <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Adjuntos</h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {order.attachments.map((att) => (
+                                    <a
+                                      key={att.id}
+                                      href={att.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                    >
+                                      {att.type === 'image' ? (
+                                        <img src={att.url} alt={att.label || ''} className="w-16 h-16 object-cover rounded border" />
+                                      ) : (
+                                        <>
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                          <span>{att.label || 'Link'}</span>
+                                        </>
+                                      )}
+                                    </a>
+                                  ))}
                                 </div>
                               </div>
+                            )}
 
-                              {/* Attachments */}
-                              {order.attachments.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium text-gray-700 mb-2">Adjuntos</h4>
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    {order.attachments.map((att) => (
-                                      <div key={att.id} className="border rounded-lg overflow-hidden">
-                                        {att.type === 'image' ? (
-                                          <a href={att.url} target="_blank" rel="noopener noreferrer">
-                                            <img
-                                              src={att.url}
-                                              alt={att.label || 'Adjunto'}
-                                              className="w-full h-24 object-cover hover:opacity-75 transition-opacity"
-                                            />
-                                            {att.label && (
-                                              <div className="px-2 py-1 bg-gray-50 text-xs text-gray-700 truncate">
-                                                {att.label}
-                                              </div>
-                                            )}
-                                          </a>
-                                        ) : (
-                                          <a
-                                            href={att.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
-                                          >
-                                            <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                            <span className="text-sm text-gray-900 truncate">
-                                              {att.label || 'Link'}
-                                            </span>
-                                          </a>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Linked sale info */}
-                              {order.status === 'completed_sale' && order.linked_sale_id && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                  <p className="text-sm text-green-800">
-                                    Cerrado con venta #{order.linked_sale_id}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* No sale reason */}
-                              {order.status === 'completed_no_sale' && order.no_sale_reason && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                  <p className="text-sm font-medium text-red-900 mb-1">Motivo sin venta:</p>
-                                  <p className="text-sm text-red-800">{order.no_sale_reason}</p>
-                                </div>
-                              )}
-
-                              {/* Actions */}
-                              <div className="flex flex-wrap gap-2 pt-2 border-t">
-                                {order.status === 'active' ? (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => startEdit(order)}
-                                    >
-                                      <Edit2 className="h-4 w-4 mr-1" />
-                                      Editar
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="primary"
-                                      onClick={() => setCloseWithSaleModal(order.id)}
-                                    >
-                                      <Check className="h-4 w-4 mr-1" />
-                                      Atender con venta
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => setCloseNoSaleModal(order.id)}
-                                    >
-                                      <X className="h-4 w-4 mr-1" />
-                                      Atender sin venta
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="danger"
-                                      onClick={() => setDeleteConfirmModal(order.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-1" />
-                                      Eliminar
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => reopenMutation.mutate(order.id)}
-                                      isLoading={reopenMutation.isPending}
-                                    >
-                                      Reabrir
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="danger"
-                                      onClick={() => setDeleteConfirmModal(order.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-1" />
-                                      Eliminar
-                                    </Button>
-                                  </>
-                                )}
+                            {order.status === 'completed_sale' && order.linked_sale_id && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                <p className="text-sm text-green-800">Cerrado con venta #{order.linked_sale_id}</p>
                               </div>
-                            </div>
-                          </CardContent>
+                            )}
+
+                            {order.status === 'completed_no_sale' && order.no_sale_reason && (
+                              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                <p className="text-sm text-red-800"><span className="font-medium">Motivo:</span> {order.no_sale_reason}</p>
+                              </div>
+                            )}
+                          </div>
                         )}
-                      </>
+                      </CardContent>
                     )}
                   </Card>
                 );
