@@ -76,32 +76,32 @@ export default function VentasPage() {
     item: SaleItem,
     field: 'delivered' | 'paid',
     newValue: boolean,
-    force?: boolean,
   ) => {
     const key = `${sale.id}-${item.id}-${field}`;
     setTogglingItemKey(key);
+    const items = sale.items.map((i) => ({
+      product_id: i.product_id ?? undefined,
+      product_name: i.product_id ? undefined : (i.product_name ?? undefined),
+      quantity: i.quantity,
+      unit_price: Number(i.unit_price),
+      delivered: field === 'delivered' && i.id === item.id ? newValue : i.delivered,
+      paid: field === 'paid' && i.id === item.id ? newValue : i.paid,
+    }));
     try {
-      const items = sale.items.map((i) => ({
-        product_id: i.product_id ?? undefined,
-        product_name: i.product_id ? undefined : (i.product_name ?? undefined),
-        quantity: i.quantity,
-        unit_price: Number(i.unit_price),
-        delivered: field === 'delivered' && i.id === item.id ? newValue : i.delivered,
-        paid: field === 'paid' && i.id === item.id ? newValue : i.paid,
-      }));
-      await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, force } });
+      await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items } });
     } catch (error) {
-      if (!force) {
-        const msg = error instanceof Error ? error.message : '';
-        if (msg.includes('stock') || msg.includes('revertir')) {
-          if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Guardar el cambio de todas formas?')) {
-            setTogglingItemKey(null);
-            await handleToggleItem(sale, item, field, newValue, true);
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('stock') || msg.includes('revertir')) {
+        if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Guardar el cambio de todas formas?')) {
+          try {
+            await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, force: true } });
+          } catch (e2) {
+            alert(e2 instanceof Error ? e2.message : 'Error al guardar el cambio');
           }
-          return;
         }
+      } else {
+        alert(msg || 'Error al guardar el cambio');
       }
-      throw error;
     } finally {
       setTogglingItemKey(null);
     }

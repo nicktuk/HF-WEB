@@ -98,23 +98,26 @@ export default function SaleDetailPage() {
     }));
   }, [isEditing, editItems, sale?.items]);
 
-  const handleDelete = async (force?: boolean) => {
+  const handleDelete = async () => {
     if (!sale) return;
-    if (!force && !confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
+    if (!confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
     try {
-      await deleteSale.mutateAsync({ saleId: sale.id, force });
+      await deleteSale.mutateAsync({ saleId: sale.id });
       router.push('/admin/ventas');
     } catch (error) {
-      if (!force) {
-        const msg = error instanceof Error ? error.message : '';
-        if (msg.includes('stock') || msg.includes('revertir')) {
-          if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Eliminar la venta de todas formas?')) {
-            await handleDelete(true);
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('stock') || msg.includes('revertir')) {
+        if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Eliminar la venta de todas formas?')) {
+          try {
+            await deleteSale.mutateAsync({ saleId: sale.id, force: true });
+            router.push('/admin/ventas');
+          } catch (e2) {
+            alert(e2 instanceof Error ? e2.message : 'Error al eliminar la venta');
           }
-          return;
         }
+      } else {
+        alert(msg || 'Error al eliminar la venta');
       }
-      throw error;
     }
   };
 
@@ -157,7 +160,7 @@ export default function SaleDetailPage() {
     setEditItems((prev) => prev.filter((item) => item.line_id !== lineId));
   };
 
-  const handleSave = async (force?: boolean) => {
+  const handleSave = async () => {
     if (!sale) return;
     const items = editItems.map((item) => ({
       product_id: item.product_id,
@@ -173,30 +176,31 @@ export default function SaleDetailPage() {
       return;
     }
 
+    const baseData = {
+      customer_name: editCustomer || undefined,
+      notes: editNotes || undefined,
+      installments: editInstallments ? Number(editInstallments) : undefined,
+      seller: editSeller,
+      items,
+    };
+
     try {
-      await updateSale.mutateAsync({
-        saleId: sale.id,
-        data: {
-          customer_name: editCustomer || undefined,
-          notes: editNotes || undefined,
-          installments: editInstallments ? Number(editInstallments) : undefined,
-          seller: editSeller,
-          items,
-          force,
-        },
-      });
+      await updateSale.mutateAsync({ saleId: sale.id, data: baseData });
       setIsEditing(false);
     } catch (error) {
-      if (!force) {
-        const msg = error instanceof Error ? error.message : '';
-        if (msg.includes('stock') || msg.includes('revertir')) {
-          if (confirm('No se pudo revertir el stock de los productos eliminados (ya fue consumido). ¿Guardar los cambios de todas formas?')) {
-            await handleSave(true);
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('stock') || msg.includes('revertir')) {
+        if (confirm('No se pudo revertir el stock de los productos eliminados (ya fue consumido). ¿Guardar los cambios de todas formas?')) {
+          try {
+            await updateSale.mutateAsync({ saleId: sale.id, data: { ...baseData, force: true } });
+            setIsEditing(false);
+          } catch (e2) {
+            alert(e2 instanceof Error ? e2.message : 'Error al guardar los cambios');
           }
-          return;
         }
+      } else {
+        alert(msg || 'Error al guardar los cambios');
       }
-      throw error;
     }
   };
 
@@ -240,12 +244,12 @@ export default function SaleDetailPage() {
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} isLoading={updateSale.isPending}>
+              <Button onClick={() => void handleSave()} isLoading={updateSale.isPending}>
                 Guardar cambios
               </Button>
             </>
           )}
-          <Button variant="danger" onClick={handleDelete} isLoading={deleteSale.isPending}>
+          <Button variant="danger" onClick={() => void handleDelete()} isLoading={deleteSale.isPending}>
             <Trash2 className="h-4 w-4 mr-2" />
             Eliminar
           </Button>
