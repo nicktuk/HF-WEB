@@ -98,11 +98,24 @@ export default function SaleDetailPage() {
     }));
   }, [isEditing, editItems, sale?.items]);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force?: boolean) => {
     if (!sale) return;
-    if (!confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
-    await deleteSale.mutateAsync(sale.id);
-    router.push('/admin/ventas');
+    if (!force && !confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
+    try {
+      await deleteSale.mutateAsync({ saleId: sale.id, force });
+      router.push('/admin/ventas');
+    } catch (error) {
+      if (!force) {
+        const msg = error instanceof Error ? error.message : '';
+        if (msg.includes('stock') || msg.includes('revertir')) {
+          if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Eliminar la venta de todas formas?')) {
+            await handleDelete(true);
+          }
+          return;
+        }
+      }
+      throw error;
+    }
   };
 
   const addProductToEdit = (product: ProductAdmin) => {
@@ -144,7 +157,7 @@ export default function SaleDetailPage() {
     setEditItems((prev) => prev.filter((item) => item.line_id !== lineId));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (force?: boolean) => {
     if (!sale) return;
     const items = editItems.map((item) => ({
       product_id: item.product_id,
@@ -160,17 +173,31 @@ export default function SaleDetailPage() {
       return;
     }
 
-    await updateSale.mutateAsync({
-      saleId: sale.id,
-      data: {
-        customer_name: editCustomer || undefined,
-        notes: editNotes || undefined,
-        installments: editInstallments ? Number(editInstallments) : undefined,
-        seller: editSeller,
-        items,
-      },
-    });
-    setIsEditing(false);
+    try {
+      await updateSale.mutateAsync({
+        saleId: sale.id,
+        data: {
+          customer_name: editCustomer || undefined,
+          notes: editNotes || undefined,
+          installments: editInstallments ? Number(editInstallments) : undefined,
+          seller: editSeller,
+          items,
+          force,
+        },
+      });
+      setIsEditing(false);
+    } catch (error) {
+      if (!force) {
+        const msg = error instanceof Error ? error.message : '';
+        if (msg.includes('stock') || msg.includes('revertir')) {
+          if (confirm('No se pudo revertir el stock de los productos eliminados (ya fue consumido). ¿Guardar los cambios de todas formas?')) {
+            await handleSave(true);
+          }
+          return;
+        }
+      }
+      throw error;
+    }
   };
 
   if (isLoading) {

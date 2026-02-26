@@ -1464,10 +1464,11 @@ async def get_sale(
 )
 async def delete_sale(
     sale_id: int,
+    force: bool = Query(False),
     service = Depends(get_sales_service),
 ):
-    """Delete sale and restore stock if delivered."""
-    service.delete_sale(sale_id)
+    """Delete sale and restore stock if delivered. Use force=true to skip stock restore errors."""
+    service.delete_sale(sale_id, force=force)
     return MessageResponse(message="Venta eliminada")
 
 
@@ -1491,6 +1492,7 @@ async def update_sale(
         data.installments,
         data.seller,
         data.items,
+        force=data.force,
     )
 
 

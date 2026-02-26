@@ -679,6 +679,7 @@ export const adminApi = {
       installments?: number;
       seller?: 'Facu' | 'Heber';
       items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
+      force?: boolean;
     }
   ): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {
@@ -690,8 +691,9 @@ export const adminApi = {
   /**
    * Delete sale
    */
-  async deleteSale(apiKey: string, saleId: number): Promise<MessageResponse> {
-    return fetchAPI(`/admin/sales/${saleId}`, {
+  async deleteSale(apiKey: string, saleId: number, force?: boolean): Promise<MessageResponse> {
+    const url = force ? `/admin/sales/${saleId}?force=true` : `/admin/sales/${saleId}`;
+    return fetchAPI(url, {
       method: 'DELETE',
     }, apiKey);
   },

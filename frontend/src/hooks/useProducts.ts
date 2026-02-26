@@ -210,6 +210,7 @@ export function useUpdateSale(apiKey: string) {
         installments?: number;
         seller?: 'Facu' | 'Heber';
         items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
+        force?: boolean;
       };
     }) =>
       adminApi.updateSale(apiKey, saleId, data),
@@ -225,7 +226,8 @@ export function useUpdateSale(apiKey: string) {
 export function useDeleteSale(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (saleId: number) => adminApi.deleteSale(apiKey, saleId),
+    mutationFn: ({ saleId, force }: { saleId: number; force?: boolean }) =>
+      adminApi.deleteSale(apiKey, saleId, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });

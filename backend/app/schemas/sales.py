@@ -32,6 +32,7 @@ class SaleUpdate(BaseModel):
     installments: Optional[int] = Field(default=None, ge=0)
     seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
     items: Optional[List[SaleItemCreate]] = None
+    force: bool = False
 
 
 class SaleItemResponse(BaseModel):

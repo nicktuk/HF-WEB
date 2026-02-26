@@ -286,6 +286,7 @@ class SalesService:
         installments: int | None = None,
         seller: str | None = None,
         items: list | None = None,
+        force: bool = False,
     ) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
@@ -312,7 +313,13 @@ class SalesService:
             for current_item in current_items:
                 delivered_qty = int(current_item.delivered_quantity or 0)
                 if delivered_qty > 0:
-                    self._restore_stock(current_item.product_id, delivered_qty)
+                    if force:
+                        try:
+                            self._restore_stock(current_item.product_id, delivered_qty)
+                        except ValidationError:
+                            pass
+                    else:
+                        self._restore_stock(current_item.product_id, delivered_qty)
 
             # Remove existing ORM-linked items explicitly so sale.items is in sync.
             for current_item in current_items:
@@ -369,7 +376,7 @@ class SalesService:
             raise NotFoundError("Sale", str(sale_id))
         return sale
 
-    def delete_sale(self, sale_id: int) -> None:
+    def delete_sale(self, sale_id: int, force: bool = False) -> None:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
@@ -378,7 +385,13 @@ class SalesService:
         for item in items:
             delivered_qty = int(item.delivered_quantity or 0)
             if delivered_qty > 0:
-                self._restore_stock(item.product_id, delivered_qty)
+                if force:
+                    try:
+                        self._restore_stock(item.product_id, delivered_qty)
+                    except ValidationError:
+                        pass
+                else:
+                    self._restore_stock(item.product_id, delivered_qty)
 
         self.db.delete(sale)
         self.db.commit()

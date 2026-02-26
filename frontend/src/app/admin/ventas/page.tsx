@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useStockSummary } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
-import type { ProductAdmin, SaleItemCreate } from '@/types';
+import type { ProductAdmin, Sale, SaleItem, SaleItemCreate } from '@/types';
 
 interface CartItem {
   id: string;
@@ -58,6 +58,7 @@ export default function VentasPage() {
   const [manualProductPrice, setManualProductPrice] = useState('');
   const [manualProductQty, setManualProductQty] = useState('1');
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
+  const [togglingItemKey, setTogglingItemKey] = useState<string | null>(null);
 
   // Persist filters to sessionStorage
   useEffect(() => {
@@ -67,7 +68,44 @@ export default function VentasPage() {
   }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly]);
 
   const createSale = useCreateSale(apiKey);
+  const updateSaleInList = useUpdateSale(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
+
+  const handleToggleItem = async (
+    sale: Sale,
+    item: SaleItem,
+    field: 'delivered' | 'paid',
+    newValue: boolean,
+    force?: boolean,
+  ) => {
+    const key = `${sale.id}-${item.id}-${field}`;
+    setTogglingItemKey(key);
+    try {
+      const items = sale.items.map((i) => ({
+        product_id: i.product_id ?? undefined,
+        product_name: i.product_id ? undefined : (i.product_name ?? undefined),
+        quantity: i.quantity,
+        unit_price: Number(i.unit_price),
+        delivered: field === 'delivered' && i.id === item.id ? newValue : i.delivered,
+        paid: field === 'paid' && i.id === item.id ? newValue : i.paid,
+      }));
+      await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, force } });
+    } catch (error) {
+      if (!force) {
+        const msg = error instanceof Error ? error.message : '';
+        if (msg.includes('stock') || msg.includes('revertir')) {
+          if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Guardar el cambio de todas formas?')) {
+            setTogglingItemKey(null);
+            await handleToggleItem(sale, item, field, newValue, true);
+          }
+          return;
+        }
+      }
+      throw error;
+    } finally {
+      setTogglingItemKey(null);
+    }
+  };
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
     page: 1,
@@ -324,40 +362,39 @@ export default function VentasPage() {
 
   const getVisibleSaleAmount = (sale: NonNullable<typeof salesData>[number]) => {
     const total = Number(sale.total_amount || 0);
-    const delivered = Number(sale.delivered_amount || 0);
-    const pending = Math.max(0, total - delivered);
+    const deliveredAmt = Number(sale.delivered_amount || 0);
+    const paidAmt = Number(sale.paid_amount || 0);
+    const pendingDelivery = Math.max(0, total - deliveredAmt);
+    const pendingPayment = Math.max(0, total - paidAmt);
 
-    if (deliveredFilter === 'no') {
-      return showPartials ? pending : total;
-    }
-    if (deliveredFilter === 'yes') {
-      return showPartials ? delivered : total;
-    }
-    if (deliveredFilter === 'partial') {
-      return pending;
-    }
-    return showPartials ? delivered : total;
+    if (deliveredFilter === 'no') return showPartials ? pendingDelivery : total;
+    if (deliveredFilter === 'yes') return showPartials ? deliveredAmt : total;
+    if (deliveredFilter === 'partial') return pendingDelivery;
+
+    if (paidFilter === 'no') return showPartials ? pendingPayment : total;
+    if (paidFilter === 'yes') return showPartials ? paidAmt : total;
+    if (paidFilter === 'partial') return pendingPayment;
+
+    return showPartials ? deliveredAmt : total;
   };
 
   const amountColumnLabel = useMemo(() => {
-    if (deliveredFilter === 'no' || deliveredFilter === 'partial') {
-      return 'Total pendiente';
-    }
-    if (showPartials) {
-      return 'Total entregado';
-    }
+    if (deliveredFilter === 'no' || deliveredFilter === 'partial') return 'Pendiente entrega';
+    if (deliveredFilter === 'yes' && showPartials) return 'Total entregado';
+    if (paidFilter === 'no' || paidFilter === 'partial') return 'Pendiente pago';
+    if (paidFilter === 'yes' && showPartials) return 'Total pagado';
+    if (showPartials) return 'Total entregado';
     return 'Total';
-  }, [deliveredFilter, showPartials]);
+  }, [deliveredFilter, paidFilter, showPartials]);
 
   const filteredAmountCardLabel = useMemo(() => {
-    if (deliveredFilter === 'no' || deliveredFilter === 'partial') {
-      return 'Valorizado pendiente';
-    }
-    if (showPartials) {
-      return 'Valorizado entregado';
-    }
+    if (deliveredFilter === 'no' || deliveredFilter === 'partial') return 'Valorizado pend. entrega';
+    if (deliveredFilter === 'yes' && showPartials) return 'Valorizado entregado';
+    if (paidFilter === 'no' || paidFilter === 'partial') return 'Valorizado pend. pago';
+    if (paidFilter === 'yes' && showPartials) return 'Valorizado pagado';
+    if (showPartials) return 'Valorizado entregado';
     return 'Valorizado total';
-  }, [deliveredFilter, showPartials]);
+  }, [deliveredFilter, paidFilter, showPartials]);
 
   const filteredTotals = useMemo(() => {
     const base = stockShortageOnly ? salesWithStockShortage : filteredSales;
@@ -857,8 +894,8 @@ export default function VentasPage() {
                                     <thead className="bg-gray-100">
                                       <tr>
                                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. pedida</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant. entregada</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -887,8 +924,30 @@ export default function VentasPage() {
                                               </div>
                                             </td>
                                             <td className="px-3 py-2 text-right">{item.quantity}</td>
-                                            <td className="px-3 py-2 text-right">{effectiveDeliveredQty}</td>
-                                            <td className="px-3 py-2 text-center">{item.paid ? 'Si' : 'No'}</td>
+                                            <td className="px-3 py-2 text-center">
+                                              {togglingItemKey === `${sale.id}-${item.id}-delivered` ? (
+                                                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                                              ) : (
+                                                <input
+                                                  type="checkbox"
+                                                  checked={item.delivered}
+                                                  onChange={(e) => handleToggleItem(sale, item, 'delivered', e.target.checked)}
+                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                                                />
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {togglingItemKey === `${sale.id}-${item.id}-paid` ? (
+                                                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                                              ) : (
+                                                <input
+                                                  type="checkbox"
+                                                  checked={item.paid}
+                                                  onChange={(e) => handleToggleItem(sale, item, 'paid', e.target.checked)}
+                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                                                />
+                                              )}
+                                            </td>
                                             <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
                                             <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_price)}</td>
                                           </tr>
