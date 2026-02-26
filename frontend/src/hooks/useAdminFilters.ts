@@ -10,6 +10,7 @@ interface AdminFiltersState {
   subcategoryFilter: string | undefined;
   featuredFilter: boolean | undefined;
   bestSellerFilter: boolean | undefined;
+  immediateDeliveryFilter: boolean | undefined;
   inStockFilter: boolean | undefined;
   priceRangeFilter: string | undefined;
   page: number;
@@ -23,6 +24,7 @@ interface AdminFiltersState {
   setSubcategoryFilter: (subcategory: string | undefined) => void;
   setFeaturedFilter: (featured: boolean | undefined) => void;
   setBestSellerFilter: (bestSeller: boolean | undefined) => void;
+  setImmediateDeliveryFilter: (immediateDelivery: boolean | undefined) => void;
   setInStockFilter: (inStock: boolean | undefined) => void;
   setPriceRangeFilter: (priceRange: string | undefined) => void;
   setPage: (page: number) => void;
@@ -38,6 +40,7 @@ const initialState = {
   subcategoryFilter: undefined as string | undefined,
   featuredFilter: undefined as boolean | undefined,
   bestSellerFilter: undefined as boolean | undefined,
+  immediateDeliveryFilter: undefined as boolean | undefined,
   inStockFilter: undefined as boolean | undefined,
   priceRangeFilter: undefined as string | undefined,
   page: 1,
@@ -56,6 +59,7 @@ export const useAdminFilters = create<AdminFiltersState>()(
       setSubcategoryFilter: (subcategoryFilter) => set({ subcategoryFilter, page: 1 }),
       setFeaturedFilter: (featuredFilter) => set({ featuredFilter, page: 1 }),
       setBestSellerFilter: (bestSellerFilter) => set({ bestSellerFilter, page: 1 }),
+      setImmediateDeliveryFilter: (immediateDeliveryFilter) => set({ immediateDeliveryFilter, page: 1 }),
       setInStockFilter: (inStockFilter) => set({ inStockFilter, page: 1 }),
       setPriceRangeFilter: (priceRangeFilter) => set({ priceRangeFilter, page: 1 }),
       setPage: (page) => set({ page }),

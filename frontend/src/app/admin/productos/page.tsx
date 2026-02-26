@@ -32,6 +32,7 @@ export default function ProductsPage() {
     subcategoryFilter,
     featuredFilter,
     bestSellerFilter,
+    immediateDeliveryFilter,
     inStockFilter,
     priceRangeFilter,
     page,
@@ -43,6 +44,7 @@ export default function ProductsPage() {
     setSubcategoryFilter,
     setFeaturedFilter,
     setBestSellerFilter,
+    setImmediateDeliveryFilter,
     setInStockFilter,
     setPriceRangeFilter,
     setPage,
@@ -184,6 +186,7 @@ export default function ProductsPage() {
     without_category: isWithoutCategory ? true : undefined,
     subcategory: subcategoryFilter,
     is_featured: featuredFilter,
+    is_immediate_delivery: immediateDeliveryFilter,
     in_stock: inStockFilter,
     price_range: priceRangeFilter,
   });
@@ -520,6 +523,22 @@ export default function ProductsPage() {
           Mas Vendido
         </button>
 
+        {/* Immediate Delivery Filter */}
+        <button
+          onClick={() => {
+            setImmediateDeliveryFilter(immediateDeliveryFilter === true ? undefined : true);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            immediateDeliveryFilter === true
+              ? 'bg-emerald-600 text-white'
+              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+          }`}
+        >
+          <Zap className="h-4 w-4" />
+          Entrega inmediata
+        </button>
+
         {/* Stock Filter */}
         <button
           onClick={() => {
@@ -631,7 +650,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || inStockFilter || priceRangeFilter) && (
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || bestSellerFilter || immediateDeliveryFilter || inStockFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>
