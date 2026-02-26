@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle, Check } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
@@ -59,13 +60,30 @@ export default function VentasPage() {
   const [manualProductQty, setManualProductQty] = useState('1');
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
   const [togglingItemKey, setTogglingItemKey] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'ventas' | 'productos'>(() => getSavedFilters()?.viewMode ?? 'ventas');
+  const searchParams = useSearchParams();
 
   // Persist filters to sessionStorage
   useEffect(() => {
     try {
-      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly }));
+      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode }));
     } catch { /* ignore */ }
-  }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly]);
+  }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode]);
+
+  useEffect(() => {
+    const pendiente = searchParams.get('pendiente');
+    if (pendiente === 'entrega') {
+      setDeliveredFilter('no');
+      setPaidFilter('all');
+      setShowPartials(true);
+      setViewMode('productos');
+    } else if (pendiente === 'cobro') {
+      setDeliveredFilter('all');
+      setPaidFilter('no');
+      setShowPartials(true);
+      setViewMode('productos');
+    }
+  }, [searchParams]);
 
   const createSale = useCreateSale(apiKey);
   const updateSaleInList = useUpdateSale(apiKey);
@@ -405,6 +423,22 @@ export default function VentasPage() {
     return { totalSales, totalItems, totalAmount, totalSoldAmount };
   }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials, deliveredFilter]);
 
+  const productViewItems = useMemo(() => {
+    const baseSales = stockShortageOnly ? salesWithStockShortage : filteredSales;
+    const result: Array<{ sale: NonNullable<typeof salesData>[number]; item: SaleItem }> = [];
+    baseSales.forEach((sale) => {
+      sale.items.forEach((item) => {
+        result.push({ sale, item });
+      });
+    });
+    result.sort((a, b) => {
+      const nameA = (a.item.product_name || '').toLowerCase();
+      const nameB = (b.item.product_name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+    return result;
+  }, [filteredSales, salesWithStockShortage, stockShortageOnly]);
+
   const handleReconcileDeliveredStock = async () => {
     if (!confirm('Esto recalcula todos los descuentos de stock según unidades entregadas. ¿Continuar?')) return;
     setIsReconcilingStock(true);
@@ -693,7 +727,25 @@ export default function VentasPage() {
                 El stock se descuenta al marcar items como Entregados.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${viewMode === 'ventas' ? 'text-gray-900' : 'text-gray-400'}`}>Vista ventas</span>
+                <button
+                  role="switch"
+                  aria-checked={viewMode === 'productos'}
+                  onClick={() => setViewMode(viewMode === 'ventas' ? 'productos' : 'ventas')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    viewMode === 'productos' ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      viewMode === 'productos' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium ${viewMode === 'productos' ? 'text-gray-900' : 'text-gray-400'}`}>Vista productos</span>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -806,6 +858,88 @@ export default function VentasPage() {
         </div>
         {isSalesLoading ? (
           <div className="p-4 text-sm text-gray-500">Cargando ventas...</div>
+        ) : viewMode === 'productos' ? (
+          productViewItems.length === 0 ? (
+            <div className="p-4 text-sm text-gray-500">No hay items.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Venta #</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {productViewItems.map(({ sale, item }) => {
+                    const effectiveDeliveredQty = item.delivered ? item.quantity : 0;
+                    const pendingQty = Math.max(0, item.quantity - effectiveDeliveredQty);
+                    const shortage = getShortageQty(item.product_id ?? undefined, pendingQty);
+                    return (
+                      <tr key={`${sale.id}-${item.id}`} className={shortage > 0 ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}>
+                        <td className="px-3 py-2 text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {shortage > 0 && <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />}
+                            <span className="font-medium">{item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Manual')}</span>
+                            {shortage > 0 && (
+                              <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Faltan {shortage}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 font-medium">#{sale.id}</td>
+                        <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
+                        <td className="px-3 py-2 text-gray-700">{sale.seller || '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">{item.quantity}</td>
+                        <td className="px-3 py-2 text-center">
+                          {togglingItemKey === `${sale.id}-${item.id}-delivered` ? (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={item.delivered}
+                              onChange={(e) => handleToggleItem(sale, item, 'delivered', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {togglingItemKey === `${sale.id}-${item.id}-paid` ? (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={item.paid}
+                              onChange={(e) => handleToggleItem(sale, item, 'paid', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-700">{formatPrice(item.unit_price)}</td>
+                        <td className="px-3 py-2 text-right font-medium text-gray-900">{formatPrice(item.total_price)}</td>
+                        <td className="px-3 py-2 text-right">
+                          <Link
+                            href={`/admin/ventas/${sale.id}`}
+                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            Ver
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (stockShortageOnly ? salesWithStockShortage.length === 0 : filteredSales.length === 0) ? (
           <div className="p-4 text-sm text-gray-500">No hay ventas registradas.</div>
         ) : (

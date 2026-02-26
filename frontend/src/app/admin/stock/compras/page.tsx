@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState, useRef, type ChangeEvent } from 'react';
-import { FileDown, X, Plus, Trash2, Eye, Package, Search, List, ShoppingBag } from 'lucide-react';
+import { FileDown, X, Plus, Trash2, Eye, Package, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -440,31 +440,23 @@ export default function ComprasPage() {
       />
 
       {/* Mode selector */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
+        <span className={`text-sm font-medium ${viewMode === 'compras' ? 'text-gray-900' : 'text-gray-400'}`}>Lista de compras</span>
         <button
-          onClick={() => setViewMode('compras')}
-          className={cn(
-            'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            viewMode === 'compras'
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          )}
+          role="switch"
+          aria-checked={viewMode === 'productos'}
+          onClick={() => setViewMode(viewMode === 'compras' ? 'productos' : 'compras')}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+            viewMode === 'productos' ? 'bg-primary-600' : 'bg-gray-300'
+          }`}
         >
-          <List className="h-4 w-4" />
-          Lista de compras
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+              viewMode === 'productos' ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
         </button>
-        <button
-          onClick={() => setViewMode('productos')}
-          className={cn(
-            'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            viewMode === 'productos'
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          )}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Productos comprados
-        </button>
+        <span className={`text-sm font-medium ${viewMode === 'productos' ? 'text-gray-900' : 'text-gray-400'}`}>Productos comprados</span>
       </div>
 
       {/* ── PRODUCTOS COMPRADOS MODE ── */}

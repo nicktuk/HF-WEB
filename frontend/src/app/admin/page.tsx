@@ -525,26 +525,26 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-xl font-bold text-emerald-700 mt-1">{formatPrice(financialStats.total_collected)}</p>
                   </button>
-                  <button
-                    onClick={() => setShowSellerStats(!showSellerStats)}
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-amber-50 transition-colors"
+                  <Link
+                    href="/admin/ventas?pendiente=entrega"
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-amber-50 transition-colors block"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-amber-600 uppercase">Pend. entrega</p>
-                      <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                      <ExternalLink className="h-4 w-4 text-amber-400" />
                     </div>
                     <p className="text-xl font-bold text-amber-700 mt-1">{formatPrice(financialStats.total_pending_delivery)}</p>
-                  </button>
-                  <button
-                    onClick={() => setShowSellerStats(!showSellerStats)}
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-rose-50 transition-colors"
+                  </Link>
+                  <Link
+                    href="/admin/ventas?pendiente=cobro"
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-rose-50 transition-colors block"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-rose-600 uppercase">Pend. cobro</p>
-                      <ChevronDown className={`h-4 w-4 text-rose-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                      <ExternalLink className="h-4 w-4 text-rose-400" />
                     </div>
                     <p className="text-xl font-bold text-rose-700 mt-1">{formatPrice(financialStats.total_pending_payment)}</p>
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
