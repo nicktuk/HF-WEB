@@ -19,6 +19,7 @@ import {
   useDeleteProduct,
   useRescrapeProduct,
   useStockPurchases,
+  useStockSummary,
   useUpdateStockPurchase,
 } from '@/hooks/useProducts';
 
@@ -31,6 +32,7 @@ export default function ProductEditPage() {
 
   const { data: product, isLoading } = useAdminProduct(apiKey, productId);
   const { data: stockPurchases, isLoading: isStockLoading } = useStockPurchases(apiKey, productId);
+  const { data: stockSummary } = useStockSummary(apiKey, [productId]);
   const updateStockPurchase = useUpdateStockPurchase(apiKey);
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
@@ -195,7 +197,9 @@ export default function ProductEditPage() {
   }
 
   const isManualProduct = product.source_website_name === 'Producto Manual';
-  const totalStock = (stockPurchases || []).reduce((acc, item) => acc + (item.quantity - item.out_quantity), 0);
+  const grossStock = (stockPurchases || []).reduce((acc, item) => acc + (item.quantity - item.out_quantity), 0);
+  const reservedQty = Number(stockSummary?.items?.find(i => i.product_id === productId)?.reserved_qty || 0);
+  const netStock = grossStock - reservedQty;
 
   return (
     <div className="space-y-6">
@@ -644,8 +648,10 @@ export default function ProductEditPage() {
                 <p className="text-sm text-gray-500">No hay compras de stock registradas.</p>
               ) : (
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-700">
-                    Stock disponible: <strong>{totalStock}</strong>
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+                    <span>Stock bruto: <strong>{grossStock}</strong></span>
+                    <span>Reservado: <strong className="text-amber-700">{reservedQty}</strong></span>
+                    <span>Stock neto: <strong className={netStock < 0 ? 'text-red-600' : 'text-gray-900'}>{netStock}</strong></span>
                   </div>
                   <div className="overflow-x-auto border rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -655,7 +661,7 @@ export default function ProductEditPage() {
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Compra</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -663,7 +669,7 @@ export default function ProductEditPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {stockPurchases.map((purchase) => {
-                          const available = purchase.quantity - purchase.out_quantity;
+                          const rowStock = purchase.quantity - purchase.out_quantity;
                           return (
                             <tr key={purchase.id} className="hover:bg-gray-50">
                               <td className="px-3 py-2">{purchase.purchase_date}</td>
@@ -675,7 +681,7 @@ export default function ProductEditPage() {
                               </td>
                               <td className="px-3 py-2 text-right">{purchase.quantity}</td>
                               <td className="px-3 py-2 text-right">{purchase.out_quantity}</td>
-                              <td className="px-3 py-2 text-right font-medium">{available}</td>
+                              <td className="px-3 py-2 text-right font-medium">{rowStock}</td>
                               <td className="px-3 py-2 text-right">{formatPrice(purchase.unit_price)}</td>
                               <td className="px-3 py-2 text-right">{formatPrice(purchase.total_amount)}</td>
                               <td className="px-3 py-2 text-right">
@@ -698,6 +704,27 @@ export default function ProductEditPage() {
                           );
                         })}
                       </tbody>
+                      <tfoot className="bg-gray-50 font-medium text-gray-700">
+                        <tr>
+                          <td colSpan={2} className="px-3 py-2 text-xs uppercase text-gray-500">Totales</td>
+                          <td className="px-3 py-2 text-right">{grossStock + (stockPurchases || []).reduce((acc, p) => acc + p.out_quantity, 0)}</td>
+                          <td className="px-3 py-2 text-right">{(stockPurchases || []).reduce((acc, p) => acc + p.out_quantity, 0)}</td>
+                          <td className="px-3 py-2 text-right">{grossStock}</td>
+                          <td colSpan={3} className="px-3 py-2" />
+                        </tr>
+                        {reservedQty > 0 && (
+                          <tr className="text-amber-700">
+                            <td colSpan={4} className="px-3 py-2 text-xs uppercase text-right">Reservado (ventas pendientes)</td>
+                            <td className="px-3 py-2 text-right">−{reservedQty}</td>
+                            <td colSpan={3} />
+                          </tr>
+                        )}
+                        <tr className={netStock < 0 ? 'text-red-600' : 'text-gray-900'}>
+                          <td colSpan={4} className="px-3 py-2 text-xs uppercase text-right font-semibold">Stock neto</td>
+                          <td className="px-3 py-2 text-right font-bold">{netStock}</td>
+                          <td colSpan={3} />
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
@@ -719,8 +746,10 @@ export default function ProductEditPage() {
             <p className="text-sm text-gray-500">No hay compras de stock registradas.</p>
           ) : (
             <div className="space-y-3">
-              <div className="text-sm text-gray-700">
-                Stock disponible: <strong>{totalStock}</strong>
+              <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+                <span>Stock bruto: <strong>{grossStock}</strong></span>
+                <span>Reservado: <strong className="text-amber-700">{reservedQty}</strong></span>
+                <span>Stock neto: <strong className={netStock < 0 ? 'text-red-600' : 'text-gray-900'}>{netStock}</strong></span>
               </div>
               <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -730,7 +759,7 @@ export default function ProductEditPage() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Compra</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -738,7 +767,7 @@ export default function ProductEditPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {stockPurchases.map((purchase) => {
-                      const available = purchase.quantity - purchase.out_quantity;
+                      const rowStock = purchase.quantity - purchase.out_quantity;
                       return (
                         <tr key={purchase.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2">{purchase.purchase_date}</td>
@@ -750,7 +779,7 @@ export default function ProductEditPage() {
                           </td>
                           <td className="px-3 py-2 text-right">{purchase.quantity}</td>
                           <td className="px-3 py-2 text-right">{purchase.out_quantity}</td>
-                          <td className="px-3 py-2 text-right font-medium">{available}</td>
+                          <td className="px-3 py-2 text-right font-medium">{rowStock}</td>
                           <td className="px-3 py-2 text-right">{formatPrice(purchase.unit_price)}</td>
                           <td className="px-3 py-2 text-right">{formatPrice(purchase.total_amount)}</td>
                           <td className="px-3 py-2 text-right">
@@ -758,7 +787,7 @@ export default function ProductEditPage() {
                               size="sm"
                               variant="outline"
                               onClick={async () => {
-                                if (!confirm('Â¿Desasociar esta compra de stock del producto?')) return;
+                                if (!confirm('¿Desasociar esta compra de stock del producto?')) return;
                                 await updateStockPurchase.mutateAsync({
                                   purchaseId: purchase.id,
                                   productId: null,
@@ -773,6 +802,27 @@ export default function ProductEditPage() {
                       );
                     })}
                   </tbody>
+                  <tfoot className="bg-gray-50 font-medium text-gray-700">
+                    <tr>
+                      <td colSpan={2} className="px-3 py-2 text-xs uppercase text-gray-500">Totales</td>
+                      <td className="px-3 py-2 text-right">{grossStock + (stockPurchases || []).reduce((acc, p) => acc + p.out_quantity, 0)}</td>
+                      <td className="px-3 py-2 text-right">{(stockPurchases || []).reduce((acc, p) => acc + p.out_quantity, 0)}</td>
+                      <td className="px-3 py-2 text-right">{grossStock}</td>
+                      <td colSpan={3} className="px-3 py-2" />
+                    </tr>
+                    {reservedQty > 0 && (
+                      <tr className="text-amber-700">
+                        <td colSpan={4} className="px-3 py-2 text-xs uppercase text-right">Reservado (ventas pendientes)</td>
+                        <td className="px-3 py-2 text-right">−{reservedQty}</td>
+                        <td colSpan={3} />
+                      </tr>
+                    )}
+                    <tr className={netStock < 0 ? 'text-red-600' : 'text-gray-900'}>
+                      <td colSpan={4} className="px-3 py-2 text-xs uppercase text-right font-semibold">Stock neto</td>
+                      <td className="px-3 py-2 text-right font-bold">{netStock}</td>
+                      <td colSpan={3} />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
