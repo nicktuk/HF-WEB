@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,7 +117,7 @@ export default function StockResumenPage() {
         'Cantidad comprada',
         'Cantidad salida',
         'Reservado',
-        'Diferencia',
+        'Stock',
         'Precio costo',
         'Reservado costo',
         'Reservado vendido',
@@ -181,7 +182,7 @@ export default function StockResumenPage() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad comprada</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad salida</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Reservado</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -191,7 +192,18 @@ export default function StockResumenPage() {
                   const diff = row.purchased - row.out - reservedQty;
                   return (
                     <tr key={row.key} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-900">{row.name}</td>
+                      <td className="px-4 py-3 text-gray-900">
+                        {row.key > 0 ? (
+                          <Link
+                            href={`/admin/productos/${row.key}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {row.name}
+                          </Link>
+                        ) : (
+                          row.name
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right">{row.purchased}</td>
                       <td className="px-4 py-3 text-right">{row.out}</td>
                       <td className="px-4 py-3 text-right">{reservedQty}</td>

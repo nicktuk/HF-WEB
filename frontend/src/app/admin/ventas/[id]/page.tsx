@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,13 +35,14 @@ export default function SaleDetailPage() {
   const params = useParams();
   const saleId = parseInt(params.id as string, 10);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const apiKey = useApiKey() || '';
 
   const { data: sale, isLoading } = useSale(apiKey, saleId);
   const deleteSale = useDeleteSale(apiKey);
   const updateSale = useUpdateSale(apiKey);
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(() => searchParams?.get('mode') === 'edit');
   const [editCustomer, setEditCustomer] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editInstallments, setEditInstallments] = useState('');

@@ -1,7 +1,8 @@
 'use client';
 
 import { Fragment, useMemo, useState, useRef, type ChangeEvent } from 'react';
-import { FileDown, X, Plus, Trash2, Eye, Package } from 'lucide-react';
+import { FileDown, X, Plus, Trash2, Eye, Package, Search, List, ShoppingBag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
@@ -68,6 +69,10 @@ interface PurchaseDetail {
 
 export default function ComprasPage() {
   const apiKey = useApiKey() || '';
+
+  // View mode
+  const [viewMode, setViewMode] = useState<'compras' | 'productos'>('compras');
+  const [productSearch, setProductSearch] = useState('');
 
   // Filters
   const [page, setPage] = useState(1);
@@ -260,6 +265,18 @@ export default function ComprasPage() {
 
     return map;
   }, [stockPurchases]);
+
+  const filteredProducts = useMemo(() => {
+    const items = stockPurchases || [];
+    if (!productSearch.trim()) return items;
+    const q = productSearch.toLowerCase();
+    return items.filter((item) => {
+      const name = (item.product_name || item.description || '').toLowerCase();
+      const code = (item.code || '').toLowerCase();
+      return name.includes(q) || code.includes(q);
+    });
+  }, [stockPurchases, productSearch]);
+
   const handleExportPurchasesCsv = () => {
     if (!purchasesData?.items?.length) return;
     if (!showPurchaseItems) {
@@ -422,6 +439,135 @@ export default function ComprasPage() {
         onChange={handleImportStockFile}
       />
 
+      {/* Mode selector */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode('compras')}
+          className={cn(
+            'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+            viewMode === 'compras'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          )}
+        >
+          <List className="h-4 w-4" />
+          Lista de compras
+        </button>
+        <button
+          onClick={() => setViewMode('productos')}
+          className={cn(
+            'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+            viewMode === 'productos'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          )}
+        >
+          <ShoppingBag className="h-4 w-4" />
+          Productos comprados
+        </button>
+      </div>
+
+      {/* ── PRODUCTOS COMPRADOS MODE ── */}
+      {viewMode === 'productos' && (
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="bg-white rounded-lg border p-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Buscar por nombre o código..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Products grid */}
+          <div className="bg-white rounded-lg border">
+            <div className="px-4 py-3 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Productos comprados</h2>
+              <span className="text-sm text-gray-500">
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'producto' : 'productos'}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              {!stockPurchases ? (
+                <div className="p-4 text-sm text-gray-500">Cargando productos...</div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="p-4 text-sm text-gray-500">
+                  {productSearch ? 'No se encontraron productos con ese criterio.' : 'No hay productos comprados.'}
+                </div>
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">P.Unit</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredProducts.map((item) => {
+                      const disponible = Number(item.quantity || 0) - Number(item.out_quantity || 0);
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-gray-900">
+                              {item.product_name || item.description || '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                            {item.code || <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                            {formatDate(item.purchase_date)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {item.quantity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-500">
+                            {item.out_quantity > 0 ? (
+                              <span className="text-amber-600 font-medium">{item.out_quantity}</span>
+                            ) : (
+                              <span className="text-gray-300">0</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={cn(
+                              'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                              disponible > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'
+                            )}>
+                              {disponible}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {formatPrice(item.unit_price)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-900">
+                            {formatPrice(item.total_amount)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LISTA DE COMPRAS MODE ── */}
+      {viewMode === 'compras' && (<>
       {/* Filters */}
       <div className="bg-white rounded-lg border p-4">
         <div className="flex flex-wrap items-end gap-4">
@@ -629,6 +775,7 @@ export default function ComprasPage() {
           </div>
         )}
       </div>
+      </>)}
 
       {/* Purchase detail modal */}
       <Modal

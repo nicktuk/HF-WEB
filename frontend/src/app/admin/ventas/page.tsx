@@ -1,13 +1,13 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useUpdateSale, useStockSummary } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useStockSummary } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleItemCreate } from '@/types';
@@ -31,21 +31,25 @@ const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   return Number((originalPrice * (1 + markup / 100)).toFixed(2));
 };
 
+const FILTER_KEY = 'ventas-filters';
+const getSavedFilters = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = sessionStorage.getItem(FILTER_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch { return null; }
+};
+
 export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
-  const [salesSearch, setSalesSearch] = useState('');
-  const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
-  const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>('all');
-  const [showPartials, setShowPartials] = useState(false);
+  const [salesSearch, setSalesSearch] = useState<string>(() => getSavedFilters()?.salesSearch ?? '');
+  const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.deliveredFilter ?? 'all');
+  const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.paidFilter ?? 'all');
+  const [showPartials, setShowPartials] = useState<boolean>(() => getSavedFilters()?.showPartials ?? false);
   const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
-  const [stockShortageOnly, setStockShortageOnly] = useState(false);
+  const [stockShortageOnly, setStockShortageOnly] = useState<boolean>(() => getSavedFilters()?.stockShortageOnly ?? false);
   const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
-  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
-  const [editCustomer, setEditCustomer] = useState('');
-  const [editNotes, setEditNotes] = useState('');
-  const [editInstallments, setEditInstallments] = useState('');
-  const [editSeller, setEditSeller] = useState<'Facu' | 'Heber'>('Facu');
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
@@ -55,9 +59,15 @@ export default function VentasPage() {
   const [manualProductQty, setManualProductQty] = useState('1');
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
 
+  // Persist filters to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly }));
+    } catch { /* ignore */ }
+  }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly]);
+
   const createSale = useCreateSale(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
-  const updateSale = useUpdateSale(apiKey);
 
   const { data: productsData, isLoading } = useAdminProducts(apiKey, {
     page: 1,
@@ -357,30 +367,6 @@ export default function VentasPage() {
     const totalSoldAmount = base.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
     return { totalSales, totalItems, totalAmount, totalSoldAmount };
   }, [filteredSales, salesWithStockShortage, stockShortageOnly, showPartials, deliveredFilter]);
-
-  const openEditModal = (saleId: number) => {
-    const sale = salesData?.find((s) => s.id === saleId);
-    if (!sale) return;
-    setEditCustomer(sale.customer_name || '');
-    setEditNotes(sale.notes || '');
-    setEditInstallments(sale.installments != null ? String(sale.installments) : '');
-    setEditSeller(sale.seller);
-    setEditingSaleId(saleId);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingSaleId) return;
-    await updateSale.mutateAsync({
-      saleId: editingSaleId,
-      data: {
-        customer_name: editCustomer || undefined,
-        notes: editNotes || undefined,
-        installments: editInstallments ? Number(editInstallments) : undefined,
-        seller: editSeller,
-      },
-    });
-    setEditingSaleId(null);
-  };
 
   const handleReconcileDeliveredStock = async () => {
     if (!confirm('Esto recalcula todos los descuentos de stock según unidades entregadas. ¿Continuar?')) return;
@@ -844,16 +830,14 @@ export default function VentasPage() {
                             </td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex justify-end gap-3">
-                                <button
+                                <Link
+                                  href={`/admin/ventas/${sale.id}?mode=edit`}
                                   className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditModal(sale.id);
-                                  }}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <Edit2 className="h-3 w-3" />
                                   Editar
-                                </button>
+                                </Link>
                                 <Link
                                   href={`/admin/ventas/${sale.id}`}
                                   className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
@@ -946,63 +930,6 @@ export default function VentasPage() {
         )}
       </div>
 
-      {editingSaleId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Editar venta #{editingSaleId}</h2>
-              <button onClick={() => setEditingSaleId(null)} className="p-2 hover:bg-gray-100 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <Input
-                label="Cliente"
-                value={editCustomer}
-                onChange={(e) => setEditCustomer(e.target.value)}
-                placeholder="Nombre del cliente"
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-                <select
-                  value={editSeller}
-                  onChange={(e) => setEditSeller(e.target.value as 'Facu' | 'Heber')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="Facu">Facu</option>
-                  <option value="Heber">Heber</option>
-                </select>
-              </div>
-              <Input
-                label="Cuotas"
-                type="number"
-                min="0"
-                value={editInstallments}
-                onChange={(e) => setEditInstallments(e.target.value)}
-                placeholder="0"
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                <textarea
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Notas adicionales..."
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-4 border-t">
-              <Button variant="outline" onClick={() => setEditingSaleId(null)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveEdit} isLoading={updateSale.isPending}>
-                Guardar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
