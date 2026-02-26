@@ -428,6 +428,11 @@ export default function VentasPage() {
     const result: Array<{ sale: NonNullable<typeof salesData>[number]; item: SaleItem }> = [];
     baseSales.forEach((sale) => {
       sale.items.forEach((item) => {
+        // Filter at item level: exclude items that don't match the active filter
+        if (deliveredFilter === 'yes' && !item.delivered) return;
+        if (deliveredFilter === 'no' && item.delivered) return;
+        if (paidFilter === 'yes' && !item.paid) return;
+        if (paidFilter === 'no' && item.paid) return;
         result.push({ sale, item });
       });
     });
@@ -437,7 +442,7 @@ export default function VentasPage() {
       return nameA.localeCompare(nameB);
     });
     return result;
-  }, [filteredSales, salesWithStockShortage, stockShortageOnly]);
+  }, [filteredSales, salesWithStockShortage, stockShortageOnly, deliveredFilter, paidFilter]);
 
   const handleReconcileDeliveredStock = async () => {
     if (!confirm('Esto recalcula todos los descuentos de stock según unidades entregadas. ¿Continuar?')) return;
