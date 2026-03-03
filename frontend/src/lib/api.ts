@@ -1033,3 +1033,73 @@ export async function uploadImages(apiKey: string, files: File[]): Promise<strin
     return `${baseUrl}${url}`;
   });
 }
+
+// ============================================
+// AI Description Generation
+// ============================================
+
+export interface AIStats {
+  total_enabled: number;
+  with_description: number;
+  without_description: number;
+  ai_provider: string;
+  web_search_enabled: boolean;
+  vision_enabled: boolean;
+  categories: { id: number; name: string; total: number; with_desc: number; pending: number }[];
+}
+
+export interface AIGenerateRequest {
+  mode: 'single' | 'category' | 'pending' | 'all';
+  product_id?: number;
+  category_id?: number;
+  force_regenerate?: boolean;
+  use_search?: boolean;
+  use_vision?: boolean;
+  use_source_refetch?: boolean;
+}
+
+export interface AIJobStatus {
+  job_id: string;
+  status: 'running' | 'completed' | 'cancelled';
+  total: number;
+  processed: number;
+  success: number;
+  failed: number;
+  progress_pct: number;
+  errors: { id: number; name: string; error: string }[];
+  results: { id: number; name: string; description: string }[];
+}
+
+export const aiApi = {
+  async getStats(apiKey: string): Promise<AIStats> {
+    return fetchAPI<AIStats>('/admin/ai/stats', {}, apiKey);
+  },
+
+  async generate(apiKey: string, req: AIGenerateRequest): Promise<{ job_id: string; total: number }> {
+    return fetchAPI('/admin/ai/generate', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    }, apiKey);
+  },
+
+  async getJob(apiKey: string, jobId: string): Promise<AIJobStatus> {
+    return fetchAPI<AIJobStatus>(`/admin/ai/job/${jobId}`, {}, apiKey);
+  },
+
+  async cancelJob(apiKey: string, jobId: string): Promise<void> {
+    await fetchAPI(`/admin/ai/job/${jobId}/cancel`, { method: 'POST' }, apiKey);
+  },
+
+  async generateSingle(
+    apiKey: string,
+    productId: number,
+    opts: { use_search?: boolean; use_vision?: boolean; use_source_refetch?: boolean } = {},
+  ): Promise<{ product_id: number; short_description: string }> {
+    const params = new URLSearchParams();
+    if (opts.use_search !== undefined) params.set('use_search', String(opts.use_search));
+    if (opts.use_vision !== undefined) params.set('use_vision', String(opts.use_vision));
+    if (opts.use_source_refetch !== undefined) params.set('use_source_refetch', String(opts.use_source_refetch));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchAPI(`/admin/ai/generate/${productId}${qs}`, { method: 'POST' }, apiKey);
+  },
+};

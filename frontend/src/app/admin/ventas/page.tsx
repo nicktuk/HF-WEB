@@ -982,6 +982,7 @@ export default function VentasPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                           {amountColumnLabel}
                         </th>
@@ -1003,7 +1004,10 @@ export default function VentasPage() {
                             <td className="px-3 py-2 text-right text-gray-700">
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
                             </td>
-                            <td className="px-3 py-2 text-right font-medium">
+                            <td className="px-3 py-2 text-right font-semibold text-gray-900">
+                              {formatPrice(Number(sale.total_amount || 0))}
+                            </td>
+                            <td className="px-3 py-2 text-right font-medium text-gray-600">
                               {formatPrice(getVisibleSaleAmount(sale))}
                             </td>
                             <td className="px-3 py-2 text-right font-medium text-emerald-700">
@@ -1048,7 +1052,7 @@ export default function VentasPage() {
                           </tr>
                           {expandedSaleId === sale.id && (
                             <tr className="bg-gray-50">
-                              <td colSpan={8} className="px-4 py-3">
+                              <td colSpan={9} className="px-4 py-3">
                                 <div className="overflow-x-auto border rounded-lg bg-white">
                                   <table className="min-w-full text-sm">
                                     <thead className="bg-gray-100">
@@ -1134,6 +1138,14 @@ export default function VentasPage() {
                           {group.items.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0)}
                         </td>
                         <td className="px-3 py-2 text-right text-gray-900">
+                          {formatPrice(
+                            group.items.reduce(
+                              (acc, sale) => acc + Number(sale.total_amount || 0),
+                              0,
+                            ),
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-700">
                           {formatPrice(
                             group.items.reduce(
                               (acc, sale) =>

@@ -69,7 +69,9 @@
       "Bash(alembic current:*)",
       "Bash(alembic upgrade:*)",
       "Bash(npx next build:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(find D:\\\\Desarrollo\\\\HF WEB\\\\backend:*)",
+      "Bash(pip install:*)"
     ]
   }
 }

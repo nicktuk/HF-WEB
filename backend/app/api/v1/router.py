@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions
 
 api_router = APIRouter()
 
@@ -38,4 +38,11 @@ api_router.include_router(
     subcategories.router,
     prefix="/subcategories",
     tags=["subcategories"]
+)
+
+# AI Description Generation
+api_router.include_router(
+    ai_descriptions.router,
+    prefix="/admin/ai",
+    tags=["ai-descriptions"]
 )

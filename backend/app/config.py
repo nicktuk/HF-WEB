@@ -66,6 +66,19 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
     ALLOWED_IMAGE_TYPES_STR: str = "image/jpeg,image/png,image/webp,image/gif"
 
+    # AI Description Generation
+    AI_PROVIDER: str = "claude"           # "claude" or "openai"
+    ANTHROPIC_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    AI_MODEL_CLAUDE: str = "claude-haiku-4-5-20251001"
+    AI_MODEL_OPENAI: str = "gpt-4o-mini"
+    AI_WEB_SEARCH_ENABLED: bool = True
+    AI_VISION_ENABLED: bool = True
+    AI_SOURCE_REFETCH_ENABLED: bool = True
+    BRAVE_SEARCH_API_KEY: str = ""
+    AI_BATCH_CONCURRENCY: int = 5
+    AI_BATCH_CHUNK_DELAY: float = 0.5    # seconds between chunks
+
     # WhatsApp / Contact
     WHATSAPP_NUMBER: str = "5492274402761"
     CATALOG_URL: str = "https://www.hefaproductos.com.ar"
