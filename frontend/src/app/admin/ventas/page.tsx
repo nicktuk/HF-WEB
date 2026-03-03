@@ -893,7 +893,13 @@ export default function VentasPage() {
                         <td className="px-3 py-2 text-gray-900">
                           <div className="flex items-center gap-2">
                             {shortage > 0 && <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />}
-                            <span className="font-medium">{item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Manual')}</span>
+                            {item.product_id ? (
+                              <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                {item.product_name || `Producto #${item.product_id}`}
+                              </Link>
+                            ) : (
+                              <span className="font-medium">{item.product_name || 'Manual'}</span>
+                            )}
                             {shortage > 0 && (
                               <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Faltan {shortage}</span>
                             )}
@@ -1054,7 +1060,13 @@ export default function VentasPage() {
                                                 {shortage > 0 && (
                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                                                 )}
-                                                <span>{item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual')}</span>
+                                                {item.product_id ? (
+                                                  <Link href={`/admin/productos/${item.product_id}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+                                                    {item.product_name || `Producto #${item.product_id}`}
+                                                  </Link>
+                                                ) : (
+                                                  <span>{item.product_name || 'Producto manual'}</span>
+                                                )}
                                                 {shortage > 0 && (
                                                   <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                                                     Faltan {shortage}

@@ -313,7 +313,13 @@ export default function SaleDetailPage() {
                     {visibleItems.map((item) => (
                       <tr key={item.line_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2">
-                          <div className="font-medium text-gray-900">{item.product_name}</div>
+                          {item.product_id ? (
+                            <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                              {item.product_name}
+                            </Link>
+                          ) : (
+                            <div className="font-medium text-gray-900">{item.product_name}</div>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-right">
                           {isEditing ? (

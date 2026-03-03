@@ -19,10 +19,11 @@ import {
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 import { useApiKey } from '@/hooks/useAuth';
 import { adminApi } from '@/lib/api';
 import { cn, formatDate } from '@/lib/utils';
-import type { Order, OrderItemCreate, OrderAttachmentCreate, OrderClose } from '@/types';
+import type { Order, OrderItemCreate, OrderAttachmentCreate, OrderClose, Sale } from '@/types';
 
 // Custom price formatter for ARS
 const formatPrice = (price: number | null | undefined) => {
@@ -73,6 +74,7 @@ export default function PedidosPage() {
   // Close modals data
   const [saleIdInput, setSaleIdInput] = useState('');
   const [noSaleReasonInput, setNoSaleReasonInput] = useState('');
+  const [saleModalSearch, setSaleModalSearch] = useState('');
 
   // New order form state
   const [newOrder, setNewOrder] = useState({
@@ -112,6 +114,13 @@ export default function PedidosPage() {
     enabled: !!apiKey
   });
 
+  // Fetch sales for "close with sale" modal
+  const { data: salesForModal, isLoading: salesModalLoading } = useQuery<Sale[]>({
+    queryKey: ['sales-modal', saleModalSearch],
+    queryFn: () => adminApi.listSales(apiKey, 30, saleModalSearch || undefined),
+    enabled: !!apiKey && closeWithSaleModal !== null,
+  });
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: typeof newOrder) => adminApi.createOrder(apiKey, data),
@@ -149,6 +158,7 @@ export default function PedidosPage() {
       setCloseNoSaleModal(null);
       setSaleIdInput('');
       setNoSaleReasonInput('');
+      setSaleModalSearch('');
     },
     onError: (error: Error) => {
       alert(`Error: ${error.message}`);
@@ -979,38 +989,108 @@ export default function PedidosPage() {
       {/* Close with sale modal */}
       {closeWithSaleModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
               <h2 className="text-lg font-semibold">Atender con venta</h2>
               <button
                 onClick={() => {
                   setCloseWithSaleModal(null);
                   setSaleIdInput('');
+                  setSaleModalSearch('');
                 }}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              <p className="text-sm text-gray-600">
-                Ingresá el ID de la venta asociada a este pedido
-              </p>
-              <Input
-                label="ID de venta"
-                type="number"
-                min="1"
-                value={saleIdInput}
-                onChange={(e) => setSaleIdInput(e.target.value)}
-                placeholder="Ej: 123"
-              />
+            <div className="p-4 space-y-3 flex-1 overflow-hidden flex flex-col min-h-0">
+              {/* Search bar */}
+              <div className="relative flex-shrink-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por cliente o producto..."
+                  value={saleModalSearch}
+                  onChange={(e) => setSaleModalSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  autoFocus
+                />
+              </div>
+
+              {/* Sales list */}
+              <div className="flex-1 overflow-y-auto border rounded-lg min-h-0">
+                {salesModalLoading ? (
+                  <div className="p-4 text-sm text-gray-500 text-center">Cargando ventas...</div>
+                ) : !salesForModal || salesForModal.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500 text-center">
+                    {saleModalSearch ? 'Sin resultados' : 'No hay ventas recientes'}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {salesForModal.map((sale) => {
+                      const isSelected = saleIdInput === String(sale.id);
+                      return (
+                        <button
+                          key={sale.id}
+                          type="button"
+                          onClick={() => setSaleIdInput(String(sale.id))}
+                          className={cn(
+                            'w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors',
+                            isSelected && 'bg-blue-50 ring-1 ring-inset ring-blue-400'
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-900 text-sm">#{sale.id}</span>
+                              <span className="text-sm text-gray-700">{sale.customer_name || 'Sin cliente'}</span>
+                              <span className="text-xs text-gray-400">{sale.seller}</span>
+                            </div>
+                            <Link
+                              href={`/admin/ventas/${sale.id}`}
+                              target="_blank"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-gray-400 hover:text-blue-600 flex-shrink-0"
+                              title="Ver venta"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
+                          {sale.items && sale.items.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {sale.items.map((item) => (
+                                <span key={item.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                  {item.product_name || `Producto #${item.product_id}`}
+                                  {item.quantity > 1 && ` ×${item.quantity}`}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Manual ID input */}
+              <div className="flex-shrink-0">
+                <Input
+                  label="ID de venta (manual)"
+                  type="number"
+                  min="1"
+                  value={saleIdInput}
+                  onChange={(e) => setSaleIdInput(e.target.value)}
+                  placeholder="Ej: 123"
+                />
+              </div>
             </div>
-            <div className="flex justify-end gap-3 p-4 border-t">
+            <div className="flex justify-end gap-3 p-4 border-t flex-shrink-0">
               <Button
                 variant="outline"
                 onClick={() => {
                   setCloseWithSaleModal(null);
                   setSaleIdInput('');
+                  setSaleModalSearch('');
                 }}
               >
                 Cancelar
@@ -1018,6 +1098,7 @@ export default function PedidosPage() {
               <Button
                 onClick={handleCloseWithSale}
                 isLoading={closeMutation.isPending}
+                disabled={!saleIdInput}
               >
                 Confirmar
               </Button>
