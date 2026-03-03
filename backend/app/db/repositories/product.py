@@ -207,14 +207,16 @@ class ProductRepository(BaseRepository[Product]):
             query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
 
         if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Product.original_name.ilike(search_term),
-                    Product.custom_name.ilike(search_term),
-                    Product.slug.ilike(search_term)
+            words = [w.strip() for w in search.split() if w.strip()]
+            for word in words:
+                word_term = f"%{word}%"
+                query = query.filter(
+                    or_(
+                        Product.original_name.ilike(word_term),
+                        Product.custom_name.ilike(word_term),
+                        Product.slug.ilike(word_term)
+                    )
                 )
-            )
 
         # Price range filter
         if price_range:
@@ -335,14 +337,16 @@ class ProductRepository(BaseRepository[Product]):
             query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
 
         if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Product.original_name.ilike(search_term),
-                    Product.custom_name.ilike(search_term),
-                    Product.slug.ilike(search_term)
+            words = [w.strip() for w in search.split() if w.strip()]
+            for word in words:
+                word_term = f"%{word}%"
+                query = query.filter(
+                    or_(
+                        Product.original_name.ilike(word_term),
+                        Product.custom_name.ilike(word_term),
+                        Product.slug.ilike(word_term)
+                    )
                 )
-            )
 
         # Price range filter
         if price_range:

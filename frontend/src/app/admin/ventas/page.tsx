@@ -131,6 +131,17 @@ export default function VentasPage() {
     search: search || undefined,
   });
 
+  const sortedProducts = useMemo(() => {
+    const items = productsData?.items || [];
+    return [...items].sort((a, b) => {
+      const sA = Number(a.stock_qty || 0);
+      const sB = Number(b.stock_qty || 0);
+      if (sA > 0 && sB <= 0) return -1;
+      if (sA <= 0 && sB > 0) return 1;
+      return 0;
+    });
+  }, [productsData]);
+
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const addToCart = (product: ProductAdmin) => {
@@ -502,17 +513,17 @@ export default function VentasPage() {
               />
             </div>
             <span className="text-xs text-gray-500">
-              {productsData?.items.length || 0} productos
+              {sortedProducts.length} productos
             </span>
           </div>
           <div>
             {isLoading ? (
               <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
-            ) : !productsData || productsData.items.length === 0 ? (
+            ) : sortedProducts.length === 0 ? (
               <div className="p-4 text-sm text-gray-500">No hay productos.</div>
             ) : (
               <div className="divide-y">
-                {productsData.items.map((product) => (
+                {sortedProducts.map((product) => (
                   <div key={product.id} className="p-4 flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 line-clamp-1">

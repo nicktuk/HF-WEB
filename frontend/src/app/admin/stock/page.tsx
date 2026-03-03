@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { useApiKey } from '@/hooks/useAuth';
 import { useUnmatchedStockPurchases, useUpdateStockPurchase, useAdminProducts } from '@/hooks/useProducts';
-import { downloadCsv } from '@/lib/csv';
+import { downloadExcel } from '@/lib/excel';
 import { formatDate, formatPrice } from '@/lib/utils';
 
 export default function StockUnmatchedPage() {
@@ -29,7 +29,7 @@ export default function StockUnmatchedPage() {
 
   const selectedPurchase = purchases?.find(p => p.id === selectedPurchaseId) || null;
 
-  const handleExportUnmatchedCsv = () => {
+  const handleExportUnmatchedExcel = () => {
     if (!purchases?.length) return;
     const rows = purchases.map((purchase) => [
       purchase.id,
@@ -37,12 +37,21 @@ export default function StockUnmatchedPage() {
       purchase.description || '',
       purchase.code || '',
       purchase.quantity,
-      Number(purchase.unit_price || 0).toFixed(2),
-      Number(purchase.total_amount || 0).toFixed(2),
+      Number(purchase.unit_price || 0),
+      Number(purchase.total_amount || 0),
     ]);
-    downloadCsv(
-      'compras_sin_match.csv',
-      ['ID', 'Fecha', 'Descripcion', 'Codigo', 'Cantidad', 'Precio unitario', 'Total'],
+    downloadExcel(
+      'compras_sin_match',
+      'Compras',
+      [
+        { header: 'ID', type: 'integer', width: 8 },
+        { header: 'Fecha', type: 'string', width: 12 },
+        { header: 'Descripcion', type: 'string', width: 42 },
+        { header: 'Codigo', type: 'string', width: 14 },
+        { header: 'Cantidad', type: 'integer', width: 10 },
+        { header: 'Precio unitario', type: 'number', width: 16 },
+        { header: 'Total', type: 'number', width: 14 },
+      ],
       rows,
     );
   };
@@ -77,11 +86,11 @@ export default function StockUnmatchedPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={handleExportUnmatchedCsv}
+              onClick={handleExportUnmatchedExcel}
               disabled={!purchases?.length}
             >
               <FileDown className="h-4 w-4 mr-1.5" />
-              Exportar CSV
+              Exportar Excel
             </Button>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">

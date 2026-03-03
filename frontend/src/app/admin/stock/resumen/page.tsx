@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
 import { useStockPurchases, useStockSummary } from '@/hooks/useProducts';
-import { downloadCsv } from '@/lib/csv';
+import { downloadExcel } from '@/lib/excel';
 import { formatPrice } from '@/lib/utils';
 
 export default function StockResumenPage() {
@@ -90,9 +90,9 @@ export default function StockResumenPage() {
     );
   }, [rows, summaryMap]);
 
-  const handleExportCsv = () => {
+  const handleExportExcel = () => {
     if (!filteredRows.length) return;
-    const csvRows = filteredRows.map((row) => {
+    const excelRows = filteredRows.map((row) => {
       const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
       const reservedQty = Number(summary?.reserved_qty || 0);
       const originalPrice = Number(summary?.original_price || 0);
@@ -105,24 +105,25 @@ export default function StockResumenPage() {
         row.out,
         reservedQty,
         diff,
-        originalPrice.toFixed(2),
-        reservedCostValue.toFixed(2),
-        reservedSoldValue.toFixed(2),
+        originalPrice,
+        reservedCostValue,
+        reservedSoldValue,
       ];
     });
-    downloadCsv(
-      'stock_resumen.csv',
+    downloadExcel(
+      'stock_resumen',
+      'Stock',
       [
-        'Producto',
-        'Cantidad comprada',
-        'Cantidad salida',
-        'Reservado',
-        'Stock',
-        'Precio costo',
-        'Reservado costo',
-        'Reservado vendido',
+        { header: 'Producto', type: 'string', width: 42 },
+        { header: 'Cantidad comprada', type: 'integer', width: 18 },
+        { header: 'Cantidad salida', type: 'integer', width: 16 },
+        { header: 'Reservado', type: 'integer', width: 12 },
+        { header: 'Stock', type: 'integer', width: 10 },
+        { header: 'Precio costo', type: 'number', width: 14 },
+        { header: 'Reservado costo', type: 'number', width: 16 },
+        { header: 'Reservado vendido', type: 'number', width: 18 },
       ],
-      csvRows,
+      excelRows,
     );
   };
 
@@ -162,9 +163,9 @@ export default function StockResumenPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">{filteredRows.length} productos</span>
-            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={!filteredRows.length}>
+            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={!filteredRows.length}>
               <FileDown className="h-4 w-4 mr-1" />
-              Exportar CSV
+              Exportar Excel
             </Button>
           </div>
         </div>

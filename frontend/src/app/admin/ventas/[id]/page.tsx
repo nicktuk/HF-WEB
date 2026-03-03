@@ -56,6 +56,17 @@ export default function SaleDetailPage() {
     search: productSearch || undefined,
   });
 
+  const sortedProducts = useMemo(() => {
+    const items = productsData?.items || [];
+    return [...items].sort((a, b) => {
+      const sA = Number(a.stock_qty || 0);
+      const sB = Number(b.stock_qty || 0);
+      if (sA > 0 && sB <= 0) return -1;
+      if (sA <= 0 && sB > 0) return 1;
+      return 0;
+    });
+  }, [productsData]);
+
   useEffect(() => {
     if (!sale) return;
     setEditCustomer(sale.customer_name || '');
@@ -273,7 +284,7 @@ export default function SaleDetailPage() {
                   />
                 </div>
                 <div className="max-h-56 overflow-y-auto space-y-2">
-                  {(productsData?.items || []).map((product) => (
+                  {sortedProducts.map((product) => (
                     <div key={product.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 line-clamp-1">
