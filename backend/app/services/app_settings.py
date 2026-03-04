@@ -42,6 +42,7 @@ def get_ai_config(db: Session) -> dict:
             batch_concurrency = settings.AI_BATCH_CONCURRENCY
     else:
         batch_concurrency = settings.AI_BATCH_CONCURRENCY
+    prompt_extra = get_setting(db, "AI_PROMPT_EXTRA") or ""
 
     return {
         "AI_PROVIDER": provider,
@@ -49,4 +50,5 @@ def get_ai_config(db: Session) -> dict:
         "OPENAI_API_KEY": openai_key,
         "BRAVE_SEARCH_API_KEY": brave_key,
         "AI_BATCH_CONCURRENCY": batch_concurrency,
+        "AI_PROMPT_EXTRA": prompt_extra,
     }

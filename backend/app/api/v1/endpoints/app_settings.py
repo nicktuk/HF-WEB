@@ -44,6 +44,7 @@ class AISettingsResponse(BaseModel):
     openai_key: str
     brave_key: str
     batch_concurrency: int
+    prompt_extra: str
 
 
 class AISettingsUpdate(BaseModel):
@@ -52,6 +53,7 @@ class AISettingsUpdate(BaseModel):
     openai_key: Optional[str] = None
     brave_key: Optional[str] = None
     batch_concurrency: Optional[int] = None
+    prompt_extra: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -71,12 +73,15 @@ def get_ai_settings(db: Session = Depends(get_db)) -> AISettingsResponse:
         else settings.AI_BATCH_CONCURRENCY
     )
 
+    prompt_extra = get_setting(db, "AI_PROMPT_EXTRA") or ""
+
     return AISettingsResponse(
         provider=provider,
         anthropic_key=_mask_key(anthropic_key),
         openai_key=_mask_key(openai_key),
         brave_key=_mask_key(brave_key),
         batch_concurrency=batch_concurrency,
+        prompt_extra=prompt_extra,
     )
 
 
@@ -104,6 +109,9 @@ def update_ai_settings(
 
     if data.batch_concurrency is not None:
         set_setting(db, "AI_BATCH_CONCURRENCY", str(data.batch_concurrency))
+
+    if data.prompt_extra is not None:
+        set_setting(db, "AI_PROMPT_EXTRA", data.prompt_extra.strip() or None)
 
     # Devolver estado actualizado (enmascarado)
     return get_ai_settings(db=db)

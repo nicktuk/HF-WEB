@@ -1114,6 +1114,7 @@ export interface AISettingsResponse {
   openai_key: string;
   brave_key: string;
   batch_concurrency: number;
+  prompt_extra: string;
 }
 
 export interface AISettingsUpdate {
@@ -1122,6 +1123,7 @@ export interface AISettingsUpdate {
   openai_key?: string;
   brave_key?: string;
   batch_concurrency?: number;
+  prompt_extra?: string;
 }
 
 export const settingsApi = {

@@ -71,7 +71,7 @@ Reglas:
 • NO incluir precio ni referencias a stock
 • Máximo 300 palabras en total
 • Usá saltos de línea entre la apertura, la lista y el cierre
-
+{extra_rules}
 {context}
 
 Respondé SOLO con la descripción formateada. Sin título, sin explicaciones extra."""
@@ -137,10 +137,13 @@ class AIDescriptionService:
         context = "\n".join(context_parts)
         vision_url = image_url if (use_vision and settings.AI_VISION_ENABLED) else None
 
+        extra = (cfg.get("AI_PROMPT_EXTRA") or "").strip()
+        extra_rules = f"\nInstrucciones adicionales:\n{extra}\n" if extra else ""
+
         provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
         if provider == "openai":
-            return await self._call_openai(context, vision_url, cfg)
-        return await self._call_claude(context, vision_url, cfg)
+            return await self._call_openai(context, vision_url, cfg, extra_rules)
+        return await self._call_claude(context, vision_url, cfg, extra_rules)
 
     # ------------------------------------------------------------------
     # Fetch URL origen
@@ -204,7 +207,7 @@ class AIDescriptionService:
     # Claude
     # ------------------------------------------------------------------
 
-    async def _call_claude(self, context: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
+    async def _call_claude(self, context: str, image_url: Optional[str], config: Optional[Dict] = None, extra_rules: str = "") -> str:
         try:
             import anthropic
         except ImportError:
@@ -227,7 +230,7 @@ class AIDescriptionService:
                     },
                 })
 
-        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context)})
+        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)})
 
         response = await client.messages.create(
             model=settings.AI_MODEL_CLAUDE,
@@ -240,7 +243,7 @@ class AIDescriptionService:
     # OpenAI
     # ------------------------------------------------------------------
 
-    async def _call_openai(self, context: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
+    async def _call_openai(self, context: str, image_url: Optional[str], config: Optional[Dict] = None, extra_rules: str = "") -> str:
         try:
             from openai import AsyncOpenAI
         except ImportError:
@@ -257,7 +260,7 @@ class AIDescriptionService:
                 "image_url": {"url": image_url, "detail": "low"},
             })
 
-        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context)})
+        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)})
 
         response = await client.chat.completions.create(
             model=settings.AI_MODEL_OPENAI,

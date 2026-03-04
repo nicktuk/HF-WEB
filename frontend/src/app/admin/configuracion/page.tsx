@@ -61,6 +61,7 @@ export default function ConfiguracionPage() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [braveKey, setBraveKey] = useState('');
   const [batchConcurrency, setBatchConcurrency] = useState(5);
+  const [promptExtra, setPromptExtra] = useState('');
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ export default function ConfiguracionPage() {
         setOpenaiKey(data.openai_key);
         setBraveKey(data.brave_key);
         setBatchConcurrency(data.batch_concurrency);
+        setPromptExtra(data.prompt_extra);
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -99,6 +101,7 @@ export default function ConfiguracionPage() {
         openai_key: openaiKey,
         brave_key: braveKey,
         batch_concurrency: batchConcurrency,
+        prompt_extra: promptExtra,
       });
       setOriginal(updated);
       setProvider(updated.provider);
@@ -106,6 +109,7 @@ export default function ConfiguracionPage() {
       setOpenaiKey(updated.openai_key);
       setBraveKey(updated.brave_key);
       setBatchConcurrency(updated.batch_concurrency);
+      setPromptExtra(updated.prompt_extra);
       showToast('success', 'Configuración guardada correctamente');
     } catch {
       showToast('error', 'Error al guardar la configuración');
@@ -254,6 +258,33 @@ export default function ConfiguracionPage() {
               className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Prompt extra card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Instrucciones para el generador</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Se agregan al prompt base. Escribí en lenguaje natural, una instrucción por línea.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <textarea
+            value={promptExtra}
+            onChange={(e) => setPromptExtra(e.target.value)}
+            rows={7}
+            placeholder={
+              'Ejemplos:\n' +
+              '- Evitá palabras como "increíble", "revolucionario", "de última generación"\n' +
+              '- La tienda se llama Hefa Productos, mencionála en el cierre si encaja natural\n' +
+              '- Siempre destacá si el producto incluye garantía oficial\n' +
+              '- Usá vos (voseo) siempre, nunca "usted" ni "tú"\n' +
+              '- Si el producto es para gaming, usá tono más entusiasta\n' +
+              '- Resaltá la relación calidad-precio cuando sea relevante'
+            }
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y font-mono leading-relaxed"
+          />
         </div>
       </div>
 
