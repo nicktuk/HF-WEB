@@ -32,8 +32,9 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class GenerateRequest(BaseModel):
-    mode: str                          # "single" | "category" | "pending" | "all"
+    mode: str                          # "single" | "category" | "pending" | "all" | "selected"
     product_id: Optional[int] = None
+    product_ids: Optional[List[int]] = None   # para mode="selected"
     category_id: Optional[int] = None
     force_regenerate: bool = False
     use_search: bool = True
@@ -91,12 +92,17 @@ async def generate_descriptions(
     elif req.mode == "all":
         pass  # sin filtro adicional
 
+    elif req.mode == "selected":
+        if not req.product_ids:
+            raise HTTPException(status_code=400, detail="product_ids requerido para mode=selected")
+        query = query.filter(Product.id.in_(req.product_ids))
+
     else:
         raise HTTPException(status_code=400, detail=f"mode inválido: {req.mode}")
 
     # Si no se fuerza re-generación, solo procesar los que no tienen descripción
     # (excepto "single" que siempre regenera, y "pending" que ya lo filtra)
-    if not req.force_regenerate and req.mode not in ("single", "pending"):
+    if not req.force_regenerate and req.mode not in ("single", "pending", "selected"):
         query = query.filter(Product.short_description == None)
 
     product_ids = [row[0] for row in query.all()]

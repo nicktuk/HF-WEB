@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -16,7 +16,7 @@ import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCateg
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
-import { adminApi } from '@/lib/api';
+import { adminApi, aiApi, AIJobStatus } from '@/lib/api';
 import { formatDate, formatPrice } from '@/lib/utils';
 
 export default function ProductsPage() {
@@ -68,6 +68,9 @@ export default function ProductsPage() {
   const [isRemovingBadge, setIsRemovingBadge] = useState(false);
   const [isMarkingNew, setIsMarkingNew] = useState(false);
   const [markNewDate, setMarkNewDate] = useState('');
+  const [aiJobId, setAiJobId] = useState<string | null>(null);
+  const [aiJob, setAiJob] = useState<AIJobStatus | null>(null);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
@@ -118,6 +121,43 @@ export default function ProductsPage() {
       showToast('Error al calcular mas vendidos', 'error');
     }
   };
+
+  const handleGenerateAI = async () => {
+    if (!selectedIds.length) return;
+    try {
+      const res = await aiApi.generate(apiKey, {
+        mode: 'selected',
+        product_ids: selectedIds,
+        force_regenerate: true,
+      });
+      setAiJobId(res.job_id);
+      setAiJob(null);
+      setShowAiModal(true);
+    } catch {
+      showToast('Error al iniciar la generación de descripciones', 'error');
+    }
+  };
+
+  // Polling del job de IA
+  useEffect(() => {
+    if (!aiJobId || !showAiModal) return;
+    if (aiJob?.status && aiJob.status !== 'running') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await aiApi.getJob(apiKey, aiJobId);
+        setAiJob(status);
+        if (status.status !== 'running') {
+          clearInterval(interval);
+          queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [aiJobId, showAiModal, aiJob?.status, apiKey, queryClient]);
 
   const handleExportPdf = async (format: 'catalog' | 'list') => {
     setIsExporting(true);
@@ -416,6 +456,14 @@ export default function ProductsPage() {
               >
                 <Power className="mr-2 h-4 w-4" />
                 Activar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleGenerateAI}
+                className="bg-violet-600 hover:bg-violet-700"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generar con IA
               </Button>
               <Button
                 size="sm"
@@ -840,6 +888,106 @@ export default function ProductsPage() {
           onClose={() => setShowActivateModal(false)}
           onSuccess={() => setSelectedIds([])}
         />
+      )}
+
+      {/* Modal progreso IA */}
+      {showAiModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-violet-600 shrink-0" />
+              <h2 className="text-lg font-semibold text-gray-900">Generando descripciones con IA</h2>
+            </div>
+
+            {!aiJob ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Iniciando job...
+              </div>
+            ) : (
+              <>
+                {/* Barra de progreso */}
+                <div>
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>{aiJob.processed} / {aiJob.total} procesados</span>
+                    <span>{aiJob.progress_pct}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                      style={{ width: `${aiJob.progress_pct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-700 font-medium">✓ {aiJob.success} ok</span>
+                  {aiJob.failed > 0 && (
+                    <span className="text-red-600 font-medium">✗ {aiJob.failed} fallidos</span>
+                  )}
+                  {aiJob.status === 'running' && (
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" /> generando...
+                    </span>
+                  )}
+                  {aiJob.status === 'completed' && (
+                    <span className="text-violet-600 font-medium">Completado</span>
+                  )}
+                  {aiJob.status === 'cancelled' && (
+                    <span className="text-gray-500">Cancelado</span>
+                  )}
+                </div>
+
+                {/* Últimos resultados */}
+                {aiJob.results.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50">
+                    {aiJob.results.slice(0, 5).map((r) => (
+                      <div key={r.id} className="text-xs">
+                        <p className="font-medium text-gray-700 truncate">{r.name}</p>
+                        <p className="text-gray-500 line-clamp-2">{r.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Errores */}
+                {aiJob.errors.length > 0 && (
+                  <div className="text-xs text-red-600 space-y-1 max-h-24 overflow-y-auto">
+                    {aiJob.errors.map((e) => (
+                      <p key={e.id}>{e.name}: {e.error}</p>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              {aiJob?.status === 'running' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (aiJobId) await aiApi.cancelJob(apiKey, aiJobId);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => {
+                  setShowAiModal(false);
+                  if (aiJob?.status === 'completed') setSelectedIds([]);
+                }}
+                disabled={!aiJob || aiJob.status === 'running'}
+                variant={aiJob?.status === 'completed' ? 'primary' : 'outline'}
+              >
+                {aiJob?.status === 'completed' ? 'Listo' : 'Cerrar'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bulk Category/Subcategory Change Modal */}

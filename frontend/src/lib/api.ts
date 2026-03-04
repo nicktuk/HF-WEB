@@ -1049,8 +1049,9 @@ export interface AIStats {
 }
 
 export interface AIGenerateRequest {
-  mode: 'single' | 'category' | 'pending' | 'all';
+  mode: 'single' | 'category' | 'pending' | 'all' | 'selected';
   product_id?: number;
+  product_ids?: number[];
   category_id?: number;
   force_regenerate?: boolean;
   use_search?: boolean;
