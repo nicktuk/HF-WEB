@@ -8,6 +8,7 @@ import {
   Package,
   Globe,
   Settings,
+  Settings2,
   LogOut,
   Tags,
   FolderTree,
@@ -48,6 +49,7 @@ const configSubmenu = [
   { name: 'Categorias', href: '/admin/categorias', icon: Tags },
   { name: 'Subcategorias', href: '/admin/subcategorias', icon: FolderTree },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
+  { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

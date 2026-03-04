@@ -71,7 +71,8 @@
       "Bash(npx next build:*)",
       "Bash(node:*)",
       "Bash(find D:\\\\Desarrollo\\\\HF WEB\\\\backend:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(test:*)"
     ]
   }
 }

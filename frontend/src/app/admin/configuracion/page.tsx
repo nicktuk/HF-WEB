@@ -1,0 +1,269 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Settings2, Save, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useApiKey } from '@/hooks/useAuth';
+import { settingsApi, AISettingsResponse } from '@/lib/api';
+
+// ─── PasswordInput ────────────────────────────────────────────────────────────
+
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder || '••••••••'}
+        disabled={disabled}
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+
+export default function ConfiguracionPage() {
+  const apiKey = useApiKey() || '';
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Valores originales (enmascarados) que llegaron del servidor
+  const [original, setOriginal] = useState<AISettingsResponse | null>(null);
+
+  // Estado del formulario
+  const [provider, setProvider] = useState('claude');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [braveKey, setBraveKey] = useState('');
+  const [batchConcurrency, setBatchConcurrency] = useState(5);
+
+  // ── Carga inicial ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!apiKey) return;
+    setLoading(true);
+    settingsApi
+      .getAI(apiKey)
+      .then((data) => {
+        setOriginal(data);
+        setProvider(data.provider);
+        setAnthropicKey(data.anthropic_key);
+        setOpenaiKey(data.openai_key);
+        setBraveKey(data.brave_key);
+        setBatchConcurrency(data.batch_concurrency);
+      })
+      .catch(() => showToast('error', 'No se pudo cargar la configuración'))
+      .finally(() => setLoading(false));
+  }, [apiKey]);
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  // ── Guardar ────────────────────────────────────────────────────────────────
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const updated = await settingsApi.updateAI(apiKey, {
+        provider,
+        anthropic_key: anthropicKey,
+        openai_key: openaiKey,
+        brave_key: braveKey,
+        batch_concurrency: batchConcurrency,
+      });
+      setOriginal(updated);
+      setProvider(updated.provider);
+      setAnthropicKey(updated.anthropic_key);
+      setOpenaiKey(updated.openai_key);
+      setBraveKey(updated.brave_key);
+      setBatchConcurrency(updated.batch_concurrency);
+      showToast('success', 'Configuración guardada correctamente');
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Settings2 className="h-6 w-6 text-gray-600" />
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Configuracion IA</h1>
+          <p className="text-sm text-gray-500">
+            Las claves guardadas aqui tienen prioridad sobre el archivo .env del servidor.
+          </p>
+        </div>
+      </div>
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${
+            toast.type === 'success'
+              ? 'bg-green-50 text-green-800'
+              : 'bg-red-50 text-red-800'
+          }`}
+        >
+          {toast.type === 'success' ? (
+            <CheckCircle className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 shrink-0" />
+          )}
+          {toast.message}
+        </div>
+      )}
+
+      {/* Form card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Proveedor de IA</h2>
+        </div>
+        <div className="space-y-5 px-6 py-5">
+          {/* Provider selector */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Proveedor activo</label>
+            <div className="flex gap-3">
+              {(['claude', 'openai'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setProvider(p)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    provider === p
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {p === 'claude' ? 'Claude (Anthropic)' : 'OpenAI'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* API Keys card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Claves de API</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Deja el campo sin modificar para conservar la clave actual. Las claves se muestran enmascaradas por seguridad.
+          </p>
+        </div>
+        <div className="space-y-5 px-6 py-5">
+          {/* Anthropic */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Anthropic API Key
+              <span className="ml-2 text-xs font-normal text-gray-400">(Claude)</span>
+            </label>
+            <PasswordInput
+              value={anthropicKey}
+              onChange={setAnthropicKey}
+              placeholder="sk-ant-..."
+            />
+          </div>
+
+          {/* OpenAI */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              OpenAI API Key
+            </label>
+            <PasswordInput
+              value={openaiKey}
+              onChange={setOpenaiKey}
+              placeholder="sk-..."
+            />
+          </div>
+
+          {/* Brave */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Brave Search API Key
+              <span className="ml-2 text-xs font-normal text-gray-400">(búsqueda web)</span>
+            </label>
+            <PasswordInput
+              value={braveKey}
+              onChange={setBraveKey}
+              placeholder="BSA..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Batch config card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Configuracion del batch</h2>
+        </div>
+        <div className="px-6 py-5">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Concurrencia del batch
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                (cuantos productos procesar en paralelo)
+              </span>
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={batchConcurrency}
+              onChange={(e) => setBatchConcurrency(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Save button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? 'Guardando...' : 'Guardar configuracion'}
+        </Button>
+      </div>
+    </div>
+  );
+}

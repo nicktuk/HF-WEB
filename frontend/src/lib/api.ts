@@ -1103,3 +1103,36 @@ export const aiApi = {
     return fetchAPI(`/admin/ai/generate/${productId}${qs}`, { method: 'POST' }, apiKey);
   },
 };
+
+// ============================================
+// App Settings API
+// ============================================
+
+export interface AISettingsResponse {
+  provider: string;
+  anthropic_key: string;
+  openai_key: string;
+  brave_key: string;
+  batch_concurrency: number;
+}
+
+export interface AISettingsUpdate {
+  provider?: string;
+  anthropic_key?: string;
+  openai_key?: string;
+  brave_key?: string;
+  batch_concurrency?: number;
+}
+
+export const settingsApi = {
+  async getAI(apiKey: string): Promise<AISettingsResponse> {
+    return fetchAPI<AISettingsResponse>('/admin/settings/ai', {}, apiKey);
+  },
+
+  async updateAI(apiKey: string, data: AISettingsUpdate): Promise<AISettingsResponse> {
+    return fetchAPI<AISettingsResponse>('/admin/settings/ai', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+};

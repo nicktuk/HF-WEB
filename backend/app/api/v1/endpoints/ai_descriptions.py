@@ -21,6 +21,7 @@ from app.db.session import get_db
 from app.models.category import Category
 from app.models.product import Product
 from app.services.ai_description import JobState, _jobs, get_ai_service
+from app.services.app_settings import get_ai_config
 from app.config import settings
 
 router = APIRouter()
@@ -106,6 +107,7 @@ async def generate_descriptions(
     job_id = uuid.uuid4().hex[:10]
     _jobs[job_id] = JobState(job_id=job_id, total=len(product_ids))
 
+    ai_config = get_ai_config(db)
     ai = get_ai_service()
     background_tasks.add_task(
         ai.run_batch_job,
@@ -114,6 +116,7 @@ async def generate_descriptions(
         use_search=req.use_search,
         use_vision=req.use_vision,
         use_source_refetch=req.use_source_refetch,
+        config=ai_config,
     )
 
     return JobResponse(job_id=job_id, total=len(product_ids))
@@ -176,9 +179,10 @@ async def generate_single(
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
+    ai_config = get_ai_config(db)
     ai = get_ai_service()
     try:
-        desc = await ai.generate_for_product(product, use_search, use_vision, use_source_refetch)
+        desc = await ai.generate_for_product(product, use_search, use_vision, use_source_refetch, config=ai_config)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

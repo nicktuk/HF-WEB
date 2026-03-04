@@ -1,5 +1,6 @@
 """SQLAlchemy models."""
 from app.models.base import Base
+from app.models.app_setting import AppSetting
 from app.models.source_website import SourceWebsite
 from app.models.product import Product, ProductImage
 from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
@@ -13,6 +14,7 @@ from app.models.order import Order, OrderItem, OrderAttachment
 
 __all__ = [
     "Base",
+    "AppSetting",
     "SourceWebsite",
     "Product",
     "ProductImage",

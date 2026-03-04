@@ -86,7 +86,9 @@ class AIDescriptionService:
         use_search: bool = True,
         use_vision: bool = True,
         use_source_refetch: bool = True,
+        config: Optional[Dict] = None,
     ) -> str:
+        cfg = config or {}
         context_parts: List[str] = []
 
         name = product.custom_name or product.original_name
@@ -119,18 +121,20 @@ class AIDescriptionService:
                 context_parts.append(f"Info del proveedor: {source_text}")
 
         # Búsqueda web
-        if use_search and settings.BRAVE_SEARCH_API_KEY:
+        brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
+        if use_search and brave_key:
             query = f"{name} {product.brand or ''}".strip()
-            web_text = await self._search_web(query)
+            web_text = await self._search_web(query, brave_key)
             if web_text:
                 context_parts.append(f"Info web: {web_text}")
 
         context = "\n".join(context_parts)
         vision_url = image_url if (use_vision and settings.AI_VISION_ENABLED) else None
 
-        if settings.AI_PROVIDER == "openai":
-            return await self._call_openai(context, vision_url)
-        return await self._call_claude(context, vision_url)
+        provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
+        if provider == "openai":
+            return await self._call_openai(context, vision_url, cfg)
+        return await self._call_claude(context, vision_url, cfg)
 
     # ------------------------------------------------------------------
     # Fetch URL origen
@@ -167,14 +171,15 @@ class AIDescriptionService:
     # Brave Search
     # ------------------------------------------------------------------
 
-    async def _search_web(self, query: str) -> Optional[str]:
+    async def _search_web(self, query: str, brave_key: Optional[str] = None) -> Optional[str]:
+        api_key = brave_key or settings.BRAVE_SEARCH_API_KEY
         try:
             resp = await self._http.get(
                 "https://api.search.brave.com/res/v1/web/search",
                 params={"q": query, "count": 3, "country": "ar", "search_lang": "es"},
                 headers={
                     "Accept": "application/json",
-                    "X-Subscription-Token": settings.BRAVE_SEARCH_API_KEY,
+                    "X-Subscription-Token": api_key,
                 },
             )
             if resp.status_code != 200:
@@ -193,13 +198,15 @@ class AIDescriptionService:
     # Claude
     # ------------------------------------------------------------------
 
-    async def _call_claude(self, context: str, image_url: Optional[str]) -> str:
+    async def _call_claude(self, context: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
         try:
             import anthropic
         except ImportError:
             raise RuntimeError("Paquete 'anthropic' no instalado. Ejecutá: pip install anthropic")
 
-        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        cfg = config or {}
+        api_key = cfg.get("ANTHROPIC_API_KEY") or settings.ANTHROPIC_API_KEY
+        client = anthropic.AsyncAnthropic(api_key=api_key)
         content: List[Dict] = []
 
         if image_url:
@@ -227,13 +234,15 @@ class AIDescriptionService:
     # OpenAI
     # ------------------------------------------------------------------
 
-    async def _call_openai(self, context: str, image_url: Optional[str]) -> str:
+    async def _call_openai(self, context: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
         try:
             from openai import AsyncOpenAI
         except ImportError:
             raise RuntimeError("Paquete 'openai' no instalado. Ejecutá: pip install openai")
 
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        cfg = config or {}
+        api_key = cfg.get("OPENAI_API_KEY") or settings.OPENAI_API_KEY
+        client = AsyncOpenAI(api_key=api_key)
         content: List[Dict] = []
 
         if image_url:
@@ -281,10 +290,12 @@ class AIDescriptionService:
         use_search: bool,
         use_vision: bool,
         use_source_refetch: bool,
+        config: Optional[Dict] = None,
     ) -> None:
         job = _jobs[job_id]
         job.total = len(product_ids)
-        concurrency = settings.AI_BATCH_CONCURRENCY
+        cfg = config or {}
+        concurrency = cfg.get("AI_BATCH_CONCURRENCY") or settings.AI_BATCH_CONCURRENCY
         semaphore = asyncio.Semaphore(concurrency)
 
         async def process_one(product_id: int) -> None:
@@ -305,7 +316,7 @@ class AIDescriptionService:
                     name = product.custom_name or product.original_name
 
                     desc = await self.generate_for_product(
-                        product, use_search, use_vision, use_source_refetch
+                        product, use_search, use_vision, use_source_refetch, config=cfg
                     )
                     product.short_description = desc[:1000]
                     db.commit()
