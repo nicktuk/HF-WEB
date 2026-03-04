@@ -57,18 +57,24 @@ Sos un experto en marketing y redacción de fichas de producto para una tienda \
 de electrónica y tecnología en Argentina.
 
 Basándote en la siguiente información del producto, escribí una descripción \
-corta de venta de 2 a 3 oraciones (máximo 160 palabras).
+de venta FORMATEADA con esta estructura exacta:
 
-La descripción debe:
-- Destacar las características más importantes y el beneficio principal
-- Estar en español argentino, tono directo y comercial
-- NO inventar especificaciones que no aparezcan en la info provista
-- NO incluir precio ni referencias a stock
-- Ser concisa y atractiva para un comprador online
+1. Una oración de apertura atractiva, comenzando con un emoji relevante al producto.
+2. Lista de 3 a 5 características clave, cada una en su propia línea con un emoji \
+apropiado al inicio (ej: 🔋 para batería, 📡 para conectividad, 💾 para almacenamiento, \
+🖥️ para pantalla, ⚡ para velocidad/rendimiento, 🔊 para audio, 📷 para cámara, etc.).
+3. Una oración de cierre destacando el caso de uso ideal o beneficio principal.
+
+Reglas:
+• Español argentino, tono directo y comercial
+• NO inventar especificaciones que no aparezcan en la info provista
+• NO incluir precio ni referencias a stock
+• Máximo 300 palabras en total
+• Usá saltos de línea entre la apertura, la lista y el cierre
 
 {context}
 
-Respondé SOLO con la descripción, sin título, sin viñetas, sin formato extra."""
+Respondé SOLO con la descripción formateada. Sin título, sin explicaciones extra."""
 
 
 class AIDescriptionService:
@@ -225,7 +231,7 @@ class AIDescriptionService:
 
         response = await client.messages.create(
             model=settings.AI_MODEL_CLAUDE,
-            max_tokens=300,
+            max_tokens=600,
             messages=[{"role": "user", "content": content}],
         )
         return response.content[0].text.strip()
@@ -255,7 +261,7 @@ class AIDescriptionService:
 
         response = await client.chat.completions.create(
             model=settings.AI_MODEL_OPENAI,
-            max_tokens=300,
+            max_tokens=600,
             messages=[{"role": "user", "content": content}],
         )
         return (response.choices[0].message.content or "").strip()
@@ -318,7 +324,7 @@ class AIDescriptionService:
                     desc = await self.generate_for_product(
                         product, use_search, use_vision, use_source_refetch, config=cfg
                     )
-                    product.short_description = desc[:1000]
+                    product.short_description = desc[:2000]
                     db.commit()
 
                     job.success += 1

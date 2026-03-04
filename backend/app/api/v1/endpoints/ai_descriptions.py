@@ -186,7 +186,7 @@ async def generate_single(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 
-    product.short_description = desc[:1000]
+    product.short_description = desc[:2000]
     db.commit()
 
     return SingleResponse(product_id=product_id, short_description=desc)
