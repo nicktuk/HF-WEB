@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
-import { uploadImages } from '@/lib/api';
+import { uploadImages, aiApi } from '@/lib/api';
 import {
   useAdminProduct,
   useUpdateProduct,
@@ -52,6 +52,10 @@ export default function ProductEditPage() {
   const [shortDescription, setShortDescription] = useState('');
   const [brand, setBrand] = useState('');
   const [sku, setSku] = useState('');
+
+  // AI generation state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Image state
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -132,6 +136,21 @@ export default function ProductEditPage() {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       setImageUrls(prev => [...prev, url]);
       setNewImageUrl('');
+    }
+  };
+
+  const handleGenerateAI = async () => {
+    setIsGeneratingAI(true);
+    setAiStatus(null);
+    try {
+      const res = await aiApi.generateSingle(apiKey, productId);
+      setShortDescription(res.short_description);
+      setAiStatus({ ok: true, msg: 'Descripcion generada. Guarda los cambios para aplicarla.' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al generar descripcion';
+      setAiStatus({ ok: false, msg });
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -428,9 +447,21 @@ export default function ProductEditPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripcion corta
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Descripcion corta
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateAI}
+                    disabled={isGeneratingAI}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Generar descripcion con IA"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isGeneratingAI ? 'animate-pulse' : ''}`} />
+                    {isGeneratingAI ? 'Generando...' : 'Generar con IA'}
+                  </button>
+                </div>
                 <textarea
                   value={shortDescription}
                   onChange={(e) => setShortDescription(e.target.value)}
@@ -438,6 +469,11 @@ export default function ProductEditPage() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   rows={2}
                 />
+                {aiStatus && (
+                  <p className={`mt-1 text-xs ${aiStatus.ok ? 'text-purple-600' : 'text-red-600'}`}>
+                    {aiStatus.msg}
+                  </p>
+                )}
               </div>
 
               <div>
