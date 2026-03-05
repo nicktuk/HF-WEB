@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Trophy, RefreshCw, TrendingUp, ShoppingBag, Package } from 'lucide-react';
-import { adminAPI } from '@/lib/api';
+import { adminApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import type { CustomerRankingItem } from '@/types';
 
@@ -20,7 +20,7 @@ export default function ClientesRankingPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const result = await adminAPI.getCustomerRanking(apiKey);
+      const result = await adminApi.getCustomerRanking(apiKey);
       setData(result);
     } finally {
       setLoading(false);
