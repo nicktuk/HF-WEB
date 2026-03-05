@@ -28,7 +28,7 @@ export function ContactButton({
   className,
 }: ContactButtonProps) {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.hefaproductos.com.ar';
   const productUrl = productSlug ? `${siteUrl}/producto/${productSlug}` : undefined;
 
   const formatPrice = (price: number) => {
