@@ -715,7 +715,7 @@ export const adminApi = {
   /**
    * Customer ranking
    */
-  async getCustomerRanking(apiKey: string): Promise<CustomerRankingItem[]> {
+  async getCustomerRanking(apiKey: string): Promise<import('@/types').CustomerRankingItem[]> {
     return fetchAPI('/admin/stats/customer-ranking', {}, apiKey);
   },
 
