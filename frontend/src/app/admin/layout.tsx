@@ -29,22 +29,29 @@ import {
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
+// Top-level items
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+];
+
+const productosSubmenu = [
   { name: 'Productos', href: '/admin/productos', icon: Package },
-  { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
-  { name: 'Ranking Clientes', href: '/admin/clientes-ranking', icon: Trophy },
-  { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
-  { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
-  { name: 'Analitica', href: '/admin/analytics', icon: LineChart },
+  { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
+  { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
+  { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
   { name: 'Comparador', href: '/admin/comparador', icon: Scale },
   { name: 'Descripciones IA', href: '/admin/ai-descripciones', icon: Sparkles },
 ];
 
-const stockSubmenu = [
-  { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
-  { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
-  { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
+const ventasSubmenu = [
+  { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
+  { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
+  { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
+];
+
+const analiticaSubmenu = [
+  { name: 'Movimientos', href: '/admin/analytics', icon: LineChart },
+  { name: 'Ranking Clientes', href: '/admin/clientes-ranking', icon: Trophy },
 ];
 
 const configSubmenu = [
@@ -54,6 +61,143 @@ const configSubmenu = [
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
+type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config';
+
+function useSubmenuState(pathname: string) {
+  const [open, setOpen] = useState<Record<SubmenuKey, boolean>>({
+    productos: false,
+    ventas: false,
+    analitica: false,
+    config: false,
+  });
+
+  useEffect(() => {
+    setOpen((prev) => ({
+      ...prev,
+      productos: productosSubmenu.some((i) => pathname.startsWith(i.href)),
+      ventas: ventasSubmenu.some((i) => pathname.startsWith(i.href)),
+      analitica: analiticaSubmenu.some((i) => pathname.startsWith(i.href)),
+      config: configSubmenu.some((i) => pathname.startsWith(i.href)),
+    }));
+  }, [pathname]);
+
+  const toggle = (key: SubmenuKey) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  return { open, toggle };
+}
+
+// Reusable submenu components for sidebar
+function SidebarSubmenu({
+  label,
+  icon: Icon,
+  items,
+  isOpen,
+  onToggle,
+  pathname,
+}: {
+  label: string;
+  icon: React.ElementType;
+  items: { name: string; href: string; icon: React.ElementType }[];
+  isOpen: boolean;
+  onToggle: () => void;
+  pathname: string;
+}) {
+  const anyActive = items.some((i) => pathname.startsWith(i.href));
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className={cn(
+          'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          anyActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+        )}
+      >
+        <span className="flex items-center gap-3">
+          <Icon className="h-5 w-5" />
+          {label}
+        </span>
+        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {isOpen && (
+        <div className="ml-4 mt-1 space-y-1">
+          {items.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Reusable submenu for mobile (horizontal chips)
+function MobileSubmenu({
+  label,
+  icon: Icon,
+  items,
+  isOpen,
+  onToggle,
+  pathname,
+}: {
+  label: string;
+  icon: React.ElementType;
+  items: { name: string; href: string; icon: React.ElementType }[];
+  isOpen: boolean;
+  onToggle: () => void;
+  pathname: string;
+}) {
+  const anyActive = items.some((i) => pathname.startsWith(i.href));
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={onToggle}
+        className={cn(
+          'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          anyActive ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <Icon className="h-4 w-4" />
+          {label}
+        </span>
+        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {isOpen && (
+        <div className="flex gap-1 overflow-x-auto pl-2">
+          {items.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
+                  isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,20 +205,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const logout = useAuth((state) => state.logout);
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [stockOpen, setStockOpen] = useState(false);
-  const [configOpen, setConfigOpen] = useState(false);
-
-  // Auto-expand submenu if on one of its pages.
-  useEffect(() => {
-    const isStockPage = stockSubmenu.some((item) => pathname.startsWith(item.href));
-    const isConfigPage = configSubmenu.some((item) => pathname.startsWith(item.href));
-    if (isStockPage) {
-      setStockOpen(true);
-    }
-    if (isConfigPage) {
-      setConfigOpen(true);
-    }
-  }, [pathname]);
+  const { open, toggle } = useSubmenuState(pathname);
 
   // Close mobile menu on route change.
   useEffect(() => {
@@ -88,15 +219,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, pathname, router]);
 
-  // Show nothing while checking auth.
-  if (!isAuthenticated && pathname !== '/admin/login') {
-    return null;
-  }
-
-  // Login page doesn't need the admin layout.
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
+  if (!isAuthenticated && pathname !== '/admin/login') return null;
+  if (pathname === '/admin/login') return <>{children}</>;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -116,17 +240,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex h-full flex-col">
-          {/* Logo */}
           <div className="border-b border-gray-800 px-6 py-4">
             <h1 className="text-xl font-bold text-white">Admin Panel</h1>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-4 py-4">
+          <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-4">
+            {/* Dashboard */}
             {navigation.map((item) => {
-              const isActive =
-                pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-
+              const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
@@ -142,86 +263,40 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               );
             })}
 
-            {/* Stock submenu */}
-            <div>
-              <button
-                onClick={() => setStockOpen(!stockOpen)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  stockSubmenu.some((item) => pathname.startsWith(item.href))
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                )}
-              >
-                <span className="flex items-center gap-3">
-                  <ShoppingCart className="h-5 w-5" />
-                  Stock
-                </span>
-                {stockOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </button>
-              {stockOpen && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {stockSubmenu.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={cn(
-                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                          isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Configuracion submenu */}
-            <div>
-              <button
-                onClick={() => setConfigOpen(!configOpen)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  configSubmenu.some((item) => pathname.startsWith(item.href))
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                )}
-              >
-                <span className="flex items-center gap-3">
-                  <Settings className="h-5 w-5" />
-                  Configuracion
-                </span>
-                {configOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </button>
-              {configOpen && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {configSubmenu.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={cn(
-                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                          isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <SidebarSubmenu
+              label="Productos"
+              icon={Package}
+              items={productosSubmenu}
+              isOpen={open.productos}
+              onToggle={() => toggle('productos')}
+              pathname={pathname}
+            />
+            <SidebarSubmenu
+              label="Ventas"
+              icon={DollarSign}
+              items={ventasSubmenu}
+              isOpen={open.ventas}
+              onToggle={() => toggle('ventas')}
+              pathname={pathname}
+            />
+            <SidebarSubmenu
+              label="Analítica"
+              icon={LineChart}
+              items={analiticaSubmenu}
+              isOpen={open.analitica}
+              onToggle={() => toggle('analitica')}
+              pathname={pathname}
+            />
+            <SidebarSubmenu
+              label="Configuracion"
+              icon={Settings}
+              items={configSubmenu}
+              isOpen={open.config}
+              onToggle={() => toggle('config')}
+              pathname={pathname}
+            />
           </nav>
 
-          {/* Logout */}
           <div className="border-t border-gray-800 px-4 py-4">
             <button
               onClick={logout}
@@ -253,102 +328,58 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
         {mobileMenuOpen && (
           <nav className="space-y-2 px-2 pb-2">
-          <div className="flex gap-1 overflow-x-auto">
-            {navigation.map((item) => {
-              const isActive =
-                pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+            {/* Dashboard chip */}
+            <div className="flex gap-1 overflow-x-auto">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
+                      isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
 
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
-                    isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="space-y-1">
-            <button
-              onClick={() => setStockOpen(!stockOpen)}
-              className={cn(
-                'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                stockSubmenu.some((item) => pathname.startsWith(item.href))
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                Stock
-              </span>
-              {stockOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-            {stockOpen && (
-              <div className="flex gap-1 overflow-x-auto pl-2">
-                {stockSubmenu.map((item) => {
-                  const isActive = pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={cn(
-                        'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
-                        isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <button
-              onClick={() => setConfigOpen(!configOpen)}
-              className={cn(
-                'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                configSubmenu.some((item) => pathname.startsWith(item.href))
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configuracion
-              </span>
-              {configOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-            {configOpen && (
-              <div className="flex gap-1 overflow-x-auto pl-2">
-                {configSubmenu.map((item) => {
-                  const isActive = pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={cn(
-                        'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
-                        isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+            <MobileSubmenu
+              label="Productos"
+              icon={Package}
+              items={productosSubmenu}
+              isOpen={open.productos}
+              onToggle={() => toggle('productos')}
+              pathname={pathname}
+            />
+            <MobileSubmenu
+              label="Ventas"
+              icon={DollarSign}
+              items={ventasSubmenu}
+              isOpen={open.ventas}
+              onToggle={() => toggle('ventas')}
+              pathname={pathname}
+            />
+            <MobileSubmenu
+              label="Analítica"
+              icon={LineChart}
+              items={analiticaSubmenu}
+              isOpen={open.analitica}
+              onToggle={() => toggle('analitica')}
+              pathname={pathname}
+            />
+            <MobileSubmenu
+              label="Configuracion"
+              icon={Settings}
+              items={configSubmenu}
+              isOpen={open.config}
+              onToggle={() => toggle('config')}
+              pathname={pathname}
+            />
           </nav>
         )}
       </header>

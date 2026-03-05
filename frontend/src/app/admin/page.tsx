@@ -218,6 +218,228 @@ export default function AdminDashboard() {
         <p className="text-gray-600">Resumen de tu catalogo</p>
       </div>
 
+      {/* Financial Stats - top */}
+      {financialStats && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Resumen financiero
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              Valores de ventas y stock a costo origen. Click en los KPIs de ventas para ver detalle por vendedor.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm space-y-4">
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Inversion + Stock</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowPayerStats(!showPayerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-slate-500 uppercase">Total comprado</p>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xl font-bold text-slate-900 mt-1">{formatPrice(financialStats.total_purchased)}</p>
+                  </button>
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-blue-600 uppercase">Stock a costo</p>
+                    <p className="text-xl font-bold text-blue-700 mt-1">{formatPrice(financialStats.stock_value_cost)}</p>
+                  </div>
+                </div>
+
+                {projections && (
+                  <>
+                    <div className="rounded-lg border bg-white p-3">
+                      <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
+                      <div className="mt-2 space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A costo</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A +50%</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">A +70%</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm space-y-4">
+                <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Ventas y Estadios</h3>
+                {projections && (
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatPrice(projections.totalSales)}</p>
+                    <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setShowSellerStats(!showSellerStats)}
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-emerald-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-emerald-600 uppercase">Total cobrado</p>
+                      <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
+                    </div>
+                    <p className="text-xl font-bold text-emerald-700 mt-1">{formatPrice(financialStats.total_collected)}</p>
+                  </button>
+                  <Link
+                    href="/admin/ventas?pendiente=entrega"
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-amber-50 transition-colors block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-amber-600 uppercase">Pend. entrega</p>
+                      <ExternalLink className="h-4 w-4 text-amber-400" />
+                    </div>
+                    <p className="text-xl font-bold text-amber-700 mt-1">{formatPrice(financialStats.total_pending_delivery)}</p>
+                  </Link>
+                  <Link
+                    href="/admin/ventas?pendiente=cobro"
+                    className="rounded-lg border bg-white p-3 text-left hover:bg-rose-50 transition-colors block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-rose-600 uppercase">Pend. cobro</p>
+                      <ExternalLink className="h-4 w-4 text-rose-400" />
+                    </div>
+                    <p className="text-xl font-bold text-rose-700 mt-1">{formatPrice(financialStats.total_pending_payment)}</p>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {projections && (
+              <div className="rounded-xl border bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Proyecciones Ventas + Stock</h3>
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {projections.scenarios.map((scenario) => (
+                    <div key={scenario.key} className="rounded-lg border bg-white p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700">{scenario.label}</span>
+                        <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                      </div>
+                      <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        Diferencia vs inversion: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stats by Seller - Collapsible */}
+            {financialStats.by_seller && showSellerStats && (
+              <div className="rounded-xl border bg-gradient-to-br from-gray-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Detalle por vendedor
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(financialStats.by_seller).map(([seller, stats]) => (
+                    <div key={seller} className="rounded-lg border bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                          {seller[0]}
+                        </div>
+                        <span className="font-semibold text-gray-900">{seller}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-emerald-600 flex items-center gap-1.5">
+                            <CreditCard className="h-3.5 w-3.5" />
+                            Cobrado
+                          </span>
+                          <span className="font-semibold text-emerald-700">{formatPrice(stats.collected)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-amber-600 flex items-center gap-1.5">
+                            <Truck className="h-3.5 w-3.5" />
+                            Pend. Entrega
+                          </span>
+                          <span className="font-semibold text-amber-700">{formatPrice(stats.pending_delivery)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-rose-600 flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5" />
+                            Pend. Cobro
+                          </span>
+                          <span className="font-semibold text-rose-700">{formatPrice(stats.pending_payment)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stats by Payer - Collapsible */}
+            {purchasesByPayer && showPayerStats && (
+              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Detalle por pagador (compras)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {purchasesByPayer.by_payer.map((item) => (
+                    <div key={item.payer} className="rounded-lg border bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          item.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                        }`}>
+                          {item.payer[0]}
+                        </div>
+                        <span className="font-semibold text-gray-900">{item.payer}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Total pagado</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(item.total_amount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500 text-xs">Pagos registrados</span>
+                          <span className="text-gray-700">{item.payment_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {purchasesByPayer.without_payment > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
+                          ?
+                        </div>
+                        <span className="font-semibold text-amber-900">Sin asignar</span>
+                      </div>
+                      <div className="text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-amber-700">Compras pendientes de pago</span>
+                          <span className="font-semibold text-amber-900">{formatPrice(purchasesByPayer.without_payment)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -440,228 +662,6 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Financial Stats */}
-      {financialStats && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Resumen financiero
-              </h2>
-            </div>
-            <p className="text-sm text-gray-500">
-              Valores de ventas y stock a costo origen. Click en los KPIs de ventas para ver detalle por vendedor.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm space-y-4">
-                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Inversion + Stock</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setShowPayerStats(!showPayerStats)}
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-slate-500 uppercase">Total comprado</p>
-                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
-                    </div>
-                    <p className="text-xl font-bold text-slate-900 mt-1">{formatPrice(financialStats.total_purchased)}</p>
-                  </button>
-                  <div className="rounded-lg border bg-white p-3">
-                    <p className="text-xs text-blue-600 uppercase">Stock a costo</p>
-                    <p className="text-xl font-bold text-blue-700 mt-1">{formatPrice(financialStats.stock_value_cost)}</p>
-                  </div>
-                </div>
-
-                {projections && (
-                  <>
-                    <div className="rounded-lg border bg-white p-3">
-                      <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
-                      <div className="mt-2 space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">A costo</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">A +50%</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">A +70%</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm space-y-4">
-                <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Ventas y Estadios</h3>
-                {projections && (
-                  <div className="rounded-lg border bg-white p-3">
-                    <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatPrice(projections.totalSales)}</p>
-                    <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    onClick={() => setShowSellerStats(!showSellerStats)}
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-emerald-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-emerald-600 uppercase">Total cobrado</p>
-                      <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
-                    </div>
-                    <p className="text-xl font-bold text-emerald-700 mt-1">{formatPrice(financialStats.total_collected)}</p>
-                  </button>
-                  <Link
-                    href="/admin/ventas?pendiente=entrega"
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-amber-50 transition-colors block"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-amber-600 uppercase">Pend. entrega</p>
-                      <ExternalLink className="h-4 w-4 text-amber-400" />
-                    </div>
-                    <p className="text-xl font-bold text-amber-700 mt-1">{formatPrice(financialStats.total_pending_delivery)}</p>
-                  </Link>
-                  <Link
-                    href="/admin/ventas?pendiente=cobro"
-                    className="rounded-lg border bg-white p-3 text-left hover:bg-rose-50 transition-colors block"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-rose-600 uppercase">Pend. cobro</p>
-                      <ExternalLink className="h-4 w-4 text-rose-400" />
-                    </div>
-                    <p className="text-xl font-bold text-rose-700 mt-1">{formatPrice(financialStats.total_pending_payment)}</p>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {projections && (
-              <div className="rounded-xl border bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Proyecciones Ventas + Stock</h3>
-                <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
-                  {projections.scenarios.map((scenario) => (
-                    <div key={scenario.key} className="rounded-lg border bg-white p-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700">{scenario.label}</span>
-                        <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
-                      </div>
-                      <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        Diferencia vs inversion: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Stats by Seller - Collapsible */}
-            {financialStats.by_seller && showSellerStats && (
-              <div className="rounded-xl border bg-gradient-to-br from-gray-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Detalle por vendedor
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(financialStats.by_seller).map(([seller, stats]) => (
-                    <div key={seller} className="rounded-lg border bg-white p-4 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
-                          {seller[0]}
-                        </div>
-                        <span className="font-semibold text-gray-900">{seller}</span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-emerald-600 flex items-center gap-1.5">
-                            <CreditCard className="h-3.5 w-3.5" />
-                            Cobrado
-                          </span>
-                          <span className="font-semibold text-emerald-700">{formatPrice(stats.collected)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-amber-600 flex items-center gap-1.5">
-                            <Truck className="h-3.5 w-3.5" />
-                            Pend. Entrega
-                          </span>
-                          <span className="font-semibold text-amber-700">{formatPrice(stats.pending_delivery)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-rose-600 flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5" />
-                            Pend. Cobro
-                          </span>
-                          <span className="font-semibold text-rose-700">{formatPrice(stats.pending_payment)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Stats by Payer - Collapsible */}
-            {purchasesByPayer && showPayerStats && (
-              <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Detalle por pagador (compras)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {purchasesByPayer.by_payer.map((item) => (
-                    <div key={item.payer} className="rounded-lg border bg-white p-4 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                          item.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
-                        }`}>
-                          {item.payer[0]}
-                        </div>
-                        <span className="font-semibold text-gray-900">{item.payer}</span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Total pagado</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(item.total_amount)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500 text-xs">Pagos registrados</span>
-                          <span className="text-gray-700">{item.payment_count}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {purchasesByPayer.without_payment > 0 && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
-                          ?
-                        </div>
-                        <span className="font-semibold text-amber-900">Sin asignar</span>
-                      </div>
-                      <div className="text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-amber-700">Compras pendientes de pago</span>
-                          <span className="font-semibold text-amber-900">{formatPrice(purchasesByPayer.without_payment)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
