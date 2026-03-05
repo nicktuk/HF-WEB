@@ -1535,6 +1535,18 @@ async def compare_prices(
 # ============================================
 
 @router.get(
+    "/stats/customer-ranking",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_customer_ranking(
+    request: Request,
+    service=Depends(get_sales_service),
+):
+    """Get sales grouped by customer: purchase count, product count, total amount."""
+    return service.customer_ranking()
+
+
+@router.get(
     "/stats/by-source-category",
     dependencies=[Depends(verify_admin)]
 )

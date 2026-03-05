@@ -72,7 +72,8 @@
       "Bash(node:*)",
       "Bash(find D:\\\\Desarrollo\\\\HF WEB\\\\backend:*)",
       "Bash(pip install:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(\"D:/Desarrollo/HF WEB/backend/app/services/sales.py\":*)"
     ]
   }
 }

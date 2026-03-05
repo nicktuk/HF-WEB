@@ -375,6 +375,13 @@ export interface Sale {
   items: SaleItem[];
 }
 
+export interface CustomerRankingItem {
+  customer_name: string;
+  purchase_count: number;
+  product_count: number;
+  total_amount: number;
+}
+
 // Order Types
 
 export interface OrderItem {

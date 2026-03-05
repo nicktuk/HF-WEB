@@ -712,6 +712,13 @@ export const adminApi = {
     }, apiKey);
   },
 
+  /**
+   * Customer ranking
+   */
+  async getCustomerRanking(apiKey: string): Promise<CustomerRankingItem[]> {
+    return fetchAPI('/admin/stats/customer-ranking', {}, apiKey);
+  },
+
   // Badge Management
 
   /**

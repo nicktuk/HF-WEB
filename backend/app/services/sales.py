@@ -1,5 +1,6 @@
 """Service for Sales operations."""
 from decimal import Decimal
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -466,3 +467,27 @@ class SalesService:
             "units_deducted": total_units_deducted,
             "shortages": shortages,
         }
+
+    def customer_ranking(self) -> List[Dict[str, Any]]:
+        """Return aggregated sales data grouped by customer name."""
+        rows = (
+            self.db.query(
+                Sale.customer_name,
+                func.count(Sale.id).label("purchase_count"),
+                func.coalesce(func.sum(SaleItem.quantity), 0).label("product_count"),
+                func.coalesce(func.sum(Sale.total_amount), 0).label("total_amount"),
+            )
+            .outerjoin(SaleItem, SaleItem.sale_id == Sale.id)
+            .group_by(Sale.customer_name)
+            .order_by(func.sum(Sale.total_amount).desc().nullslast())
+            .all()
+        )
+        return [
+            {
+                "customer_name": row.customer_name or "Sin nombre",
+                "purchase_count": row.purchase_count,
+                "product_count": int(row.product_count),
+                "total_amount": float(row.total_amount),
+            }
+            for row in rows
+        ]

@@ -24,6 +24,7 @@ import {
   X,
   ClipboardList,
   Sparkles,
+  Trophy,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos', href: '/admin/productos', icon: Package },
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
+  { name: 'Ranking Clientes', href: '/admin/clientes-ranking', icon: Trophy },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
   { name: 'Analitica', href: '/admin/analytics', icon: LineChart },
