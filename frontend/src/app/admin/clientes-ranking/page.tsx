@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Trophy, RefreshCw, TrendingUp, ShoppingBag, Package } from 'lucide-react';
+import { Trophy, RefreshCw, TrendingUp, ShoppingBag, Package, Search, X } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import type { CustomerRankingItem } from '@/types';
@@ -16,6 +16,7 @@ export default function ClientesRankingPage() {
   const [data, setData] = useState<CustomerRankingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('total_amount');
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -29,10 +30,12 @@ export default function ClientesRankingPage() {
 
   useEffect(() => { load(); }, []);
 
-  const sorted = useMemo(() =>
-    [...data].sort((a, b) => b[sortBy] - a[sortBy]),
-    [data, sortBy]
-  );
+  const sorted = useMemo(() => {
+    const filtered = search.trim()
+      ? data.filter((r) => r.customer_name.toLowerCase().includes(search.trim().toLowerCase()))
+      : data;
+    return [...filtered].sort((a, b) => b[sortBy] - a[sortBy]);
+  }, [data, sortBy, search]);
 
   const totals = useMemo(() => ({
     customers: data.length,
@@ -75,12 +78,34 @@ export default function ClientesRankingPage() {
         <SummaryCard icon={<TrendingUp className="h-5 w-5 text-green-500" />} label="Total facturado" value={formatCurrency(totals.amount)} />
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar cliente..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm shadow-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Table */}
       <div className="overflow-hidden rounded-xl bg-white shadow ring-1 ring-gray-200">
         {loading && data.length === 0 ? (
           <div className="flex items-center justify-center py-20 text-gray-400">Cargando...</div>
         ) : sorted.length === 0 ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">Sin datos de ventas</div>
+          <div className="flex items-center justify-center py-20 text-gray-400">
+            {search ? `Sin resultados para "${search}"` : 'Sin datos de ventas'}
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="border-b bg-gray-50">
