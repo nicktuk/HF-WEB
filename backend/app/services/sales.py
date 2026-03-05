@@ -469,19 +469,46 @@ class SalesService:
         }
 
     def customer_ranking(self) -> List[Dict[str, Any]]:
-        """Return aggregated sales data grouped by customer name."""
-        rows = (
+        """Return aggregated sales data grouped by customer name.
+
+        Two separate subqueries avoid double-counting: joining Sale with SaleItem
+        (1-to-many) would multiply total_amount and purchase_count by the number
+        of items per sale.
+        """
+        # Subquery 1: per-customer sale count and total amount (no item join)
+        sale_agg = (
             self.db.query(
-                Sale.customer_name,
+                Sale.customer_name.label("customer_name"),
                 func.count(Sale.id).label("purchase_count"),
-                func.coalesce(func.sum(SaleItem.quantity), 0).label("product_count"),
                 func.coalesce(func.sum(Sale.total_amount), 0).label("total_amount"),
             )
-            .outerjoin(SaleItem, SaleItem.sale_id == Sale.id)
             .group_by(Sale.customer_name)
-            .order_by(func.sum(Sale.total_amount).desc().nullslast())
+            .subquery()
+        )
+
+        # Subquery 2: per-customer sum of item quantities
+        item_agg = (
+            self.db.query(
+                Sale.customer_name.label("customer_name"),
+                func.coalesce(func.sum(SaleItem.quantity), 0).label("product_count"),
+            )
+            .join(SaleItem, SaleItem.sale_id == Sale.id)
+            .group_by(Sale.customer_name)
+            .subquery()
+        )
+
+        rows = (
+            self.db.query(
+                sale_agg.c.customer_name,
+                sale_agg.c.purchase_count,
+                func.coalesce(item_agg.c.product_count, 0).label("product_count"),
+                sale_agg.c.total_amount,
+            )
+            .outerjoin(item_agg, sale_agg.c.customer_name == item_agg.c.customer_name)
+            .order_by(sale_agg.c.total_amount.desc())
             .all()
         )
+
         return [
             {
                 "customer_name": row.customer_name or "Sin nombre",
