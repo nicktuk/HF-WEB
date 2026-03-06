@@ -793,6 +793,30 @@ export const adminApi = {
   },
 
   /**
+   * Create a manual purchase with items
+   */
+  async createManualPurchase(
+    apiKey: string,
+    data: {
+      supplier: string;
+      purchase_date: string;
+      notes?: string;
+      items: Array<{
+        product_id?: number;
+        description?: string;
+        code?: string;
+        quantity: number;
+        unit_price: number;
+      }>;
+    }
+  ): Promise<any> {
+    return fetchAPI('/admin/purchases', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  /**
    * Get unique list of suppliers
    */
   async getSuppliers(apiKey: string): Promise<{ suppliers: string[] }> {

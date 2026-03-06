@@ -2199,6 +2199,46 @@ class ProductService:
             raise NotFoundError("Purchase", str(purchase_id))
         return purchase
 
+    def create_manual_purchase(self, supplier: str, purchase_date, notes, items: list):
+        """Create a purchase manually with its items."""
+        from app.models.stock import Purchase, StockPurchase
+
+        purchase = Purchase(
+            supplier=supplier,
+            purchase_date=purchase_date,
+            notes=notes,
+        )
+        self.db.add(purchase)
+        self.db.flush()  # get purchase.id
+
+        for item_data in items:
+            unit_price = item_data["unit_price"]
+            quantity = item_data["quantity"]
+            total = unit_price * quantity
+
+            # Resolve description from product if not given
+            description = item_data.get("description")
+            if not description and item_data.get("product_id"):
+                product = self.db.query(Product).filter(Product.id == item_data["product_id"]).first()
+                if product:
+                    description = product.custom_name or product.original_name
+
+            sp = StockPurchase(
+                purchase_id=purchase.id,
+                product_id=item_data.get("product_id"),
+                description=description,
+                code=item_data.get("code"),
+                purchase_date=purchase_date,
+                unit_price=unit_price,
+                quantity=quantity,
+                total_amount=total,
+            )
+            self.db.add(sp)
+
+        self.db.commit()
+        self.db.refresh(purchase)
+        return purchase
+
     def add_payment_to_purchase(self, purchase_id: int, payer: str, amount: Decimal, payment_method: str):
         """Add a payment to a purchase."""
         from app.models.stock import Purchase, PurchasePayment

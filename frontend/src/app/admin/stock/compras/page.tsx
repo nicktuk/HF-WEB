@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useMemo, useState, useRef, type ChangeEvent } from 'react';
-import { FileDown, X, Plus, Trash2, Eye, Package, Search } from 'lucide-react';
+import { Fragment, useMemo, useState, useRef, useCallback, type ChangeEvent } from 'react';
+import { FileDown, X, Plus, Trash2, Eye, Package, Search, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import {
   useDeletePayment,
   useImportStockWithSupplier,
   useStockPurchases,
+  useCreateManualPurchase,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
@@ -99,6 +100,23 @@ export default function ComprasPage() {
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Manual purchase modal state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualSupplier, setManualSupplier] = useState('');
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [manualNotes, setManualNotes] = useState('');
+  const [manualItems, setManualItems] = useState<Array<{
+    product_id?: number;
+    product_label?: string;
+    description: string;
+    code: string;
+    quantity: number;
+    unit_price: number;
+  }>>([{ description: '', code: '', quantity: 1, unit_price: 0 }]);
+  const [productSearchTerms, setProductSearchTerms] = useState<Record<number, string>>({});
+  const [productSearchResults, setProductSearchResults] = useState<Record<number, Array<{ id: number; label: string; sku: string }>>>({});
+  const [manualError, setManualError] = useState('');
+
   // Payment form state
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
@@ -120,6 +138,7 @@ export default function ComprasPage() {
   const addPayment = useAddPaymentToPurchase(apiKey);
   const deletePayment = useDeletePayment(apiKey);
   const importStock = useImportStockWithSupplier(apiKey);
+  const createManualPurchase = useCreateManualPurchase(apiKey);
 
   // Import handlers
   const handleImportStockClick = () => {
@@ -398,6 +417,118 @@ export default function ComprasPage() {
     );
   };
 
+  // Manual purchase handlers
+  const openManualModal = () => {
+    setManualSupplier('');
+    setManualDate(new Date().toISOString().slice(0, 10));
+    setManualNotes('');
+    setManualItems([{ description: '', code: '', quantity: 1, unit_price: 0 }]);
+    setProductSearchTerms({});
+    setProductSearchResults({});
+    setManualError('');
+    setShowManualModal(true);
+  };
+
+  const addManualItem = () => {
+    setManualItems((prev) => [...prev, { description: '', code: '', quantity: 1, unit_price: 0 }]);
+  };
+
+  const removeManualItem = (idx: number) => {
+    setManualItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateManualItem = (idx: number, field: string, value: string | number) => {
+    setManualItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+
+  const searchProductForItem = useCallback(async (idx: number, term: string) => {
+    setProductSearchTerms((prev) => ({ ...prev, [idx]: term }));
+    if (term.length < 2) {
+      setProductSearchResults((prev) => ({ ...prev, [idx]: [] }));
+      return;
+    }
+    try {
+      const data = await adminApi.getProducts(apiKey, { search: term, limit: 8, enabled: true });
+      const results = (data.items || []).map((p: any) => ({
+        id: p.id,
+        label: p.custom_name || p.original_name,
+        sku: p.sku || '',
+      }));
+      setProductSearchResults((prev) => ({ ...prev, [idx]: results }));
+    } catch {
+      setProductSearchResults((prev) => ({ ...prev, [idx]: [] }));
+    }
+  }, [apiKey]);
+
+  const selectProductForItem = (idx: number, product: { id: number; label: string; sku: string }) => {
+    setManualItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? { ...item, product_id: product.id, product_label: product.label, description: product.label, code: product.sku || item.code }
+          : item
+      )
+    );
+    setProductSearchTerms((prev) => ({ ...prev, [idx]: '' }));
+    setProductSearchResults((prev) => ({ ...prev, [idx]: [] }));
+  };
+
+  const clearProductFromItem = (idx: number) => {
+    setManualItems((prev) =>
+      prev.map((item, i) =>
+        i === idx ? { ...item, product_id: undefined, product_label: undefined } : item
+      )
+    );
+  };
+
+  const manualTotal = manualItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+
+  const handleSaveManualPurchase = async () => {
+    if (!manualSupplier.trim()) {
+      setManualError('El mayorista es obligatorio.');
+      return;
+    }
+    if (!manualDate) {
+      setManualError('La fecha es obligatoria.');
+      return;
+    }
+    if (manualItems.length === 0) {
+      setManualError('Agregá al menos un item.');
+      return;
+    }
+    for (const item of manualItems) {
+      if (!item.description.trim() && !item.product_id) {
+        setManualError('Cada item debe tener una descripción o producto.');
+        return;
+      }
+      if (item.quantity <= 0) {
+        setManualError('La cantidad debe ser mayor a 0.');
+        return;
+      }
+      if (item.unit_price <= 0) {
+        setManualError('El precio unitario debe ser mayor a 0.');
+        return;
+      }
+    }
+    setManualError('');
+    try {
+      await createManualPurchase.mutateAsync({
+        supplier: manualSupplier.trim(),
+        purchase_date: manualDate,
+        notes: manualNotes.trim() || undefined,
+        items: manualItems.map((item) => ({
+          product_id: item.product_id,
+          description: item.description.trim() || undefined,
+          code: item.code.trim() || undefined,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        })),
+      });
+      setShowManualModal(false);
+    } catch (err) {
+      setManualError(err instanceof Error ? err.message : 'Error al guardar la compra.');
+    }
+  };
+
   const handleExportPreviewCsv = () => {
     if (!stockPreview?.rows?.length) return;
     const rows = stockPreview.rows.map((row) => [
@@ -425,10 +556,16 @@ export default function ComprasPage() {
           <h1 className="text-2xl font-bold text-gray-900">Compras</h1>
           <p className="text-gray-600">Importa compras desde CSV y registra pagos por mayorista.</p>
         </div>
-        <Button onClick={handleImportStockClick} disabled={isImportingStock}>
-          <FileDown className="mr-2 h-4 w-4" />
-          Importar CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openManualModal}>
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Nueva Compra
+          </Button>
+          <Button onClick={handleImportStockClick} disabled={isImportingStock}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+        </div>
       </div>
 
       <input
@@ -1213,6 +1350,190 @@ export default function ComprasPage() {
             </Button>
           ) : null}
           <Button onClick={() => setStockImportResult(null)}>Cerrar</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* ── MANUAL PURCHASE MODAL ── */}
+      <Modal open={showManualModal} onClose={() => setShowManualModal(false)} title="Nueva Compra Manual">
+        <ModalContent>
+          <div className="space-y-4">
+            {/* Supplier */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mayorista *</label>
+              <input
+                list="suppliers-list"
+                value={manualSupplier}
+                onChange={(e) => setManualSupplier(e.target.value)}
+                placeholder="Ej: Ingram, Multimax..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <datalist id="suppliers-list">
+                {(suppliersData?.suppliers || []).map((s: string) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
+              <input
+                type="date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+              <textarea
+                value={manualNotes}
+                onChange={(e) => setManualNotes(e.target.value)}
+                rows={2}
+                placeholder="Opcional..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              />
+            </div>
+
+            {/* Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Items *</label>
+                <button
+                  type="button"
+                  onClick={addManualItem}
+                  className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Agregar item
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {manualItems.map((item, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-medium text-gray-500 mt-1">Item {idx + 1}</span>
+                      {manualItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeManualItem(idx)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Product search */}
+                    <div className="relative">
+                      {item.product_label ? (
+                        <div className="flex items-center gap-2 bg-primary-50 border border-primary-200 rounded px-2 py-1">
+                          <Package className="h-3.5 w-3.5 text-primary-600 shrink-0" />
+                          <span className="text-sm text-primary-800 flex-1 truncate">{item.product_label}</span>
+                          <button type="button" onClick={() => clearProductFromItem(idx)} className="text-primary-400 hover:text-primary-600">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Buscar producto (opcional)..."
+                            value={productSearchTerms[idx] || ''}
+                            onChange={(e) => searchProductForItem(idx, e.target.value)}
+                            className="w-full border border-gray-300 rounded pl-7 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                          {(productSearchResults[idx] || []).length > 0 && (
+                            <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                              {productSearchResults[idx].map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => selectProductForItem(idx, p)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <span className="flex-1 truncate">{p.label}</span>
+                                  {p.sku && <span className="text-xs text-gray-400 shrink-0">{p.sku}</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    <input
+                      type="text"
+                      placeholder="Descripción *"
+                      value={item.description}
+                      onChange={(e) => updateManualItem(idx, 'description', e.target.value)}
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+
+                    {/* Code, Qty, Price */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs text-gray-500">Código</label>
+                        <input
+                          type="text"
+                          value={item.code}
+                          onChange={(e) => updateManualItem(idx, 'code', e.target.value)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Cantidad *</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => updateManualItem(idx, 'quantity', parseInt(e.target.value) || 1)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Precio unit. *</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={item.unit_price}
+                          onChange={(e) => updateManualItem(idx, 'unit_price', parseFloat(e.target.value) || 0)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Item subtotal */}
+                    <div className="text-right text-xs text-gray-500">
+                      Subtotal: <span className="font-medium text-gray-700">{formatPrice(item.quantity * item.unit_price)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grand total */}
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+              <span className="text-sm font-medium text-gray-700">Total compra</span>
+              <span className="text-lg font-bold text-gray-900">{formatPrice(manualTotal)}</span>
+            </div>
+
+            {manualError && (
+              <p className="text-sm text-red-600">{manualError}</p>
+            )}
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setShowManualModal(false)}>Cancelar</Button>
+          <Button onClick={handleSaveManualPurchase} disabled={createManualPurchase.isPending}>
+            {createManualPurchase.isPending ? 'Guardando...' : 'Guardar Compra'}
+          </Button>
         </ModalFooter>
       </Modal>
     </div>

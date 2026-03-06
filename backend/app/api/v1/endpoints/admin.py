@@ -57,6 +57,7 @@ from app.schemas.stock import (
     StockPurchaseItemResponse,
     AddPaymentRequest,
     StockImportRequest,
+    ManualPurchaseCreate,
 )
 from app.schemas.sales import (
     SaleCreate,
@@ -293,6 +294,44 @@ async def update_stock_purchase(
     # Allow manual association without duplicate validation
     # Duplicate check is only enforced during CSV import
     return service.update_stock_purchase(purchase_id, data.product_id)
+
+
+@router.post(
+    "/purchases",
+    dependencies=[Depends(verify_admin)]
+)
+async def create_manual_purchase(
+    req: ManualPurchaseCreate,
+    service: ProductService = Depends(get_product_service),
+):
+    """Create a purchase manually."""
+    from decimal import Decimal
+    items = [
+        {
+            "product_id": item.product_id,
+            "description": item.description,
+            "code": item.code,
+            "quantity": item.quantity,
+            "unit_price": float(item.unit_price),
+        }
+        for item in req.items
+    ]
+    purchase = service.create_manual_purchase(
+        supplier=req.supplier,
+        purchase_date=req.purchase_date,
+        notes=req.notes,
+        items=items,
+    )
+    return {
+        "id": purchase.id,
+        "supplier": purchase.supplier,
+        "purchase_date": purchase.purchase_date,
+        "notes": purchase.notes,
+        "total_amount": Decimal(str(purchase.total_amount)),
+        "total_paid": Decimal(str(purchase.total_paid)),
+        "item_count": len(purchase.items),
+        "created_at": purchase.created_at,
+    }
 
 
 @router.get(

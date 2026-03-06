@@ -548,6 +548,30 @@ export function usePurchasesByPayer(apiKey: string) {
   });
 }
 
+export function useCreateManualPurchase(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      supplier: string;
+      purchase_date: string;
+      notes?: string;
+      items: Array<{
+        product_id?: number;
+        description?: string;
+        code?: string;
+        quantity: number;
+        unit_price: number;
+      }>;
+    }) => adminApi.createManualPurchase(apiKey, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['purchases-by-payer'] });
+    },
+  });
+}
+
 export function useImportStockWithSupplier(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({

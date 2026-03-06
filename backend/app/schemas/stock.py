@@ -68,6 +68,21 @@ class StockPurchaseItemResponse(BaseModel):
 # Purchase Schemas
 # ============================================
 
+class ManualPurchaseItemCreate(BaseModel):
+    product_id: Optional[int] = None
+    description: Optional[str] = None
+    code: Optional[str] = None
+    quantity: int
+    unit_price: Decimal
+
+
+class ManualPurchaseCreate(BaseModel):
+    supplier: str
+    purchase_date: date
+    notes: Optional[str] = None
+    items: List[ManualPurchaseItemCreate]
+
+
 class PurchaseCreate(BaseModel):
     supplier: str
     purchase_date: date
