@@ -1354,7 +1354,7 @@ export default function ComprasPage() {
       </Modal>
 
       {/* ── MANUAL PURCHASE MODAL ── */}
-      <Modal open={showManualModal} onClose={() => setShowManualModal(false)} title="Nueva Compra Manual">
+      <Modal isOpen={showManualModal} onClose={() => setShowManualModal(false)} title="Nueva Compra Manual">
         <ModalContent>
           <div className="space-y-4">
             {/* Supplier */}
