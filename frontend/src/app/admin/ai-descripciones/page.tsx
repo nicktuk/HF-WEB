@@ -37,6 +37,7 @@ interface ProductItem {
   label: string;
   category: string;
   hasDesc: boolean;
+  enabled: boolean;
 }
 
 // ─── componente principal ────────────────────────────────────────────────────
@@ -92,7 +93,6 @@ export default function AIDescripcionesPage() {
     try {
       const data = await adminApi.getProducts(apiKey, {
         search: q || undefined,
-        enabled: true,
         limit: 50,
       });
       setProductResults(
@@ -101,6 +101,7 @@ export default function AIDescripcionesPage() {
           label: p.custom_name || p.original_name,
           category: p.category || '',
           hasDesc: !!p.short_description,
+          enabled: !!p.enabled,
         }))
       );
     } catch {
@@ -118,10 +119,13 @@ export default function AIDescripcionesPage() {
   }, [productSearch, mode, searchProducts]);
 
   useEffect(() => {
-    if (mode === 'selected' && productResults.length === 0 && !loadingProducts) {
+    if (mode === 'selected') {
+      setProductSearch('');
       void searchProducts('');
+    } else {
+      setSelectedIds([]);
     }
-    if (mode !== 'selected') setSelectedIds([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const toggleProduct = (id: number) =>
@@ -354,6 +358,10 @@ export default function AIDescripcionesPage() {
                 )}
               </div>
 
+              <p className="text-xs text-gray-400">
+                Se muestran todos los productos. Los <strong>inactivos</strong> aparecen marcados y el backend los ignorará al procesar.
+              </p>
+
               {/* Buscador */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -412,8 +420,15 @@ export default function AIDescripcionesPage() {
                           checked={selectedIds.includes(p.id)}
                           onChange={() => toggleProduct(p.id)}
                         />
-                        <span className="flex-1 text-sm text-gray-800 truncate">{p.label}</span>
+                        <span className={cn('flex-1 text-sm truncate', p.enabled ? 'text-gray-800' : 'text-gray-400')}>
+                          {p.label}
+                        </span>
                         <span className="text-xs text-gray-400 shrink-0">{p.category}</span>
+                        {!p.enabled && (
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0">
+                            inactivo
+                          </span>
+                        )}
                         {p.hasDesc && (
                           <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full shrink-0">
                             desc

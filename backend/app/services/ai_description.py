@@ -286,40 +286,49 @@ class AIDescriptionService:
 
     async def _search_images(self, query: str, brave_key: str, max_results: int = 3) -> List[str]:
         """Search product images using Brave Image Search API."""
-        try:
-            resp = await self._http.get(
-                "https://api.search.brave.com/res/v1/images/search",
-                params={"q": query, "count": max_results, "search_lang": "es", "safesearch": "moderate"},
-                headers={
-                    "Accept": "application/json",
-                    "X-Subscription-Token": brave_key,
-                },
-            )
-            if resp.status_code != 200:
-                return []
-            data = resp.json()
-            urls: List[str] = []
-            for result in data.get("results", [])[:max_results]:
-                url = result.get("properties", {}).get("url") or result.get("thumbnail", {}).get("src")
-                if url and url.startswith("http"):
-                    urls.append(url)
-            return urls
-        except Exception:
-            return []
+        resp = await self._http.get(
+            "https://api.search.brave.com/res/v1/images/search",
+            params={"q": query, "count": max_results, "search_lang": "es", "safesearch": "moderate"},
+            headers={
+                "Accept": "application/json",
+                "X-Subscription-Token": brave_key,
+            },
+        )
+        if resp.status_code == 401:
+            raise RuntimeError("Clave de Brave Search inválida o sin acceso a Image Search (requiere plan Pro o superior).")
+        if resp.status_code == 422:
+            raise RuntimeError("Brave Image Search: parámetros inválidos.")
+        if resp.status_code != 200:
+            raise RuntimeError(f"Brave Image Search devolvió error {resp.status_code}.")
+        data = resp.json()
+        urls: List[str] = []
+        for result in data.get("results", [])[:max_results]:
+            url = result.get("properties", {}).get("url") or result.get("thumbnail", {}).get("src")
+            if url and url.startswith("http"):
+                urls.append(url)
+        return urls
 
     async def _save_images_to_db(self, db: Session, product_id: int, urls: List[str]) -> None:
-        """Persist found image URLs to product_images table."""
+        """Persist found image URLs to product_images table (appends, does not overwrite)."""
         try:
-            for order, url in enumerate(urls):
+            existing = db.query(ProductImage).filter(ProductImage.product_id == product_id).all()
+            existing_urls = {img.url for img in existing}
+            has_primary = any(img.is_primary for img in existing)
+            next_order = max((img.display_order for img in existing), default=-1) + 1
+
+            for i, url in enumerate(urls):
+                if url in existing_urls:
+                    continue
                 img = ProductImage(
                     product_id=product_id,
                     url=url,
                     original_url=url,
                     alt_text="Imagen encontrada por IA",
-                    display_order=order,
-                    is_primary=(order == 0),
+                    display_order=next_order + i,
+                    is_primary=(not has_primary and i == 0),
                 )
                 db.add(img)
+                has_primary = True  # solo el primero nuevo puede ser primary
             db.flush()
         except Exception:
             db.rollback()
@@ -352,9 +361,12 @@ class AIDescriptionService:
         cfg = config or {}
         brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
         if not brave_key:
-            raise RuntimeError("No hay clave de Brave Search configurada")
+            raise RuntimeError("No hay clave de Brave Search configurada en la configuración IA ni en .env (BRAVE_SEARCH_API_KEY).")
         name = product.custom_name or product.original_name
+        if not name:
+            raise RuntimeError("El producto no tiene nombre.")
         query = f"{name} {product.brand or ''}".strip()
+        # Propaga excepciones de _search_images (ej. 401 por plan insuficiente)
         found_urls = await self._search_images(query, brave_key)
         if found_urls and db is not None:
             await self._save_images_to_db(db, product.id, found_urls)
