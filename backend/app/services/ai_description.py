@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.session import SessionLocal
-from app.models.product import Product
+from app.models.product import Product, ProductImage
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +92,9 @@ class AIDescriptionService:
         use_search: bool = True,
         use_vision: bool = True,
         use_source_refetch: bool = True,
+        use_image_search: bool = False,
         config: Optional[Dict] = None,
+        db: Optional[Session] = None,
     ) -> str:
         cfg = config or {}
         context_parts: List[str] = []
@@ -119,6 +121,15 @@ class AIDescriptionService:
         if product.images:
             primary = next((i for i in product.images if i.is_primary), product.images[0])
             image_url = primary.url
+
+        # Búsqueda de imágenes (solo si el producto no tiene imágenes propias)
+        brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
+        if use_image_search and brave_key and not product.images and db is not None:
+            query = f"{name} {product.brand or ''}".strip()
+            found_urls = await self._search_images(query, brave_key)
+            if found_urls:
+                image_url = image_url or found_urls[0]
+                await self._save_images_to_db(db, product.id, found_urls)
 
         # Re-fetch URL origen
         if use_source_refetch and product.source_url:
@@ -273,6 +284,46 @@ class AIDescriptionService:
     # Helpers
     # ------------------------------------------------------------------
 
+    async def _search_images(self, query: str, brave_key: str, max_results: int = 3) -> List[str]:
+        """Search product images using Brave Image Search API."""
+        try:
+            resp = await self._http.get(
+                "https://api.search.brave.com/res/v1/images/search",
+                params={"q": query, "count": max_results, "search_lang": "es", "safesearch": "moderate"},
+                headers={
+                    "Accept": "application/json",
+                    "X-Subscription-Token": brave_key,
+                },
+            )
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+            urls: List[str] = []
+            for result in data.get("results", [])[:max_results]:
+                url = result.get("properties", {}).get("url") or result.get("thumbnail", {}).get("src")
+                if url and url.startswith("http"):
+                    urls.append(url)
+            return urls
+        except Exception:
+            return []
+
+    async def _save_images_to_db(self, db: Session, product_id: int, urls: List[str]) -> None:
+        """Persist found image URLs to product_images table."""
+        try:
+            for order, url in enumerate(urls):
+                img = ProductImage(
+                    product_id=product_id,
+                    url=url,
+                    original_url=url,
+                    alt_text="Imagen encontrada por IA",
+                    display_order=order,
+                    is_primary=(order == 0),
+                )
+                db.add(img)
+            db.flush()
+        except Exception:
+            db.rollback()
+
     async def _fetch_image_b64(self, url: str) -> Optional[Dict]:
         try:
             resp = await self._http.get(url)
@@ -299,6 +350,7 @@ class AIDescriptionService:
         use_search: bool,
         use_vision: bool,
         use_source_refetch: bool,
+        use_image_search: bool = False,
         config: Optional[Dict] = None,
     ) -> None:
         job = _jobs[job_id]
@@ -325,7 +377,8 @@ class AIDescriptionService:
                     name = product.custom_name or product.original_name
 
                     desc = await self.generate_for_product(
-                        product, use_search, use_vision, use_source_refetch, config=cfg
+                        product, use_search, use_vision, use_source_refetch,
+                        use_image_search=use_image_search, config=cfg, db=db,
                     )
                     product.short_description = desc[:2000]
                     db.commit()

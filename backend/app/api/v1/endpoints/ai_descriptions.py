@@ -40,6 +40,7 @@ class GenerateRequest(BaseModel):
     use_search: bool = True
     use_vision: bool = True
     use_source_refetch: bool = True
+    use_image_search: bool = False
 
 
 class JobResponse(BaseModel):
@@ -122,6 +123,7 @@ async def generate_descriptions(
         use_search=req.use_search,
         use_vision=req.use_vision,
         use_source_refetch=req.use_source_refetch,
+        use_image_search=req.use_image_search,
         config=ai_config,
     )
 
@@ -179,6 +181,7 @@ async def generate_single(
     use_search: bool = Query(default=True),
     use_vision: bool = Query(default=True),
     use_source_refetch: bool = Query(default=True),
+    use_image_search: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
@@ -188,7 +191,10 @@ async def generate_single(
     ai_config = get_ai_config(db)
     ai = get_ai_service()
     try:
-        desc = await ai.generate_for_product(product, use_search, use_vision, use_source_refetch, config=ai_config)
+        desc = await ai.generate_for_product(
+            product, use_search, use_vision, use_source_refetch,
+            use_image_search=use_image_search, config=ai_config, db=db,
+        )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

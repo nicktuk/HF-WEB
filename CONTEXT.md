@@ -1,6 +1,39 @@
 # HF WEB - Contexto del Proyecto
 
+## Preferencias de trabajo
+
+- **Cuando el usuario hace una pregunta, está evaluando alternativas — NO implementar nada.** Responder con una explicación de opciones, pros/contras, o aclaraciones. Solo implementar cuando el usuario lo pide explícitamente.
+
 ## Arquitectura
+
+---
+
+## Estado actual del menú admin (2026-03-06)
+
+`frontend/src/app/admin/layout.tsx` — estructura con submenús por grupo:
+
+| Ítem | Ruta | Notas |
+|------|------|-------|
+| **Dashboard** | `/admin` | Top level. Resumen financiero aparece primero |
+| **Productos** (submenu) | | |
+| → Productos | `/admin/productos` | |
+| → Compras | `/admin/stock/compras` | |
+| → Stock | `/admin/stock/resumen` | |
+| → Stock sin match | `/admin/stock` | |
+| → Comparador | `/admin/comparador` | |
+| → Descripciones IA | `/admin/ai-descripciones` | |
+| **Ventas** (submenu) | | |
+| → Ventas | `/admin/ventas` | |
+| → Pedidos | `/admin/pedidos` | |
+| → WhatsApp | `/admin/whatsapp` | |
+| **Analítica** (submenu) | | |
+| → Movimientos | `/admin/analytics` | |
+| → Ranking Clientes | `/admin/clientes-ranking` | |
+| **Configuracion** (submenu) | | |
+| → Categorias | `/admin/categorias` | |
+| → Subcategorias | `/admin/subcategorias` | |
+| → Webs Origen | `/admin/source-websites` | |
+| → Configuracion IA | `/admin/configuracion` | |
 
 ---
 
@@ -776,4 +809,62 @@ El menú de configuración ahora incluye "Subcategorías":
     - Genera PDF con branding, precios, descripciones e imÃ¡genes
     - Usa imÃ¡genes locales (uploads) o HTTP
     - Incluye secciÃ³n "Nuevo" si hay productos destacados
-    - WhatsApp en header/footer con nÃºmero hardcodeado `WHATSAPP_NUMBER`
+    - WhatsApp en header/footer con número hardcodeado `WHATSAPP_NUMBER`
+
+---
+
+## Sesión 2026-03-06
+
+### Fix: URL producto en mensaje WhatsApp
+- **Archivo:** `frontend/src/components/public/ContactButton.tsx`
+- `NEXT_PUBLIC_SITE_URL` ahora tiene fallback hardcodeado a `https://www.hefaproductos.com.ar` (antes usaba `window.location.origin` que podía ser localhost u otro dominio)
+
+### Feature: Ranking de Clientes
+- **Ruta:** `/admin/clientes-ranking`
+- **Página:** `frontend/src/app/admin/clientes-ranking/page.tsx`
+- **Endpoint:** `GET /admin/stats/customer-ranking`
+- **Servicio:** `SalesService.customer_ranking()` en `backend/app/services/sales.py`
+
+**Detalles técnicos importantes:**
+- La query usa **dos subqueries separadas** para evitar duplicar datos:
+  - `sale_agg`: agrupa por cliente en `sales` → purchase_count + total_amount
+  - `item_agg`: agrupa por cliente con JOIN a `sale_items` → product_count (suma de cantidades)
+  - Unirlas con `outerjoin` evita que el total_amount se multiplique por cantidad de ítems
+- La query inicial con un solo JOIN tenía el bug de triplicar valores
+
+**Funcionalidades de la página:**
+- Tabla con ranking (🥇🥈🥉 para top 3), ordenable por cualquier columna
+- Buscador de cliente (filtro client-side, sin llamadas extra al backend)
+- Click en fila → drawer lateral con ventas del cliente
+- Drawer carga via `listSales(apiKey, 200, customerName)` y filtra por nombre exacto
+- Cada venta en el drawer es una card expandible con ítems, estados de entrega/pago y totales
+- Indicadores de estado iguales a la vista de ventas (verde=completo, amarillo=parcial, vacío=pendiente)
+
+### Reorganización del menú admin
+- **Archivo:** `frontend/src/app/admin/layout.tsx`
+- Menú reescrito con 4 submenús y componentes reutilizables `SidebarSubmenu` / `MobileSubmenu`
+- Estado de abierto/cerrado centralizado en hook `useSubmenuState`
+- Ver tabla completa en sección "Estado actual del menú admin"
+
+### Dashboard: resumen financiero al tope
+- **Archivo:** `frontend/src/app/admin/page.tsx`
+- El bloque "Resumen financiero" se movió para aparecer primero, antes de las cards de productos y pedidos
+
+### Mejora: modal Nueva Venta
+- **Archivo:** `frontend/src/app/admin/ventas/page.tsx`
+- La tabla de ítems del carrito fue reemplazada por cards por ítem
+- Cada card muestra el nombre completo del producto (sin truncar)
+- Precio editable con label visible ("Precio $")
+- Botón eliminar (✕) rojo visible en cada ítem
+- Checks de Entregado/Pagado con etiqueta al lado
+
+### Feature: Búsqueda de imágenes en IA
+- **Archivos modificados:**
+  - `backend/app/services/ai_description.py`
+  - `backend/app/api/v1/endpoints/ai_descriptions.py`
+  - `frontend/src/lib/api.ts` (campo `use_image_search` en `AIGenerateRequest`)
+  - `frontend/src/app/admin/ai-descripciones/page.tsx` (toggle "Buscar imágenes")
+- **Comportamiento:** usa Brave Image Search API (misma clave que búsqueda web)
+- **Condición:** solo actúa en productos **sin imágenes existentes** (`product.images == []`)
+- **Resultado:** guarda hasta 3 URLs en `product_images`, la primera como `is_primary=True`
+- Toggle desactivado por defecto (es una operación con efectos secundarios irreversibles)

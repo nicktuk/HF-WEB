@@ -1064,6 +1064,7 @@ export interface AIGenerateRequest {
   use_search?: boolean;
   use_vision?: boolean;
   use_source_refetch?: boolean;
+  use_image_search?: boolean;
 }
 
 export interface AIJobStatus {

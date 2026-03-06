@@ -41,6 +41,7 @@ export default function AIDescripcionesPage() {
   const [useSearch, setUseSearch] = useState(true);
   const [useVision, setUseVision] = useState(true);
   const [useRefetch, setUseRefetch] = useState(true);
+  const [useImageSearch, setUseImageSearch] = useState(false);
   const [mode, setMode] = useState<Mode>('pending');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [forceRegenerate, setForceRegenerate] = useState(false);
@@ -99,6 +100,7 @@ export default function AIDescripcionesPage() {
         use_search: useSearch,
         use_vision: useVision,
         use_source_refetch: useRefetch,
+        use_image_search: useImageSearch,
       });
       startMs.current = Date.now();
       setJobId(res.job_id);
@@ -226,6 +228,7 @@ export default function AIDescripcionesPage() {
               <Toggle value={useSearch} onChange={setUseSearch} label="Búsqueda web (Brave)" />
               <Toggle value={useVision} onChange={setUseVision} label="Análisis de imagen" />
               <Toggle value={useRefetch} onChange={setUseRefetch} label="Re-fetch URL origen" />
+              <Toggle value={useImageSearch} onChange={setUseImageSearch} label="Buscar imágenes (solo sin fotos)" />
             </div>
           </div>
 
