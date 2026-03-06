@@ -33,6 +33,7 @@ router = APIRouter()
 
 class GenerateRequest(BaseModel):
     mode: str                          # "single" | "category" | "pending" | "all" | "selected"
+    action: str = "description"        # "description" | "images" | "both"
     product_id: Optional[int] = None
     product_ids: Optional[List[int]] = None   # para mode="selected"
     category_id: Optional[int] = None
@@ -124,6 +125,7 @@ async def generate_descriptions(
         use_vision=req.use_vision,
         use_source_refetch=req.use_source_refetch,
         use_image_search=req.use_image_search,
+        action=req.action,
         config=ai_config,
     )
 
@@ -165,6 +167,33 @@ async def cancel_job(job_id: str):
     if job.status == "running":
         job.status = "cancelled"
     return {"ok": True, "status": job.status}
+
+
+# ---------------------------------------------------------------------------
+# POST /search-images/{product_id}  →  solo búsqueda de imágenes
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/search-images/{product_id}",
+    dependencies=[Depends(verify_admin)],
+)
+async def search_images_single(
+    product_id: int,
+    db: Session = Depends(get_db),
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    ai_config = get_ai_config(db)
+    ai = get_ai_service()
+    try:
+        urls = await ai.search_images_for_product(product, config=ai_config, db=db)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    db.commit()
+    return {"product_id": product_id, "found": len(urls), "urls": urls}
 
 
 # ---------------------------------------------------------------------------

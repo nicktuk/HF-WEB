@@ -1089,6 +1089,7 @@ export interface AIGenerateRequest {
   use_vision?: boolean;
   use_source_refetch?: boolean;
   use_image_search?: boolean;
+  action?: 'description' | 'images' | 'both';
 }
 
 export interface AIJobStatus {
@@ -1126,14 +1127,22 @@ export const aiApi = {
   async generateSingle(
     apiKey: string,
     productId: number,
-    opts: { use_search?: boolean; use_vision?: boolean; use_source_refetch?: boolean } = {},
+    opts: { use_search?: boolean; use_vision?: boolean; use_source_refetch?: boolean; use_image_search?: boolean } = {},
   ): Promise<{ product_id: number; short_description: string }> {
     const params = new URLSearchParams();
     if (opts.use_search !== undefined) params.set('use_search', String(opts.use_search));
     if (opts.use_vision !== undefined) params.set('use_vision', String(opts.use_vision));
     if (opts.use_source_refetch !== undefined) params.set('use_source_refetch', String(opts.use_source_refetch));
+    if (opts.use_image_search !== undefined) params.set('use_image_search', String(opts.use_image_search));
     const qs = params.toString() ? `?${params.toString()}` : '';
     return fetchAPI(`/admin/ai/generate/${productId}${qs}`, { method: 'POST' }, apiKey);
+  },
+
+  async searchImages(
+    apiKey: string,
+    productId: number,
+  ): Promise<{ product_id: number; found: number; urls: string[] }> {
+    return fetchAPI(`/admin/ai/search-images/${productId}`, { method: 'POST' }, apiKey);
   },
 };
 

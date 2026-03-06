@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -56,6 +56,10 @@ export default function ProductEditPage() {
   // AI generation state
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // Image search state
+  const [isSearchingImages, setIsSearchingImages] = useState(false);
+  const [imageSearchStatus, setImageSearchStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Image state
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -151,6 +155,29 @@ export default function ProductEditPage() {
       setAiStatus({ ok: false, msg });
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleSearchImages = async () => {
+    setIsSearchingImages(true);
+    setImageSearchStatus(null);
+    try {
+      const res = await aiApi.searchImages(apiKey, productId);
+      if (res.found > 0) {
+        setImageUrls((prev) => {
+          const existing = new Set(prev);
+          const newUrls = res.urls.filter((u: string) => !existing.has(u));
+          return [...prev, ...newUrls];
+        });
+        setImageSearchStatus({ ok: true, msg: `${res.found} imagen(es) encontrada(s). Guardá para aplicar.` });
+      } else {
+        setImageSearchStatus({ ok: false, msg: 'No se encontraron imágenes.' });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al buscar imágenes';
+      setImageSearchStatus({ ok: false, msg });
+    } finally {
+      setIsSearchingImages(false);
     }
   };
 
@@ -402,6 +429,29 @@ export default function ProductEditPage() {
                   <Plus className="h-4 w-4 mr-1" />
                   URL
                 </Button>
+              </div>
+
+              {/* AI image search */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSearchImages}
+                  disabled={isSearchingImages}
+                  className="text-violet-600 border-violet-200 hover:bg-violet-50"
+                >
+                  {isSearchingImages
+                    ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    : <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                  }
+                  {isSearchingImages ? 'Buscando...' : 'Buscar imágenes con IA'}
+                </Button>
+                {imageSearchStatus && (
+                  <span className={`text-xs ${imageSearchStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {imageSearchStatus.msg}
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-gray-500">

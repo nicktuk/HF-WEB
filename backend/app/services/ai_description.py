@@ -340,6 +340,27 @@ class AIDescriptionService:
             return None
 
     # ------------------------------------------------------------------
+    # Solo búsqueda de imágenes para un producto
+    # ------------------------------------------------------------------
+
+    async def search_images_for_product(
+        self,
+        product: Product,
+        config: Optional[Dict] = None,
+        db: Optional[Session] = None,
+    ) -> List[str]:
+        cfg = config or {}
+        brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
+        if not brave_key:
+            raise RuntimeError("No hay clave de Brave Search configurada")
+        name = product.custom_name or product.original_name
+        query = f"{name} {product.brand or ''}".strip()
+        found_urls = await self._search_images(query, brave_key)
+        if found_urls and db is not None:
+            await self._save_images_to_db(db, product.id, found_urls)
+        return found_urls
+
+    # ------------------------------------------------------------------
     # Batch job (llamado como BackgroundTask de FastAPI)
     # ------------------------------------------------------------------
 
@@ -351,6 +372,7 @@ class AIDescriptionService:
         use_vision: bool,
         use_source_refetch: bool,
         use_image_search: bool = False,
+        action: str = "description",   # "description" | "images" | "both"
         config: Optional[Dict] = None,
     ) -> None:
         job = _jobs[job_id]
@@ -376,16 +398,25 @@ class AIDescriptionService:
 
                     name = product.custom_name or product.original_name
 
-                    desc = await self.generate_for_product(
-                        product, use_search, use_vision, use_source_refetch,
-                        use_image_search=use_image_search, config=cfg, db=db,
-                    )
-                    product.short_description = desc[:2000]
+                    result_label = ""
+
+                    if action in ("images", "both"):
+                        found = await self.search_images_for_product(product, cfg, db)
+                        result_label = f"{len(found)} imagen(es) encontrada(s)"
+
+                    if action in ("description", "both"):
+                        desc = await self.generate_for_product(
+                            product, use_search, use_vision, use_source_refetch,
+                            use_image_search=False, config=cfg, db=db,
+                        )
+                        product.short_description = desc[:2000]
+                        result_label = desc
+
                     db.commit()
 
                     job.success += 1
                     # Guardar últimos 60 resultados para mostrar en UI
-                    job.results.append({"id": product_id, "name": name, "description": desc})
+                    job.results.append({"id": product_id, "name": name, "description": result_label})
                     if len(job.results) > 60:
                         job.results.pop(0)
 
