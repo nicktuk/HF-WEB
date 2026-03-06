@@ -130,7 +130,12 @@ export default function AIDescripcionesPage() {
   const toggleAll = () => {
     const allIds = productResults.map((p) => p.id);
     const allSelected = allIds.every((id) => selectedIds.includes(id));
-    setSelectedIds(allSelected ? selectedIds.filter((id) => !allIds.includes(id)) : [...new Set([...selectedIds, ...allIds])]);
+    if (allSelected) {
+      setSelectedIds(selectedIds.filter((id) => !allIds.includes(id)));
+    } else {
+      const merged = selectedIds.concat(allIds.filter((id) => !selectedIds.includes(id)));
+      setSelectedIds(merged);
+    }
   };
 
   // ── polling del job activo ───────────────────────────────────────────────
