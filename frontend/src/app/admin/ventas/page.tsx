@@ -628,83 +628,87 @@ export default function VentasPage() {
             </div>
 
             <div className="border rounded-lg overflow-hidden">
-              <div className="px-3 py-2 bg-gray-50 text-sm font-medium text-gray-700">
-                Items de la venta
+              <div className="px-3 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b">
+                Items de la venta ({cartItems.length})
               </div>
               {cartItems.length === 0 ? (
                 <div className="p-4 text-sm text-gray-500">No hay items.</div>
               ) : (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {cartItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-2">
-                          <div className="font-medium text-gray-900 line-clamp-1">
-                            {item.product ? (item.product.custom_name || item.product.original_name) : (item.manualName || 'Producto manual')}
+                <div className="divide-y">
+                  {cartItems.map((item) => {
+                    const name = item.product
+                      ? (item.product.custom_name || item.product.original_name)
+                      : (item.manualName || 'Producto manual');
+                    const stockQty = Number(item.product?.stock_qty || 0);
+                    const hasStock = !item.product || stockQty > 0;
+                    return (
+                      <div key={item.id} className="p-3 space-y-2">
+                        {/* Row 1: name + delete */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 leading-snug">{name}</p>
+                            <p className={`text-xs mt-0.5 ${hasStock ? 'text-gray-500' : 'text-amber-700'}`}>
+                              {item.product
+                                ? `Stock: ${stockQty}${stockQty <= 0 ? ' — Sin unidades' : ''}`
+                                : 'Producto manual'}
+                            </p>
                           </div>
-                          <div className={`text-xs ${item.product && Number(item.product.stock_qty || 0) > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
-                            {item.product
-                              ? `Stock disponible: ${item.product.stock_qty || 0}${Number(item.product.stock_qty || 0) <= 0 ? ' (Sin unidades)' : ''}`
-                              : 'Producto manual sin stock'}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <input
-                            type="number"
-                            min="0"
-                            className="w-20 px-2 py-1 border rounded text-right"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={item.delivered}
-                            onChange={(e) => updateItemCheck(item.id, 'delivered', e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={item.paid}
-                            onChange={(e) => updateItemCheck(item.id, 'paid', e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <input
-                            type="number"
-                            min="0"
-                            className="w-28 px-2 py-1 border rounded text-right"
-                            value={item.unit_price}
-                            onChange={(e) => updateUnitPrice(item.id, Number(e.target.value))}
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right font-medium">
-                          {formatPrice(item.quantity * item.unit_price)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                            title="Eliminar item"
+                          >
                             <X className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </button>
+                        </div>
+                        {/* Row 2: qty / price / total / checks */}
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                            Cant.
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-16 rounded border px-2 py-1 text-right text-sm"
+                              value={item.quantity}
+                              onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+                            />
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                            Precio $
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-28 rounded border px-2 py-1 text-right text-sm"
+                              value={item.unit_price}
+                              onChange={(e) => updateUnitPrice(item.id, Number(e.target.value))}
+                            />
+                          </label>
+                          <span className="ml-auto font-semibold text-gray-900">
+                            {formatPrice(item.quantity * item.unit_price)}
+                          </span>
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.delivered}
+                              onChange={(e) => updateItemCheck(item.id, 'delivered', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                            />
+                            Entregado
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.paid}
+                              onChange={(e) => updateItemCheck(item.id, 'paid', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                            />
+                            Pagado
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
