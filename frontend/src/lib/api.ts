@@ -286,6 +286,16 @@ export const adminApi = {
     }, apiKey);
   },
 
+  async disableBySupplier(
+    apiKey: string,
+    supplier: string,
+  ): Promise<{ count: number; product_ids: number[] }> {
+    return fetchAPI('/admin/products/disable-by-supplier', {
+      method: 'POST',
+      body: JSON.stringify({ supplier }),
+    }, apiKey);
+  },
+
   /**
    * Set markup percentage for all products
    */

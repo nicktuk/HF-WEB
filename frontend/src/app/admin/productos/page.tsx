@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -12,7 +12,7 @@ import { BulkWholesaleMarkupModal } from '@/components/admin/BulkWholesaleMarkup
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges, useSuppliers } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
@@ -71,9 +71,15 @@ export default function ProductsPage() {
   const [aiJobId, setAiJobId] = useState<string | null>(null);
   const [aiJob, setAiJob] = useState<AIJobStatus | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [isBulkDisabling, setIsBulkDisabling] = useState(false);
+  const [showSupplierDisableModal, setShowSupplierDisableModal] = useState(false);
+  const [supplierToDisable, setSupplierToDisable] = useState('');
+  const [supplierDisableResult, setSupplierDisableResult] = useState<{ count: number } | null>(null);
+  const [isDisablingBySupplier, setIsDisablingBySupplier] = useState(false);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
+  const { data: suppliersData } = useSuppliers(apiKey);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -175,6 +181,40 @@ export default function ProductsPage() {
       alert(error instanceof Error ? error.message : 'Error al exportar PDF');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleBulkDisable = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`¿Inactivar ${selectedIds.length} producto(s) seleccionado(s)?`)) return;
+    setIsBulkDisabling(true);
+    try {
+      const res = await adminApi.bulkAction(apiKey, selectedIds, 'disable');
+      showToast(res.message || `${selectedIds.length} productos inactivados`, 'success');
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch {
+      showToast('Error al inactivar productos', 'error');
+    } finally {
+      setIsBulkDisabling(false);
+    }
+  };
+
+  const handleDisableBySupplier = async () => {
+    if (!supplierToDisable.trim()) return;
+    setIsDisablingBySupplier(true);
+    setSupplierDisableResult(null);
+    try {
+      const res = await adminApi.disableBySupplier(apiKey, supplierToDisable.trim());
+      setSupplierDisableResult({ count: res.count });
+      if (res.count > 0) {
+        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      }
+    } catch {
+      showToast('Error al inactivar por mayorista', 'error');
+      setShowSupplierDisableModal(false);
+    } finally {
+      setIsDisablingBySupplier(false);
     }
   };
 
@@ -333,6 +373,17 @@ export default function ProductsPage() {
               </button>
               <div className="border-t my-1" />
               <button
+                onClick={() => { setSupplierToDisable(''); setSupplierDisableResult(null); setShowSupplierDisableModal(true); }}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Building2 className="h-4 w-4 text-red-500" />
+                <div>
+                  <p className="font-medium">Inactivar por mayorista</p>
+                  <p className="text-xs text-gray-500">Desactiva todos los productos de un proveedor</p>
+                </div>
+              </button>
+              <div className="border-t my-1" />
+              <button
                 onClick={handleCalculateBestSellers}
                 className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
               >
@@ -456,6 +507,16 @@ export default function ProductsPage() {
               >
                 <Power className="mr-2 h-4 w-4" />
                 Activar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBulkDisable}
+                disabled={isBulkDisabling}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <PowerOff className="mr-2 h-4 w-4" />
+                Inactivar
               </Button>
               <Button
                 size="sm"
@@ -985,6 +1046,67 @@ export default function ProductsPage() {
               >
                 {aiJob?.status === 'completed' ? 'Listo' : 'Cerrar'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inactivar por mayorista Modal */}
+      {showSupplierDisableModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-red-500 shrink-0" />
+              <h2 className="text-lg font-semibold text-gray-900">Inactivar por mayorista</h2>
+            </div>
+            <p className="text-sm text-gray-600">
+              Ingresá el nombre (o parte del nombre) del mayorista. Se inactivarán todos los productos
+              activos que tengan al menos una compra de ese proveedor.
+            </p>
+
+            {supplierDisableResult ? (
+              <div className={`rounded-lg p-4 text-sm ${supplierDisableResult.count > 0 ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-600'}`}>
+                {supplierDisableResult.count > 0
+                  ? `✓ Se inactivaron ${supplierDisableResult.count} producto(s).`
+                  : 'No se encontraron productos activos para ese mayorista.'}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mayorista</label>
+                  <input
+                    list="supplier-disable-list"
+                    type="text"
+                    value={supplierToDisable}
+                    onChange={(e) => setSupplierToDisable(e.target.value)}
+                    placeholder="Ej: Ingram, Multimax..."
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                    autoFocus
+                  />
+                  <datalist id="supplier-disable-list">
+                    {(suppliersData?.suppliers || []).map((s: string) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setShowSupplierDisableModal(false)}>
+                {supplierDisableResult ? 'Cerrar' : 'Cancelar'}
+              </Button>
+              {!supplierDisableResult && (
+                <Button
+                  onClick={handleDisableBySupplier}
+                  disabled={!supplierToDisable.trim() || isDisablingBySupplier}
+                  isLoading={isDisablingBySupplier}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Inactivar
+                </Button>
+              )}
             </div>
           </div>
         </div>

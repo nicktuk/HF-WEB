@@ -1004,6 +1004,25 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
+    def disable_by_supplier(self, supplier: str) -> dict:
+        """Disable all enabled products that have purchases from the given supplier."""
+        from app.models.stock import Purchase
+
+        product_ids_q = (
+            self.db.query(Product.id)
+            .join(StockPurchase, StockPurchase.product_id == Product.id)
+            .join(Purchase, Purchase.id == StockPurchase.purchase_id)
+            .filter(Purchase.supplier.ilike(f"%{supplier}%"))
+            .filter(Product.enabled == True)
+            .distinct()
+        )
+        product_ids = [row[0] for row in product_ids_q.all()]
+        if not product_ids:
+            return {"count": 0, "product_ids": []}
+        count = self.repo.bulk_update_enabled(product_ids, False)
+        cache.invalidate_all_products()
+        return {"count": count, "product_ids": product_ids}
+
     def bulk_set_markup(
         self,
         markup_percentage: Decimal,

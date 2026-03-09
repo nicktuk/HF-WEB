@@ -897,6 +897,22 @@ async def bulk_action(
 
 
 @router.post(
+    "/products/disable-by-supplier",
+    dependencies=[Depends(verify_admin)]
+)
+async def disable_by_supplier(
+    data: dict,
+    service: ProductService = Depends(get_product_service),
+):
+    """Disable all enabled products that have purchases from the given supplier."""
+    supplier = (data.get("supplier") or "").strip()
+    if not supplier:
+        raise HTTPException(status_code=400, detail="supplier requerido")
+    result = service.disable_by_supplier(supplier)
+    return result
+
+
+@router.post(
     "/products/bulk-markup",
     response_model=MessageResponse,
     dependencies=[Depends(verify_admin)]
