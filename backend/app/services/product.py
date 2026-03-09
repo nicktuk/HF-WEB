@@ -1005,16 +1005,17 @@ class ProductService:
         return count
 
     def disable_by_supplier(self, supplier: str) -> dict:
-        """Disable all enabled products that have purchases from the given supplier."""
-        from app.models.stock import Purchase
+        """Disable all enabled products whose source website name/display_name matches the supplier."""
+        from app.models.source_website import SourceWebsite
 
         product_ids_q = (
             self.db.query(Product.id)
-            .join(StockPurchase, StockPurchase.product_id == Product.id)
-            .join(Purchase, Purchase.id == StockPurchase.purchase_id)
-            .filter(Purchase.supplier.ilike(f"%{supplier}%"))
+            .join(SourceWebsite, SourceWebsite.id == Product.source_website_id)
             .filter(Product.enabled == True)
-            .distinct()
+            .filter(
+                SourceWebsite.name.ilike(f"%{supplier}%") |
+                SourceWebsite.display_name.ilike(f"%{supplier}%")
+            )
         )
         product_ids = [row[0] for row in product_ids_q.all()]
         if not product_ids:

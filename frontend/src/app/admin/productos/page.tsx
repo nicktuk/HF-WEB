@@ -12,7 +12,7 @@ import { BulkWholesaleMarkupModal } from '@/components/admin/BulkWholesaleMarkup
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges, useSuppliers } from '@/hooks/useProducts';
+import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
@@ -79,7 +79,6 @@ export default function ProductsPage() {
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
-  const { data: suppliersData } = useSuppliers(apiKey);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -1060,8 +1059,8 @@ export default function ProductsPage() {
               <h2 className="text-lg font-semibold text-gray-900">Inactivar por mayorista</h2>
             </div>
             <p className="text-sm text-gray-600">
-              Ingresá el nombre (o parte del nombre) del mayorista. Se inactivarán todos los productos
-              activos que tengan al menos una compra de ese proveedor.
+              Ingresá el nombre (o parte del nombre) del mayorista origen. Se inactivarán todos los productos
+              activos cuya web origen coincida con ese nombre.
             </p>
 
             {supplierDisableResult ? (
@@ -1084,8 +1083,8 @@ export default function ProductsPage() {
                     autoFocus
                   />
                   <datalist id="supplier-disable-list">
-                    {(suppliersData?.suppliers || []).map((s: string) => (
-                      <option key={s} value={s} />
+                    {(sourceWebsites || []).map((sw: any) => (
+                      <option key={sw.id} value={sw.display_name} />
                     ))}
                   </datalist>
                 </div>
