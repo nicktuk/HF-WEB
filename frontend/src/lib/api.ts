@@ -1028,6 +1028,21 @@ export const adminApi = {
     }, apiKey);
   },
 
+  // ============================================
+  // Catalog Settings
+  // ============================================
+
+  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string }> {
+    return fetchAPI('/admin/settings/catalog', {}, apiKey);
+  },
+
+  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string }): Promise<{ featured_pill_label: string }> {
+    return fetchAPI('/admin/settings/catalog', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
   /**
    * Generate a single combined WhatsApp message for multiple products
    */
@@ -1046,6 +1061,15 @@ export const adminApi = {
     }, apiKey);
   },
 };
+
+/**
+ * Fetch public catalog settings (no auth required)
+ */
+export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string }> {
+  const res = await fetch(`${API_URL}/admin/settings/public/catalog-settings`);
+  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos' };
+  return res.json();
+}
 
 /**
  * Upload images to the server

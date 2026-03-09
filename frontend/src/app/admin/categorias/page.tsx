@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical, Package, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Package, Eye, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
+import { adminApi } from '@/lib/api';
 import type {
   Category,
   CategoryCreateForm,
@@ -72,6 +73,10 @@ export default function CategoriasPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [showSourceProductsModal, setShowSourceProductsModal] = useState(false);
+
+  // Catalog settings
+  const [pillLabelInput, setPillLabelInput] = useState('');
+  const [pillLabelSaved, setPillLabelSaved] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
   const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
@@ -106,6 +111,28 @@ export default function CategoriasPage() {
     queryFn: () => fetchSourceCategoryProducts(apiKey, selectedSourceName || ''),
     enabled: !!apiKey && !!selectedSourceName && showSourceProductsModal,
   });
+
+  const { data: catalogSettings } = useQuery({
+    queryKey: ['catalog-settings', apiKey],
+    queryFn: () => adminApi.getCatalogSettings(apiKey),
+    enabled: !!apiKey,
+  });
+
+  const updateCatalogMutation = useMutation({
+    mutationFn: (label: string) => adminApi.updateCatalogSettings(apiKey, { featured_pill_label: label }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalog-settings'] });
+      setPillLabelSaved(true);
+      setTimeout(() => setPillLabelSaved(false), 2000);
+    },
+  });
+
+  useEffect(() => {
+    if (catalogSettings && !pillLabelInput) {
+      setPillLabelInput(catalogSettings.featured_pill_label);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogSettings]);
 
   const createMutation = useMutation({
     mutationFn: async (data: CategoryCreateForm) => {
@@ -453,6 +480,36 @@ export default function CategoriasPage() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Catalog filter settings */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Settings2 className="h-4 w-4 text-gray-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Configuración de filtros</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Define el texto de la píldora de productos destacados. Todos los productos marcados como <strong>Nuevo</strong> se mostrarán al filtrar por esta opción, independientemente del nombre.
+          </p>
+          <div className="flex items-center gap-3 max-w-md">
+            <Input
+              label="Etiqueta de &quot;Nuevos ingresos&quot;"
+              value={pillLabelInput}
+              onChange={(e) => setPillLabelInput(e.target.value)}
+              placeholder="Ej: Nuevos ingresos"
+            />
+            <div className="mt-5">
+              <Button
+                onClick={() => updateCatalogMutation.mutate(pillLabelInput)}
+                isLoading={updateCatalogMutation.isPending}
+                disabled={!pillLabelInput.trim()}
+              >
+                {pillLabelSaved ? 'Guardado ✓' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

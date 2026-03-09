@@ -1106,7 +1106,7 @@ export default function ProductsPage() {
                     autoFocus
                   />
                   <datalist id="supplier-disable-list">
-                    {(sourceWebsites || []).map((sw: any) => (
+                    {(sourceWebsites?.items || []).map((sw: any) => (
                       <option key={sw.id} value={sw.display_name} />
                     ))}
                   </datalist>

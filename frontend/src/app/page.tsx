@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { usePublicProducts, useCategories, useSubcategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 import { trackPublicEvent } from '@/lib/analytics';
+import { fetchPublicCatalogSettings } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 export default function HomePage() {
   return (
@@ -198,6 +200,13 @@ function HomePageContent() {
   // Load subcategories for the selected category (URL) or temp category (drill-down menu)
   const { data: subcategories } = useSubcategories(selectedCategory);
   const { data: tempSubcategories } = useSubcategories(tempCategory || undefined);
+
+  const { data: catalogSettings } = useQuery({
+    queryKey: ['public-catalog-settings'],
+    queryFn: fetchPublicCatalogSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+  const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
@@ -402,10 +411,10 @@ function HomePageContent() {
                   : 'bg-white text-orange-700 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50'
               }`}
               aria-pressed={showFeatured}
-              aria-label={showFeatured ? 'Desactivar filtro Nuevos ingresos' : 'Activar filtro Nuevos ingresos'}
+              aria-label={showFeatured ? `Desactivar filtro ${featuredLabel}` : `Activar filtro ${featuredLabel}`}
             >
               <Star className={`h-3.5 w-3.5 ${showFeatured ? 'fill-current' : ''}`} />
-              Nuevos ingresos
+              {featuredLabel}
             </button>
             {/* Entrega inmediata filter pill */}
             <button
@@ -506,7 +515,7 @@ function HomePageContent() {
                     }`}
                   >
                     <Star className="h-4 w-4" />
-                    Nuevos ingresos
+                    {featuredLabel}
                   </button>
                   <button
                     onClick={() => {
@@ -668,7 +677,7 @@ function HomePageContent() {
                 }`}
               >
                 <Star className="h-3.5 w-3.5" />
-                Nuevos ingresos
+                {featuredLabel}
               </button>
               <button
                 onClick={() => {

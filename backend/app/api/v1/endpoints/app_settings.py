@@ -1,8 +1,11 @@
 """
 Endpoints para configuración de la aplicación desde el panel admin.
 
-GET /admin/settings/ai  → devuelve config de IA con claves enmascaradas
-PUT /admin/settings/ai  → actualiza config de IA en DB
+GET /admin/settings/ai       → devuelve config de IA con claves enmascaradas
+PUT /admin/settings/ai       → actualiza config de IA en DB
+GET /admin/settings/catalog  → devuelve config del catálogo público
+PUT /admin/settings/catalog  → actualiza config del catálogo público
+GET /catalog-settings        → (público) devuelve config del catálogo
 """
 from typing import Optional
 
@@ -115,3 +118,53 @@ def update_ai_settings(
 
     # Devolver estado actualizado (enmascarado)
     return get_ai_settings(db=db)
+
+
+# ---------------------------------------------------------------------------
+# Schemas catálogo
+# ---------------------------------------------------------------------------
+
+FEATURED_PILL_DEFAULT = "Nuevos ingresos"
+
+
+class CatalogSettingsResponse(BaseModel):
+    featured_pill_label: str
+
+
+class CatalogSettingsUpdate(BaseModel):
+    featured_pill_label: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# GET /catalog  (admin)
+# ---------------------------------------------------------------------------
+
+@router.get("/catalog", response_model=CatalogSettingsResponse, dependencies=[Depends(verify_admin)])
+def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsResponse:
+    featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
+    return CatalogSettingsResponse(featured_pill_label=featured_label)
+
+
+# ---------------------------------------------------------------------------
+# PUT /catalog  (admin)
+# ---------------------------------------------------------------------------
+
+@router.put("/catalog", response_model=CatalogSettingsResponse, dependencies=[Depends(verify_admin)])
+def update_catalog_settings(
+    data: CatalogSettingsUpdate,
+    db: Session = Depends(get_db),
+) -> CatalogSettingsResponse:
+    if data.featured_pill_label is not None:
+        label = data.featured_pill_label.strip() or FEATURED_PILL_DEFAULT
+        set_setting(db, "FEATURED_PILL_LABEL", label)
+    return get_catalog_settings(db=db)
+
+
+# ---------------------------------------------------------------------------
+# GET /public/catalog-settings  (sin auth)
+# ---------------------------------------------------------------------------
+
+@router.get("/public/catalog-settings")
+def get_public_catalog_settings(db: Session = Depends(get_db)):
+    featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
+    return {"featured_pill_label": featured_label}
