@@ -288,7 +288,7 @@ class AIDescriptionService:
         """Search product images using Brave Image Search API."""
         resp = await self._http.get(
             "https://api.search.brave.com/res/v1/images/search",
-            params={"q": query, "count": max_results, "search_lang": "es", "safesearch": "moderate"},
+            params={"q": query, "count": max_results, "safesearch": "moderate"},
             headers={
                 "Accept": "application/json",
                 "X-Subscription-Token": brave_key,
@@ -297,7 +297,7 @@ class AIDescriptionService:
         if resp.status_code == 401:
             raise RuntimeError("Clave de Brave Search inválida o sin acceso a Image Search (requiere plan Pro o superior).")
         if resp.status_code == 422:
-            raise RuntimeError("Brave Image Search: parámetros inválidos.")
+            raise RuntimeError(f"Brave Image Search: parámetros inválidos. Detalle: {resp.text[:200]}")
         if resp.status_code != 200:
             raise RuntimeError(f"Brave Image Search devolvió error {resp.status_code}.")
         data = resp.json()
