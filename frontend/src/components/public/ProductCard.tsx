@@ -33,7 +33,7 @@ export function ProductCard({ product }: ProductCardProps) {
                style={{
                  clipPath: 'polygon(0 0, 100% 0, 100% 100%, 10% 100%)',
                }}>
-            Nuevo
+            Nuevo ingreso
           </div>
         </div>
       )}

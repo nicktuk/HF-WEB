@@ -1690,6 +1690,29 @@ async def remove_badge_bulk(
 
 
 @router.post(
+    "/products/add-badge",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def add_badge(
+    data: dict,
+    service: ProductService = Depends(get_product_service),
+):
+    """Add a badge to selected products."""
+    product_ids = data.get("product_ids") or []
+    badge = data.get("badge", "is_featured")
+    if not product_ids:
+        raise HTTPException(status_code=400, detail="product_ids requerido")
+    count = service.bulk_add_badge(product_ids, badge)
+    badge_names = {
+        "is_featured": "Nuevo",
+        "is_immediate_delivery": "Entrega inmediata",
+        "is_best_seller": "Lo más vendido",
+    }
+    return MessageResponse(message=f"Marca '{badge_names.get(badge, badge)}' aplicada a {count} productos")
+
+
+@router.post(
     "/products/calculate-best-sellers",
     response_model=MessageResponse,
     dependencies=[Depends(verify_admin)]

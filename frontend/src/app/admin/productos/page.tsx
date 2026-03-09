@@ -85,6 +85,19 @@ export default function ProductsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleAddBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller', productIds: number[]) => {
+    setIsRemovingBadge(true);
+    try {
+      const result = await adminApi.addBadgeBulk(apiKey, badge, productIds);
+      showToast(result.message, 'success');
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch {
+      showToast('Error al aplicar marca', 'error');
+    } finally {
+      setIsRemovingBadge(false);
+    }
+  };
+
   const handleRemoveBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller', productIds?: number[]) => {
     setIsRemovingBadge(true);
     try {
@@ -541,6 +554,16 @@ export default function ProductsPage() {
               >
                 <FileDown className="mr-2 h-4 w-4" />
                 Exportar mayorista
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleAddBadge('is_featured', selectedIds)}
+                disabled={isRemovingBadge}
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <Star className="mr-1 h-4 w-4 fill-amber-400" />
+                Marcar Nuevo
               </Button>
               <Button
                 size="sm"

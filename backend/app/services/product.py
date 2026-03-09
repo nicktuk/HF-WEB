@@ -2115,6 +2115,20 @@ class ProductService:
 
         return count
 
+    def bulk_add_badge(self, product_ids: List[int], badge_field: str = "is_featured") -> int:
+        """Add badge to selected products."""
+        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller"]
+        if badge_field not in valid_badges:
+            raise ValueError(f"Invalid badge field. Must be one of: {valid_badges}")
+        count = (
+            self.db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .update({getattr(Product, badge_field): True}, synchronize_session=False)
+        )
+        self.db.commit()
+        cache.invalidate_all_products()
+        return count
+
     def calculate_best_sellers(self, threshold: int = 5) -> int:
         """
         Automatically mark products as best sellers based on sales quantity.

@@ -734,6 +734,17 @@ export const adminApi = {
   /**
    * Remove badge from products
    */
+  async addBadgeBulk(
+    apiKey: string,
+    badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller',
+    productIds: number[],
+  ): Promise<MessageResponse> {
+    return fetchAPI('/admin/products/add-badge', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds, badge }),
+    }, apiKey);
+  },
+
   async removeBadgeBulk(
     apiKey: string,
     badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller',

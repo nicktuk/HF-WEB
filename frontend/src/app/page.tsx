@@ -402,10 +402,10 @@ function HomePageContent() {
                   : 'bg-white text-orange-700 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50'
               }`}
               aria-pressed={showFeatured}
-              aria-label={showFeatured ? 'Desactivar filtro Nuevo' : 'Activar filtro Nuevo'}
+              aria-label={showFeatured ? 'Desactivar filtro Nuevos ingresos' : 'Activar filtro Nuevos ingresos'}
             >
               <Star className={`h-3.5 w-3.5 ${showFeatured ? 'fill-current' : ''}`} />
-              Nuevo
+              Nuevos ingresos
             </button>
             {/* Entrega inmediata filter pill */}
             <button
@@ -506,7 +506,7 @@ function HomePageContent() {
                     }`}
                   >
                     <Star className="h-4 w-4" />
-                    Nuevo
+                    Nuevos ingresos
                   </button>
                   <button
                     onClick={() => {
@@ -668,7 +668,7 @@ function HomePageContent() {
                 }`}
               >
                 <Star className="h-3.5 w-3.5" />
-                Nuevo
+                Nuevos ingresos
               </button>
               <button
                 onClick={() => {
