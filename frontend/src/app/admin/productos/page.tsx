@@ -85,7 +85,7 @@ export default function ProductsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleAddBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller', productIds: number[]) => {
+  const handleAddBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller' | 'is_published', productIds: number[]) => {
     setIsRemovingBadge(true);
     try {
       const result = await adminApi.addBadgeBulk(apiKey, badge, productIds);
@@ -98,7 +98,7 @@ export default function ProductsPage() {
     }
   };
 
-  const handleRemoveBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller', productIds?: number[]) => {
+  const handleRemoveBadge = async (badge: 'is_featured' | 'is_immediate_delivery' | 'is_best_seller' | 'is_published', productIds?: number[]) => {
     setIsRemovingBadge(true);
     try {
       const result = await adminApi.removeBadgeBulk(apiKey, badge, productIds);
