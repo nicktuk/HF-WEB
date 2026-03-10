@@ -8,6 +8,7 @@ class WhatsAppFilterRequest(BaseModel):
     is_featured: Optional[bool] = Field(None, description="Filter by 'Nuevo'")
     is_immediate_delivery: Optional[bool] = Field(None, description="Filter by 'Entrega inmediata'")
     is_best_seller: Optional[bool] = Field(None, description="Filter by 'Lo más vendido'")
+    is_published: Optional[bool] = Field(None, description="Filter by 'Publicar'")
     category: Optional[str] = Field(None, max_length=100)
     subcategory: Optional[str] = Field(None, max_length=100)
     limit: int = Field(default=500, ge=1, le=1000)
@@ -33,6 +34,7 @@ class WhatsAppProductItem(BaseModel):
     is_featured: bool = False
     is_immediate_delivery: bool = False
     is_best_seller: bool = False
+    is_published: bool = False
     category: Optional[str] = None
     subcategory: Optional[str] = None
 

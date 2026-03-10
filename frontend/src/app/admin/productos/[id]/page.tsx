@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -43,6 +43,7 @@ export default function ProductEditPage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -77,6 +78,7 @@ export default function ProductEditPage() {
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
       setIsCheckStock(product.is_check_stock || false);
+      setIsPublished(product.is_published || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
       setOriginalPrice(product.original_price ? String(product.original_price) : '');
@@ -189,6 +191,7 @@ export default function ProductEditPage() {
         is_featured: isFeatured,
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
+        is_published: isPublished,
         markup_percentage: markup,
         custom_name: customName || '',
         original_price: originalPrice ? parseFloat(originalPrice) : 0,
@@ -674,6 +677,31 @@ export default function ProductEditPage() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       isCheckStock ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Publicar toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Send className="h-4 w-4 text-blue-600" />
+                    Publicar
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Marcado para publicar en WhatsApp
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsPublished(!isPublished)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isPublished ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isPublished ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>

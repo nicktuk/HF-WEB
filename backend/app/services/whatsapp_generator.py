@@ -18,6 +18,7 @@ class WhatsAppMessageGenerator:
         is_featured: Optional[bool] = None,
         is_immediate_delivery: Optional[bool] = None,
         is_best_seller: Optional[bool] = None,
+        is_published: Optional[bool] = None,
         category: Optional[str] = None,
         subcategory: Optional[str] = None,
         limit: int = 500
@@ -31,6 +32,8 @@ class WhatsAppMessageGenerator:
             query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
         if is_best_seller is not None:
             query = query.filter(Product.is_best_seller == is_best_seller)
+        if is_published is not None:
+            query = query.filter(Product.is_published == is_published)
         if category:
             query = query.join(Category, Product.category_id == Category.id).filter(Category.name == category)
         if subcategory:

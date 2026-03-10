@@ -42,6 +42,7 @@ class ProductUpdate(BaseModel):
     is_immediate_delivery: Optional[bool] = None
     is_check_stock: Optional[bool] = None
     is_best_seller: Optional[bool] = None
+    is_published: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     original_price: Optional[Decimal] = Field(None, ge=0)
@@ -103,6 +104,7 @@ class ProductResponse(BaseModel):
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
     is_best_seller: bool = False
+    is_published: bool = False
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -299,6 +301,6 @@ class ProductRemoveBadge(BaseModel):
     )
     badge: str = Field(
         ...,
-        pattern="^(is_featured|is_immediate_delivery|is_best_seller)$",
-        description="Badge to remove: is_featured, is_immediate_delivery, or is_best_seller"
+        pattern="^(is_featured|is_immediate_delivery|is_best_seller|is_published)$",
+        description="Badge to remove: is_featured, is_immediate_delivery, is_best_seller or is_published"
     )

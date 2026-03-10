@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2 } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -394,6 +394,20 @@ export default function ProductsPage() {
                   <p className="text-xs text-gray-500">Desactiva todos los productos de un proveedor</p>
                 </div>
               </button>
+              <button
+                onClick={() => {
+                  if (confirm('¿Quitar la marca "Publicar" de todos los productos?')) {
+                    handleRemoveBadge('is_published', []);
+                  }
+                }}
+                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Send className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p className="font-medium">Quitar todo publicar</p>
+                  <p className="text-xs text-gray-500">Limpia la marca "Publicar" de todos los productos</p>
+                </div>
+              </button>
               <div className="border-t my-1" />
               <button
                 onClick={handleCalculateBestSellers}
@@ -554,6 +568,16 @@ export default function ProductsPage() {
               >
                 <FileDown className="mr-2 h-4 w-4" />
                 Exportar mayorista
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleAddBadge('is_published', selectedIds)}
+                disabled={isRemovingBadge}
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                <Send className="mr-1 h-4 w-4" />
+                Publicar
               </Button>
               <Button
                 size="sm"

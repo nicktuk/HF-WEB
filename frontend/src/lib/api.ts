@@ -999,6 +999,7 @@ export const adminApi = {
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
       is_best_seller?: boolean;
+      is_published?: boolean;
       category?: string;
       subcategory?: string;
       limit?: number;

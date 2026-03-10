@@ -56,6 +56,7 @@ export interface ProductAdmin extends ProductPublic {
   market_max_price?: number;
   market_sample_count: number;
   stock_qty?: number;
+  is_published: boolean;
 }
 
 export interface PendingPriceChange {
@@ -454,6 +455,7 @@ export interface WhatsAppProductItem {
   is_featured: boolean;
   is_immediate_delivery: boolean;
   is_best_seller: boolean;
+  is_published: boolean;
   category: string | null;
   subcategory: string | null;
 }

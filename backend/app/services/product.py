@@ -2092,7 +2092,7 @@ class ProductService:
         Returns:
             Number of products updated
         """
-        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller"]
+        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller", "is_published"]
         if badge_field not in valid_badges:
             raise ValueError(f"Invalid badge field. Must be one of: {valid_badges}")
 
@@ -2117,7 +2117,7 @@ class ProductService:
 
     def bulk_add_badge(self, product_ids: List[int], badge_field: str = "is_featured") -> int:
         """Add badge to selected products."""
-        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller"]
+        valid_badges = ["is_featured", "is_immediate_delivery", "is_best_seller", "is_published"]
         if badge_field not in valid_badges:
             raise ValueError(f"Invalid badge field. Must be one of: {valid_badges}")
         count = (

@@ -1708,6 +1708,7 @@ async def add_badge(
         "is_featured": "Nuevo",
         "is_immediate_delivery": "Entrega inmediata",
         "is_best_seller": "Lo más vendido",
+        "is_published": "Publicar",
     }
     return MessageResponse(message=f"Marca '{badge_names.get(badge, badge)}' aplicada a {count} productos")
 
@@ -1753,6 +1754,7 @@ async def filter_products_for_whatsapp(
         is_featured=data.is_featured,
         is_immediate_delivery=data.is_immediate_delivery,
         is_best_seller=data.is_best_seller,
+        is_published=data.is_published,
         category=data.category,
         subcategory=data.subcategory,
         limit=data.limit
@@ -1776,6 +1778,7 @@ async def filter_products_for_whatsapp(
             is_featured=p.is_featured,
             is_immediate_delivery=p.is_immediate_delivery,
             is_best_seller=p.is_best_seller,
+            is_published=p.is_published,
             category=p.category_ref.name if p.category_ref else None,
             subcategory=p.subcategory,
         ))

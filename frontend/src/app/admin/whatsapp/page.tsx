@@ -18,6 +18,7 @@ export default function WhatsAppGeneratorPage() {
   const [filterFeatured, setFilterFeatured] = useState(false);
   const [filterImmediate, setFilterImmediate] = useState(false);
   const [filterBestSeller, setFilterBestSeller] = useState(false);
+  const [filterPublished, setFilterPublished] = useState(false);
 
   // Products and selection
   const [products, setProducts] = useState<WhatsAppProductItem[]>([]);
@@ -101,6 +102,7 @@ export default function WhatsAppGeneratorPage() {
       if (filterFeatured) filters.is_featured = true;
       if (filterImmediate) filters.is_immediate_delivery = true;
       if (filterBestSeller) filters.is_best_seller = true;
+      if (filterPublished) filters.is_published = true;
       if (filterCategory) filters.category = filterCategory;
       if (filterSubcategory) filters.subcategory = filterSubcategory;
 
@@ -275,6 +277,15 @@ export default function WhatsAppGeneratorPage() {
                 className="rounded border-gray-300"
               />
               <span className="text-sm">Lo Mas Vendido</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={filterPublished}
+                onChange={(e) => setFilterPublished(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm font-medium text-blue-700">Publicar</span>
             </label>
           </div>
 
