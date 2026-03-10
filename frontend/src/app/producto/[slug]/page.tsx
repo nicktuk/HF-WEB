@@ -19,9 +19,7 @@ export default function ProductPage() {
   const { data: product, isLoading, error } = usePublicProduct(slug);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
 
-  const sortedImages = product?.images
-    ? [...product.images].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-    : [];
+  const sortedImages = product?.images ?? [];
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
 
   const goToPrev = () => {
