@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { ContactButton } from '@/components/public/ContactButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
@@ -18,6 +18,23 @@ export default function ProductPage() {
   const slug = params.slug as string;
   const { data: product, isLoading, error } = usePublicProduct(slug);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
+
+  const sortedImages = product?.images
+    ? [...product.images].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    : [];
+  const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
+
+  const goToPrev = () => {
+    if (sortedImages.length < 2) return;
+    const prev = (currentIndex - 1 + sortedImages.length) % sortedImages.length;
+    setSelectedImage(sortedImages[prev]);
+  };
+
+  const goToNext = () => {
+    if (sortedImages.length < 2) return;
+    const next = (currentIndex + 1) % sortedImages.length;
+    setSelectedImage(sortedImages[next]);
+  };
 
   // Update selected image when product loads
   useEffect(() => {
@@ -99,7 +116,7 @@ export default function ProductPage() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div className="aspect-square relative rounded-lg overflow-hidden bg-white border">
+            <div className="aspect-square relative rounded-lg overflow-hidden bg-white border group">
               {selectedImage ? (
                 <Image
                   src={selectedImage.url}
@@ -115,12 +132,45 @@ export default function ProductPage() {
                   </svg>
                 </div>
               )}
+
+              {/* Navigation arrows */}
+              {sortedImages.length > 1 && (
+                <>
+                  <button
+                    onClick={goToPrev}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                    aria-label="Imagen anterior"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-700" />
+                  </button>
+                  <button
+                    onClick={goToNext}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                    aria-label="Imagen siguiente"
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-700" />
+                  </button>
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+                    {sortedImages.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedImage(sortedImages[i])}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-gray-400/70 hover:bg-gray-600'
+                        }`}
+                        aria-label={`Ir a imagen ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Thumbnails */}
-            {product.images.length > 1 && (
+            {sortedImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
-                {product.images.map((image, index) => (
+                {sortedImages.map((image, index) => (
                   <button
                     key={image.id}
                     onClick={() => setSelectedImage(image)}
