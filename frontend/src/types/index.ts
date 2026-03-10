@@ -291,6 +291,7 @@ export interface ProductUpdateForm {
   is_immediate_delivery?: boolean;
   is_check_stock?: boolean;
   is_best_seller?: boolean;
+  is_published?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   original_price?: number;
