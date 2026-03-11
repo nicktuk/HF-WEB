@@ -548,6 +548,47 @@ async def get_purchases_by_payer(
 
 
 @router.get(
+    "/products/pending-prices",
+    response_model=PendingPriceChangeResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def get_pending_price_changes(
+    request: Request,
+    service: ProductService = Depends(get_product_service),
+):
+    """Get pending original price changes for approval."""
+    return service.get_pending_price_changes()
+
+
+@router.post(
+    "/products/pending-prices/approve",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def approve_pending_price_changes(
+    data: PendingPriceAction,
+    service: ProductService = Depends(get_product_service),
+):
+    """Approve pending original price changes."""
+    count = service.approve_pending_prices(data.product_ids)
+    return MessageResponse(message=f"Precios aprobados: {count}")
+
+
+@router.post(
+    "/products/pending-prices/reject",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def reject_pending_price_changes(
+    data: PendingPriceAction,
+    service: ProductService = Depends(get_product_service),
+):
+    """Reject pending original price changes."""
+    count = service.reject_pending_prices(data.product_ids)
+    return MessageResponse(message=f"Precios descartados: {count}")
+
+
+@router.get(
     "/products/{product_id}",
     response_model=ProductAdminResponse,
     dependencies=[Depends(verify_admin)]
@@ -1396,47 +1437,6 @@ async def get_stock_by_category(
 ):
     """Get stock quantity and valuation by category."""
     return service.get_stock_stats_by_category()
-
-
-@router.get(
-    "/products/pending-prices",
-    response_model=PendingPriceChangeResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def get_pending_price_changes(
-    request: Request,
-    service: ProductService = Depends(get_product_service),
-):
-    """Get pending original price changes for approval."""
-    return service.get_pending_price_changes()
-
-
-@router.post(
-    "/products/pending-prices/approve",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def approve_pending_price_changes(
-    data: PendingPriceAction,
-    service: ProductService = Depends(get_product_service),
-):
-    """Approve pending original price changes."""
-    count = service.approve_pending_prices(data.product_ids)
-    return MessageResponse(message=f"Precios aprobados: {count}")
-
-
-@router.post(
-    "/products/pending-prices/reject",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def reject_pending_price_changes(
-    data: PendingPriceAction,
-    service: ProductService = Depends(get_product_service),
-):
-    """Reject pending original price changes."""
-    count = service.reject_pending_prices(data.product_ids)
-    return MessageResponse(message=f"Precios descartados: {count}")
 
 
 @router.get(

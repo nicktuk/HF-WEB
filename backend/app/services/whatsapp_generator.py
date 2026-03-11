@@ -24,7 +24,11 @@ class WhatsAppMessageGenerator:
         limit: int = 500
     ) -> List[Product]:
         """Get products filtered by badges for message generation."""
-        query = self.db.query(Product).filter(Product.enabled == True)
+        query = self.db.query(Product)
+
+        # Solo filtrar por enabled si no se está filtrando por is_published
+        if is_published is None:
+            query = query.filter(Product.enabled == True)
 
         if is_featured is not None:
             query = query.filter(Product.is_featured == is_featured)
