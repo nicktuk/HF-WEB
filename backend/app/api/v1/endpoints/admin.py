@@ -1854,78 +1854,32 @@ async def generate_manual_post(
 ):
     """
     Generate a WhatsApp-length description using AI for a product not in the catalog.
-    Uses the configured AI provider (OpenAI or Anthropic).
+    Uses the same AI service and config as product description generation.
     """
-    from app.models.app_setting import AppSetting
-    from app.config import settings as app_settings
+    from app.services.ai_description import get_ai_service
+    from app.services.app_settings import get_ai_config
 
     db = service.db
-    # Load AI config from DB
-    config = {}
-    ai_settings = db.query(AppSetting).filter(
-        AppSetting.key.in_([
-            "AI_PROVIDER", "AI_MODEL_OPENAI", "AI_MODEL_ANTHROPIC",
-            "OPENAI_API_KEY", "ANTHROPIC_API_KEY"
-        ])
-    ).all()
-    for s in ai_settings:
-        config[s.key] = s.value
+    ai_config = get_ai_config(db)
+    ai = get_ai_service()
 
-    provider = config.get("AI_PROVIDER") or app_settings.AI_PROVIDER or "openai"
-    price_line = f"\nPrecio: {data.price}" if data.price else ""
+    context = data.prompt
+    if data.price:
+        context += f"\nPrecio: {data.price}"
 
-    system_prompt = (
-        "Sos un experto en marketing para WhatsApp en Argentina. "
-        "Generá una descripción corta y atractiva para un producto, "
-        "ideal para compartir por WhatsApp. "
-        "Máximo 4 líneas. Usá emojis relevantes. "
-        "Escribí en español rioplatense informal. "
-        "No incluyas URL ni precio (se agrega por separado)."
+    extra_rules = (
+        "\nGenerá para mensaje de WhatsApp: máximo 4 líneas cortas, "
+        "emojis relevantes, sin URL, sin precio en el texto (va por separado)."
     )
-    user_prompt = f"{data.prompt}{price_line}"
 
-    if provider == "openai":
-        try:
-            from openai import AsyncOpenAI
-        except ImportError:
-            raise HTTPException(status_code=500, detail="Paquete 'openai' no instalado.")
-
-        api_key = config.get("OPENAI_API_KEY") or app_settings.OPENAI_API_KEY
-        if not api_key:
-            raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada.")
-
-        model = config.get("AI_MODEL_OPENAI") or app_settings.AI_MODEL_OPENAI or "gpt-4o-mini"
-        client = AsyncOpenAI(api_key=api_key)
-        response = await client.chat.completions.create(
-            model=model,
-            max_tokens=300,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
-        text = (response.choices[0].message.content or "").strip()
-
-    else:
-        # Anthropic
-        try:
-            import anthropic
-        except ImportError:
-            raise HTTPException(status_code=500, detail="Paquete 'anthropic' no instalado.")
-
-        api_key = config.get("ANTHROPIC_API_KEY") or app_settings.ANTHROPIC_API_KEY
-        if not api_key:
-            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY no configurada.")
-
-        model = config.get("AI_MODEL_ANTHROPIC") or getattr(app_settings, "AI_MODEL_ANTHROPIC", "claude-haiku-4-5-20251001")
-        client = anthropic.AsyncAnthropic(api_key=api_key)
-        response = await client.messages.create(
-            model=model,
-            max_tokens=300,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-        text = (response.content[0].text if response.content else "").strip()
+    try:
+        provider = ai_config.get("AI_PROVIDER", "openai")
+        if provider == "openai":
+            text = await ai._call_openai(context, None, ai_config, extra_rules)
+        else:
+            text = await ai._call_claude(context, None, ai_config, extra_rules)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
 
     return {"text": text}
 
