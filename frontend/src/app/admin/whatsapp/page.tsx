@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { adminApi, publicApi } from '@/lib/api';
 import { useApiKey } from '@/hooks/useAuth';
 import type { WhatsAppProductItem, WhatsAppMessage, WhatsAppBulkMessage } from '@/types';
 
 export default function WhatsAppGeneratorPage() {
   const apiKey = useApiKey() || '';
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'catalog' | 'manual'>('catalog');
+
+  // Manual post state
+  const [manualImage, setManualImage] = useState<File | null>(null);
+  const [manualImagePreview, setManualImagePreview] = useState<string | null>(null);
+  const [manualPrompt, setManualPrompt] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [manualText, setManualText] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
+  const manualFileInputRef = useRef<HTMLInputElement>(null);
 
   // Categories and subcategories
   const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
@@ -190,6 +202,33 @@ export default function WhatsAppGeneratorPage() {
     }
   };
 
+  // Manual post handlers
+  const handleManualImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setManualImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setManualImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const generateManualPost = async () => {
+    if (!apiKey || !manualPrompt.trim()) return;
+    setManualLoading(true);
+    setManualText('');
+    try {
+      const result = await adminApi.generateManualPost(apiKey, {
+        prompt: manualPrompt,
+        price: manualPrice || undefined,
+      });
+      setManualText(result.text);
+    } catch {
+      showToast('Error al generar descripción', 'error');
+    } finally {
+      setManualLoading(false);
+    }
+  };
+
   // Filter subcategories for selected category
   const availableSubcategories = subcategories.filter(
     sub => sub.category_name === filterCategory
@@ -211,6 +250,146 @@ export default function WhatsAppGeneratorPage() {
         <h1 className="text-2xl font-bold text-gray-900">Generador de Mensajes WhatsApp</h1>
         <p className="text-gray-600">Crea mensajes promocionales para compartir en tu canal</p>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('catalog')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            activeTab === 'catalog'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Desde catálogo
+        </button>
+        <button
+          onClick={() => setActiveTab('manual')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            activeTab === 'manual'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Publicación manual
+        </button>
+      </div>
+
+      {/* Manual post tab */}
+      {activeTab === 'manual' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-semibold mb-4">Publicación manual</h2>
+            <p className="text-sm text-gray-500 mb-6">Para productos que no están en el catálogo.</p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Left: image + price + prompt */}
+              <div className="space-y-4">
+                {/* Image upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Foto del producto</label>
+                  <input
+                    ref={manualFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleManualImageChange}
+                    className="hidden"
+                  />
+                  {manualImagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={manualImagePreview}
+                        alt="Vista previa"
+                        className="w-full max-h-64 object-contain rounded-lg border bg-gray-50"
+                      />
+                      <button
+                        onClick={() => {
+                          setManualImage(null);
+                          setManualImagePreview(null);
+                          if (manualFileInputRef.current) manualFileInputRef.current.value = '';
+                        }}
+                        className="absolute top-2 right-2 bg-white/90 rounded-full p-1 text-gray-600 hover:text-red-600 text-xs shadow"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => manualFileInputRef.current?.click()}
+                      className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-gray-400 hover:text-gray-600 transition"
+                    >
+                      <span className="text-3xl mb-2">📷</span>
+                      <span className="text-sm">Clic para seleccionar imagen</span>
+                      <span className="text-xs mt-1">No se guarda en el servidor</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Precio (opcional)</label>
+                  <input
+                    type="text"
+                    value={manualPrice}
+                    onChange={(e) => setManualPrice(e.target.value)}
+                    placeholder="Ej: $15.000"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+
+                {/* Prompt */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Descripción del producto</label>
+                  <textarea
+                    value={manualPrompt}
+                    onChange={(e) => setManualPrompt(e.target.value)}
+                    placeholder="Describí el producto para que la IA genere el texto de WhatsApp..."
+                    className="w-full px-3 py-2 border rounded-lg"
+                    rows={4}
+                  />
+                </div>
+
+                <button
+                  onClick={generateManualPost}
+                  disabled={manualLoading || !manualPrompt.trim()}
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                >
+                  {manualLoading ? 'Generando...' : 'Generar descripción IA'}
+                </button>
+              </div>
+
+              {/* Right: output */}
+              <div className="space-y-4">
+                {manualText ? (
+                  <>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 min-h-[200px]">
+                      <pre className="whitespace-pre-wrap font-sans text-sm">{manualText}</pre>
+                    </div>
+                    {manualPrice && (
+                      <div className="bg-blue-50 rounded-lg px-4 py-2 text-sm text-blue-800">
+                        💰 <strong>Precio:</strong> {manualPrice}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => copyToClipboard(manualPrice ? `${manualText}\n\n💰 ${manualPrice}` : manualText)}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                    >
+                      Copiar texto
+                    </button>
+                  </>
+                ) : (
+                  <div className="h-full min-h-[200px] bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                    El texto generado aparecerá aquí
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Catalog tab */}
+      {activeTab === 'catalog' && (<>
 
       {/* Filters */}
       <div className="bg-white rounded-lg border p-6">
@@ -564,6 +743,7 @@ export default function WhatsAppGeneratorPage() {
           <p>Cargando productos...</p>
         </div>
       )}
+      </>)}
     </div>
   );
 }

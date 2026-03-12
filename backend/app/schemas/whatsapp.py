@@ -48,6 +48,12 @@ class WhatsAppMessageResponse(BaseModel):
     wa_link: Optional[str] = None
 
 
+class ManualPostRequest(BaseModel):
+    """Request to generate a manual WhatsApp post."""
+    prompt: str = Field(..., min_length=5, max_length=2000)
+    price: Optional[str] = Field(None, max_length=100)
+
+
 class WhatsAppBulkMessageResponse(BaseModel):
     """Response with generated message for multiple products (combined)."""
     text: str

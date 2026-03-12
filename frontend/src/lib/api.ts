@@ -1061,6 +1061,16 @@ export const adminApi = {
       body: JSON.stringify(data),
     }, apiKey);
   },
+
+  async generateManualPost(
+    apiKey: string,
+    data: { prompt: string; price?: string }
+  ): Promise<{ text: string }> {
+    return fetchAPI('/admin/whatsapp/manual-post', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
 };
 
 /**
