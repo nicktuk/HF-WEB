@@ -1080,10 +1080,16 @@ export const adminApi = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('prompt', prompt);
-    return fetchAPI('/admin/whatsapp/generate-image', {
+    const response = await fetch(`${API_URL}/admin/whatsapp/generate-image`, {
       method: 'POST',
+      headers: { 'X-Admin-API-Key': apiKey },
       body: formData,
-    }, apiKey);
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error desconocido' }));
+      throw new Error(error.detail || `HTTP error ${response.status}`);
+    }
+    return response.json();
   },
 };
 

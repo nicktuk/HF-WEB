@@ -1718,6 +1718,7 @@ class ProductService:
                     0
                 ).label("stock_value"),
             )
+            .select_from(Product)
             .join(StockPurchase, StockPurchase.product_id == Product.id)
             .outerjoin(Category, Product.category_id == Category.id)
             .group_by(Category.name)
