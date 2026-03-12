@@ -1850,7 +1850,7 @@ async def generate_whatsapp_bulk_message(
 )
 async def generate_manual_post(
     data: ManualPostRequest,
-    db: Session = Depends(get_db),
+    service: ProductService = Depends(get_product_service),
 ):
     """
     Generate a WhatsApp-length description using AI for a product not in the catalog.
@@ -1859,6 +1859,7 @@ async def generate_manual_post(
     from app.models.app_setting import AppSetting
     from app.config import settings as app_settings
 
+    db = service.db
     # Load AI config from DB
     config = {}
     ai_settings = db.query(AppSetting).filter(
