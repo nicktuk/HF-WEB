@@ -288,7 +288,7 @@ class AIDescriptionService:
         """Search product images using Brave Image Search API."""
         resp = await self._http.get(
             "https://api.search.brave.com/res/v1/images/search",
-            params={"q": query, "count": max_results, "safesearch": "moderate"},
+            params={"q": query, "count": max_results},
             headers={
                 "Accept": "application/json",
                 "X-Subscription-Token": brave_key,

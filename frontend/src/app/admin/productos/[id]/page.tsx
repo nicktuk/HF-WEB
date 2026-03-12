@@ -71,9 +71,12 @@ export default function ProductEditPage() {
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
   const [nextProductId, setNextProductId] = useState<number | null>(null);
 
-  // Initialize form when product loads
+  // Initialize form when product loads — only once per product ID to avoid
+  // React Query background refetches resetting unsaved user changes.
+  const initializedProductId = useRef<number | null>(null);
   useEffect(() => {
-    if (product) {
+    if (product && initializedProductId.current !== product.id) {
+      initializedProductId.current = product.id;
       setEnabled(product.enabled);
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
