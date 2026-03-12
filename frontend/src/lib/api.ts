@@ -1071,6 +1071,20 @@ export const adminApi = {
       body: JSON.stringify(data),
     }, apiKey);
   },
+
+  async generateWhatsAppImage(
+    apiKey: string,
+    file: File,
+    prompt: string
+  ): Promise<{ image: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('prompt', prompt);
+    return fetchAPI('/admin/whatsapp/generate-image', {
+      method: 'POST',
+      body: formData,
+    }, apiKey);
+  },
 };
 
 /**

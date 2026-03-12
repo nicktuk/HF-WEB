@@ -14,6 +14,9 @@ export default function WhatsAppGeneratorPage() {
   // Manual post state
   const [manualImage, setManualImage] = useState<File | null>(null);
   const [manualImagePreview, setManualImagePreview] = useState<string | null>(null);
+  const [manualImagePrompt, setManualImagePrompt] = useState('');
+  const [manualGeneratedImage, setManualGeneratedImage] = useState<string | null>(null);
+  const [manualImageLoading, setManualImageLoading] = useState(false);
   const [manualPrompt, setManualPrompt] = useState('');
   const [manualPrice, setManualPrice] = useState('');
   const [manualText, setManualText] = useState('');
@@ -203,6 +206,20 @@ export default function WhatsAppGeneratorPage() {
   };
 
   // Manual post handlers
+  const generateManualImage = async () => {
+    if (!apiKey || !manualImage || !manualImagePrompt.trim()) return;
+    setManualImageLoading(true);
+    setManualGeneratedImage(null);
+    try {
+      const result = await adminApi.generateWhatsAppImage(apiKey, manualImage, manualImagePrompt);
+      setManualGeneratedImage(result.image);
+    } catch {
+      showToast('Error al generar imagen', 'error');
+    } finally {
+      setManualImageLoading(false);
+    }
+  };
+
   const handleManualImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -287,7 +304,7 @@ export default function WhatsAppGeneratorPage() {
               <div className="space-y-4">
                 {/* Image upload */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Foto del producto</label>
+                  <label className="block text-sm font-medium mb-2">Foto de referencia</label>
                   <input
                     ref={manualFileInputRef}
                     type="file"
@@ -300,12 +317,13 @@ export default function WhatsAppGeneratorPage() {
                       <img
                         src={manualImagePreview}
                         alt="Vista previa"
-                        className="w-full max-h-64 object-contain rounded-lg border bg-gray-50"
+                        className="w-full max-h-48 object-contain rounded-lg border bg-gray-50"
                       />
                       <button
                         onClick={() => {
                           setManualImage(null);
                           setManualImagePreview(null);
+                          setManualGeneratedImage(null);
                           if (manualFileInputRef.current) manualFileInputRef.current.value = '';
                         }}
                         className="absolute top-2 right-2 bg-white/90 rounded-full p-1 text-gray-600 hover:text-red-600 text-xs shadow"
@@ -316,13 +334,35 @@ export default function WhatsAppGeneratorPage() {
                   ) : (
                     <button
                       onClick={() => manualFileInputRef.current?.click()}
-                      className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-gray-400 hover:text-gray-600 transition"
+                      className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-gray-400 hover:text-gray-600 transition"
                     >
-                      <span className="text-3xl mb-2">📷</span>
+                      <span className="text-2xl mb-1">📷</span>
                       <span className="text-sm">Clic para seleccionar imagen</span>
                       <span className="text-xs mt-1">No se guarda en el servidor</span>
                     </button>
                   )}
+                </div>
+
+                {/* Image prompt */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Prompt para generar imagen nueva</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualImagePrompt}
+                      onChange={(e) => setManualImagePrompt(e.target.value)}
+                      placeholder="Ej: fondo blanco limpio, iluminación profesional de producto..."
+                      className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                      disabled={!manualImage}
+                    />
+                    <button
+                      onClick={generateManualImage}
+                      disabled={manualImageLoading || !manualImage || !manualImagePrompt.trim()}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                    >
+                      {manualImageLoading ? 'Generando...' : 'Generar imagen'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Price */}
@@ -337,15 +377,15 @@ export default function WhatsAppGeneratorPage() {
                   />
                 </div>
 
-                {/* Prompt */}
+                {/* Text prompt */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Descripción del producto</label>
+                  <label className="block text-sm font-medium mb-2">Prompt para descripción WhatsApp</label>
                   <textarea
                     value={manualPrompt}
                     onChange={(e) => setManualPrompt(e.target.value)}
                     placeholder="Describí el producto para que la IA genere el texto de WhatsApp..."
                     className="w-full px-3 py-2 border rounded-lg"
-                    rows={4}
+                    rows={3}
                   />
                 </div>
 
@@ -360,9 +400,37 @@ export default function WhatsAppGeneratorPage() {
 
               {/* Right: output */}
               <div className="space-y-4">
+                {/* Generated image */}
+                {manualGeneratedImage ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Imagen generada</p>
+                    <img
+                      src={manualGeneratedImage}
+                      alt="Imagen generada"
+                      className="w-full rounded-lg border"
+                    />
+                    <button
+                      onClick={() => downloadImage(manualGeneratedImage, 'imagen-generada.png')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                    >
+                      Descargar imagen
+                    </button>
+                  </div>
+                ) : manualImagePreview && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-500">Imagen de referencia</p>
+                    <img
+                      src={manualImagePreview}
+                      alt="Referencia"
+                      className="w-full rounded-lg border opacity-60"
+                    />
+                  </div>
+                )}
+
+                {/* Generated text */}
                 {manualText ? (
                   <>
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 min-h-[200px]">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 min-h-[120px]">
                       <pre className="whitespace-pre-wrap font-sans text-sm">{manualText}</pre>
                     </div>
                     {manualPrice && (
@@ -378,7 +446,7 @@ export default function WhatsAppGeneratorPage() {
                     </button>
                   </>
                 ) : (
-                  <div className="h-full min-h-[200px] bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                  <div className="min-h-[120px] bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-sm">
                     El texto generado aparecerá aquí
                   </div>
                 )}

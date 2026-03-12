@@ -1845,6 +1845,57 @@ async def generate_whatsapp_bulk_message(
 
 
 @router.post(
+    "/whatsapp/generate-image",
+    dependencies=[Depends(verify_admin)]
+)
+async def generate_whatsapp_image(
+    prompt: str = Form(...),
+    file: UploadFile = File(...),
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Generate a new product image using GPT-image-1 (gpt-4o image generation).
+    Takes an uploaded reference image + text prompt and returns base64 image.
+    """
+    from app.services.app_settings import get_ai_config
+
+    db = service.db
+    ai_config = get_ai_config(db)
+    api_key = ai_config.get("OPENAI_API_KEY") or settings.OPENAI_API_KEY
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada.")
+
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Paquete 'openai' no instalado.")
+
+    image_bytes = await file.read()
+    client = AsyncOpenAI(api_key=api_key)
+
+    try:
+        response = await client.images.edit(
+            model="gpt-image-1",
+            image=(file.filename or "image.png", image_bytes, file.content_type or "image/png"),
+            prompt=prompt,
+            n=1,
+            size="1024x1024",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    item = response.data[0]
+    if getattr(item, "b64_json", None):
+        image_data = f"data:image/png;base64,{item.b64_json}"
+    elif getattr(item, "url", None):
+        image_data = item.url
+    else:
+        raise HTTPException(status_code=502, detail="La API no devolvió imagen.")
+
+    return {"image": image_data}
+
+
+@router.post(
     "/whatsapp/manual-post",
     dependencies=[Depends(verify_admin)]
 )
