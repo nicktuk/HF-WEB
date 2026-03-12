@@ -1,6 +1,6 @@
 """Admin API endpoints - Authentication required."""
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, Request, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
@@ -1914,10 +1914,28 @@ async def generate_manual_post(
     ai_config = get_ai_config(db)
     ai = get_ai_service()
 
-    context = data.prompt
+    # Build context
+    context_parts = [data.prompt]
+    if data.brand:
+        context_parts.append(f"Marca: {data.brand}")
+    if data.model:
+        context_parts.append(f"Modelo: {data.model}")
     if data.price:
-        context += f"\nPrecio: {data.price}"
+        context_parts.append(f"Precio: {data.price}")
 
+    # Web search: use explicit search_query, or build from brand + model
+    brave_key = ai_config.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
+    if brave_key:
+        query = data.search_query or " ".join(filter(None, [data.brand, data.model])) or None
+        if query:
+            try:
+                web_text = await ai._search_web(query, brave_key)
+                if web_text:
+                    context_parts.append(f"Info web: {web_text}")
+            except Exception:
+                pass  # search failure is non-fatal
+
+    context = "\n".join(context_parts)
     extra_rules = (
         "\nGenerá para mensaje de WhatsApp: máximo 4 líneas cortas, "
         "emojis relevantes, sin URL, sin precio en el texto (va por separado)."

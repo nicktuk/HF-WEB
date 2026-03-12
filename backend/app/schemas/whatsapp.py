@@ -52,6 +52,9 @@ class ManualPostRequest(BaseModel):
     """Request to generate a manual WhatsApp post."""
     prompt: str = Field(..., min_length=5, max_length=2000)
     price: Optional[str] = Field(None, max_length=100)
+    brand: Optional[str] = Field(None, max_length=100)
+    model: Optional[str] = Field(None, max_length=100)
+    search_query: Optional[str] = Field(None, max_length=200)
 
 
 class WhatsAppBulkMessageResponse(BaseModel):

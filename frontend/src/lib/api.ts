@@ -1064,7 +1064,7 @@ export const adminApi = {
 
   async generateManualPost(
     apiKey: string,
-    data: { prompt: string; price?: string }
+    data: { prompt: string; price?: string; brand?: string; model?: string; search_query?: string }
   ): Promise<{ text: string }> {
     return fetchAPI('/admin/whatsapp/manual-post', {
       method: 'POST',

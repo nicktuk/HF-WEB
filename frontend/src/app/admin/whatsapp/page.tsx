@@ -17,6 +17,9 @@ export default function WhatsAppGeneratorPage() {
   const [manualImagePrompt, setManualImagePrompt] = useState('');
   const [manualGeneratedImage, setManualGeneratedImage] = useState<string | null>(null);
   const [manualImageLoading, setManualImageLoading] = useState(false);
+  const [manualBrand, setManualBrand] = useState('');
+  const [manualModel, setManualModel] = useState('');
+  const [manualSearchQuery, setManualSearchQuery] = useState('');
   const [manualPrompt, setManualPrompt] = useState('');
   const [manualPrice, setManualPrice] = useState('');
   const [manualText, setManualText] = useState('');
@@ -237,6 +240,9 @@ export default function WhatsAppGeneratorPage() {
       const result = await adminApi.generateManualPost(apiKey, {
         prompt: manualPrompt,
         price: manualPrice || undefined,
+        brand: manualBrand || undefined,
+        model: manualModel || undefined,
+        search_query: manualSearchQuery || undefined,
       });
       setManualText(result.text);
     } catch {
@@ -363,6 +369,45 @@ export default function WhatsAppGeneratorPage() {
                       {manualImageLoading ? 'Generando...' : 'Generar imagen'}
                     </button>
                   </div>
+                </div>
+
+                {/* Brand + Model */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Marca</label>
+                    <input
+                      type="text"
+                      value={manualBrand}
+                      onChange={(e) => setManualBrand(e.target.value)}
+                      placeholder="Ej: Samsung"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Modelo</label>
+                    <input
+                      type="text"
+                      value={manualModel}
+                      onChange={(e) => setManualModel(e.target.value)}
+                      placeholder="Ej: Galaxy A55"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Custom search query */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Búsqueda web personalizada
+                    <span className="text-gray-400 font-normal ml-1">(opcional — sobreescribe marca+modelo)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={manualSearchQuery}
+                    onChange={(e) => setManualSearchQuery(e.target.value)}
+                    placeholder="Ej: Samsung Galaxy A55 especificaciones técnicas"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                  />
                 </div>
 
                 {/* Price */}
