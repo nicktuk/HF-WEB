@@ -1,6 +1,6 @@
 """add carousel fields to categories
 
-Revision ID: 030_add_carousel_fields_to_categories
+Revision ID: 030_carousel_categories
 Revises: 029_add_is_published_to_products
 Create Date: 2026-03-17
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "030_add_carousel_fields_to_categories"
+revision = "030_carousel_categories"
 down_revision = "029_add_is_published_to_products"
 branch_labels = None
 depends_on = None
