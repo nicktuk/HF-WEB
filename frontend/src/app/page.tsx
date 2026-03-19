@@ -354,6 +354,17 @@ function HomePageContent() {
                 className="pl-10 h-10 rounded-xl border-zinc-200 bg-white shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
               />
             </div>
+            {/* Ver todo pill */}
+            <button
+              onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined })}
+              className={`hidden md:flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                !selectedCategory && !showFeatured && !showImmediate
+                  ? 'bg-[#0D1B2A] text-white shadow-sm'
+                  : 'border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 shadow-sm'
+              }`}
+            >
+              Ver todo
+            </button>
             {/* Menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
