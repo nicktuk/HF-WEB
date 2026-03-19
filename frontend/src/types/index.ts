@@ -134,6 +134,13 @@ export interface Category {
   enabled_product_count: number;
   created_at?: string;
   updated_at?: string;
+  show_in_carousel: boolean;
+  carousel_title: string | null;
+  carousel_subtitle: string | null;
+  carousel_image_url: string | null;
+  carousel_bg_color: string | null;
+  carousel_text_color: string | null;
+  carousel_font: string | null; // 'sans' | 'serif' | 'mono'
 }
 
 export interface CategoryCreateForm {
@@ -142,6 +149,13 @@ export interface CategoryCreateForm {
   display_order: number;
   color: string;
   show_in_menu: boolean;
+  show_in_carousel?: boolean;
+  carousel_title?: string;
+  carousel_subtitle?: string;
+  carousel_image_url?: string;
+  carousel_bg_color?: string;
+  carousel_text_color?: string;
+  carousel_font?: string;
 }
 
 export interface CategoryMapping {

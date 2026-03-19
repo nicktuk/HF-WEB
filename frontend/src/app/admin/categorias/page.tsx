@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical, Package, Eye, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Package, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import { adminApi } from '@/lib/api';
+import { adminApi, uploadImages } from '@/lib/api';
 import type {
   Category,
   CategoryCreateForm,
@@ -80,12 +80,21 @@ export default function CategoriasPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
   const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState<CategoryCreateForm>({
     name: '',
     is_active: true,
     display_order: 0,
     color: '#6b7280',
     show_in_menu: false,
+    show_in_carousel: false,
+    carousel_title: '',
+    carousel_subtitle: '',
+    carousel_image_url: '',
+    carousel_bg_color: '#0D1B2A',
+    carousel_text_color: '#ffffff',
+    carousel_font: 'sans',
   });
 
   const { data: categories, isLoading } = useQuery({
@@ -237,18 +246,40 @@ export default function CategoriasPage() {
 
   const openCreateModal = () => {
     setEditingCategory(null);
-    setFormData({ name: '', is_active: true, display_order: 0, color: '#6b7280', show_in_menu: false });
+    setCarouselOpen(false);
+    setFormData({
+      name: '',
+      is_active: true,
+      display_order: 0,
+      color: '#6b7280',
+      show_in_menu: false,
+      show_in_carousel: false,
+      carousel_title: '',
+      carousel_subtitle: '',
+      carousel_image_url: '',
+      carousel_bg_color: '#0D1B2A',
+      carousel_text_color: '#ffffff',
+      carousel_font: 'sans',
+    });
     setShowModal(true);
   };
 
   const openEditModal = (category: Category) => {
     setEditingCategory(category);
+    setCarouselOpen(false);
     setFormData({
       name: category.name,
       is_active: category.is_active,
       display_order: category.display_order,
       color: category.color || '#6b7280',
       show_in_menu: category.show_in_menu || false,
+      show_in_carousel: category.show_in_carousel || false,
+      carousel_title: category.carousel_title || '',
+      carousel_subtitle: category.carousel_subtitle || '',
+      carousel_image_url: category.carousel_image_url || '',
+      carousel_bg_color: category.carousel_bg_color || '#0D1B2A',
+      carousel_text_color: category.carousel_text_color || '#ffffff',
+      carousel_font: category.carousel_font || 'sans',
     });
     setShowModal(true);
   };
@@ -256,7 +287,21 @@ export default function CategoriasPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingCategory(null);
-    setFormData({ name: '', is_active: true, display_order: 0, color: '#6b7280', show_in_menu: false });
+    setCarouselOpen(false);
+    setFormData({
+      name: '',
+      is_active: true,
+      display_order: 0,
+      color: '#6b7280',
+      show_in_menu: false,
+      show_in_carousel: false,
+      carousel_title: '',
+      carousel_subtitle: '',
+      carousel_image_url: '',
+      carousel_bg_color: '#0D1B2A',
+      carousel_text_color: '#ffffff',
+      carousel_font: 'sans',
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -580,7 +625,7 @@ export default function CategoriasPage() {
         isOpen={showModal}
         onClose={closeModal}
         title={editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
-        size="sm"
+        size="md"
       >
         <form onSubmit={handleSubmit}>
           <ModalContent className="space-y-4">
@@ -656,6 +701,232 @@ export default function CategoriasPage() {
                   Mostrar en menu mobile (junto a Nuevo y Entrega Inmediata)
                 </label>
               </div>
+            </div>
+
+            {/* ── Carousel config collapsible ── */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCarouselOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <span>Configuracion de carrusel</span>
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${carouselOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {carouselOpen && (
+                <div className="p-4 space-y-4">
+                  {/* show_in_carousel toggle */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="show_in_carousel"
+                      checked={formData.show_in_carousel || false}
+                      onChange={(e) => setFormData({ ...formData, show_in_carousel: e.target.checked })}
+                      className="h-4 w-4 text-primary-600 rounded border-gray-300"
+                    />
+                    <label htmlFor="show_in_carousel" className="text-sm text-gray-700">
+                      Mostrar en carrusel
+                    </label>
+                  </div>
+
+                  <Input
+                    label="Titulo (deja vacio para usar el nombre)"
+                    value={formData.carousel_title || ''}
+                    onChange={(e) => setFormData({ ...formData, carousel_title: e.target.value })}
+                    placeholder={formData.name || 'Nombre de la categoria'}
+                  />
+
+                  <Input
+                    label="Subtitulo"
+                    value={formData.carousel_subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, carousel_subtitle: e.target.value })}
+                    placeholder="Ej: Ver todos los productos"
+                  />
+
+                  {/* Imagen de fondo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Imagen de fondo
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      {formData.carousel_image_url && (
+                        <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-200">
+                          <img
+                            src={formData.carousel_image_url}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, carousel_image_url: '' })}
+                            className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                      <label className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {isUploadingImage ? 'Subiendo...' : '+ Subir imagen'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingImage(true);
+                            try {
+                              const urls = await uploadImages(apiKey, [file]);
+                              setFormData(prev => ({ ...prev, carousel_image_url: urls[0] }));
+                            } catch (err) {
+                              console.error('Error subiendo imagen', err);
+                            } finally {
+                              setIsUploadingImage(false);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* carousel_bg_color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Color de fondo
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {PRESET_COLORS.map((color) => (
+                        <button
+                          key={color.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, carousel_bg_color: color.value })}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            formData.carousel_bg_color === color.value
+                              ? 'border-gray-900 scale-110'
+                              : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                          style={{ backgroundColor: color.value }}
+                          title={color.name}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={formData.carousel_bg_color || '#0D1B2A'}
+                        onChange={(e) => setFormData({ ...formData, carousel_bg_color: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                        title="Color personalizado"
+                      />
+                      <span className="text-xs text-gray-500 font-mono">{formData.carousel_bg_color || '#0D1B2A'}</span>
+                    </div>
+                  </div>
+
+                  {/* carousel_text_color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Color de texto
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {[
+                        { name: 'Blanco', value: '#ffffff' },
+                        { name: 'Negro', value: '#000000' },
+                        { name: 'Gris claro', value: '#f3f4f6' },
+                        { name: 'Gris', value: '#6b7280' },
+                        { name: 'Amarillo', value: '#fbbf24' },
+                      ].map((color) => (
+                        <button
+                          key={color.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, carousel_text_color: color.value })}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            formData.carousel_text_color === color.value
+                              ? 'border-gray-900 scale-110'
+                              : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                          style={{ backgroundColor: color.value }}
+                          title={color.name}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={formData.carousel_text_color || '#ffffff'}
+                        onChange={(e) => setFormData({ ...formData, carousel_text_color: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                        title="Color personalizado"
+                      />
+                      <span className="text-xs text-gray-500 font-mono">{formData.carousel_text_color || '#ffffff'}</span>
+                    </div>
+                  </div>
+
+                  {/* carousel_font */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fuente
+                    </label>
+                    <select
+                      value={formData.carousel_font || 'sans'}
+                      onChange={(e) => setFormData({ ...formData, carousel_font: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary-300"
+                    >
+                      <option value="sans">Sin serifa (Sans)</option>
+                      <option value="serif">Con serifa (Serif)</option>
+                      <option value="mono">Monoespaciado (Mono)</option>
+                    </select>
+                  </div>
+
+                  {/* Live preview */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">
+                      Vista previa
+                    </p>
+                    {(() => {
+                      const fontMap = { sans: 'font-sans', serif: 'font-serif', mono: 'font-mono' };
+                      const fontClass = fontMap[(formData.carousel_font || 'sans') as keyof typeof fontMap] ?? 'font-sans';
+                      const bgColor = formData.carousel_bg_color || formData.color || '#0D1B2A';
+                      const textColor = formData.carousel_text_color || '#ffffff';
+                      const title = formData.carousel_title || formData.name || 'Nombre';
+                      return (
+                        <div
+                          className={`relative rounded-2xl overflow-hidden ${fontClass}`}
+                          style={{ width: '220px', height: '140px', backgroundColor: bgColor }}
+                        >
+                          {formData.carousel_image_url && (
+                            <img
+                              src={formData.carousel_image_url}
+                              alt=""
+                              aria-hidden="true"
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          )}
+                          {formData.carousel_image_url ? (
+                            <div className="absolute inset-0 bg-black/45" />
+                          ) : (
+                            <div
+                              className="absolute inset-0 opacity-20"
+                              style={{
+                                backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)',
+                                backgroundSize: '16px 16px',
+                              }}
+                            />
+                          )}
+                          <div className="relative z-10 flex flex-col justify-end h-full p-4">
+                            <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: textColor }}>
+                              {title}
+                            </span>
+                            {formData.carousel_subtitle && (
+                              <span className="text-xs mt-1 leading-tight line-clamp-1 opacity-80" style={{ color: textColor }}>
+                                {formData.carousel_subtitle}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           </ModalContent>
 

@@ -22,6 +22,19 @@ const config: Config = {
           900: '#1e3a8a',
           950: '#172554',
         },
+        brand: {
+          DEFAULT: '#0D1B2A',
+          50: '#e8edf2',
+          100: '#c5d0dc',
+          200: '#9aafc4',
+          300: '#6e8dac',
+          400: '#4d749a',
+          500: '#2c5c88',
+          600: '#265480',
+          700: '#1e4a75',
+          800: '#16406a',
+          900: '#0D1B2A',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -37,7 +50,15 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities }: { addUtilities: (utilities: Record<string, Record<string, string>>) => void }) {
+      addUtilities({
+        '.tabular-nums': {
+          'font-variant-numeric': 'tabular-nums',
+        },
+      });
+    },
+  ],
 }
 
 export default config

@@ -21,6 +21,13 @@ class Category(Base):
     display_order = Column(Integer, default=0, nullable=False)
     color = Column(String(7), default="#6b7280", nullable=False, comment="Color hex para el badge (ej: #3b82f6)")
     show_in_menu = Column(Boolean, default=False, nullable=False, comment="Mostrar como filtro rapido en mobile")
+    show_in_carousel = Column(Boolean, default=False, nullable=False)
+    carousel_title = Column(String(100), nullable=True)
+    carousel_subtitle = Column(String(200), nullable=True)
+    carousel_image_url = Column(String(500), nullable=True)
+    carousel_bg_color = Column(String(7), default="#0D1B2A", nullable=True)
+    carousel_text_color = Column(String(7), default="#ffffff", nullable=True)
+    carousel_font = Column(String(50), default="sans", nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

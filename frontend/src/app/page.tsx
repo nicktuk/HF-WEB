@@ -11,6 +11,7 @@ import { usePublicProducts, useCategories, useSubcategories } from '@/hooks/useP
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 import { trackPublicEvent } from '@/lib/analytics';
 import { fetchPublicCatalogSettings } from '@/lib/api';
+import type { Category } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 
 export default function HomePage() {
@@ -23,32 +24,32 @@ export default function HomePage() {
 
 function HomePageSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-2">
-          <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
-            <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
-              <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
-                HE-FA
-              </span>
-              <span className="mt-1 w-[11.5rem] whitespace-nowrap text-center text-[8px] font-normal uppercase tracking-[0.12em] text-gray-200 sm:w-[16.5rem] sm:text-[11px] sm:tracking-[0.14em]">
-                Productos para el hogar
-              </span>
+    <div className="min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f0f2f5' }}>
+      <header className="sticky top-0 z-40 header-texture">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black tracking-[0.18em] text-white leading-none">HE·FA</span>
+                <span className="text-[9px] uppercase tracking-[0.22em] text-brand-300 leading-none mt-1 font-medium">
+                  Productos para el hogar
+                </span>
+              </div>
             </div>
-            <div className="absolute right-3 top-1/2 hidden h-9 w-28 -translate-y-1/2 rounded-lg bg-gray-200/90 animate-pulse sm:block" />
+            <div className="hidden h-9 w-32 rounded-full bg-white/10 animate-pulse sm:block" />
           </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6 space-y-4">
-          <div className="h-10 w-full max-w-md bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-11 w-full max-w-md bg-white/80 rounded-xl animate-pulse shadow-sm" />
           <div className="flex gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+              <div key={i} className="h-8 w-20 bg-white/80 rounded-full animate-pulse shadow-sm" />
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <ProductCardSkeleton key={i} />
           ))}
@@ -278,86 +279,99 @@ function HomePageContent() {
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-2">
-          <div className="relative h-14 w-full overflow-hidden rounded-lg bg-[#0b1025] sm:h-16">
-            <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center">
-              <span className="w-[9.5rem] text-center text-xl font-semibold tracking-[0.18em] text-white sm:w-[14.5rem] sm:text-3xl">
-                HE-FA
-              </span>
-              <span className="mt-1 w-[11.5rem] whitespace-nowrap text-center text-[8px] font-normal uppercase tracking-[0.12em] text-gray-200 sm:w-[16.5rem] sm:text-[11px] sm:tracking-[0.14em]">
-                Productos para el hogar
-              </span>
+    <div className="min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f0f2f5' }}>
+
+      {/* ─── HEADER ──────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-40 header-texture shadow-lg">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between gap-4">
+
+            {/* Logo */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Icon mark */}
+              <div className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 border border-white/20">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-2xl font-black tracking-[0.18em] text-white">
+                  HE·FA
+                </span>
+                <span className="text-[9px] uppercase tracking-[0.22em] text-blue-200/70 font-medium mt-0.5">
+                  Productos para el hogar
+                </span>
+              </div>
             </div>
-            <a
-              href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                trackPublicEvent('whatsapp_click', {
-                  metadata: { origin: 'home_header_button' },
-                });
-              }}
-              className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-white transition-colors hover:bg-green-600 sm:inline-flex"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Contactar
-            </a>
+
+            {/* Actions — desktop */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* ¿Primera vez? */}
+              <button
+                onClick={() => setHowWeWorkOpen(true)}
+                className="flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-all duration-200"
+                aria-label="¿Cómo trabajamos?"
+              >
+                <Lightbulb className="h-3.5 w-3.5 text-yellow-300" />
+                <span className="hidden sm:inline">¿Cómo funciona?</span>
+              </button>
+
+              {/* WhatsApp CTA */}
+              <a
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackPublicEvent('whatsapp_click', { metadata: { origin: 'home_header_button' } })}
+                className="hidden sm:inline-flex items-center gap-2 rounded-full bg-green-500 px-5 py-2 text-sm font-semibold text-white shadow-md hover:bg-green-400 hover:shadow-green-500/40 hover:shadow-lg transition-all duration-200 border border-green-400/50"
+              >
+                <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Contactar
+              </a>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Banner informativo debajo del header */}
-      <div className="container mx-auto px-4 py-1.5">
-        <button
-          onClick={() => setHowWeWorkOpen(true)}
-          className="w-full text-left text-sm font-semibold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 transition-colors flex items-center gap-3"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-md flex-shrink-0">
-            <Lightbulb className="h-4 w-4 animate-pulse" />
-          </span>
-          <span>¿Primera vez comprando con nosotros? Te contamos acá</span>
-        </button>
-      </div>
 
-      {/* Main */}
+
+      {/* ─── MAIN ────────────────────────────────────────────────────── */}
       <main className="container mx-auto px-4 py-3">
-        {/* Search and Filters */}
-        <div className="mb-4 space-y-3">
+
+        {/* Search and Filters — sticky below header */}
+        <div className="sticky top-16 z-30 filter-bar-glass -mx-4 px-4 pb-3 pt-3 mb-5 space-y-3">
+
           {/* Search and Mobile Menu Button */}
           <div className="flex gap-2">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-zinc-400 pointer-events-none" style={{ width: '1.1rem', height: '1.1rem' }} />
               <Input
                 type="search"
                 placeholder="Buscar productos..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 rounded-xl border-zinc-200 bg-white shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
               />
             </div>
-            {/* Mobile menu button */}
+            {/* Menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-zinc-200 bg-white shadow-sm hover:bg-zinc-50 transition-colors font-medium text-sm text-zinc-700"
               aria-label="Abrir menú de categorías"
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {!mobileMenuOpen && <span className="text-xs">Filtros</span>}
             </button>
           </div>
 
-          {/* Filters Pills (Mobile) */}
+          {/* ── Active filter pills ── */}
           <div className="flex flex-wrap gap-2 md:hidden">
-            {/* Category pill - only show when neither "Nuevo" nor "Inmediata" are active */}
             {!showFeatured && !showImmediate && (
               <>
                 {selectedCategory ? (
                   <span
-                    className="px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm flex items-center gap-1.5"
                     style={{
                       backgroundColor: orderedCategories.find(c => c.name === selectedCategory)?.color || '#3b82f6'
                     }}
@@ -372,14 +386,13 @@ function HomePageContent() {
                     </button>
                   </span>
                 ) : (
-                  <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
+                  <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-zinc-200 text-zinc-700">
                     Todos
                   </span>
                 )}
-                {/* Subcategory pill */}
                 {selectedSubcategory && (
                   <span
-                    className="px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm flex items-center gap-1.5"
                     style={{
                       backgroundColor: subcategories?.find(s => s.name === selectedSubcategory)?.color || '#6b7280'
                     }}
@@ -396,7 +409,8 @@ function HomePageContent() {
                 )}
               </>
             )}
-            {/* Nuevo filter pill */}
+
+            {/* Novedades pill */}
             <button
               onClick={() => {
                 if (showFeatured) {
@@ -405,10 +419,10 @@ function HomePageContent() {
                   updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined });
                 }
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 showFeatured
-                  ? 'bg-orange-500 text-white shadow-md border-2 border-orange-600 hover:bg-orange-600'
-                  : 'bg-white text-orange-700 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50'
+                  ? 'bg-amber-500 text-white shadow-md border-2 border-amber-600 hover:bg-amber-600'
+                  : 'bg-white text-amber-700 border-2 border-amber-200 hover:border-amber-300 hover:bg-amber-50'
               }`}
               aria-pressed={showFeatured}
               aria-label={showFeatured ? `Desactivar filtro ${featuredLabel}` : `Activar filtro ${featuredLabel}`}
@@ -416,7 +430,8 @@ function HomePageContent() {
               <Star className={`h-3.5 w-3.5 ${showFeatured ? 'fill-current' : ''}`} />
               {featuredLabel}
             </button>
-            {/* Entrega inmediata filter pill */}
+
+            {/* Entrega inmediata pill */}
             <button
               onClick={() => {
                 if (showImmediate) {
@@ -425,10 +440,10 @@ function HomePageContent() {
                   updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined });
                 }
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 showImmediate
-                  ? 'bg-green-600 text-white shadow-md border-2 border-green-700 hover:bg-green-700'
-                  : 'bg-white text-green-700 border-2 border-green-200 hover:border-green-300 hover:bg-green-50'
+                  ? 'bg-emerald-600 text-white shadow-md border-2 border-emerald-700 hover:bg-emerald-700'
+                  : 'bg-white text-emerald-700 border-2 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50'
               }`}
               aria-pressed={showImmediate}
               aria-label={showImmediate ? 'Desactivar filtro Entrega inmediata' : 'Activar filtro Entrega inmediata'}
@@ -436,14 +451,15 @@ function HomePageContent() {
               <Zap className={`h-3.5 w-3.5 ${showImmediate ? 'fill-current' : ''}`} />
               Inmediata
             </button>
-            {/* Category pills for show_in_menu categories - only when no category selected */}
+
+            {/* Category pills for show_in_menu categories */}
             {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
               <button
                 key={category.name}
                 onClick={() => {
                   updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                 }}
-                className={`relative px-3 py-1.5 rounded-full text-sm font-medium transition-all animate-attention-pulse border-2 hover:scale-105`}
+                className="relative px-3 py-1.5 rounded-full text-xs font-semibold transition-all animate-attention-pulse border-2 hover:scale-105"
                 style={{
                   backgroundColor: 'white',
                   borderColor: category.color,
@@ -454,7 +470,8 @@ function HomePageContent() {
                 {category.name}
               </button>
             ))}
-            {/* Subcategory pills - only when category selected */}
+
+            {/* Subcategory pills */}
             {selectedCategory && subcategories && subcategories.length > 0 && subcategories.map((subcategory) => (
               <button
                 key={subcategory.name}
@@ -465,7 +482,7 @@ function HomePageContent() {
                     updateParams({ subcategory: subcategory.name });
                   }
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   selectedSubcategory === subcategory.name
                     ? 'text-white shadow-md'
                     : 'border-2 hover:scale-105'
@@ -485,33 +502,32 @@ function HomePageContent() {
             ))}
           </div>
 
-          {/* Mobile Dropdown Menu */}
+          {/* ── Dropdown Menu ── */}
           {mobileMenuOpen && orderedCategories.length > 0 && (
-            <div className="md:hidden bg-white border rounded-lg shadow-lg p-4 space-y-2">
+            <div className="bg-white border border-zinc-200 rounded-2xl shadow-xl p-4 space-y-1">
               {mobileMenuMode === 'categories' ? (
                 <>
-                  {/* Categories View */}
                   <button
                     onClick={() => {
                       updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       !selectedCategory && !showFeatured && !showImmediate
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-zinc-100 text-zinc-900'
+                        : 'text-zinc-700 hover:bg-zinc-50'
                     }`}
                   >
-                    Todos
+                    Todos los productos
                   </button>
                   <button
                     onClick={() => {
                       updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                       showFeatured
-                        ? 'bg-orange-100 text-orange-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-amber-50 text-amber-700 font-semibold'
+                        : 'text-zinc-700 hover:bg-zinc-50'
                     }`}
                   >
                     <Star className="h-4 w-4" />
@@ -521,29 +537,28 @@ function HomePageContent() {
                     onClick={() => {
                       updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                       showImmediate
-                        ? 'bg-green-100 text-green-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-emerald-50 text-emerald-700 font-semibold'
+                        : 'text-zinc-700 hover:bg-zinc-50'
                     }`}
                   >
                     <Zap className="h-4 w-4" />
                     Entrega inmediata
                   </button>
-                  <div className="border-t pt-2 mt-2">
-                    <p className="text-xs text-gray-500 mb-2 px-3">Categorías</p>
+                  <div className="border-t border-zinc-100 pt-2 mt-2">
+                    <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 px-3">Categorías</p>
                     {orderedCategories.map((category) => (
                       <button
                         key={category.name}
                         onClick={() => {
-                          // Drill-down: show subcategories for this category
                           setTempCategory(category.name);
                           setMobileMenuMode('subcategories');
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2.5 ${
                           selectedCategory === category.name && !showFeatured && !showImmediate
                             ? 'text-white'
-                            : 'text-gray-700 hover:bg-gray-50'
+                            : 'text-zinc-700 hover:bg-zinc-50'
                         }`}
                         style={{
                           backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
@@ -552,7 +567,7 @@ function HomePageContent() {
                         }}
                       >
                         <span
-                          className="w-3 h-3 rounded-full"
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: category.color }}
                         />
                         {category.name}
@@ -562,53 +577,49 @@ function HomePageContent() {
                 </>
               ) : (
                 <>
-                  {/* Subcategories View (drill-down) */}
                   <button
                     onClick={() => {
                       setMobileMenuMode('categories');
                       setTempCategory(null);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Volver a categorías
                   </button>
 
-                  <div className="border-t pt-2 mt-2">
-                    {/* Header showing current category */}
+                  <div className="border-t border-zinc-100 pt-2 mt-1">
                     <div
-                      className="px-3 py-2 rounded-lg mb-2 flex items-center gap-2"
+                      className="px-3 py-2 rounded-xl mb-2 flex items-center gap-2"
                       style={{
-                        backgroundColor: `${orderedCategories.find(c => c.name === tempCategory)?.color}20`,
+                        backgroundColor: `${orderedCategories.find(c => c.name === tempCategory)?.color}18`,
                       }}
                     >
                       <span
-                        className="w-3 h-3 rounded-full"
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: orderedCategories.find(c => c.name === tempCategory)?.color }}
                       />
                       <span
-                        className="text-sm font-semibold"
+                        className="text-sm font-bold"
                         style={{ color: orderedCategories.find(c => c.name === tempCategory)?.color }}
                       >
                         {tempCategory}
                       </span>
                     </div>
 
-                    {/* "All in category" button */}
                     <button
                       onClick={() => {
                         updateParams({ category: tempCategory || undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
                         setMobileMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50"
+                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-zinc-700 hover:bg-zinc-50"
                     >
                       Ver todo en {tempCategory}
                     </button>
 
-                    {/* Subcategories list */}
                     {tempSubcategories && tempSubcategories.length > 0 ? (
                       <>
-                        <p className="text-xs text-gray-500 mb-2 px-3 mt-3">Subcategorías</p>
+                        <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 px-3 mt-3">Subcategorías</p>
                         {tempSubcategories.map((subcategory) => (
                           <button
                             key={subcategory.name}
@@ -621,10 +632,10 @@ function HomePageContent() {
                               });
                               setMobileMenuOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                            className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2.5 ${
                               selectedSubcategory === subcategory.name
                                 ? 'text-white'
-                                : 'text-gray-700 hover:bg-gray-50'
+                                : 'text-zinc-700 hover:bg-zinc-50'
                             }`}
                             style={{
                               backgroundColor: selectedSubcategory === subcategory.name
@@ -633,7 +644,7 @@ function HomePageContent() {
                             }}
                           >
                             <span
-                              className="w-3 h-3 rounded-full"
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
                               style={{ backgroundColor: subcategory.color }}
                             />
                             {subcategory.name}
@@ -641,7 +652,7 @@ function HomePageContent() {
                         ))}
                       </>
                     ) : (
-                      <p className="text-xs text-gray-400 px-3 mt-2">
+                      <p className="text-xs text-zinc-400 px-3 mt-2">
                         No hay subcategorías
                       </p>
                     )}
@@ -651,165 +662,59 @@ function HomePageContent() {
             </div>
           )}
 
-          {/* Desktop Categories */}
-          {orderedCategories.length > 0 && (
-            <div className="hidden md:flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-                }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  !selectedCategory && !showFeatured && !showImmediate
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => {
-                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
-                }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  showFeatured
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
-                }`}
-              >
-                <Star className="h-3.5 w-3.5" />
-                {featuredLabel}
-              </button>
-              <button
-                onClick={() => {
-                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
-                }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  showImmediate
-                    ? 'bg-green-600 text-white shadow-sm'
-                    : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                }`}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Entrega inmediata
-              </button>
-              {orderedCategories.map((category) => (
-                <button
-                  key={category.name}
-                  onClick={() => {
-                    if (selectedCategory === category.name) {
-                      updateParams({ category: undefined, subcategory: undefined });
-                    } else {
-                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category.name && !showFeatured && !showImmediate
-                      ? 'text-white'
-                      : 'hover:opacity-80'
-                  }`}
-                  style={{
-                    backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate
-                      ? category.color
-                      : `${category.color}20`,
-                    color: selectedCategory === category.name && !showFeatured && !showImmediate
-                      ? 'white'
-                      : category.color,
-                  }}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Desktop Subcategories - only when category selected */}
-          {selectedCategory && subcategories && subcategories.length > 0 && !showFeatured && !showImmediate && (
-            <div className="hidden md:flex flex-wrap gap-2 pt-2 border-t border-gray-200">
-              <span className="text-sm text-gray-500 py-1.5">Subcategorías:</span>
-              {subcategories.map((subcategory) => (
-                <button
-                  key={subcategory.name}
-                  onClick={() => {
-                    if (selectedSubcategory === subcategory.name) {
-                      updateParams({ subcategory: undefined });
-                    } else {
-                      updateParams({ subcategory: subcategory.name });
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    selectedSubcategory === subcategory.name
-                      ? 'text-white'
-                      : 'hover:opacity-80'
-                  }`}
-                  style={{
-                    backgroundColor: selectedSubcategory === subcategory.name
-                      ? subcategory.color
-                      : `${subcategory.color}20`,
-                    color: selectedSubcategory === subcategory.name
-                      ? 'white'
-                      : subcategory.color,
-                  }}
-                >
-                  {subcategory.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Product Grid */}
+        {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
+        {showGroupedByCategory && (
+          <CategoryCarousel
+            slides={orderedCategories.filter(c => c.show_in_carousel)}
+            onSelect={(name) => updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined })}
+          />
+        )}
+
+        {/* ─── PRODUCT GRID ─────────────────────────────────────────── */}
         <div>
           {showImmediate && (
-            <div className="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-3 shadow-sm">
+            <div className="mb-5 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                  <Zap className="h-4 w-4" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                  <Zap className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-emerald-800">
+                  <p className="text-sm font-bold text-emerald-800">
                     Entrega inmediata
                   </p>
-                  <p className="text-xs text-emerald-700">
+                  <p className="text-xs text-emerald-700 mt-0.5">
                     Productos listos para retirar o enviar sin demoras.
                   </p>
                 </div>
               </div>
             </div>
           )}
+
           {showGroupedByCategory ? (
             groupedProducts.length === 0 ? (
               <ProductGrid products={[]} isLoading={isLoading} />
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {groupedProducts.map((group) => (
                   <section key={group.name} className="space-y-4">
-                    <div
-                      className="w-full rounded-xl border-2 px-3 py-2 shadow-sm"
-                      style={{
-                        backgroundColor: `${group.color}14`,
-                        borderColor: `${group.color}88`,
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="h-0.5 flex-1 rounded-full"
-                          style={{ backgroundColor: `${group.color}99` }}
-                        />
-                        <p
-                          className="shrink-0 rounded-full border px-4 py-1 text-center text-sm font-semibold uppercase tracking-wide"
-                          style={{
-                            color: group.color,
-                            borderColor: `${group.color}88`,
-                            backgroundColor: '#ffffff',
-                          }}
-                        >
-                          {group.name}
-                        </p>
-                        <span
-                          className="h-0.5 flex-1 rounded-full"
-                          style={{ backgroundColor: `${group.color}99` }}
-                        />
-                      </div>
+                    {/* Category separator — updated style */}
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="h-5 w-0.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: group.color }}
+                      />
+                      <p
+                        className="shrink-0 text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: group.color }}
+                      >
+                        {group.name}
+                      </p>
+                      <span
+                        className="h-px flex-1"
+                        style={{ backgroundColor: `${group.color}33` }}
+                      />
                     </div>
                     <ProductGrid products={group.products} />
                   </section>
@@ -822,10 +727,81 @@ function HomePageContent() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} {siteName}
+      {/* ─── FOOTER ──────────────────────────────────────────────────── */}
+      <footer className="mt-16 bg-[#0D1B2A]">
+        {/* Top accent line */}
+        <div className="h-1 bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600" />
+
+        <div className="container mx-auto px-4 py-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+            {/* Brand column */}
+            <div className="sm:col-span-1">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 border border-white/20">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                  </svg>
+                </div>
+                <span className="text-xl font-black tracking-[0.18em] text-white">HE·FA</span>
+              </div>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Distribuidora mayorista y minorista de productos para el hogar. Electrodomésticos, bazar, herramientas y más.
+              </p>
+            </div>
+
+            {/* Contact column */}
+            <div className="sm:col-span-1">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Contacto</h4>
+              <ul className="space-y-3">
+                <li>
+                  <a
+                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackPublicEvent('whatsapp_click', { metadata: { origin: 'footer' } })}
+                    className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-green-400 transition-colors group"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-500/10 border border-green-500/20 text-green-500 group-hover:bg-green-500/20 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                    </span>
+                    WhatsApp
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Info column */}
+            <div className="sm:col-span-1">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Información</h4>
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    onClick={() => setHowWeWorkOpen(true)}
+                    className="text-sm text-zinc-400 hover:text-white transition-colors text-left"
+                  >
+                    ¿Cómo funciona?
+                  </button>
+                </li>
+                <li>
+                  <span className="text-sm text-zinc-500">
+                    Zona: Argentina
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <p className="text-xs text-zinc-600">
+              © {new Date().getFullYear()} {siteName}. Todos los derechos reservados.
+            </p>
+            <p className="text-xs text-zinc-600">
+              Distribución mayorista · Argentina
+            </p>
+          </div>
         </div>
       </footer>
 
@@ -834,6 +810,107 @@ function HomePageContent() {
 
       {/* Floating WhatsApp Button (mobile) */}
       <FloatingWhatsAppButton />
+    </div>
+  );
+}
+
+type CarouselSlide = { name: string; color: string; show_in_carousel: boolean; carousel_title: string | null; carousel_subtitle: string | null; carousel_image_url: string | null; carousel_bg_color: string | null; carousel_text_color: string | null; carousel_font: string | null; display_order: number; show_in_menu: boolean; };
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1', '');
+
+function fixImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  return url.replace(/^http:\/\/localhost:\d+/, API_BASE);
+}
+
+function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isPaused = useRef(false);
+  // Duplicate slides for seamless infinite loop
+  const doubled = [...slides, ...slides];
+
+  useEffect(() => {
+    if (slides.length === 0) return;
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const STEP = 1;
+    const INTERVAL = 16;
+
+    const tick = () => {
+      if (isPaused.current || !container) return;
+      container.scrollLeft += STEP;
+      // When we've scrolled past the first copy, jump back silently
+      if (container.scrollLeft >= container.scrollWidth / 2) {
+        container.scrollLeft -= container.scrollWidth / 2;
+      }
+    };
+
+    const id = setInterval(tick, INTERVAL);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  if (slides.length === 0) return null;
+
+  return (
+    <div
+      ref={scrollRef}
+      className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide"
+      onMouseEnter={() => { isPaused.current = true; }}
+      onMouseLeave={() => { isPaused.current = false; }}
+      onTouchStart={() => { isPaused.current = true; }}
+      onTouchEnd={() => { isPaused.current = false; }}
+    >
+      <div className="flex gap-3 pb-2" style={{ width: 'max-content' }}>
+        {doubled.map((slide, i) => {
+          const fontMap = { sans: 'font-sans', serif: 'font-serif', mono: 'font-mono' };
+          const fontClass = fontMap[slide.carousel_font as keyof typeof fontMap] ?? 'font-sans';
+          const bgColor = slide.carousel_bg_color || slide.color || '#0D1B2A';
+          const textColor = slide.carousel_text_color || '#ffffff';
+          const title = slide.carousel_title || slide.name;
+          const imageUrl = fixImageUrl(slide.carousel_image_url);
+          return (
+            <button
+              key={`${slide.name}-${i}`}
+              type="button"
+              onClick={() => onSelect(slide.name)}
+              className={`relative shrink-0 rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass}`}
+              style={{ width: '240px', backgroundColor: bgColor }}
+              aria-label={`Filtrar por categoría: ${title}`}
+            >
+              {imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+              {imageUrl ? (
+                <div className="absolute inset-0 bg-black/45" />
+              ) : (
+                <div
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)',
+                    backgroundSize: '16px 16px',
+                  }}
+                />
+              )}
+              <div className="relative z-10 flex flex-col justify-end h-full p-4 text-left">
+                <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: textColor }}>
+                  {title}
+                </span>
+                {slide.carousel_subtitle && (
+                  <span className="text-xs mt-1 leading-tight line-clamp-1 opacity-80" style={{ color: textColor }}>
+                    {slide.carousel_subtitle}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

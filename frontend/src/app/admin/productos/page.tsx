@@ -328,8 +328,8 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-zinc-900">Productos</h1>
+          <p className="text-zinc-600">
             Gestiona los productos de tu catÃ¡logo
           </p>
         </div>
@@ -343,55 +343,55 @@ export default function ProductsPage() {
             <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
               <button
                 onClick={() => setShowBulkMarkupModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-t-lg flex items-center gap-2"
               >
                 <Percent className="h-4 w-4" />
                 <div>
                   <p className="font-medium">Markup masivo</p>
-                  <p className="text-xs text-gray-500">Aplicar markup a mÃºltiples productos</p>
+                  <p className="text-xs text-zinc-500">Aplicar markup a mÃºltiples productos</p>
                 </div>
               </button>
               <button
                 onClick={() => setShowWholesaleMarkupModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2 border-t"
               >
                 <Percent className="h-4 w-4 text-emerald-600" />
                 <div>
                   <p className="font-medium">Markup mayorista</p>
-                  <p className="text-xs text-gray-500">Aplica a todos los productos</p>
+                  <p className="text-xs text-zinc-500">Aplica a todos los productos</p>
                 </div>
               </button>
               <button
                 onClick={() => handleExportPdf('catalog')}
                 disabled={isExporting}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2 border-t"
               >
                 <FileDown className="h-4 w-4" />
                 <div>
                   <p className="font-medium">Exportar PDF (catÃ¡logo)</p>
-                  <p className="text-xs text-gray-500">CatÃ¡logo con imÃ¡genes</p>
+                  <p className="text-xs text-zinc-500">CatÃ¡logo con imÃ¡genes</p>
                 </div>
               </button>
               <button
                 onClick={() => handleExportPdf('list')}
                 disabled={isExporting}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 border-t"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2 border-t"
               >
                 <FileDown className="h-4 w-4" />
                 <div>
                   <p className="font-medium">Exportar PDF (lista)</p>
-                  <p className="text-xs text-gray-500">Lista de precios simple</p>
+                  <p className="text-xs text-zinc-500">Lista de precios simple</p>
                 </div>
               </button>
               <div className="border-t my-1" />
               <button
                 onClick={() => { setSupplierToDisable(''); setSupplierDisableResult(null); setShowSupplierDisableModal(true); }}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
               >
                 <Building2 className="h-4 w-4 text-red-500" />
                 <div>
                   <p className="font-medium">Inactivar por mayorista</p>
-                  <p className="text-xs text-gray-500">Desactiva todos los productos de un proveedor</p>
+                  <p className="text-xs text-zinc-500">Desactiva todos los productos de un proveedor</p>
                 </div>
               </button>
               <button
@@ -400,26 +400,26 @@ export default function ProductsPage() {
                     handleRemoveBadge('is_published', []);
                   }
                 }}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
               >
                 <Send className="h-4 w-4 text-blue-500" />
                 <div>
                   <p className="font-medium">Quitar todo publicar</p>
-                  <p className="text-xs text-gray-500">Limpia la marca "Publicar" de todos los productos</p>
+                  <p className="text-xs text-zinc-500">Limpia la marca "Publicar" de todos los productos</p>
                 </div>
               </button>
               <div className="border-t my-1" />
               <button
                 onClick={handleCalculateBestSellers}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
               >
                 <TrendingUp className="h-4 w-4 text-purple-600" />
                 <div>
                   <p className="font-medium">Calcular mas vendidos</p>
-                  <p className="text-xs text-gray-500">Marca automatica segun ventas</p>
+                  <p className="text-xs text-zinc-500">Marca automatica segun ventas</p>
                 </div>
               </button>
-              <div className="px-4 py-3 hover:bg-gray-100">
+              <div className="px-4 py-3 hover:bg-zinc-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="h-4 w-4 text-amber-500" />
                   <p className="font-medium text-sm">Marcar "Nuevo" por fecha</p>
@@ -449,12 +449,12 @@ export default function ProductsPage() {
                   }
                 }}
                 disabled={isRemovingBadge}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
               >
                 <Star className="h-4 w-4 text-amber-600" />
                 <div>
                   <p className="font-medium">Quitar todos "Nuevo"</p>
-                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
+                  <p className="text-xs text-zinc-500">Remueve la marca de todos</p>
                 </div>
               </button>
               <button
@@ -464,12 +464,12 @@ export default function ProductsPage() {
                   }
                 }}
                 disabled={isRemovingBadge}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
               >
                 <Zap className="h-4 w-4 text-emerald-600" />
                 <div>
                   <p className="font-medium">Quitar todos "Inmediata"</p>
-                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
+                  <p className="text-xs text-zinc-500">Remueve la marca de todos</p>
                 </div>
               </button>
               <button
@@ -479,12 +479,12 @@ export default function ProductsPage() {
                   }
                 }}
                 disabled={isRemovingBadge}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-b-lg flex items-center gap-2"
               >
                 <TrendingUp className="h-4 w-4 text-purple-600" />
                 <div>
                   <p className="font-medium">Quitar todos "Top"</p>
-                  <p className="text-xs text-gray-500">Remueve la marca de todos</p>
+                  <p className="text-xs text-zinc-500">Remueve la marca de todos</p>
                 </div>
               </button>
             </div>
@@ -500,17 +500,17 @@ export default function ProductsPage() {
             <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
               <button
                 onClick={() => setShowAddModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-t-lg"
               >
                 <p className="font-medium">Desde catalogo</p>
-                <p className="text-xs text-gray-500">Scrapear de web mayorista</p>
+                <p className="text-xs text-zinc-500">Scrapear de web mayorista</p>
               </button>
               <button
                 onClick={() => setShowManualModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg"
+                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-b-lg"
               >
                 <p className="font-medium">Producto manual</p>
-                <p className="text-xs text-gray-500">Crear desde cero</p>
+                <p className="text-xs text-zinc-500">Crear desde cero</p>
               </button>
             </div>
           </div>
@@ -636,7 +636,7 @@ export default function ProductsPage() {
       <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
           <Input
             type="search"
             placeholder="Buscar productos..."
@@ -801,7 +801,7 @@ export default function ProductsPage() {
 
       {/* Results count and per-page selector */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-zinc-600">
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
@@ -812,7 +812,7 @@ export default function ProductsPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Por pÃ¡gina:</span>
+          <span className="text-sm text-zinc-600">Por pÃ¡gina:</span>
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
@@ -842,42 +842,42 @@ export default function ProductsPage() {
         size="lg"
       >
         <ModalContent className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-zinc-600">
             Se detectaron cambios de precio origen en productos ya existentes. AprobÃƒÂ¡ para actualizar el precio.
           </p>
           {pendingItems.length === 0 ? (
-            <div className="text-sm text-gray-500">No hay cambios pendientes.</div>
+            <div className="text-sm text-zinc-500">No hay cambios pendientes.</div>
           ) : (
-            <div className="overflow-x-auto border rounded-lg">
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 overflow-hidden">
               <table className="min-w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-zinc-50 border-b border-zinc-200">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fuente</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actual</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Nuevo</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Detectado</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Producto</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Fuente</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Actual</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Nuevo</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Detectado</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-zinc-200">
                   {pendingItems.map((item) => (
-                    <tr key={item.product_id} className="hover:bg-gray-50">
+                    <tr key={item.product_id} className="hover:bg-zinc-50/80">
                       <td className="px-3 py-2">
-                        <div className="font-medium text-gray-900 line-clamp-1">
+                        <div className="font-medium text-zinc-900 line-clamp-1">
                           {item.display_name}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-gray-600">
+                      <td className="px-3 py-2 text-zinc-600">
                         {item.source_website_name || '-'}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {formatPrice(item.original_price ?? null)}
                       </td>
-                      <td className="px-3 py-2 text-right font-medium text-gray-900">
+                      <td className="px-3 py-2 text-right font-medium text-zinc-900">
                         {formatPrice(item.pending_original_price)}
                       </td>
-                      <td className="px-3 py-2 text-gray-600">
+                      <td className="px-3 py-2 text-zinc-600">
                         {formatDate(item.detected_at)}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -940,7 +940,7 @@ export default function ProductsPage() {
           >
             Anterior
           </Button>
-          <span className="px-4 py-2 text-gray-600">
+          <span className="px-4 py-2 text-zinc-600">
             PÃ¡gina {page} de {data.pages}
           </span>
           <Button
@@ -1003,11 +1003,11 @@ export default function ProductsPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-violet-600 shrink-0" />
-              <h2 className="text-lg font-semibold text-gray-900">Generando descripciones con IA</h2>
+              <h2 className="text-lg font-semibold text-zinc-900">Generando descripciones con IA</h2>
             </div>
 
             {!aiJob ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-zinc-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Iniciando job...
               </div>
@@ -1015,11 +1015,11 @@ export default function ProductsPage() {
               <>
                 {/* Barra de progreso */}
                 <div>
-                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <div className="flex justify-between text-sm text-zinc-600 mb-1">
                     <span>{aiJob.processed} / {aiJob.total} procesados</span>
                     <span>{aiJob.progress_pct}%</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-violet-500 rounded-full transition-all duration-500"
                       style={{ width: `${aiJob.progress_pct}%` }}
@@ -1034,7 +1034,7 @@ export default function ProductsPage() {
                     <span className="text-red-600 font-medium">✗ {aiJob.failed} fallidos</span>
                   )}
                   {aiJob.status === 'running' && (
-                    <span className="text-gray-400 flex items-center gap-1">
+                    <span className="text-zinc-400 flex items-center gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" /> generando...
                     </span>
                   )}
@@ -1042,17 +1042,17 @@ export default function ProductsPage() {
                     <span className="text-violet-600 font-medium">Completado</span>
                   )}
                   {aiJob.status === 'cancelled' && (
-                    <span className="text-gray-500">Cancelado</span>
+                    <span className="text-zinc-500">Cancelado</span>
                   )}
                 </div>
 
                 {/* Últimos resultados */}
                 {aiJob.results.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50">
+                  <div className="max-h-40 overflow-y-auto space-y-2 border rounded-lg p-3 bg-zinc-50">
                     {aiJob.results.slice(0, 5).map((r) => (
                       <div key={r.id} className="text-xs">
-                        <p className="font-medium text-gray-700 truncate">{r.name}</p>
-                        <p className="text-gray-500 line-clamp-2">{r.description}</p>
+                        <p className="font-medium text-zinc-700 truncate">{r.name}</p>
+                        <p className="text-zinc-500 line-clamp-2">{r.description}</p>
                       </div>
                     ))}
                   </div>
@@ -1103,15 +1103,15 @@ export default function ProductsPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center gap-3">
               <Building2 className="h-5 w-5 text-red-500 shrink-0" />
-              <h2 className="text-lg font-semibold text-gray-900">Inactivar por mayorista</h2>
+              <h2 className="text-lg font-semibold text-zinc-900">Inactivar por mayorista</h2>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-zinc-600">
               Ingresá el nombre (o parte del nombre) del mayorista origen. Se inactivarán todos los productos
               activos cuya web origen coincida con ese nombre.
             </p>
 
             {supplierDisableResult ? (
-              <div className={`rounded-lg p-4 text-sm ${supplierDisableResult.count > 0 ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-600'}`}>
+              <div className={`rounded-lg p-4 text-sm ${supplierDisableResult.count > 0 ? 'bg-red-50 text-red-800' : 'bg-zinc-50 text-zinc-600'}`}>
                 {supplierDisableResult.count > 0
                   ? `✓ Se inactivaron ${supplierDisableResult.count} producto(s).`
                   : 'No se encontraron productos activos para ese mayorista.'}
@@ -1119,7 +1119,7 @@ export default function ProductsPage() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mayorista</label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Mayorista</label>
                   <input
                     list="supplier-disable-list"
                     type="text"
@@ -1163,7 +1163,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 className="text-lg font-semibold mb-4">Cambiar categorÃ­a y subcategorÃ­a</h2>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-zinc-600 mb-4">
               Cambiar la categorÃ­a/subcategorÃ­a de {selectedIds.length} producto(s) seleccionado(s)
             </p>
             <select

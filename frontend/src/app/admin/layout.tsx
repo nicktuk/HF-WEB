@@ -109,7 +109,7 @@ function SidebarSubmenu({
         onClick={onToggle}
         className={cn(
           'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          anyActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+          anyActive ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'
         )}
       >
         <span className="flex items-center gap-3">
@@ -128,7 +128,7 @@ function SidebarSubmenu({
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  isActive ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -223,10 +223,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (pathname === '/admin/login') return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-zinc-100">
       <button
         onClick={() => setDesktopMenuOpen(!desktopMenuOpen)}
-        className="fixed left-3 top-3 z-[60] hidden rounded-lg bg-gray-900 p-2 text-white shadow-md transition-colors hover:bg-gray-800 md:block"
+        className="fixed left-3 top-3 z-[60] hidden rounded-lg bg-[#0D1B2A] p-2 text-white shadow-md transition-colors hover:bg-[#16406a] md:block"
         aria-label={desktopMenuOpen ? 'Ocultar menu' : 'Mostrar menu'}
       >
         {desktopMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -235,72 +235,98 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 hidden w-64 bg-gray-900 transition-transform duration-200 md:block',
+          'fixed inset-y-0 left-0 z-50 hidden w-64 bg-[#0D1B2A] transition-transform duration-200 md:block',
           desktopMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex h-full flex-col">
-          <div className="border-b border-gray-800 px-6 py-4">
-            <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+          <div className="border-b border-white/10 px-6 py-4">
+            <h1 className="text-xl font-bold text-white tracking-wide">HE-FA</h1>
+            <p className="text-[10px] uppercase tracking-widest text-zinc-400 mt-0.5">Panel Admin</p>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-4">
+          <nav className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
             {/* Dashboard */}
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              );
-            })}
+            <div>
+              {navigation.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
 
-            <SidebarSubmenu
-              label="Productos"
-              icon={Package}
-              items={productosSubmenu}
-              isOpen={open.productos}
-              onToggle={() => toggle('productos')}
-              pathname={pathname}
-            />
-            <SidebarSubmenu
-              label="Ventas"
-              icon={DollarSign}
-              items={ventasSubmenu}
-              isOpen={open.ventas}
-              onToggle={() => toggle('ventas')}
-              pathname={pathname}
-            />
-            <SidebarSubmenu
-              label="Analítica"
-              icon={LineChart}
-              items={analiticaSubmenu}
-              isOpen={open.analitica}
-              onToggle={() => toggle('analitica')}
-              pathname={pathname}
-            />
-            <SidebarSubmenu
-              label="Configuracion"
-              icon={Settings}
-              items={configSubmenu}
-              isOpen={open.config}
-              onToggle={() => toggle('config')}
-              pathname={pathname}
-            />
+            <div>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Catálogo
+              </p>
+              <SidebarSubmenu
+                label="Productos"
+                icon={Package}
+                items={productosSubmenu}
+                isOpen={open.productos}
+                onToggle={() => toggle('productos')}
+                pathname={pathname}
+              />
+            </div>
+
+            <div>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Comercial
+              </p>
+              <SidebarSubmenu
+                label="Ventas"
+                icon={DollarSign}
+                items={ventasSubmenu}
+                isOpen={open.ventas}
+                onToggle={() => toggle('ventas')}
+                pathname={pathname}
+              />
+            </div>
+
+            <div>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Analítica
+              </p>
+              <SidebarSubmenu
+                label="Analítica"
+                icon={LineChart}
+                items={analiticaSubmenu}
+                isOpen={open.analitica}
+                onToggle={() => toggle('analitica')}
+                pathname={pathname}
+              />
+            </div>
+
+            <div>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Configuración
+              </p>
+              <SidebarSubmenu
+                label="Configuracion"
+                icon={Settings}
+                items={configSubmenu}
+                isOpen={open.config}
+                onToggle={() => toggle('config')}
+                pathname={pathname}
+              />
+            </div>
           </nav>
 
-          <div className="border-t border-gray-800 px-4 py-4">
+          <div className="border-t border-white/10 px-4 py-4">
             <button
               onClick={logout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <LogOut className="h-5 w-5" />
               Cerrar sesion

@@ -8,32 +8,12 @@
   }
 
   body {
-    @apply antialiased text-gray-900 bg-gray-50;
+    @apply antialiased text-zinc-900;
+    background-color: #f0f2f5;
   }
 }
 
 @layer utilities {
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
-
-  .line-clamp-2 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .line-clamp-3 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-
   /* Attention-grabbing animation for featured category pills */
   .animate-attention-pulse {
     animation: attention-pulse 2s ease-in-out;
@@ -68,5 +48,59 @@
       transform: scale(1);
       box-shadow: 0 0 0 0 transparent;
     }
+  }
+
+  /* Subtle dot pattern for the page background */
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle, #c8cfd8 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Header inner gradient texture */
+  .header-texture {
+    background: linear-gradient(
+      135deg,
+      #0D1B2A 0%,
+      #122033 50%,
+      #0D1B2A 100%
+    );
+  }
+
+  /* Card hover lift effect */
+  .card-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Price shimmer underline */
+  .price-accent::after {
+    content: '';
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    border-radius: 1px;
+    margin-top: 2px;
+    opacity: 0.5;
+  }
+
+  /* Hide scrollbar for carousel */
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Filter bar glass effect */
+  .filter-bar-glass {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 }

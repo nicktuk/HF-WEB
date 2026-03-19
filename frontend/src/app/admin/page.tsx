@@ -214,8 +214,8 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Resumen de tu catalogo</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Dashboard</h1>
+        <p className="text-zinc-500">Resumen de tu catalogo</p>
       </div>
 
       {/* Financial Stats - top */}
@@ -223,12 +223,12 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
+              <DollarSign className="h-5 w-5 text-zinc-600" />
+              <h2 className="text-lg font-semibold text-zinc-900">
                 Resumen financiero
               </h2>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-zinc-500">
               Valores de ventas y stock a costo origen. Click en los KPIs de ventas para ver detalle por vendedor.
             </p>
           </CardHeader>
@@ -256,19 +256,19 @@ export default function AdminDashboard() {
                 {projections && (
                   <>
                     <div className="rounded-lg border bg-white p-3">
-                      <p className="text-xs text-gray-500 uppercase">Stock valorizado proyectado</p>
+                      <p className="text-xs text-zinc-500 uppercase">Stock valorizado proyectado</p>
                       <div className="mt-2 space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">A costo</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stockCost)}</span>
+                          <span className="text-zinc-600">A costo</span>
+                          <span className="font-semibold text-zinc-900">{formatPrice(projections.stockCost)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">A +50%</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock50)}</span>
+                          <span className="text-zinc-600">A +50%</span>
+                          <span className="font-semibold text-zinc-900">{formatPrice(projections.stock50)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">A +70%</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(projections.stock70)}</span>
+                          <span className="text-zinc-600">A +70%</span>
+                          <span className="font-semibold text-zinc-900">{formatPrice(projections.stock70)}</span>
                         </div>
                       </div>
                     </div>
@@ -280,8 +280,8 @@ export default function AdminDashboard() {
                 <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Ventas y Estadios</h3>
                 {projections && (
                   <div className="rounded-lg border bg-white p-3">
-                    <p className="text-xs text-gray-500 uppercase">Suma de ventas</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatPrice(projections.totalSales)}</p>
+                    <p className="text-xs text-zinc-500 uppercase">Suma de ventas</p>
+                    <p className="text-2xl font-bold text-zinc-900 mt-1">{formatPrice(projections.totalSales)}</p>
                     <p className={`text-sm mt-2 ${projections.gainVsInvested >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                       Ganancia vs compras: {formatPrice(projections.gainVsInvested)} ({formatPct(projections.gainPctVsInvested)})
                     </p>
@@ -330,8 +330,8 @@ export default function AdminDashboard() {
                   {projections.scenarios.map((scenario) => (
                     <div key={scenario.key} className="rounded-lg border bg-white p-3">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700">{scenario.label}</span>
-                        <span className="font-semibold text-gray-900">{formatPrice(scenario.total)}</span>
+                        <span className="text-zinc-700">{scenario.label}</span>
+                        <span className="font-semibold text-zinc-900">{formatPrice(scenario.total)}</span>
                       </div>
                       <div className={`text-xs mt-1 ${scenario.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                         Diferencia vs inversion: {formatPrice(scenario.diff)} ({formatPct(scenario.pct)})
@@ -344,8 +344,8 @@ export default function AdminDashboard() {
 
             {/* Stats by Seller - Collapsible */}
             {financialStats.by_seller && showSellerStats && (
-              <div className="rounded-xl border bg-gradient-to-br from-gray-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <div className="rounded-xl border bg-gradient-to-br from-zinc-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
+                <h3 className="text-sm font-semibold text-zinc-700 mb-4 flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   Detalle por vendedor
                 </h3>
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
                         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
                           {seller[0]}
                         </div>
-                        <span className="font-semibold text-gray-900">{seller}</span>
+                        <span className="font-semibold text-zinc-900">{seller}</span>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between items-center">
@@ -390,7 +390,7 @@ export default function AdminDashboard() {
             {/* Stats by Payer - Collapsible */}
             {purchasesByPayer && showPayerStats && (
               <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 shadow-inner animate-in slide-in-from-top-2 duration-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-zinc-700 mb-4 flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   Detalle por pagador (compras)
                 </h3>
@@ -403,16 +403,16 @@ export default function AdminDashboard() {
                         }`}>
                           {item.payer[0]}
                         </div>
-                        <span className="font-semibold text-gray-900">{item.payer}</span>
+                        <span className="font-semibold text-zinc-900">{item.payer}</span>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Total pagado</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(item.total_amount)}</span>
+                          <span className="text-zinc-600">Total pagado</span>
+                          <span className="font-semibold text-zinc-900">{formatPrice(item.total_amount)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-500 text-xs">Pagos registrados</span>
-                          <span className="text-gray-700">{item.payment_count}</span>
+                          <span className="text-zinc-500 text-xs">Pagos registrados</span>
+                          <span className="text-zinc-700">{item.payment_count}</span>
                         </div>
                       </div>
                     </div>
@@ -442,61 +442,57 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Package className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Productos</p>
-                <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
-              </div>
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+          <div className="h-1 bg-blue-500" />
+          <div className="p-5 flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Total Productos</p>
+              <p className="mt-2 text-3xl font-bold text-zinc-900 tabular-nums">{totalProducts}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-lg bg-blue-50 p-2">
+              <Package className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Eye className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Habilitados</p>
-                <p className="text-2xl font-bold text-gray-900">{enabledCount}</p>
-              </div>
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+          <div className="h-1 bg-emerald-500" />
+          <div className="p-5 flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Habilitados</p>
+              <p className="mt-2 text-3xl font-bold text-zinc-900 tabular-nums">{enabledCount}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-lg bg-emerald-50 p-2">
+              <Eye className="h-5 w-5 text-emerald-500" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <EyeOff className="h-6 w-6 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Deshabilitados</p>
-                <p className="text-2xl font-bold text-gray-900">{disabledCount}</p>
-              </div>
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+          <div className="h-1 bg-zinc-300" />
+          <div className="p-5 flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deshabilitados</p>
+              <p className="mt-2 text-3xl font-bold text-zinc-900 tabular-nums">{disabledCount}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-lg bg-zinc-100 p-2">
+              <EyeOff className="h-5 w-5 text-zinc-400" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Webs de Origen</p>
-                <p className="text-2xl font-bold text-gray-900">{sourceWebsites?.items.length || 0}</p>
-              </div>
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+          <div className="h-1 bg-violet-500" />
+          <div className="p-5 flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Webs de Origen</p>
+              <p className="mt-2 text-3xl font-bold text-zinc-900 tabular-nums">{sourceWebsites?.items.length || 0}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-lg bg-violet-50 p-2">
+              <TrendingUp className="h-5 w-5 text-violet-500" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Order Stats */}
@@ -505,14 +501,12 @@ export default function AdminDashboard() {
           <Link href="/admin/pedidos?status=active">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <ClipboardList className="h-6 w-6 text-yellow-600" />
-                  </div>
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Pedidos activos</p>
-                    <p className="text-2xl font-bold text-gray-900">{orderStats.active_count}</p>
+                    <p className="text-sm text-zinc-500">Pedidos activos</p>
+                    <p className="mt-1 text-3xl font-bold text-zinc-900 tabular-nums">{orderStats.active_count}</p>
                   </div>
+                  <ClipboardList className="h-5 w-5 text-zinc-300" />
                 </div>
               </CardContent>
             </Card>
@@ -521,14 +515,12 @@ export default function AdminDashboard() {
           <Link href="/admin/pedidos?status=completed_sale">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Convertidos en venta</p>
-                    <p className="text-2xl font-bold text-gray-900">{orderStats.completed_sale_count}</p>
+                    <p className="text-sm text-zinc-500">Convertidos en venta</p>
+                    <p className="mt-1 text-3xl font-bold text-zinc-900 tabular-nums">{orderStats.completed_sale_count}</p>
                   </div>
+                  <CheckCircle className="h-5 w-5 text-zinc-300" />
                 </div>
               </CardContent>
             </Card>
@@ -537,14 +529,12 @@ export default function AdminDashboard() {
           <Link href="/admin/pedidos?status=completed_no_sale">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-100 rounded-lg">
-                    <XCircle className="h-6 w-6 text-red-600" />
-                  </div>
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Pedidos perdidos</p>
-                    <p className="text-2xl font-bold text-gray-900">{orderStats.completed_no_sale_count}</p>
+                    <p className="text-sm text-zinc-500">Pedidos perdidos</p>
+                    <p className="mt-1 text-3xl font-bold text-zinc-900 tabular-nums">{orderStats.completed_no_sale_count}</p>
                   </div>
+                  <XCircle className="h-5 w-5 text-zinc-300" />
                 </div>
               </CardContent>
             </Card>
@@ -557,12 +547,12 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
+              <DollarSign className="h-5 w-5 text-zinc-600" />
+              <h2 className="text-lg font-semibold text-zinc-900">
                 Productos por Rango de Precio
               </h2>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-zinc-500">
               Solo productos habilitados. Click para ver detalle.
             </p>
           </CardHeader>
@@ -570,7 +560,7 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               {priceRangeData.ranges.map((range) => {
                 const isExpanded = expandedRanges.has(range.key);
-                const colors = rangeColors[range.key] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
+                const colors = rangeColors[range.key] || { bg: 'bg-zinc-50', text: 'text-zinc-700', border: 'border-zinc-200' };
 
                 return (
                   <div key={range.key} className={`border rounded-lg overflow-hidden ${colors.border}`}>
@@ -593,7 +583,7 @@ export default function AdminDashboard() {
                         <span className={`text-2xl font-bold ${colors.text}`}>
                           {range.count}
                         </span>
-                        <span className="text-sm text-gray-500">productos</span>
+                        <span className="text-sm text-zinc-500">productos</span>
                       </div>
                     </button>
 
@@ -601,22 +591,22 @@ export default function AdminDashboard() {
                     {isExpanded && range.products.length > 0 && (
                       <div className="border-t bg-white">
                         <table className="min-w-full text-sm">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-zinc-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-zinc-500 uppercase">
                                 Producto
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-zinc-500 uppercase">
                                 Fuente
                               </th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-right text-xs font-medium text-zinc-500 uppercase">
                                 Precio
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-200">
+                          <tbody className="divide-y divide-zinc-200">
                             {range.products.map((product) => (
-                              <tr key={product.id} className="hover:bg-gray-50">
+                              <tr key={product.id} className="hover:bg-zinc-50">
                                 <td className="px-4 py-2">
                                   <div className="flex items-center gap-2">
                                     {product.image && (
@@ -635,10 +625,10 @@ export default function AdminDashboard() {
                                     </Link>
                                   </div>
                                 </td>
-                                <td className="px-4 py-2 text-gray-600">
+                                <td className="px-4 py-2 text-zinc-600">
                                   {product.source_name || '-'}
                                 </td>
-                                <td className="px-4 py-2 text-right font-medium text-gray-900">
+                                <td className="px-4 py-2 text-right font-medium text-zinc-900">
                                   {formatPrice(product.price)}
                                 </td>
                               </tr>
@@ -646,7 +636,7 @@ export default function AdminDashboard() {
                           </tbody>
                         </table>
                         {range.count > range.products.length && (
-                          <div className="px-4 py-2 text-center text-sm text-gray-500 border-t">
+                          <div className="px-4 py-2 text-center text-sm text-zinc-500 border-t">
                             Mostrando {range.products.length} de {range.count} productos
                           </div>
                         )}
@@ -654,7 +644,7 @@ export default function AdminDashboard() {
                     )}
 
                     {isExpanded && range.products.length === 0 && (
-                      <div className="border-t bg-white px-4 py-4 text-center text-gray-500">
+                      <div className="border-t bg-white px-4 py-4 text-center text-zinc-500">
                         No hay productos en este rango
                       </div>
                     )}
@@ -671,57 +661,57 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Boxes className="h-5 w-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
+              <Boxes className="h-5 w-5 text-zinc-600" />
+              <h2 className="text-lg font-semibold text-zinc-900">
                 Stock por categoría
               </h2>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-zinc-500">
               Valorizado a precio origen.
             </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="rounded-lg border p-4">
-                <p className="text-xs text-gray-500 uppercase">Unidades en stock</p>
-                <p className="text-2xl font-bold text-gray-900">{stockByCategory.total_qty}</p>
+                <p className="text-xs text-zinc-500 uppercase">Unidades en stock</p>
+                <p className="text-2xl font-bold text-zinc-900">{stockByCategory.total_qty}</p>
               </div>
               <div className="rounded-lg border p-4">
-                <p className="text-xs text-gray-500 uppercase">Valorizado total</p>
-                <p className="text-2xl font-bold text-gray-900">{formatPrice(stockByCategory.total_value)}</p>
+                <p className="text-xs text-zinc-500 uppercase">Valorizado total</p>
+                <p className="text-2xl font-bold text-zinc-900">{formatPrice(stockByCategory.total_value)}</p>
               </div>
             </div>
 
             {stockByCategory.items.length === 0 ? (
-              <div className="text-center text-sm text-gray-500 py-6">
+              <div className="text-center text-sm text-zinc-500 py-6">
                 No hay stock asociado a productos.
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-zinc-50">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zinc-500 uppercase">
                         Categoría
                       </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zinc-500 uppercase">
                         Stock
                       </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zinc-500 uppercase">
                         Valorizado
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-zinc-200">
                     {stockByCategory.items.map((item) => (
-                      <tr key={item.category} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 font-medium text-gray-900">
+                      <tr key={item.category} className="hover:bg-zinc-50">
+                        <td className="px-4 py-2 font-medium text-zinc-900">
                           {item.category}
                         </td>
                         <td className="px-4 py-2 text-right">
                           {item.stock_qty}
                         </td>
-                        <td className="px-4 py-2 text-right font-medium text-gray-900">
+                        <td className="px-4 py-2 text-right font-medium text-zinc-900">
                           {formatPrice(item.stock_value)}
                         </td>
                       </tr>
@@ -737,7 +727,7 @@ export default function AdminDashboard() {
       {/* Source Websites */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-zinc-900">
             Webs de Origen
           </h2>
         </CardHeader>
@@ -747,13 +737,13 @@ export default function AdminDashboard() {
               {sourceWebsites.items.map((website) => (
                 <li
                   key={website.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg"
                 >
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-zinc-900">
                       {website.display_name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-zinc-500">
                       {website.enabled_product_count} activos / {website.product_count} total
                     </p>
                   </div>
@@ -761,7 +751,7 @@ export default function AdminDashboard() {
                     className={`px-2 py-1 text-xs rounded-full ${
                       website.is_active
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
+                        : 'bg-zinc-100 text-zinc-700'
                     }`}
                   >
                     {website.is_active ? 'Activo' : 'Inactivo'}
@@ -770,7 +760,7 @@ export default function AdminDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-zinc-500 text-center py-4">
               No hay webs de origen configuradas
             </p>
           )}

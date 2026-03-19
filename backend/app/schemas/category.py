@@ -1,7 +1,7 @@
 """Category schemas."""
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoryBase(BaseModel):
@@ -11,6 +11,13 @@ class CategoryBase(BaseModel):
     display_order: int = 0
     color: str = Field(default="#6b7280", pattern=r'^#[0-9a-fA-F]{6}$')
     show_in_menu: bool = False
+    show_in_carousel: bool = False
+    carousel_title: Optional[str] = Field(None, max_length=100)
+    carousel_subtitle: Optional[str] = Field(None, max_length=200)
+    carousel_image_url: Optional[str] = Field(None, max_length=500)
+    carousel_bg_color: Optional[str] = Field(default="#0D1B2A", pattern=r'^#[0-9a-fA-F]{6}$')
+    carousel_text_color: Optional[str] = Field(default="#ffffff", pattern=r'^#[0-9a-fA-F]{6}$')
+    carousel_font: Optional[str] = Field(default="sans", max_length=50)
 
 
 class CategoryCreate(CategoryBase):
@@ -25,18 +32,24 @@ class CategoryUpdate(BaseModel):
     display_order: Optional[int] = None
     color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     show_in_menu: Optional[bool] = None
+    show_in_carousel: Optional[bool] = None
+    carousel_title: Optional[str] = Field(None, max_length=100)
+    carousel_subtitle: Optional[str] = Field(None, max_length=200)
+    carousel_image_url: Optional[str] = Field(None, max_length=500)
+    carousel_bg_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
+    carousel_text_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
+    carousel_font: Optional[str] = Field(None, max_length=50)
 
 
 class CategoryResponse(CategoryBase):
     """Schema for category response."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     product_count: int = 0
     enabled_product_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 class CategoryMappingCreate(BaseModel):

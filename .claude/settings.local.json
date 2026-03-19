@@ -73,7 +73,12 @@
       "Bash(find D:\\\\Desarrollo\\\\HF WEB\\\\backend:*)",
       "Bash(pip install:*)",
       "Bash(test:*)",
-      "Bash(\"D:/Desarrollo/HF WEB/backend/app/services/sales.py\":*)"
+      "Bash(\"D:/Desarrollo/HF WEB/backend/app/services/sales.py\":*)",
+      "Bash(cd:*)",
+      "Bash(taskkill:*)",
+      "Bash(find:*)",
+      "Bash(netstat -ano)",
+      "Bash(xargs -I{} taskkill /F /PID {})"
     ]
   }
 }

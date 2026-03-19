@@ -107,7 +107,19 @@ export const publicApi = {
   /**
    * Get list of categories
    */
-  async getCategories(): Promise<{ name: string; color: string; show_in_menu: boolean; display_order: number }[]> {
+  async getCategories(): Promise<{
+    name: string;
+    color: string;
+    show_in_menu: boolean;
+    display_order: number;
+    show_in_carousel: boolean;
+    carousel_title: string | null;
+    carousel_subtitle: string | null;
+    carousel_image_url: string | null;
+    carousel_bg_color: string | null;
+    carousel_text_color: string | null;
+    carousel_font: string | null;
+  }[]> {
     return fetchAPI('/public/categories');
   },
 
