@@ -64,6 +64,7 @@ export default function SeccionesPage() {
   const [formData, setFormData] = useState<SectionForm>(DEFAULT_FORM);
   const [formError, setFormError] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // Product search state (for manual sections)
   const [productSearch, setProductSearch] = useState('');
@@ -138,6 +139,7 @@ export default function SeccionesPage() {
     setEditingSection(null);
     setFormData(DEFAULT_FORM);
     setFormError('');
+    setFileInputKey(k => k + 1);
     setShowModal(true);
   }
 
@@ -164,6 +166,7 @@ export default function SeccionesPage() {
     setEditingSection(null);
     setFormData(DEFAULT_FORM);
     setFormError('');
+    setFileInputKey(k => k + 1);
   }
 
   function openProductsModal(section: Section) {
@@ -508,6 +511,7 @@ export default function SeccionesPage() {
                   >
                     {isUploadingImage ? 'Subiendo...' : '+ Subir imagen'}
                     <input
+                      key={fileInputKey}
                       type="file"
                       accept="image/*"
                       className="hidden"

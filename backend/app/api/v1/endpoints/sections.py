@@ -111,7 +111,7 @@ async def update_section(section_id: int, data: SectionUpdate, db: Session = Dep
     section = db.query(Section).filter(Section.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Sección no encontrada")
-    updates = data.model_dump(exclude_none=True)
+    updates = data.model_dump(exclude_unset=True)
     logger.info(f"Updating section {section_id} with: {updates}")
     try:
         for field, value in updates.items():
