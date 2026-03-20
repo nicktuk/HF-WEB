@@ -14,7 +14,6 @@ import { fetchPublicCatalogSettings, publicApi } from '@/lib/api';
 import type { Category } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { SectionStrip } from '@/components/public/SectionStrip';
-import { SectionCard } from '@/components/public/SectionCard';
 
 export default function HomePage() {
   return (
@@ -784,21 +783,10 @@ function HomePageContent() {
 
         {/* ─── SECTIONS ─────────────────────────────────────────────── */}
         {sections && sections.length > 0 && (
-          <div className="mt-10 space-y-2">
+          <div className="mt-10 space-y-4">
             {sections.map((section) => (
               <SectionStrip key={section.id} section={section} />
             ))}
-          </div>
-        )}
-
-        {/* ─── SECTION CARDS ─────────────────────────────────────────── */}
-        {sections && sections.length > 0 && (
-          <div className="mt-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sections.map((section) => (
-                <SectionCard key={section.id} section={section} />
-              ))}
-            </div>
           </div>
         )}
       </main>

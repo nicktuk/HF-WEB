@@ -17,55 +17,63 @@ export function SectionStrip({ section }: SectionStripProps) {
   const getMoreHref = () => {
     if (section.criteria_type === 'featured') return '/?featured=true';
     if (section.criteria_type === 'immediate_delivery') return '/?immediate_delivery=true';
-    if (section.criteria_type === 'category' && section.criteria_value) return `/?category=${encodeURIComponent(section.criteria_value)}`;
+    if (section.criteria_type === 'category' && section.criteria_value)
+      return `/?category=${encodeURIComponent(section.criteria_value)}`;
     return null;
   };
 
   const moreHref = getMoreHref();
 
-  const headerContent = (
-    <>
-      <div>
-        <h2 className="text-lg font-extrabold tracking-tight" style={{ color: textColor }}>
-          {section.title}
-        </h2>
-        {section.subtitle && (
-          <p className="text-sm opacity-75 mt-0.5" style={{ color: textColor }}>
-            {section.subtitle}
-          </p>
+  const headerCard = (
+    <div className="rounded-2xl overflow-hidden flex" style={{ minHeight: '88px' }}>
+      {/* Left: title + subtitle + "ver más" */}
+      <div
+        className="flex-1 px-5 py-4 flex flex-col justify-between"
+        style={{ backgroundColor: bgColor }}
+      >
+        <div>
+          <h2 className="text-lg font-extrabold tracking-tight leading-tight" style={{ color: textColor }}>
+            {section.title}
+          </h2>
+          {section.subtitle && (
+            <p className="text-sm opacity-75 mt-0.5" style={{ color: textColor }}>
+              {section.subtitle}
+            </p>
+          )}
+        </div>
+        {moreHref && (
+          <span
+            className="text-xs font-semibold opacity-80 mt-2 flex items-center gap-1"
+            style={{ color: textColor }}
+          >
+            Ver más →
+          </span>
         )}
       </div>
-      {moreHref && (
-        <span
-          className="text-xs font-semibold opacity-80 flex items-center gap-1 shrink-0 ml-4"
-          style={{ color: textColor }}
-        >
-          Ver más →
-        </span>
+
+      {/* Right: image (if configured) */}
+      {section.image_url && (
+        <div className="w-28 sm:w-40 shrink-0 relative overflow-hidden">
+          <img
+            src={section.image_url}
+            alt={section.title}
+            className={`w-full h-full object-cover${moreHref ? ' group-hover:scale-105 transition-transform duration-500' : ''}`}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 
   return (
-    <div className="mb-8">
-      {/* Header */}
+    <div className="mb-6">
+      {/* Header card — clickable if has filter href */}
       {moreHref ? (
-        <Link
-          href={moreHref}
-          className="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: bgColor }}
-        >
-          {headerContent}
+        <Link href={moreHref} className="group block mb-4 hover:opacity-95 transition-opacity">
+          {headerCard}
         </Link>
       ) : (
-        <div
-          className="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between"
-          style={{ backgroundColor: bgColor }}
-        >
-          {headerContent}
-        </div>
+        <div className="mb-4">{headerCard}</div>
       )}
-
 
       {/* Products horizontal scroll */}
       <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
