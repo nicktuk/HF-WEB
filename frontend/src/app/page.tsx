@@ -202,6 +202,16 @@ function HomePageContent() {
   const { data: subcategories } = useSubcategories(selectedCategory);
   const { data: tempSubcategories } = useSubcategories(tempCategory || undefined);
 
+  // Si la categoría seleccionada en el menú no tiene subs, filtrar directamente
+  useEffect(() => {
+    if (mobileMenuMode === 'subcategories' && tempCategory && Array.isArray(tempSubcategories) && tempSubcategories.length === 0) {
+      updateParams({ category: tempCategory, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+      setMobileMenuOpen(false);
+      setMobileMenuMode('categories');
+      setTempCategory(null);
+    }
+  }, [tempSubcategories, mobileMenuMode, tempCategory]);
+
   const { data: catalogSettings } = useQuery({
     queryKey: ['public-catalog-settings'],
     queryFn: fetchPublicCatalogSettings,
@@ -365,6 +375,25 @@ function HomePageContent() {
             >
               Ver todo
             </button>
+            {/* Subcategory pills — desktop */}
+            {selectedCategory && subcategories && subcategories.length > 0 && !showFeatured && !showImmediate && (
+              <>
+                <span className="hidden md:block w-px h-6 bg-zinc-300 self-center" />
+                {subcategories.map((sub) => (
+                  <button
+                    key={sub.name}
+                    onClick={() => updateParams({ subcategory: selectedSubcategory === sub.name ? undefined : sub.name })}
+                    className="hidden md:flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                    style={{
+                      backgroundColor: selectedSubcategory === sub.name ? sub.color : `${sub.color}18`,
+                      color: selectedSubcategory === sub.name ? 'white' : sub.color,
+                    }}
+                  >
+                    {sub.name}
+                  </button>
+                ))}
+              </>
+            )}
             {/* Menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
