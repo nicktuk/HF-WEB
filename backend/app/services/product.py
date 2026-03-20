@@ -1258,11 +1258,17 @@ class ProductService:
         """Get list of categories with their properties for public display."""
         from app.models.category import Category as CategoryModel
 
+        from sqlalchemy import or_
         categories = (
             self.db.query(CategoryModel)
-            .join(Product, Product.category_id == CategoryModel.id)
+            .outerjoin(Product, Product.category_id == CategoryModel.id)
             .filter(CategoryModel.is_active == True)
-            .filter(Product.enabled == True)
+            .filter(
+                or_(
+                    CategoryModel.show_in_carousel == True,
+                    Product.enabled == True,
+                )
+            )
             .distinct()
             .order_by(CategoryModel.display_order, CategoryModel.name)
             .all()
