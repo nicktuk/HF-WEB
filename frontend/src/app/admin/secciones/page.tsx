@@ -103,11 +103,15 @@ export default function SeccionesPage() {
     onError: (err: Error) => setFormError(err.message),
   });
 
+  const [deleteError, setDeleteError] = useState('');
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminApi.deleteSection(apiKey, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-sections'] });
+      setDeleteError('');
     },
+    onError: (err: Error) => setDeleteError(err.message),
   });
 
   const addProductMutation = useMutation({
@@ -224,6 +228,14 @@ export default function SeccionesPage() {
           Nueva sección
         </Button>
       </div>
+
+      {/* Delete error */}
+      {deleteError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>Error al eliminar: {deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="ml-4 text-red-500 hover:text-red-700">✕</button>
+        </div>
+      )}
 
       {/* List */}
       {isLoading ? (

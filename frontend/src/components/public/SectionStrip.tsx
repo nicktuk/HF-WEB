@@ -18,36 +18,54 @@ export function SectionStrip({ section }: SectionStripProps) {
     if (section.criteria_type === 'featured') return '/?featured=true';
     if (section.criteria_type === 'immediate_delivery') return '/?immediate_delivery=true';
     if (section.criteria_type === 'category' && section.criteria_value) return `/?category=${encodeURIComponent(section.criteria_value)}`;
-    return '/';
+    return null;
   };
+
+  const moreHref = getMoreHref();
+
+  const headerContent = (
+    <>
+      <div>
+        <h2 className="text-lg font-extrabold tracking-tight" style={{ color: textColor }}>
+          {section.title}
+        </h2>
+        {section.subtitle && (
+          <p className="text-sm opacity-75 mt-0.5" style={{ color: textColor }}>
+            {section.subtitle}
+          </p>
+        )}
+      </div>
+      {moreHref && (
+        <span
+          className="text-xs font-semibold opacity-80 flex items-center gap-1 shrink-0 ml-4"
+          style={{ color: textColor }}
+        >
+          Ver más →
+        </span>
+      )}
+    </>
+  );
 
   return (
     <div className="mb-8">
       {/* Header */}
-      <div
-        className="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between"
-        style={{ backgroundColor: bgColor }}
-      >
-        <div>
-          <h2 className="text-lg font-extrabold tracking-tight" style={{ color: textColor }}>
-            {section.title}
-          </h2>
-          {section.subtitle && (
-            <p className="text-sm opacity-75 mt-0.5" style={{ color: textColor }}>
-              {section.subtitle}
-            </p>
-          )}
+      {moreHref ? (
+        <Link
+          href={moreHref}
+          className="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: bgColor }}
+        >
+          {headerContent}
+        </Link>
+      ) : (
+        <div
+          className="rounded-2xl px-5 py-4 mb-4 flex items-center justify-between"
+          style={{ backgroundColor: bgColor }}
+        >
+          {headerContent}
         </div>
-        {section.criteria_type !== 'manual' && (
-          <Link
-            href={getMoreHref()}
-            className="text-xs font-semibold opacity-80 hover:opacity-100 flex items-center gap-1 shrink-0 ml-4"
-            style={{ color: textColor }}
-          >
-            Ver más →
-          </Link>
-        )}
-      </div>
+      )}
+
 
       {/* Products horizontal scroll */}
       <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
