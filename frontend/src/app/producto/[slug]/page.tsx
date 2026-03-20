@@ -11,6 +11,9 @@ import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
 import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductImage } from '@/types';
+import { SectionStrip } from '@/components/public/SectionStrip';
+import { useQuery } from '@tanstack/react-query';
+import { publicApi } from '@/lib/api';
 
 export default function ProductPage() {
   const params = useParams();
@@ -18,6 +21,12 @@ export default function ProductPage() {
   const slug = params.slug as string;
   const { data: product, isLoading, error } = usePublicProduct(slug);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
+
+  const { data: sections } = useQuery({
+    queryKey: ['public-sections'],
+    queryFn: () => publicApi.getSections(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const sortedImages = product?.images ?? [];
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
@@ -247,6 +256,14 @@ export default function ProductPage() {
             </div>
           </div>
         </div>
+      {/* Sections */}
+      {sections && sections.length > 0 && (
+        <div className="mt-10 container mx-auto px-4 space-y-2">
+          {sections.map((section) => (
+            <SectionStrip key={section.id} section={section} />
+          ))}
+        </div>
+      )}
       </main>
 
       {/* Mobile CTA */}

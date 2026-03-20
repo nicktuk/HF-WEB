@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { usePublicProducts, useCategories, useSubcategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 import { trackPublicEvent } from '@/lib/analytics';
-import { fetchPublicCatalogSettings } from '@/lib/api';
+import { fetchPublicCatalogSettings, publicApi } from '@/lib/api';
 import type { Category } from '@/types';
 import { useQuery } from '@tanstack/react-query';
+import { SectionStrip } from '@/components/public/SectionStrip';
 
 export default function HomePage() {
   return (
@@ -218,6 +219,12 @@ function HomePageContent() {
     staleTime: 5 * 60 * 1000,
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
+
+  const { data: sections } = useQuery({
+    queryKey: ['public-sections'],
+    queryFn: () => publicApi.getSections(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
@@ -773,6 +780,15 @@ function HomePageContent() {
             <ProductGrid products={sortedProducts} isLoading={isLoading} />
           )}
         </div>
+
+        {/* ─── SECTIONS ─────────────────────────────────────────────── */}
+        {sections && sections.length > 0 && (
+          <div className="mt-10 space-y-2">
+            {sections.map((section) => (
+              <SectionStrip key={section.id} section={section} />
+            ))}
+          </div>
+        )}
       </main>
 
       {/* ─── FOOTER ──────────────────────────────────────────────────── */}

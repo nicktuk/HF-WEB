@@ -11,6 +11,7 @@ from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
+from app.models.section import Section, SectionProduct
 
 __all__ = [
     "Base",
@@ -31,4 +32,6 @@ __all__ = [
     "Order",
     "OrderItem",
     "OrderAttachment",
+    "Section",
+    "SectionProduct",
 ]

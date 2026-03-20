@@ -78,7 +78,8 @@
       "Bash(taskkill:*)",
       "Bash(find:*)",
       "Bash(netstat -ano)",
-      "Bash(xargs -I{} taskkill /F /PID {})"
+      "Bash(xargs -I{} taskkill /F /PID {})",
+      "Bash(source venv/Scripts/activate)"
     ]
   }
 }

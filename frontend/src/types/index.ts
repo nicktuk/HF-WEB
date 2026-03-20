@@ -498,3 +498,35 @@ export interface WhatsAppBulkMessage {
   }>;
   product_count: number;
 }
+
+// Section Types
+
+export interface ProductInSection {
+  id: number;
+  slug: string;
+  name: string;
+  price: number | null;
+  currency: string;
+  brand?: string;
+  category?: string;
+  subcategory?: string;
+  is_featured: boolean;
+  is_immediate_delivery: boolean;
+  is_check_stock: boolean;
+  is_best_seller: boolean;
+  images: { id: number; url: string; alt_text: string | null; is_primary: boolean }[];
+}
+
+export interface Section {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  display_order: number;
+  is_active: boolean;
+  criteria_type: string;
+  criteria_value: string | null;
+  max_products: number;
+  bg_color: string | null;
+  text_color: string | null;
+  products: ProductInSection[];
+}

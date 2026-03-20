@@ -24,6 +24,7 @@ import type {
   OrderClose,
   OrderStats,
   OrderAttachment,
+  Section,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -132,6 +133,13 @@ export const publicApi = {
   async getSubcategories(category?: string): Promise<{ name: string; category_name: string; color: string }[]> {
     const params = category ? `?category=${encodeURIComponent(category)}` : '';
     return fetchAPI(`/public/subcategories${params}`);
+  },
+
+  /**
+   * Get public sections
+   */
+  async getSections(): Promise<Section[]> {
+    return fetchAPI('/sections/public');
   },
 
   /**
@@ -1085,6 +1093,32 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }, apiKey);
+  },
+
+  // Sections
+
+  async getSections(apiKey: string): Promise<Section[]> {
+    return fetchAPI('/sections', {}, apiKey);
+  },
+
+  async createSection(apiKey: string, data: Partial<Section>): Promise<Section> {
+    return fetchAPI('/sections', { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async updateSection(apiKey: string, id: number, data: Partial<Section>): Promise<Section> {
+    return fetchAPI(`/sections/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async deleteSection(apiKey: string, id: number): Promise<void> {
+    return fetchAPI(`/sections/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  async addProductToSection(apiKey: string, sectionId: number, productId: number): Promise<void> {
+    return fetchAPI(`/sections/${sectionId}/products`, { method: 'POST', body: JSON.stringify({ product_id: productId, display_order: 0 }) }, apiKey);
+  },
+
+  async removeProductFromSection(apiKey: string, sectionId: number, productId: number): Promise<void> {
+    return fetchAPI(`/sections/${sectionId}/products/${productId}`, { method: 'DELETE' }, apiKey);
   },
 
   async generateWhatsAppImage(
