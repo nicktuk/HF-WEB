@@ -79,7 +79,8 @@
       "Bash(find:*)",
       "Bash(netstat -ano)",
       "Bash(xargs -I{} taskkill /F /PID {})",
-      "Bash(source venv/Scripts/activate)"
+      "Bash(source venv/Scripts/activate)",
+      "Bash(python -c \":*)"
     ]
   }
 }

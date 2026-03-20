@@ -1281,6 +1281,9 @@ class ProductService:
                 "carousel_bg_color": cat.carousel_bg_color,
                 "carousel_text_color": cat.carousel_text_color,
                 "carousel_font": cat.carousel_font,
+                "carousel_filter_type": cat.carousel_filter_type,
+                "carousel_glow": cat.carousel_glow or False,
+                "carousel_glow_color": cat.carousel_glow_color,
             }
             for cat in categories
         ]
