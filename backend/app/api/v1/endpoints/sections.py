@@ -1,7 +1,10 @@
 """Section management endpoints."""
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import get_db, verify_admin
 from app.models.section import Section, SectionProduct
@@ -108,10 +111,17 @@ async def update_section(section_id: int, data: SectionUpdate, db: Session = Dep
     section = db.query(Section).filter(Section.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Sección no encontrada")
-    for field, value in data.model_dump(exclude_none=True).items():
-        setattr(section, field, value)
-    db.commit()
-    db.refresh(section)
+    updates = data.model_dump(exclude_none=True)
+    logger.info(f"Updating section {section_id} with: {updates}")
+    try:
+        for field, value in updates.items():
+            setattr(section, field, value)
+        db.commit()
+        db.refresh(section)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating section {section_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
     products = resolve_section_products(section, db)
     return SectionResponse(
         id=section.id, title=section.title, subtitle=section.subtitle,
@@ -129,8 +139,13 @@ async def delete_section(section_id: int, db: Session = Depends(get_db)):
     section = db.query(Section).filter(Section.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Sección no encontrada")
-    db.delete(section)
-    db.commit()
+    try:
+        db.delete(section)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting section {section_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
     return {"ok": True}
 
 
