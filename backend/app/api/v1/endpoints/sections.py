@@ -41,7 +41,7 @@ def resolve_section_products(section: Section, db: Session) -> List[ProductInSec
         result.append(ProductInSection(
             id=p.id, slug=p.slug,
             name=p.custom_name or p.original_name,
-            price=p.price, currency=p.original_currency or "ARS",
+            price=p.final_price, currency=p.original_currency or "ARS",
             brand=p.brand, category=p.category, subcategory=p.subcategory,
             is_featured=p.is_featured or False, is_immediate_delivery=p.is_immediate_delivery or False,
             is_check_stock=p.is_check_stock or False, is_best_seller=p.is_best_seller or False,
