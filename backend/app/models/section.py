@@ -23,7 +23,7 @@ class Section(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    products = relationship("SectionProduct", back_populates="section", order_by="SectionProduct.display_order", cascade="all, delete-orphan")
+    products = relationship("SectionProduct", back_populates="section", order_by="SectionProduct.display_order", cascade="save-update, merge", passive_deletes=True)
 
 
 class SectionProduct(Base):
