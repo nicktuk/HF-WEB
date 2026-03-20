@@ -12,6 +12,7 @@ import { usePublicProduct } from '@/hooks/useProducts';
 import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductImage } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
+import { SectionCard } from '@/components/public/SectionCard';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi } from '@/lib/api';
 
@@ -262,6 +263,17 @@ export default function ProductPage() {
           {sections.map((section) => (
             <SectionStrip key={section.id} section={section} />
           ))}
+        </div>
+      )}
+
+      {/* Section Cards */}
+      {sections && sections.length > 0 && (
+        <div className="container mx-auto px-4 mt-10 pb-24 md:pb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sections.map((section) => (
+              <SectionCard key={section.id} section={section} />
+            ))}
+          </div>
         </div>
       )}
       </main>

@@ -528,5 +528,6 @@ export interface Section {
   max_products: number;
   bg_color: string | null;
   text_color: string | null;
+  image_url: string | null;
   products: ProductInSection[];
 }

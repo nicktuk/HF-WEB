@@ -14,6 +14,7 @@ class SectionBase(BaseModel):
     max_products: int = Field(default=8, ge=1, le=50)
     bg_color: Optional[str] = Field(default="#0D1B2A", pattern=r'^#[0-9a-fA-F]{6}$')
     text_color: Optional[str] = Field(default="#ffffff", pattern=r'^#[0-9a-fA-F]{6}$')
+    image_url: Optional[str] = Field(None, max_length=500)
 
 
 class SectionCreate(SectionBase):
@@ -30,6 +31,7 @@ class SectionUpdate(BaseModel):
     max_products: Optional[int] = Field(None, ge=1, le=50)
     bg_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     text_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
+    image_url: Optional[str] = Field(None, max_length=500)
 
 
 class SectionProductAdd(BaseModel):

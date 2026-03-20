@@ -19,6 +19,7 @@ class Section(Base):
     max_products = Column(Integer, default=8, nullable=False)
     bg_color = Column(String(7), default="#0D1B2A", nullable=True)
     text_color = Column(String(7), default="#ffffff", nullable=True)
+    image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

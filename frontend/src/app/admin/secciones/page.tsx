@@ -10,7 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import { adminApi } from '@/lib/api';
+import { adminApi, uploadImages } from '@/lib/api';
 import type { Section, ProductInSection, ProductAdmin } from '@/types';
 
 const CRITERIA_OPTIONS = [
@@ -39,6 +39,7 @@ interface SectionForm {
   max_products: number;
   bg_color: string;
   text_color: string;
+  image_url: string;
 }
 
 const DEFAULT_FORM: SectionForm = {
@@ -51,6 +52,7 @@ const DEFAULT_FORM: SectionForm = {
   max_products: 8,
   bg_color: '#0D1B2A',
   text_color: '#ffffff',
+  image_url: '',
 };
 
 export default function SeccionesPage() {
@@ -61,6 +63,7 @@ export default function SeccionesPage() {
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [formData, setFormData] = useState<SectionForm>(DEFAULT_FORM);
   const [formError, setFormError] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Product search state (for manual sections)
   const [productSearch, setProductSearch] = useState('');
@@ -146,6 +149,7 @@ export default function SeccionesPage() {
       max_products: section.max_products,
       bg_color: section.bg_color || '#0D1B2A',
       text_color: section.text_color || '#ffffff',
+      image_url: section.image_url || '',
     });
     setFormError('');
     setShowModal(true);
@@ -186,6 +190,7 @@ export default function SeccionesPage() {
       max_products: formData.max_products,
       bg_color: formData.bg_color,
       text_color: formData.text_color,
+      image_url: formData.image_url.trim() || null,
     };
 
     if (editingSection) {
@@ -461,6 +466,60 @@ export default function SeccionesPage() {
                       className="font-mono text-sm"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Imagen de la tarjeta
+                </label>
+                <div className="space-y-2">
+                  {formData.image_url && (
+                    <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={formData.image_url}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData((f) => ({ ...f, image_url: '' }))}
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                  <label
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    {isUploadingImage ? 'Subiendo...' : '+ Subir imagen'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingImage(true);
+                        try {
+                          const urls = await uploadImages(apiKey, [file]);
+                          setFormData((f) => ({ ...f, image_url: urls[0] }));
+                        } catch (err) {
+                          console.error('Error subiendo imagen', err);
+                        } finally {
+                          setIsUploadingImage(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  <Input
+                    value={formData.image_url}
+                    onChange={(e) => setFormData((f) => ({ ...f, image_url: e.target.value }))}
+                    placeholder="https://... (o subir imagen arriba)"
+                    className="text-sm"
+                  />
                 </div>
               </div>
 

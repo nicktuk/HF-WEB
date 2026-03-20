@@ -31,7 +31,7 @@ def resolve_section_products(section: Section, db: Session) -> List[ProductInSec
     elif section.criteria_type == "best_seller":
         items = db.query(Product).filter(Product.enabled == True, Product.is_best_seller == True).limit(limit).all()
     elif section.criteria_type == "category" and section.criteria_value:
-        items = db.query(Product).filter(Product.enabled == True, Product.category_name == section.criteria_value).limit(limit).all()
+        items = db.query(Product).filter(Product.enabled == True, Product.category == section.criteria_value).limit(limit).all()
     else:
         items = []
 
@@ -42,7 +42,7 @@ def resolve_section_products(section: Section, db: Session) -> List[ProductInSec
             id=p.id, slug=p.slug,
             name=p.custom_name or p.original_name,
             price=p.price, currency=p.original_currency or "ARS",
-            brand=p.brand, category=p.category_name, subcategory=p.subcategory_name,
+            brand=p.brand, category=p.category, subcategory=p.subcategory,
             is_featured=p.is_featured or False, is_immediate_delivery=p.is_immediate_delivery or False,
             is_check_stock=p.is_check_stock or False, is_best_seller=p.is_best_seller or False,
             images=images,
@@ -61,6 +61,7 @@ async def list_public_sections(db: Session = Depends(get_db)):
             display_order=s.display_order, is_active=s.is_active,
             criteria_type=s.criteria_type, criteria_value=s.criteria_value,
             max_products=s.max_products, bg_color=s.bg_color, text_color=s.text_color,
+            image_url=s.image_url,
             created_at=s.created_at, updated_at=s.updated_at,
             products=products,
         ))
@@ -78,6 +79,7 @@ async def list_sections(db: Session = Depends(get_db)):
             display_order=s.display_order, is_active=s.is_active,
             criteria_type=s.criteria_type, criteria_value=s.criteria_value,
             max_products=s.max_products, bg_color=s.bg_color, text_color=s.text_color,
+            image_url=s.image_url,
             created_at=s.created_at, updated_at=s.updated_at,
             products=products,
         ))
@@ -95,6 +97,7 @@ async def create_section(data: SectionCreate, db: Session = Depends(get_db)):
         display_order=section.display_order, is_active=section.is_active,
         criteria_type=section.criteria_type, criteria_value=section.criteria_value,
         max_products=section.max_products, bg_color=section.bg_color, text_color=section.text_color,
+        image_url=section.image_url,
         created_at=section.created_at, updated_at=section.updated_at,
         products=[],
     )
@@ -115,6 +118,7 @@ async def update_section(section_id: int, data: SectionUpdate, db: Session = Dep
         display_order=section.display_order, is_active=section.is_active,
         criteria_type=section.criteria_type, criteria_value=section.criteria_value,
         max_products=section.max_products, bg_color=section.bg_color, text_color=section.text_color,
+        image_url=section.image_url,
         created_at=section.created_at, updated_at=section.updated_at,
         products=products,
     )
