@@ -69,6 +69,7 @@ async def list_categories(
             "carousel_bg_color": cat.carousel_bg_color,
             "carousel_text_color": cat.carousel_text_color,
             "carousel_font": cat.carousel_font,
+            "carousel_filter_type": cat.carousel_filter_type,
             "created_at": cat.created_at,
             "updated_at": cat.updated_at,
             "product_count": total,

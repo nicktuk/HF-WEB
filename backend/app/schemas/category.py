@@ -18,6 +18,7 @@ class CategoryBase(BaseModel):
     carousel_bg_color: Optional[str] = Field(default="#0D1B2A", pattern=r'^#[0-9a-fA-F]{6}$')
     carousel_text_color: Optional[str] = Field(default="#ffffff", pattern=r'^#[0-9a-fA-F]{6}$')
     carousel_font: Optional[str] = Field(default="sans", max_length=50)
+    carousel_filter_type: Optional[str] = Field(None, max_length=50)
 
 
 class CategoryCreate(CategoryBase):
@@ -39,6 +40,7 @@ class CategoryUpdate(BaseModel):
     carousel_bg_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     carousel_text_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     carousel_font: Optional[str] = Field(None, max_length=50)
+    carousel_filter_type: Optional[str] = Field(None, max_length=50)
 
 
 class CategoryResponse(CategoryBase):

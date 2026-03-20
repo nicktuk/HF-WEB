@@ -708,7 +708,15 @@ function HomePageContent() {
         {showGroupedByCategory && (
           <CategoryCarousel
             slides={orderedCategories.filter(c => c.show_in_carousel)}
-            onSelect={(name) => updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined })}
+            onSelect={(name, filterType) => {
+              if (filterType === 'immediate_delivery') {
+                updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
+              } else if (filterType === 'featured') {
+                updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
+              } else {
+                updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+              }
+            }}
           />
         )}
 
@@ -854,7 +862,7 @@ function HomePageContent() {
   );
 }
 
-type CarouselSlide = { name: string; color: string; show_in_carousel: boolean; carousel_title: string | null; carousel_subtitle: string | null; carousel_image_url: string | null; carousel_bg_color: string | null; carousel_text_color: string | null; carousel_font: string | null; display_order: number; show_in_menu: boolean; };
+type CarouselSlide = { name: string; color: string; show_in_carousel: boolean; carousel_title: string | null; carousel_subtitle: string | null; carousel_image_url: string | null; carousel_bg_color: string | null; carousel_text_color: string | null; carousel_font: string | null; carousel_filter_type: string | null; display_order: number; show_in_menu: boolean; };
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1', '');
 
@@ -863,7 +871,7 @@ function fixImageUrl(url: string | null): string | null {
   return url.replace(/^http:\/\/localhost:\d+/, API_BASE);
 }
 
-function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string) => void }) {
+function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string, filterType: string | null) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPaused = useRef(false);
   // Duplicate slides for seamless infinite loop
@@ -913,7 +921,7 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
             <button
               key={`${slide.name}-${i}`}
               type="button"
-              onClick={() => onSelect(slide.name)}
+              onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
               className={`relative shrink-0 rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass}`}
               style={{ width: '240px', backgroundColor: bgColor }}
               aria-label={`Filtrar por categoría: ${title}`}

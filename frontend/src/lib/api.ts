@@ -119,6 +119,7 @@ export const publicApi = {
     carousel_bg_color: string | null;
     carousel_text_color: string | null;
     carousel_font: string | null;
+    carousel_filter_type: string | null;
   }[]> {
     return fetchAPI('/public/categories');
   },

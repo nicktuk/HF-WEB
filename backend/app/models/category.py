@@ -28,6 +28,7 @@ class Category(Base):
     carousel_bg_color = Column(String(7), default="#0D1B2A", nullable=True)
     carousel_text_color = Column(String(7), default="#ffffff", nullable=True)
     carousel_font = Column(String(50), default="sans", nullable=True)
+    carousel_filter_type = Column(String(50), nullable=True, comment="Filtro especial: 'immediate_delivery' | 'featured' | null")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
