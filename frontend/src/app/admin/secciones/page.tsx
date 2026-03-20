@@ -40,6 +40,7 @@ interface SectionForm {
   bg_color: string;
   text_color: string;
   image_url: string;
+  position: 'arriba' | 'abajo';
 }
 
 const DEFAULT_FORM: SectionForm = {
@@ -53,6 +54,7 @@ const DEFAULT_FORM: SectionForm = {
   bg_color: '#0D1B2A',
   text_color: '#ffffff',
   image_url: '',
+  position: 'abajo',
 };
 
 export default function SeccionesPage() {
@@ -156,6 +158,7 @@ export default function SeccionesPage() {
       bg_color: section.bg_color || '#0D1B2A',
       text_color: section.text_color || '#ffffff',
       image_url: section.image_url || '',
+      position: section.position || 'abajo',
     });
     setFormError('');
     setShowModal(true);
@@ -198,6 +201,7 @@ export default function SeccionesPage() {
       bg_color: formData.bg_color,
       text_color: formData.text_color,
       image_url: formData.image_url.trim() || null,
+      position: formData.position,
     };
 
     if (editingSection) {
@@ -562,6 +566,29 @@ export default function SeccionesPage() {
                       {formData.subtitle}
                     </p>
                   )}
+                </div>
+              </div>
+
+              {/* Position */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Posición
+                </label>
+                <div className="flex gap-3">
+                  {(['arriba', 'abajo'] as const).map((pos) => (
+                    <button
+                      key={pos}
+                      type="button"
+                      onClick={() => setFormData(f => ({ ...f, position: pos }))}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                        formData.position === pos
+                          ? 'bg-[#0D1B2A] text-white border-[#0D1B2A]'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {pos === 'arriba' ? '↑ Arriba (antes de productos)' : '↓ Abajo (después de productos)'}
+                    </button>
+                  ))}
                 </div>
               </div>
 

@@ -529,5 +529,6 @@ export interface Section {
   bg_color: string | null;
   text_color: string | null;
   image_url: string | null;
+  position: 'arriba' | 'abajo';
   products: ProductInSection[];
 }

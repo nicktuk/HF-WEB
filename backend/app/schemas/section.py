@@ -15,6 +15,7 @@ class SectionBase(BaseModel):
     bg_color: Optional[str] = Field(default="#0D1B2A", pattern=r'^#[0-9a-fA-F]{6}$')
     text_color: Optional[str] = Field(default="#ffffff", pattern=r'^#[0-9a-fA-F]{6}$')
     image_url: Optional[str] = Field(None, max_length=500)
+    position: str = Field(default="abajo", pattern=r'^(arriba|abajo)$')
 
 
 class SectionCreate(SectionBase):
@@ -32,6 +33,7 @@ class SectionUpdate(BaseModel):
     bg_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     text_color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     image_url: Optional[str] = Field(None, max_length=500)
+    position: Optional[str] = Field(None, pattern=r'^(arriba|abajo)$')
 
 
 class SectionProductAdd(BaseModel):

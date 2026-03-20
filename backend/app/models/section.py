@@ -20,6 +20,7 @@ class Section(Base):
     bg_color = Column(String(7), default="#0D1B2A", nullable=True)
     text_color = Column(String(7), default="#ffffff", nullable=True)
     image_url = Column(String(500), nullable=True)
+    position = Column(String(10), nullable=False, default="abajo")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

@@ -14,6 +14,7 @@ import { fetchPublicCatalogSettings, publicApi } from '@/lib/api';
 import type { Category } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { SectionStrip } from '@/components/public/SectionStrip';
+import { SectionCard } from '@/components/public/SectionCard';
 
 export default function HomePage() {
   return (
@@ -70,6 +71,7 @@ function HomePageContent() {
   const selectedSubcategory = searchParams.get('subcategory') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
+  const selectedSectionId = searchParams.get('section_id') ? Number(searchParams.get('section_id')) : undefined;
 
   // Local state for search input (for debouncing)
   const [searchInput, setSearchInput] = useState(searchFromUrl);
@@ -176,9 +178,9 @@ function HomePageContent() {
 
   const { data, isLoading } = usePublicProducts({
     page: 1,
-    limit: 1000, // Load all products without pagination
-    category: showFeatured || showImmediate ? undefined : selectedCategory,
-    subcategory: showFeatured || showImmediate ? undefined : selectedSubcategory,
+    limit: 1000,
+    category: (showFeatured || showImmediate || selectedSectionId) ? undefined : selectedCategory,
+    subcategory: (showFeatured || showImmediate || selectedSectionId) ? undefined : selectedSubcategory,
     search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
     immediate_delivery: showImmediate ? true : undefined,
@@ -226,6 +228,25 @@ function HomePageContent() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const sectionsArriba = sections?.filter(s => s.position === 'arriba') ?? [];
+  const sectionsAbajo = sections?.filter(s => s.position === 'abajo') ?? [];
+
+  // Products for a manual section selected via section_id param
+  const selectedSection = selectedSectionId ? sections?.find(s => s.id === selectedSectionId) : undefined;
+  const sectionProducts = selectedSection?.products ?? [];
+
+  const handleSectionSelect = useCallback((section: typeof sectionsArriba[0]) => {
+    if (section.criteria_type === 'featured') {
+      updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined, section_id: undefined });
+    } else if (section.criteria_type === 'immediate_delivery') {
+      updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined, section_id: undefined });
+    } else if (section.criteria_type === 'category' && section.criteria_value) {
+      updateParams({ category: section.criteria_value, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+    } else if (section.criteria_type === 'manual') {
+      updateParams({ section_id: String(section.id), category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+    }
+  }, [updateParams]);
+
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
     const items = data?.items || [];
@@ -254,7 +275,7 @@ function HomePageContent() {
     });
   })();
 
-  const showGroupedByCategory = !selectedCategory && !showFeatured && !showImmediate;
+  const showGroupedByCategory = !selectedCategory && !showFeatured && !showImmediate && !selectedSectionId;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -711,6 +732,17 @@ function HomePageContent() {
 
         </div>
 
+        {/* ─── SECTIONS ARRIBA ─────────────────────────────────────── */}
+        {sectionsArriba.length > 0 && (
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5">
+            <div className="flex gap-3" style={{ width: 'max-content' }}>
+              {sectionsArriba.map(s => (
+                <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
         {showGroupedByCategory && (
           <CategoryCarousel
@@ -729,6 +761,21 @@ function HomePageContent() {
 
         {/* ─── PRODUCT GRID ─────────────────────────────────────────── */}
         <div>
+          {selectedSectionId && selectedSection && (
+            <div className="mb-5 rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between"
+              style={{ backgroundColor: selectedSection.bg_color || '#0D1B2A' }}>
+              <p className="text-sm font-bold" style={{ color: selectedSection.text_color || '#fff' }}>
+                {selectedSection.title}
+              </p>
+              <button
+                onClick={() => updateParams({ section_id: undefined })}
+                className="text-xs opacity-70 hover:opacity-100 font-semibold"
+                style={{ color: selectedSection.text_color || '#fff' }}
+              >
+                × Ver todo
+              </button>
+            </div>
+          )}
           {showImmediate && (
             <div className="mb-5 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3">
@@ -747,14 +794,15 @@ function HomePageContent() {
             </div>
           )}
 
-          {showGroupedByCategory ? (
+          {selectedSectionId ? (
+            <ProductGrid products={sectionProducts as any} isLoading={false} />
+          ) : showGroupedByCategory ? (
             groupedProducts.length === 0 ? (
               <ProductGrid products={[]} isLoading={isLoading} />
             ) : (
               <div className="space-y-10">
                 {groupedProducts.map((group) => (
                   <section key={group.name} className="space-y-4">
-                    {/* Category separator — updated style */}
                     <div className="flex items-center gap-3">
                       <span
                         className="h-5 w-0.5 shrink-0 rounded-full"
@@ -781,12 +829,14 @@ function HomePageContent() {
           )}
         </div>
 
-        {/* ─── SECTIONS ─────────────────────────────────────────────── */}
-        {sections && sections.length > 0 && (
-          <div className="mt-10 space-y-4">
-            {sections.map((section) => (
-              <SectionStrip key={section.id} section={section} />
-            ))}
+        {/* ─── SECTIONS ABAJO ──────────────────────────────────────── */}
+        {sectionsAbajo.length > 0 && (
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mt-10">
+            <div className="flex gap-3" style={{ width: 'max-content' }}>
+              {sectionsAbajo.map(s => (
+                <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
+              ))}
+            </div>
           </div>
         )}
       </main>

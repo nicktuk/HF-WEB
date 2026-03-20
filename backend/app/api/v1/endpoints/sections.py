@@ -64,7 +64,7 @@ async def list_public_sections(db: Session = Depends(get_db)):
             display_order=s.display_order, is_active=s.is_active,
             criteria_type=s.criteria_type, criteria_value=s.criteria_value,
             max_products=s.max_products, bg_color=s.bg_color, text_color=s.text_color,
-            image_url=s.image_url,
+            image_url=s.image_url, position=s.position,
             created_at=s.created_at, updated_at=s.updated_at,
             products=products,
         ))
@@ -82,7 +82,7 @@ async def list_sections(db: Session = Depends(get_db)):
             display_order=s.display_order, is_active=s.is_active,
             criteria_type=s.criteria_type, criteria_value=s.criteria_value,
             max_products=s.max_products, bg_color=s.bg_color, text_color=s.text_color,
-            image_url=s.image_url,
+            image_url=s.image_url, position=s.position,
             created_at=s.created_at, updated_at=s.updated_at,
             products=products,
         ))
@@ -100,7 +100,7 @@ async def create_section(data: SectionCreate, db: Session = Depends(get_db)):
         display_order=section.display_order, is_active=section.is_active,
         criteria_type=section.criteria_type, criteria_value=section.criteria_value,
         max_products=section.max_products, bg_color=section.bg_color, text_color=section.text_color,
-        image_url=section.image_url,
+        image_url=section.image_url, position=section.position,
         created_at=section.created_at, updated_at=section.updated_at,
         products=[],
     )
@@ -128,7 +128,7 @@ async def update_section(section_id: int, data: SectionUpdate, db: Session = Dep
         display_order=section.display_order, is_active=section.is_active,
         criteria_type=section.criteria_type, criteria_value=section.criteria_value,
         max_products=section.max_products, bg_color=section.bg_color, text_color=section.text_color,
-        image_url=section.image_url,
+        image_url=section.image_url, position=section.position,
         created_at=section.created_at, updated_at=section.updated_at,
         products=products,
     )
