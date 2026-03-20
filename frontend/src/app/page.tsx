@@ -26,7 +26,7 @@ export default function HomePage() {
 
 function HomePageSkeleton() {
   return (
-    <div className="min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f0f2f5' }}>
+    <div className="min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f7f4ef' }}>
       <header className="sticky top-0 z-40 header-texture">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
@@ -231,6 +231,16 @@ function HomePageContent() {
   const sectionsArriba = sections?.filter(s => s.position === 'arriba') ?? [];
   const sectionsAbajo = sections?.filter(s => s.position === 'abajo') ?? [];
 
+  // Accent color for the background gradient (driven by active filter)
+  const accentColor = useMemo(() => {
+    if (selectedCategory) {
+      return orderedCategories.find(c => c.name === selectedCategory)?.color ?? '#94a3b8';
+    }
+    if (showFeatured) return '#f59e0b';
+    if (showImmediate) return '#10b981';
+    return '#94a3b8';
+  }, [selectedCategory, orderedCategories, showFeatured, showImmediate]);
+
   // Products for a manual section selected via section_id param
   const selectedSection = selectedSectionId ? sections?.find(s => s.id === selectedSectionId) : undefined;
   const sectionProducts = selectedSection?.products ?? [];
@@ -317,7 +327,18 @@ function HomePageContent() {
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
 
   return (
-    <div className="min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f0f2f5' }}>
+    <div className="relative min-h-screen bg-dot-pattern" style={{ backgroundColor: '#f7f4ef' }}>
+
+      {/* ─── ACCENT GRADIENT (tints behind header + carousel + sections) ── */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0"
+        style={{
+          height: '640px',
+          background: `linear-gradient(to bottom, ${accentColor}28 0%, ${accentColor}18 45%, transparent 100%)`,
+          zIndex: 0,
+          transition: 'background 0.6s ease',
+        }}
+      />
 
       {/* ─── HEADER ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 header-texture shadow-lg">
@@ -375,7 +396,7 @@ function HomePageContent() {
 
 
       {/* ─── MAIN ────────────────────────────────────────────────────── */}
-      <main className="container mx-auto px-4 py-3">
+      <main className="relative z-10 container mx-auto px-4 py-3">
 
         {/* Search and Filters — sticky below header */}
         <div className="sticky top-16 z-30 filter-bar-glass -mx-4 px-4 pb-3 pt-3 mb-5 space-y-3">
