@@ -96,6 +96,8 @@ export default function CategoriasPage() {
     carousel_text_color: '#ffffff',
     carousel_font: 'sans',
     carousel_filter_type: null,
+    carousel_glow: false,
+    carousel_glow_color: '#ffffff',
   });
 
   const { data: categories, isLoading } = useQuery({
@@ -262,6 +264,8 @@ export default function CategoriasPage() {
       carousel_text_color: '#ffffff',
       carousel_font: 'sans',
       carousel_filter_type: null,
+      carousel_glow: false,
+      carousel_glow_color: '#ffffff',
     });
     setShowModal(true);
   };
@@ -283,6 +287,8 @@ export default function CategoriasPage() {
       carousel_text_color: category.carousel_text_color || '#ffffff',
       carousel_font: category.carousel_font || 'sans',
       carousel_filter_type: category.carousel_filter_type ?? null,
+      carousel_glow: category.carousel_glow || false,
+      carousel_glow_color: category.carousel_glow_color || '#ffffff',
     });
     setShowModal(true);
   };
@@ -305,6 +311,8 @@ export default function CategoriasPage() {
       carousel_text_color: '#ffffff',
       carousel_font: 'sans',
       carousel_filter_type: null,
+      carousel_glow: false,
+      carousel_glow_color: '#ffffff',
     });
   };
 
@@ -897,6 +905,39 @@ export default function CategoriasPage() {
                     <p className="mt-1 text-xs text-gray-500">
                       Si seleccionas un filtro especial, al hacer clic en este slide se activará ese filtro en lugar de filtrar por categoría.
                     </p>
+                  </div>
+
+                  {/* carousel_glow */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="carousel_glow"
+                        checked={formData.carousel_glow || false}
+                        onChange={(e) => setFormData({ ...formData, carousel_glow: e.target.checked })}
+                        className="h-4 w-4 text-primary-600 rounded border-gray-300"
+                      />
+                      <label htmlFor="carousel_glow" className="text-sm text-gray-700">
+                        Borde fluorescente
+                      </label>
+                    </div>
+                    {formData.carousel_glow && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Color del borde
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={formData.carousel_glow_color || '#ffffff'}
+                            onChange={(e) => setFormData({ ...formData, carousel_glow_color: e.target.value })}
+                            className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                            title="Color del borde fluorescente"
+                          />
+                          <span className="text-xs text-gray-500 font-mono">{formData.carousel_glow_color || '#ffffff'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Live preview */}

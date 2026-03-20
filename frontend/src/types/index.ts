@@ -142,6 +142,8 @@ export interface Category {
   carousel_text_color: string | null;
   carousel_font: string | null; // 'sans' | 'serif' | 'mono'
   carousel_filter_type: string | null;
+  carousel_glow: boolean;
+  carousel_glow_color: string | null;
 }
 
 export interface CategoryCreateForm {
@@ -158,6 +160,8 @@ export interface CategoryCreateForm {
   carousel_text_color?: string;
   carousel_font?: string;
   carousel_filter_type?: string | null;
+  carousel_glow?: boolean;
+  carousel_glow_color?: string;
 }
 
 export interface CategoryMapping {
