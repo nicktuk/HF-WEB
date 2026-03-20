@@ -945,19 +945,23 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
           const textColor = slide.carousel_text_color || '#ffffff';
           const title = slide.carousel_title || slide.name;
           const imageUrl = fixImageUrl(slide.carousel_image_url);
+          const glowColor = slide.carousel_glow_color || '#ffffff';
           return (
-            <button
+            <div
               key={`${slide.name}-${i}`}
-              type="button"
-              onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
-              className={`relative shrink-0 rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass} ${slide.carousel_glow ? 'animate-glow-pulse' : ''}`}
+              className={`shrink-0 rounded-2xl ${slide.carousel_glow ? 'animate-glow-pulse' : ''}`}
               style={{
                 width: '240px',
-                backgroundColor: bgColor,
                 boxShadow: slide.carousel_glow
-                  ? `0 0 0 2px ${slide.carousel_glow_color || '#ffffff'}, 0 0 16px 2px ${slide.carousel_glow_color || '#ffffff'}88, 0 0 32px 4px ${slide.carousel_glow_color || '#ffffff'}44`
+                  ? `0 0 0 4px ${glowColor}, 0 0 20px 4px ${glowColor}99, 0 0 45px 8px ${glowColor}55`
                   : undefined,
               }}
+            >
+            <button
+              type="button"
+              onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
+              className={`relative w-full rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass}`}
+              style={{ backgroundColor: bgColor }}
               aria-label={`Filtrar por categoría: ${title}`}
             >
               {imageUrl && (
@@ -990,6 +994,7 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
                 )}
               </div>
             </button>
+            </div>
           );
         })}
       </div>
