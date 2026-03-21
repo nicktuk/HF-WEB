@@ -12,7 +12,7 @@ interface SectionStripProps {
 }
 
 export function SectionStrip({ section }: SectionStripProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const bgColor = section.bg_color || '#0D1B2A';
   const textColor = section.text_color || '#ffffff';
 
