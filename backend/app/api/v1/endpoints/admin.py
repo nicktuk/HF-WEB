@@ -856,21 +856,26 @@ async def sync_uploads_from_prod(
         if s.image_url:
             all_urls.add(s.image_url)
 
-    # Filtrar solo las que apuntan a /uploads/
-    pattern = re.compile(r"https?://[^/]+(/uploads/([^/?#]+))")
+    # Filtrar solo las que apuntan a /uploads/ (absolutas o relativas)
+    abs_pattern = re.compile(r"https?://[^/]+/uploads/([^/?#]+)")
     to_sync = []
     for url in all_urls:
-        m = pattern.search(url)
+        m = abs_pattern.search(url)
         if m:
-            filename = m.group(2)
-            dest = upload_dir / filename
-            if not dest.exists():
-                # Construir URL de origen (puede ser prod u otro backend)
-                source_url = url
-                to_sync.append((filename, source_url, dest))
+            filename = m.group(1)
+            source_url = url  # ya es absoluta, descargar de donde apunte
+        elif url.startswith("/uploads/"):
+            filename = url.split("/uploads/", 1)[1].split("?")[0]
+            source_url = f"{settings.PROD_BACKEND_URL}/uploads/{filename}"
+        else:
+            continue
+
+        dest = upload_dir / filename
+        if not dest.exists():
+            to_sync.append((filename, source_url, dest))
 
     if not to_sync:
-        return {"status": "nothing_to_sync", "synced": 0, "skipped": 0, "errors": []}
+        return {"status": "nothing_to_sync", "total_in_db": len(all_urls), "synced": 0, "errors": []}
 
     synced = 0
     errors = []
@@ -888,6 +893,7 @@ async def sync_uploads_from_prod(
 
     return {
         "status": "done",
+        "total_in_db": len(all_urls),
         "synced": synced,
         "errors": errors,
     }
