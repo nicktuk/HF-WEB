@@ -107,7 +107,7 @@ function PublicHeaderInner() {
       )}
 
       {/* ─── HEADER ──────────────────────────────────────────────────── */}
-      <header className={`sticky z-40 header-texture shadow-lg ${isStaging ? 'top-6' : 'top-0'}`}>
+      <header className="sticky top-0 z-40 header-texture shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex flex-col py-2 gap-2">
 
@@ -171,7 +171,7 @@ function PublicHeaderInner() {
       </header>
 
       {/* ─── SUBHEADER ────────────────────────────────────────────── */}
-      <div className={`sticky z-[39] ${isStaging ? 'top-[132px]' : 'top-[104px]'}`} style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className={`sticky z-[39] top-[104px]`} style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="container mx-auto px-4">
           <div className="flex h-11 items-center gap-2 overflow-x-auto scrollbar-hide">
 
