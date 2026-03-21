@@ -285,7 +285,9 @@ function HomePageContent() {
     });
   })();
 
-  const showGroupedByCategory = !selectedCategory && !showFeatured && !showImmediate && !selectedSectionId;
+  // Carousel visible whenever no category/featured/immediate filter is active (section filter doesn't hide it)
+  const showCarousel = !selectedCategory && !showFeatured && !showImmediate;
+  const showGroupedByCategory = showCarousel && !selectedSectionId;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -765,7 +767,7 @@ function HomePageContent() {
         )}
 
         {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
-        {showGroupedByCategory && (
+        {showCarousel && (
           <CategoryCarousel
             slides={orderedCategories.filter(c => c.show_in_carousel)}
             onSelect={(name, filterType) => {
