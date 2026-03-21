@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
+import { resolveImageUrl } from '@/lib/api';
 import type { Section } from '@/types';
 
 interface SectionStripProps {
@@ -77,7 +78,7 @@ export function SectionStrip({ section }: SectionStripProps) {
                     <div className="aspect-square relative overflow-hidden bg-zinc-50">
                       {primaryImage ? (
                         <img
-                          src={primaryImage.url}
+                          src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
                           alt={primaryImage.alt_text || product.name}
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

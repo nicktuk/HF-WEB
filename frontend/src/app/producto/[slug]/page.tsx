@@ -14,7 +14,7 @@ import type { ProductImage } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
-import { publicApi } from '@/lib/api';
+import { publicApi, resolveImageUrl } from '@/lib/api';
 
 export default function ProductPage() {
   const params = useParams();
@@ -117,7 +117,7 @@ export default function ProductPage() {
             <div className="aspect-square relative rounded-lg overflow-hidden bg-white border group">
               {selectedImage ? (
                 <Image
-                  src={selectedImage.url}
+                  src={resolveImageUrl(selectedImage.url) ?? selectedImage.url}
                   alt={selectedImage.alt_text || product.name}
                   fill
                   className="object-contain"
@@ -177,7 +177,7 @@ export default function ProductPage() {
                     }`}
                   >
                     <Image
-                      src={image.url}
+                      src={resolveImageUrl(image.url) ?? image.url}
                       alt={image.alt_text || `${product.name} - ${index + 1}`}
                       width={80}
                       height={80}
