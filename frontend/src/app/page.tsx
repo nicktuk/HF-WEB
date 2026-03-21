@@ -471,9 +471,9 @@ function HomePageContent() {
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilter(false)} />
             {/* Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[88vh] flex flex-col">
-              {/* Header sticky */}
-              <div className="sticky top-0 bg-white border-b border-zinc-100 px-4 py-3 flex items-center justify-between rounded-t-2xl">
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[88vh] flex flex-col overflow-hidden">
+              {/* Header fijo arriba */}
+              <div className="shrink-0 bg-white border-b border-zinc-100 px-4 py-3 flex items-center justify-between rounded-t-2xl">
                 <span className="text-base font-semibold text-zinc-900">Filtros y orden</span>
                 <button
                   onClick={() => {
@@ -506,7 +506,7 @@ function HomePageContent() {
                 </button>
               </div>
               {/* Scrollable content */}
-              <div className="overflow-y-auto p-4 space-y-6 pb-8">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 pb-8">
                 {/* Sort */}
                 <div>
                   <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Ordenar</p>
