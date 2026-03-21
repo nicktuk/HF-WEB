@@ -22,7 +22,7 @@ import sys
 # ── Configuración ────────────────────────────────────────────────
 PROD_BACKEND   = "https://hf-web-production.up.railway.app"
 STAGING_BACKEND = "https://hf-web-back-staging.up.railway.app"
-STAGING_API_KEY = ""   # <── completar con el ADMIN_API_KEY de staging
+STAGING_API_KEY = "busH8sDsncfrB391P_JePMCiix_yFKPNWbuPtvbOlos"   # <── completar con el ADMIN_API_KEY de staging
 # ─────────────────────────────────────────────────────────────────
 
 if not STAGING_API_KEY:

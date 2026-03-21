@@ -10,6 +10,8 @@ import os
 import uuid
 from pathlib import Path
 
+from sqlalchemy.orm import Session
+from app.db.session import get_db
 from app.api.deps import (
     get_product_service,
     get_market_intelligence_service,
@@ -825,37 +827,71 @@ async def upload_images(
     return {"urls": uploaded_urls}
 
 
-@router.post("/upload/sync-from-url", dependencies=[Depends(verify_admin)])
-async def sync_file_from_url(
+@router.post("/upload/sync-from-prod", dependencies=[Depends(verify_admin)])
+async def sync_uploads_from_prod(
     request: Request,
-    payload: dict,
+    db: Session = Depends(get_db),
 ):
     """
-    Descarga un archivo desde una URL y lo guarda en el volumen local con el mismo nombre.
-    Usar solo para sincronizar uploads entre ambientes (ej: prod → staging).
+    Descarga todos los archivos de /uploads/ que están referenciados en la DB
+    pero no existen en el volumen local. Usar para sincronizar staging desde prod.
     """
     import httpx
-
-    source_url: str = payload.get("url", "")
-    filename: str = payload.get("filename", "")
-
-    if not source_url or not filename:
-        raise HTTPException(status_code=400, detail="url y filename son requeridos")
+    import re
+    from app.models.product import ProductImage
+    from app.models.section import Section
 
     upload_dir = Path(settings.UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    dest = upload_dir / filename
 
-    if dest.exists():
-        return {"filename": filename, "status": "already_exists"}
+    # Recolectar todas las URLs de imágenes en la DB
+    all_urls: set[str] = set()
 
+    images = db.query(ProductImage).all()
+    for img in images:
+        if img.url:
+            all_urls.add(img.url)
+
+    sections = db.query(Section).all()
+    for s in sections:
+        if s.image_url:
+            all_urls.add(s.image_url)
+
+    # Filtrar solo las que apuntan a /uploads/
+    pattern = re.compile(r"https?://[^/]+(/uploads/([^/?#]+))")
+    to_sync = []
+    for url in all_urls:
+        m = pattern.search(url)
+        if m:
+            filename = m.group(2)
+            dest = upload_dir / filename
+            if not dest.exists():
+                # Construir URL de origen (puede ser prod u otro backend)
+                source_url = url
+                to_sync.append((filename, source_url, dest))
+
+    if not to_sync:
+        return {"status": "nothing_to_sync", "synced": 0, "skipped": 0, "errors": []}
+
+    synced = 0
+    errors = []
     async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.get(source_url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"No se pudo descargar {source_url}")
-        dest.write_bytes(response.content)
+        for filename, source_url, dest in to_sync:
+            try:
+                r = await client.get(source_url)
+                if r.status_code == 200:
+                    dest.write_bytes(r.content)
+                    synced += 1
+                else:
+                    errors.append({"file": filename, "reason": f"HTTP {r.status_code}"})
+            except Exception as e:
+                errors.append({"file": filename, "reason": str(e)})
 
-    return {"filename": filename, "status": "ok"}
+    return {
+        "status": "done",
+        "synced": synced,
+        "errors": errors,
+    }
 
 
 @router.patch(
