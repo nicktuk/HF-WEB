@@ -827,9 +827,8 @@ async def upload_images(
     return {"urls": uploaded_urls}
 
 
-@router.post("/upload/sync-from-prod", dependencies=[Depends(verify_admin)])
+@router.get("/upload/sync-from-prod", dependencies=[Depends(verify_admin)])
 async def sync_uploads_from_prod(
-    request: Request,
     db: Session = Depends(get_db),
 ):
     """
