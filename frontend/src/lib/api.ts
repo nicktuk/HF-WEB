@@ -28,6 +28,21 @@ import type {
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = API_URL.replace('/api/v1', '');
+
+/**
+ * Normalizes an image URL so that /uploads/ paths always resolve to the current backend,
+ * and external URLs (ImgBB, scrapers, etc.) are returned as-is.
+ */
+export function resolveImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('/')) return `${API_BASE}${url}`;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Rewrite any backend /uploads/ URL to the current environment's backend
+    return url.replace(/^https?:\/\/[^/]+(?=\/uploads\/)/, API_BASE);
+  }
+  return url;
+}
 
 /**
  * Base fetch wrapper with error handling
@@ -1176,18 +1191,9 @@ export async function uploadImages(apiKey: string, files: File[]): Promise<strin
 
   const data = await response.json();
 
-  // URLs can be:
-  // 1. Full URLs from cloud storage (ImgBB) - start with http:// or https://
-  // 2. Relative URLs from local storage - start with /uploads/
-  const baseUrl = API_URL.replace('/api/v1', '');
-  return data.urls.map((url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      // Already a full URL (from ImgBB or other cloud storage)
-      return url;
-    }
-    // Relative URL - convert to full URL
-    return `${baseUrl}${url}`;
-  });
+  // Return URLs as-is: external URLs (ImgBB, etc.) stay absolute,
+  // local /uploads/ paths stay relative so each environment resolves them correctly.
+  return data.urls as string[];
 }
 
 // ============================================

@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_PUBLIC: str = "100/minute"
     RATE_LIMIT_ADMIN: str = "1000/minute"
 
+    # Sync uploads (staging only)
+    PROD_BACKEND_URL: str = "https://hf-web-production.up.railway.app"
+
     # File Uploads
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB

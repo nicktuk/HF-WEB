@@ -10,7 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import { adminApi, uploadImages } from '@/lib/api';
+import { adminApi, uploadImages, resolveImageUrl } from '@/lib/api';
 import type { Section, ProductInSection, ProductAdmin } from '@/types';
 
 const CRITERIA_OPTIONS = [
@@ -497,7 +497,7 @@ export default function SeccionesPage() {
                   {formData.image_url && (
                     <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200">
                       <img
-                        src={formData.image_url}
+                        src={resolveImageUrl(formData.image_url) ?? formData.image_url}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />

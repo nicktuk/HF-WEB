@@ -50,11 +50,6 @@
     }
   }
 
-  /* Subtle dot pattern for the page background */
-  .bg-dot-pattern {
-    background-image: radial-gradient(circle, #d4cfc8 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
 
   /* Header inner gradient texture */
   .header-texture {

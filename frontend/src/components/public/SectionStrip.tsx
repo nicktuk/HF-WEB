@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
+import { resolveImageUrl } from '@/lib/api';
 import type { Section } from '@/types';
 
 interface SectionStripProps {
@@ -11,7 +12,7 @@ interface SectionStripProps {
 }
 
 export function SectionStrip({ section }: SectionStripProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const bgColor = section.bg_color || '#0D1B2A';
   const textColor = section.text_color || '#ffffff';
 
@@ -33,17 +34,6 @@ export function SectionStrip({ section }: SectionStripProps) {
         onClick={() => setExpanded((v) => !v)}
         className="w-full text-left focus:outline-none"
       >
-        {/* Image */}
-        {section.image_url && (
-          <div className="aspect-video w-full overflow-hidden">
-            <img
-              src={section.image_url}
-              alt={section.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
-        )}
-
         {/* Title bar */}
         <div
           className="flex items-center justify-between px-4 py-3"
@@ -88,7 +78,7 @@ export function SectionStrip({ section }: SectionStripProps) {
                     <div className="aspect-square relative overflow-hidden bg-zinc-50">
                       {primaryImage ? (
                         <img
-                          src={primaryImage.url}
+                          src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
                           alt={primaryImage.alt_text || product.name}
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

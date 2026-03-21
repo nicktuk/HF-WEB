@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
+import { resolveImageUrl } from '@/lib/api';
 import type { ProductPublic } from '@/types';
 
 interface ProductCardProps {
@@ -31,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {primaryImage ? (
           <>
             <Image
-              src={primaryImage.url}
+              src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
               alt={primaryImage.alt_text || product.name}
               fill
               className="object-cover group-hover:scale-[1.07] transition-transform duration-500 ease-out"
