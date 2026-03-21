@@ -825,6 +825,39 @@ async def upload_images(
     return {"urls": uploaded_urls}
 
 
+@router.post("/upload/sync-from-url", dependencies=[Depends(verify_admin)])
+async def sync_file_from_url(
+    request: Request,
+    payload: dict,
+):
+    """
+    Descarga un archivo desde una URL y lo guarda en el volumen local con el mismo nombre.
+    Usar solo para sincronizar uploads entre ambientes (ej: prod → staging).
+    """
+    import httpx
+
+    source_url: str = payload.get("url", "")
+    filename: str = payload.get("filename", "")
+
+    if not source_url or not filename:
+        raise HTTPException(status_code=400, detail="url y filename son requeridos")
+
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    dest = upload_dir / filename
+
+    if dest.exists():
+        return {"filename": filename, "status": "already_exists"}
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.get(source_url)
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"No se pudo descargar {source_url}")
+        dest.write_bytes(response.content)
+
+    return {"filename": filename, "status": "ok"}
+
+
 @router.patch(
     "/products/{product_id}",
     response_model=ProductAdminResponse,
