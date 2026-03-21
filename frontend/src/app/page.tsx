@@ -208,9 +208,10 @@ function HomePageContent() {
     });
   })();
 
-  // Carousel visible whenever no category/featured/immediate filter is active (section filter doesn't hide it)
-  const showCarousel = !selectedCategory && !showFeatured && !showImmediate;
-  const showGroupedByCategory = showCarousel && !selectedSectionId;
+  // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
+  const anyFilterActive = !!(selectedCategory || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
+  const showCarousel = !anyFilterActive;
+  const showGroupedByCategory = !anyFilterActive;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -273,7 +274,7 @@ function HomePageContent() {
       <main className="relative z-10 container mx-auto px-4 py-3">
 
         {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
-        {showCarousel && !selectedSectionId && (
+        {showCarousel && (
           <CategoryCarousel
             slides={orderedCategories.filter(c => c.show_in_carousel)}
             onSelect={(name, filterType) => {
@@ -289,7 +290,7 @@ function HomePageContent() {
         )}
 
         {/* ─── SECTIONS ARRIBA (encima de los productos) ───────────── */}
-        {sectionsArriba.length > 0 && !selectedSectionId && (
+        {sectionsArriba.length > 0 && !anyFilterActive && (
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
             <div className="flex gap-3 h-full">
               {sectionsArriba.map(s => (
@@ -370,7 +371,7 @@ function HomePageContent() {
         </div>
 
         {/* ─── SECTIONS ABAJO ──────────────────────────────────────── */}
-        {sectionsAbajo.length > 0 && !selectedSectionId && (
+        {sectionsAbajo.length > 0 && !anyFilterActive && (
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mt-10 h-[280px] sm:h-[400px] lg:h-[440px]">
             <div className="flex gap-3 h-full">
               {sectionsAbajo.map(s => (
