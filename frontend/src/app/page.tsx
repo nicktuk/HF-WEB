@@ -467,11 +467,11 @@ function HomePageContent() {
 
         {/* ─── MOBILE FILTER PANEL (bottom sheet) ───────────────────── */}
         {showMobileFilter && (
-          <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 md:hidden" style={{ zIndex: 9999 }}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilter(false)} />
             {/* Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[88vh] flex flex-col overflow-hidden">
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl flex flex-col" style={{ maxHeight: '88dvh' }}>
               {/* Header */}
               <div className="shrink-0 px-4 py-3 flex items-center justify-between border-b border-zinc-100">
                 <span className="text-base font-semibold text-zinc-900">Filtros y orden</span>
@@ -480,7 +480,7 @@ function HomePageContent() {
                 </button>
               </div>
               {/* Scrollable content */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 pb-2">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 pb-2">
                 {/* Sort */}
                 <div>
                   <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Ordenar</p>
