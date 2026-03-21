@@ -33,17 +33,6 @@ export function SectionStrip({ section }: SectionStripProps) {
         onClick={() => setExpanded((v) => !v)}
         className="w-full text-left focus:outline-none"
       >
-        {/* Image */}
-        {section.image_url && (
-          <div className="aspect-video w-full overflow-hidden">
-            <img
-              src={section.image_url}
-              alt={section.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
-        )}
-
         {/* Title bar */}
         <div
           className="flex items-center justify-between px-4 py-3"

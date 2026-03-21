@@ -12,6 +12,7 @@ import { usePublicProduct } from '@/hooks/useProducts';
 import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductImage } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
+import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi } from '@/lib/api';
 
@@ -64,7 +65,8 @@ export default function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
+        <PublicHeader />
         <div className="container mx-auto px-4 py-6">
           <Skeleton className="h-6 w-32 mb-6" />
           <div className="grid md:grid-cols-2 gap-8">
@@ -83,7 +85,7 @@ export default function ProductPage() {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#e0f2fe' }}>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Producto no encontrado
@@ -104,19 +106,8 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <button
-            onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            Volver al catálogo
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
+      <PublicHeader />
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 pb-24 md:pb-6">

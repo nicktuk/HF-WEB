@@ -8,48 +8,42 @@ interface SectionCardProps {
 }
 
 export function SectionCard({ section, onSelect }: SectionCardProps) {
-  const borderColor = section.bg_color || '#0D1B2A';
-  const textColor = section.text_color || '#1a1a1a';
+  const bgColor = section.bg_color || '#1a1a2e';
+  const textColor = section.text_color || '#ffffff';
 
   return (
     <button
       type="button"
       onClick={() => onSelect(section)}
-      className="shrink-0 flex flex-col overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-left focus:outline-none"
+      className="relative shrink-0 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-0.5 text-left focus:outline-none h-full"
       style={{
         width: '300px',
-        height: '360px',
-        border: `3px solid ${borderColor}`,
+        background: bgColor,
+        borderLeft: `4px solid ${textColor}40`,
       }}
     >
-      {/* Title area — top */}
-      <div className="shrink-0 px-4 py-3 bg-white">
-        <p
-          className="text-base font-extrabold tracking-tight leading-tight"
-          style={{ color: textColor }}
-        >
+      {/* Título */}
+      <div className="relative z-10 px-4 pt-4 pb-2">
+        <p className="text-xl font-extrabold tracking-tight leading-tight drop-shadow" style={{ color: textColor }}>
           {section.title}
         </p>
         {section.subtitle && (
-          <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">
+          <p className="text-xs mt-1 font-medium opacity-80" style={{ color: textColor }}>
             {section.subtitle}
           </p>
         )}
       </div>
 
-      {/* Image — fills remaining space */}
-      <div className="flex-1 w-full overflow-hidden">
+      {/* Imagen */}
+      <div className="relative z-10 flex-1 w-full flex items-end justify-center px-4 pb-4 pt-2" style={{ height: 'calc(100% - 70px)' }}>
         {section.image_url ? (
           <img
             src={section.image_url}
             alt={section.title}
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full object-contain drop-shadow-2xl"
           />
         ) : (
-          <div
-            className="w-full h-full opacity-30"
-            style={{ backgroundColor: borderColor }}
-          />
+          <div className="w-full h-full opacity-20 rounded" style={{ backgroundColor: textColor }} />
         )}
       </div>
     </button>

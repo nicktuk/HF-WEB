@@ -8,6 +8,82 @@
 
 ---
 
+## Sesión 2026-03-19/20/21
+
+### PublicHeader — componente extraído
+
+- Nuevo componente: `frontend/src/components/public/PublicHeader.tsx`
+- Contiene todo el header sticky + subheader (antes estaba inline en `page.tsx`)
+- Se usa en `page.tsx` y en `producto/[slug]/page.tsx`
+- Header: logo HE·FA, botón "¿Cómo funciona?", botón WhatsApp (desktop)
+- Barra de búsqueda con debounce de **300ms** (antes 900ms)
+- Subheader sticky (`top-[104px]`) con pills: Filtros (hamburger), Ver todo, Novedades, Inmediata, categorías, subcategorías
+- Dropdown hamburger con drill-down: categorías → subcategorías
+- `updateParams` navega con `router.replace` en home y `router.push` desde otras páginas
+
+### Carrusel de categorías
+
+**Backend (campos nuevos en `Category`):**
+- Migración `030_add_carousel_fields_to_categories.py`: `carousel_title`, `carousel_subtitle`, `carousel_image_url`, `carousel_bg_color`, `carousel_text_color`, `carousel_font`, `carousel_filter_type`
+- Migración `031_carousel_filter_type.py`: campo `carousel_filter_type`
+- Migración `032_carousel_glow.py`: campos `carousel_glow` (bool), `carousel_glow_color`
+- Campo `show_in_carousel` (bool) en `Category`
+- `carousel_filter_type` puede ser `null` (filtra por nombre), `featured` o `immediate_delivery`
+
+**Frontend:**
+- Componente `CategoryCarousel` en `page.tsx` (inline)
+- Auto-scroll infinito (duplica slides, resetea `scrollLeft` al llegar a la mitad)
+- Pausa al hover/touch
+- Soporta imagen de fondo, efecto glow, fuente configurable
+- Solo se muestra cuando no hay filtro de categoría/featured/immediate activo
+
+### Módulo Secciones
+
+**Backend:**
+- Migraciones:
+  - `033_add_sections.py`: tablas `sections` y `section_products`
+  - `034_section_image_url.py`: campo `image_url` en `Section`
+  - `035_section_products_updated_at.py`: `updated_at` en sección
+  - `036_section_position.py`: campo `position` (`arriba` / `abajo`)
+- Modelo `Section`: `id`, `title`, `subtitle`, `display_order`, `is_active`, `criteria_type`, `criteria_value`, `max_products`, `bg_color`, `text_color`, `image_url`, `position`
+- `criteria_type`: `manual`, `featured`, `immediate_delivery`, `category`, `best_seller`
+- Endpoint: `backend/app/api/v1/endpoints/sections.py`
+  - `GET /public/sections` — devuelve secciones activas con sus productos resueltos
+  - CRUD admin para secciones
+
+**Frontend:**
+- Admin: `frontend/src/app/admin/secciones/page.tsx` — CRUD de secciones
+- Componente público: `frontend/src/components/public/SectionCard.tsx`
+  - Tarjeta 300px de ancho, altura completa del contenedor
+  - Imagen centrada en la parte inferior de la card
+  - Título + subtítulo en la parte superior
+  - Borde izquierdo de acento (`4px solid textColor40`)
+- Componente: `frontend/src/components/public/SectionStrip.tsx` (usado en detalle de producto)
+- Datos: `publicApi.getSections()` con `queryKey: ['public-sections']`
+
+**Lógica en `page.tsx`:**
+- `sectionsArriba` y `sectionsAbajo` (filtradas por `position`)
+- Se muestran en containers `h-[280px] sm:h-[400px] lg:h-[440px]`, scroll horizontal
+- `section_id` en URL para activar filtro de sección manual
+- Al seleccionar sección: `handleSectionSelect` mapea `criteria_type` a los params de URL
+- Banner en grid muestra nombre de sección activa + botón "× Ver todo"
+- Scroll automático al grid al activar filtro de sección (`productGridRef`)
+
+### Cambios visuales en `page.tsx`
+
+- `accentColor`: gradiente de fondo que cambia con el filtro activo (color de categoría, amber para featured, emerald para inmediata)
+- Vista por defecto: productos agrupados por categoría (`groupedByCategory`) con separadores de color
+- `showGroupedByCategory`: true solo cuando no hay categoría/featured/immediate/section_id activo
+- Footer con columnas: marca, contacto, información
+
+### Cambios en `globals.css`
+
+- `animate-attention-pulse`: animación de pulso/glow para pills de categorías al cargar
+- `animate-glow-pulse`: para tarjetas de carrusel con glow activado
+- Fondo `body` cambiado a `#f7f4ef` (crema)
+
+---
+
 ## Estado actual del menú admin (2026-03-06)
 
 `frontend/src/app/admin/layout.tsx` — estructura con submenús por grupo:
