@@ -875,7 +875,13 @@ async def sync_uploads_from_prod(
             to_sync.append((filename, source_url, dest))
 
     if not to_sync:
-        return {"status": "nothing_to_sync", "total_in_db": len(all_urls), "synced": 0, "errors": []}
+        return {
+            "status": "nothing_to_sync",
+            "total_in_db": len(all_urls),
+            "urls_in_db": list(all_urls),
+            "synced": 0,
+            "errors": [],
+        }
 
     synced = 0
     errors = []
