@@ -472,41 +472,15 @@ function HomePageContent() {
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilter(false)} />
             {/* Sheet */}
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[88vh] flex flex-col overflow-hidden">
-              {/* Header fijo arriba */}
-              <div className="shrink-0 bg-white border-b border-zinc-100 px-4 py-3 flex items-center justify-between rounded-t-2xl">
+              {/* Header */}
+              <div className="shrink-0 px-4 py-3 flex items-center justify-between border-b border-zinc-100">
                 <span className="text-base font-semibold text-zinc-900">Filtros y orden</span>
-                <button
-                  onClick={() => {
-                    // Apply and close
-                    const updates: Record<string, string | undefined> = {};
-                    updates.sort = tempSort || undefined;
-                    if (tempCategories.length === 0) {
-                      updates.category = undefined;
-                      updates.categories = undefined;
-                    } else if (tempCategories.length === 1) {
-                      updates.category = tempCategories[0];
-                      updates.categories = undefined;
-                      updates.subcategory = undefined;
-                    } else {
-                      updates.category = undefined;
-                      updates.categories = tempCategories.join(',');
-                      updates.subcategory = undefined;
-                    }
-                    if (tempCategories.length > 0) {
-                      updates.featured = undefined;
-                      updates.immediate_delivery = undefined;
-                      updates.section_id = undefined;
-                    }
-                    updateParams(updates);
-                    setShowMobileFilter(false);
-                  }}
-                  className="bg-blue-600 text-white px-5 py-1.5 rounded-full text-sm font-semibold"
-                >
-                  Aplicar filtro
+                <button onClick={() => setShowMobileFilter(false)} className="text-sm text-zinc-400 hover:text-zinc-600">
+                  Cancelar
                 </button>
               </div>
               {/* Scrollable content */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 pb-8">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 pb-2">
                 {/* Sort */}
                 <div>
                   <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Ordenar</p>
@@ -558,6 +532,37 @@ function HomePageContent() {
                     </label>
                   ))}
                 </div>
+              </div>
+              {/* Footer con botón Aplicar */}
+              <div className="shrink-0 border-t border-zinc-100 px-4 py-3 bg-white">
+                <button
+                  onClick={() => {
+                    const updates: Record<string, string | undefined> = {};
+                    updates.sort = tempSort || undefined;
+                    if (tempCategories.length === 0) {
+                      updates.category = undefined;
+                      updates.categories = undefined;
+                    } else if (tempCategories.length === 1) {
+                      updates.category = tempCategories[0];
+                      updates.categories = undefined;
+                      updates.subcategory = undefined;
+                    } else {
+                      updates.category = undefined;
+                      updates.categories = tempCategories.join(',');
+                      updates.subcategory = undefined;
+                    }
+                    if (tempCategories.length > 0) {
+                      updates.featured = undefined;
+                      updates.immediate_delivery = undefined;
+                      updates.section_id = undefined;
+                    }
+                    updateParams(updates);
+                    setShowMobileFilter(false);
+                  }}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold"
+                >
+                  Aplicar filtro
+                </button>
               </div>
             </div>
           </div>
