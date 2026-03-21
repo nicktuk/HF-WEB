@@ -171,7 +171,7 @@ function PublicHeaderInner() {
       </header>
 
       {/* ─── SUBHEADER ────────────────────────────────────────────── */}
-      <div className={`sticky z-[39] ${isStaging ? 'top-[128px]' : 'top-[104px]'}`} style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className={`sticky z-[39] ${isStaging ? 'top-[132px]' : 'top-[104px]'}`} style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="container mx-auto px-4">
           <div className="flex h-11 items-center gap-2 overflow-x-auto scrollbar-hide">
 
