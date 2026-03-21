@@ -277,35 +277,45 @@ function HomePageContent() {
       <PublicHeader />
 
 
-      {/* ─── MAIN ────────────────────────────────────────────────────── */}
-      <main className="relative z-10 container mx-auto px-4 py-3">
+      {/* ─── PRE-GRID GRADIENT ZONE ──────────────────────────────────── */}
+      <div
+        className="relative z-10"
+        style={{ background: 'linear-gradient(to bottom, #162844 0%, #e0f2fe 100%)' }}
+      >
+        <div className="container mx-auto px-4 pt-3 pb-2">
 
-        {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
-        {showCarousel && (
-          <CategoryCarousel
-            slides={orderedCategories.filter(c => c.show_in_carousel)}
-            onSelect={(name, filterType) => {
-              if (filterType === 'immediate_delivery') {
-                updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
-              } else if (filterType === 'featured') {
-                updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
-              } else {
-                updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-              }
-            }}
-          />
-        )}
+          {/* ─── CATEGORY CAROUSEL ─────────────────────────────────── */}
+          {showCarousel && (
+            <CategoryCarousel
+              slides={orderedCategories.filter(c => c.show_in_carousel)}
+              onSelect={(name, filterType) => {
+                if (filterType === 'immediate_delivery') {
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
+                } else if (filterType === 'featured') {
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
+                } else {
+                  updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                }
+              }}
+            />
+          )}
 
-        {/* ─── SECTIONS ARRIBA (encima de los productos) ───────────── */}
-        {sectionsArriba.length > 0 && !anyFilterActive && (
-          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
-            <div className="flex gap-3 h-full">
-              {sectionsArriba.map(s => (
-                <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
-              ))}
+          {/* ─── SECTIONS ARRIBA ───────────────────────────────────── */}
+          {sectionsArriba.length > 0 && !anyFilterActive && (
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
+              <div className="flex gap-3 h-full">
+                {sectionsArriba.map(s => (
+                  <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+        </div>
+      </div>
+
+      {/* ─── MAIN ────────────────────────────────────────────────────── */}
+      <main className="relative z-10 container mx-auto px-4 pb-3">
 
         {/* ─── SORT BAR (desktop only) ──────────────────────────────── */}
         <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
