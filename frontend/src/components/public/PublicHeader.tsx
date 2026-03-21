@@ -355,7 +355,7 @@ function PublicHeaderInner() {
         </div>{/* /container */}
       </div>{/* /subheader */}
 
-      <HowWeWorkModal open={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
+      <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
     </>
   );
 }
