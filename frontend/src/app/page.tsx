@@ -483,7 +483,7 @@ function HomePageContent() {
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 pb-2">
                 {/* Sort */}
                 <div>
-                  <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Ordenar</p>
+                  <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-3">Ordenar</p>
                   {[
                     { value: '', label: 'Relevancia' },
                     { value: 'price_asc', label: 'Precio: menor a mayor' },
@@ -505,7 +505,7 @@ function HomePageContent() {
                 {/* Categories checkboxes */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Categorías</p>
+                    <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Categorías</p>
                     {tempCategories.length > 0 && (
                       <button onClick={() => setTempCategories([])} className="text-xs text-zinc-400 hover:text-zinc-600 underline">
                         Limpiar
