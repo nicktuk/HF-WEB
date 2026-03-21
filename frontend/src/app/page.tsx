@@ -298,7 +298,7 @@ function HomePageContent() {
       {/* ─── PRE-GRID GRADIENT ZONE ──────────────────────────────────── */}
       <div
         className="relative z-10"
-        style={{ background: 'linear-gradient(to bottom, #162844 0%, #e0f2fe 100%)' }}
+        style={{ background: 'linear-gradient(to bottom, #fde8d4 0%, #e0f2fe 100%)' }}
       >
         <div className="container mx-auto px-4 pt-3 pb-2">
 
