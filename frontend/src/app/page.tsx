@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Zap } from 'lucide-react';
+import { Zap, SlidersHorizontal } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
@@ -70,8 +70,17 @@ function HomePageContent() {
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const selectedSectionId = searchParams.get('section_id') ? Number(searchParams.get('section_id')) : undefined;
+  const sortParam = searchParams.get('sort') || undefined;
+  const categoriesParam = searchParams.get('categories') || '';
+  const multiCategories = categoriesParam ? categoriesParam.split(',') : [];
+  // Effective categories: multi-select takes precedence over single pill
+  const effectiveCategories = multiCategories.length > 0 ? multiCategories
+    : (selectedCategory ? [selectedCategory] : []);
 
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+  const [tempSort, setTempSort] = useState('');
+  const [tempCategories, setTempCategories] = useState<string[]>([]);
 
   useEffect(() => {
     trackPublicEvent('page_view', {
@@ -105,11 +114,16 @@ function HomePageContent() {
     router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
   }, [searchParams, router, selectedCategory, selectedSubcategory]);
 
+  const apiCategory = (!showFeatured && !showImmediate && !selectedSectionId && effectiveCategories.length === 1)
+    ? effectiveCategories[0] : undefined;
+  const apiSubcategory = (!showFeatured && !showImmediate && !selectedSectionId && effectiveCategories.length === 1)
+    ? selectedSubcategory : undefined;
+
   const { data, isLoading } = usePublicProducts({
     page: 1,
     limit: 1000,
-    category: (showFeatured || showImmediate || selectedSectionId) ? undefined : selectedCategory,
-    subcategory: (showFeatured || showImmediate || selectedSectionId) ? undefined : selectedSubcategory,
+    category: apiCategory,
+    subcategory: apiSubcategory,
     search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
     immediate_delivery: showImmediate ? true : undefined,
@@ -182,7 +196,18 @@ function HomePageContent() {
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
-    const items = data?.items || [];
+    let items = data?.items || [];
+
+    // Client-side multi-category filter
+    if (effectiveCategories.length > 1) {
+      items = items.filter(p => effectiveCategories.includes(p.category || ''));
+    }
+
+    if (sortParam === 'price_asc') return [...items].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+    if (sortParam === 'price_desc') return [...items].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+    if (sortParam === 'name_asc') return [...items].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    if (sortParam === 'name_desc') return [...items].sort((a, b) => b.name.localeCompare(a.name, 'es'));
+
     if (showFeatured || showImmediate) {
       return items;
     }
@@ -209,9 +234,9 @@ function HomePageContent() {
   })();
 
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
-  const anyFilterActive = !!(selectedCategory || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
+  const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const showGroupedByCategory = !anyFilterActive;
+  const showGroupedByCategory = !anyFilterActive && !sortParam;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -270,35 +295,94 @@ function HomePageContent() {
       <PublicHeader />
 
 
-      {/* ─── MAIN ────────────────────────────────────────────────────── */}
-      <main className="relative z-10 container mx-auto px-4 py-3">
+      {/* ─── PRE-GRID GRADIENT ZONE ──────────────────────────────────── */}
+      <div
+        className="relative z-10"
+        style={{ background: 'linear-gradient(to bottom, #fde8d4 0%, #e0f2fe 100%)' }}
+      >
+        <div className="container mx-auto px-4 pt-3 pb-2">
 
-        {/* ─── CATEGORY CAROUSEL ───────────────────────────────────── */}
-        {showCarousel && (
-          <CategoryCarousel
-            slides={orderedCategories.filter(c => c.show_in_carousel)}
-            onSelect={(name, filterType) => {
-              if (filterType === 'immediate_delivery') {
-                updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
-              } else if (filterType === 'featured') {
-                updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
-              } else {
-                updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-              }
-            }}
-          />
-        )}
+          {/* ─── CATEGORY CAROUSEL ─────────────────────────────────── */}
+          {showCarousel && (
+            <CategoryCarousel
+              slides={orderedCategories.filter(c => c.show_in_carousel)}
+              onSelect={(name, filterType) => {
+                if (filterType === 'immediate_delivery') {
+                  updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
+                } else if (filterType === 'featured') {
+                  updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined });
+                } else {
+                  updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
+                }
+              }}
+            />
+          )}
 
-        {/* ─── SECTIONS ARRIBA (encima de los productos) ───────────── */}
-        {sectionsArriba.length > 0 && !anyFilterActive && (
-          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
-            <div className="flex gap-3 h-full">
-              {sectionsArriba.map(s => (
-                <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
-              ))}
+          {/* ─── SECTIONS ARRIBA ───────────────────────────────────── */}
+          {sectionsArriba.length > 0 && !anyFilterActive && (
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
+              <div className="flex gap-3 h-full">
+                {sectionsArriba.map(s => (
+                  <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
+                ))}
+              </div>
             </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ─── MAIN ────────────────────────────────────────────────────── */}
+      <main className="relative z-10 container mx-auto px-4 pb-3">
+
+        {/* ─── MOBILE FILTER BUTTON (md:hidden) ─────────────────────── */}
+        <div className="md:hidden flex items-center justify-between pt-3 pb-3">
+          <button
+            onClick={() => {
+              setTempSort(sortParam || '');
+              setTempCategories(effectiveCategories);
+              setShowMobileFilter(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-zinc-200 shadow-sm text-sm font-semibold text-zinc-700"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtros y orden
+            {(effectiveCategories.length > 0 || sortParam) && (
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                {effectiveCategories.length + (sortParam ? 1 : 0)}
+              </span>
+            )}
+          </button>
+          {(effectiveCategories.length > 0 || sortParam) && (
+            <button
+              onClick={() => updateParams({ category: undefined, categories: undefined, sort: undefined, subcategory: undefined })}
+              className="text-xs text-zinc-400 hover:text-zinc-600 underline"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        {/* ─── SORT BAR (desktop only) ──────────────────────────────── */}
+        <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
+          <span className="text-sm text-zinc-500">
+            {data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-500">Ordenar:</span>
+            <select
+              value={sortParam || ''}
+              onChange={(e) => updateParams({ sort: e.target.value || undefined })}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30 cursor-pointer"
+            >
+              <option value="">Relevancia</option>
+              <option value="price_asc">Precio: menor a mayor</option>
+              <option value="price_desc">Precio: mayor a menor</option>
+              <option value="name_asc">Nombre: A → Z</option>
+              <option value="name_desc">Nombre: Z → A</option>
+            </select>
           </div>
-        )}
+        </div>
 
         {/* ─── PRODUCT GRID ─────────────────────────────────────────── */}
         <div ref={productGridRef}>
@@ -377,6 +461,109 @@ function HomePageContent() {
               {sectionsAbajo.map(s => (
                 <SectionCard key={s.id} section={s} onSelect={handleSectionSelect} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── MOBILE FILTER PANEL (bottom sheet) ───────────────────── */}
+        {showMobileFilter && (
+          <div className="fixed inset-0 md:hidden" style={{ zIndex: 9999 }}>
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilter(false)} />
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl flex flex-col" style={{ maxHeight: '88dvh' }}>
+              {/* Header */}
+              <div className="shrink-0 px-4 py-3 flex items-center justify-between border-b border-zinc-100">
+                <span className="text-base font-semibold text-zinc-900">Filtros y orden</span>
+                <button onClick={() => setShowMobileFilter(false)} className="text-sm text-zinc-400 hover:text-zinc-600">
+                  Cancelar
+                </button>
+              </div>
+              {/* Scrollable content */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 pb-2">
+                {/* Sort */}
+                <div>
+                  <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-3">Ordenar</p>
+                  {[
+                    { value: '', label: 'Relevancia' },
+                    { value: 'price_asc', label: 'Precio: menor a mayor' },
+                    { value: 'price_desc', label: 'Precio: mayor a menor' },
+                    { value: 'name_asc', label: 'Nombre: A → Z' },
+                    { value: 'name_desc', label: 'Nombre: Z → A' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTempSort(opt.value)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                        tempSort === opt.value ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-zinc-700 hover:bg-zinc-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Categories checkboxes */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Categorías</p>
+                    {tempCategories.length > 0 && (
+                      <button onClick={() => setTempCategories([])} className="text-xs text-zinc-400 hover:text-zinc-600 underline">
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  {orderedCategories.map((cat) => (
+                    <label key={cat.name} className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-zinc-50">
+                      <input
+                        type="checkbox"
+                        checked={tempCategories.includes(cat.name)}
+                        onChange={(e) => {
+                          setTempCategories(prev =>
+                            e.target.checked ? [...prev, cat.name] : prev.filter(c => c !== cat.name)
+                          );
+                        }}
+                        className="w-4 h-4 rounded border-zinc-300 focus:ring-2 focus:ring-blue-500"
+                        style={{ accentColor: cat.color }}
+                      />
+                      <span className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                        {cat.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {/* Footer con botón Aplicar */}
+              <div className="shrink-0 border-t border-zinc-100 px-4 py-3 bg-white">
+                <button
+                  onClick={() => {
+                    const updates: Record<string, string | undefined> = {};
+                    updates.sort = tempSort || undefined;
+                    if (tempCategories.length === 0) {
+                      updates.category = undefined;
+                      updates.categories = undefined;
+                    } else if (tempCategories.length === 1) {
+                      updates.category = tempCategories[0];
+                      updates.categories = undefined;
+                      updates.subcategory = undefined;
+                    } else {
+                      updates.category = undefined;
+                      updates.categories = tempCategories.join(',');
+                      updates.subcategory = undefined;
+                    }
+                    if (tempCategories.length > 0) {
+                      updates.featured = undefined;
+                      updates.immediate_delivery = undefined;
+                      updates.section_id = undefined;
+                    }
+                    updateParams(updates);
+                    setShowMobileFilter(false);
+                  }}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold"
+                >
+                  Aplicar filtro
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -483,20 +670,28 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
     const container = scrollRef.current;
     if (!container) return;
 
-    const STEP = 1;
-    const INTERVAL = 16;
+    const SPEED = window.innerWidth >= 768 ? 15 : 28; // px/s — slower on desktop
+    let lastTime: number | null = null;
+    let rafId: number;
 
-    const tick = () => {
-      if (isPaused.current || !container) return;
-      container.scrollLeft += STEP;
-      // When we've scrolled past the first copy, jump back silently
-      if (container.scrollLeft >= container.scrollWidth / 2) {
-        container.scrollLeft -= container.scrollWidth / 2;
+    const tick = (timestamp: number) => {
+      if (!isPaused.current && container) {
+        if (lastTime !== null) {
+          const elapsed = Math.min(timestamp - lastTime, 50);
+          container.scrollLeft += SPEED * elapsed / 1000;
+          if (container.scrollLeft >= container.scrollWidth / 2) {
+            container.scrollLeft -= container.scrollWidth / 2;
+          }
+        }
+        lastTime = timestamp;
+      } else {
+        lastTime = null;
       }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const id = setInterval(tick, INTERVAL);
-    return () => clearInterval(id);
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [slides.length]);
 
   if (slides.length === 0) return null;

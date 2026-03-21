@@ -35,6 +35,7 @@ export default function ProductsPage() {
     immediateDeliveryFilter,
     inStockFilter,
     priceRangeFilter,
+    sortByFilter,
     page,
     limit,
     setSearch,
@@ -47,6 +48,7 @@ export default function ProductsPage() {
     setImmediateDeliveryFilter,
     setInStockFilter,
     setPriceRangeFilter,
+    setSortByFilter,
     setPage,
     setLimit,
   } = useAdminFilters();
@@ -281,6 +283,7 @@ export default function ProductsPage() {
     is_immediate_delivery: immediateDeliveryFilter,
     in_stock: inStockFilter,
     price_range: priceRangeFilter,
+    sort_by: sortByFilter,
   });
 
   useEffect(() => {
@@ -796,6 +799,22 @@ export default function ProductsPage() {
           <option value="5001-20000">$5.001 - $20.000</option>
           <option value="20001-80000">$20.001 - $80.000</option>
           <option value="80001+">Mayor a $80.000</option>
+        </select>
+
+        {/* Sort Filter */}
+        <select
+          value={sortByFilter || ''}
+          onChange={(e) => {
+            setSortByFilter(e.target.value || undefined);
+            setSelectedIds([]);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
+        >
+          <option value="">Ordenar por defecto</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="name_asc">Nombre: A → Z</option>
+          <option value="name_desc">Nombre: Z → A</option>
         </select>
       </div>
 

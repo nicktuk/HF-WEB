@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Search, Star, Zap, Menu, X, ChevronLeft, Lightbulb } from 'lucide-react';
+import { Search, Star, Zap, Lightbulb } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
@@ -22,21 +22,14 @@ function PublicHeaderInner() {
   const selectedSubcategory = searchParams.get('subcategory') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
+  const sortParam = searchParams.get('sort') || '';
 
   // Local state
   const [searchInput, setSearchInput] = useState(searchFromUrl);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileMenuMode, setMobileMenuMode] = useState<'categories' | 'subcategories'>('categories');
-  const [tempCategory, setTempCategory] = useState<string | null>(null);
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
 
   // Sync search input when URL changes
   useEffect(() => { setSearchInput(searchFromUrl); }, [searchFromUrl]);
-
-  // Close menu on filter change
-  useEffect(() => {
-    if (selectedSubcategory || showFeatured || showImmediate) setMobileMenuOpen(false);
-  }, [selectedSubcategory, showFeatured, showImmediate]);
 
   // updateParams: on home update URL in-place, on other pages navigate to home
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -77,23 +70,12 @@ function PublicHeaderInner() {
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
   );
   const { data: subcategories } = useSubcategories(selectedCategory);
-  const { data: tempSubcategories } = useSubcategories(tempCategory ?? undefined);
   const { data: catalogSettings } = useQuery({
     queryKey: ['public-catalog-settings'],
     queryFn: fetchPublicCatalogSettings,
     staleTime: 5 * 60 * 1000,
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
-
-  // Auto-apply when drill-down category has no subcategories
-  useEffect(() => {
-    if (mobileMenuMode === 'subcategories' && tempCategory && Array.isArray(tempSubcategories) && tempSubcategories.length === 0) {
-      updateParams({ category: tempCategory, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-      setMobileMenuOpen(false);
-      setMobileMenuMode('categories');
-      setTempCategory(null);
-    }
-  }, [tempSubcategories, mobileMenuMode, tempCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
@@ -175,16 +157,6 @@ function PublicHeaderInner() {
         <div className="container mx-auto px-4">
           <div className="flex h-11 items-center gap-2 overflow-x-auto scrollbar-hide">
 
-            {/* Sandwich */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors text-xs font-medium"
-              aria-label="Abrir menú de categorías"
-            >
-              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-              <span>Filtros</span>
-            </button>
-
             {/* Ver todo */}
             <button
               onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined })}
@@ -248,119 +220,6 @@ function PublicHeaderInner() {
             ))}
 
           </div>
-
-          {/* ── Dropdown Menu ── */}
-          {mobileMenuOpen && orderedCategories.length > 0 && (
-            <div className="bg-white border border-zinc-200 rounded-2xl shadow-xl p-4 space-y-1 mb-2">
-              {mobileMenuMode === 'categories' ? (
-                <>
-                  <button
-                    onClick={() => {
-                      updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      !selectedCategory && !showFeatured && !showImmediate ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700 hover:bg-zinc-50'
-                    }`}
-                  >
-                    Todos los productos
-                  </button>
-                  <button
-                    onClick={() => updateParams({ featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined })}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                      showFeatured ? 'bg-amber-50 text-amber-700 font-semibold' : 'text-zinc-700 hover:bg-zinc-50'
-                    }`}
-                  >
-                    <Star className="h-4 w-4" />
-                    {featuredLabel}
-                  </button>
-                  <button
-                    onClick={() => updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined })}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                      showImmediate ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-zinc-700 hover:bg-zinc-50'
-                    }`}
-                  >
-                    <Zap className="h-4 w-4" />
-                    Entrega inmediata
-                  </button>
-                  <div className="border-t border-zinc-100 pt-2 mt-2">
-                    <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 px-3">Categorías</p>
-                    {orderedCategories.map((category) => (
-                      <button
-                        key={category.name}
-                        onClick={() => {
-                          setTempCategory(category.name);
-                          setMobileMenuMode('subcategories');
-                        }}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2.5 ${
-                          selectedCategory === category.name && !showFeatured && !showImmediate ? 'text-white' : 'text-zinc-700 hover:bg-zinc-50'
-                        }`}
-                        style={{
-                          backgroundColor: selectedCategory === category.name && !showFeatured && !showImmediate ? category.color : undefined,
-                        }}
-                      >
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
-                        {category.name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setMobileMenuMode('categories'); setTempCategory(null); }}
-                    className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Volver a categorías
-                  </button>
-                  <div className="border-t border-zinc-100 pt-2 mt-1">
-                    <div
-                      className="px-3 py-2 rounded-xl mb-2 flex items-center gap-2"
-                      style={{ backgroundColor: `${orderedCategories.find(c => c.name === tempCategory)?.color}18` }}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: orderedCategories.find(c => c.name === tempCategory)?.color }} />
-                      <span className="text-sm font-bold" style={{ color: orderedCategories.find(c => c.name === tempCategory)?.color }}>
-                        {tempCategory}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        updateParams({ category: tempCategory || undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined });
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-zinc-700 hover:bg-zinc-50"
-                    >
-                      Ver todo en {tempCategory}
-                    </button>
-                    {tempSubcategories && tempSubcategories.length > 0 ? (
-                      <>
-                        <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 px-3 mt-3">Subcategorías</p>
-                        {tempSubcategories.map((subcategory) => (
-                          <button
-                            key={subcategory.name}
-                            onClick={() => {
-                              updateParams({ category: tempCategory || undefined, subcategory: subcategory.name, featured: undefined, immediate_delivery: undefined });
-                              setMobileMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2.5 ${
-                              selectedSubcategory === subcategory.name ? 'text-white' : 'text-zinc-700 hover:bg-zinc-50'
-                            }`}
-                            style={{ backgroundColor: selectedSubcategory === subcategory.name ? subcategory.color : undefined }}
-                          >
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: subcategory.color }} />
-                            {subcategory.name}
-                          </button>
-                        ))}
-                      </>
-                    ) : (
-                      <p className="text-xs text-zinc-400 px-3 mt-2">No hay subcategorías</p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>{/* /container */}
       </div>{/* /subheader */}
 

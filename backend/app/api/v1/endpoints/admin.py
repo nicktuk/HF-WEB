@@ -116,6 +116,7 @@ async def get_products_admin(
     is_immediate_delivery: Optional[bool] = Query(default=None),
     in_stock: Optional[bool] = Query(default=None),
     price_range: Optional[str] = Query(default=None, max_length=20),
+    sort_by: Optional[str] = Query(default=None, max_length=20),
     service: ProductService = Depends(get_product_service),
 ):
     """
@@ -137,6 +138,7 @@ async def get_products_admin(
         is_immediate_delivery,
         price_range,
         in_stock,
+        sort_by,
     )
     pages = (total + limit - 1) // limit if limit > 0 else 0
 

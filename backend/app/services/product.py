@@ -150,6 +150,7 @@ class ProductService:
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None,
         in_stock: Optional[bool] = None,
+        sort_by: Optional[str] = None,
     ) -> Tuple[List[Product], int]:
         """Get all products for admin panel."""
         skip = (page - 1) * limit
@@ -167,6 +168,7 @@ class ProductService:
             is_immediate_delivery,
             price_range,
             in_stock,
+            sort_by,
         )
         total = self.repo.count_admin(
             enabled,

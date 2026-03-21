@@ -150,6 +150,7 @@ class ProductRepository(BaseRepository[Product]):
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None,
         in_stock: Optional[bool] = None,
+        sort_by: Optional[str] = None,
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -222,9 +223,20 @@ class ProductRepository(BaseRepository[Product]):
         if price_range:
             query = self._apply_price_range_filter(query, price_range)
 
+        # Sorting
+        if sort_by == 'price_asc':
+            query = query.order_by(Product.original_price.asc())
+        elif sort_by == 'price_desc':
+            query = query.order_by(Product.original_price.desc())
+        elif sort_by == 'name_asc':
+            query = query.order_by(func.coalesce(Product.custom_name, Product.original_name).asc())
+        elif sort_by == 'name_desc':
+            query = query.order_by(func.coalesce(Product.custom_name, Product.original_name).desc())
+        else:
+            query = query.order_by(Product.created_at.desc())
+
         return (
             query
-            .order_by(Product.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
