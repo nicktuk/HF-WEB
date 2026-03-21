@@ -196,7 +196,7 @@ function HomePageContent() {
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
-    const items = data?.items || [];
+    let items = data?.items || [];
 
     // Client-side multi-category filter
     if (effectiveCategories.length > 1) {
