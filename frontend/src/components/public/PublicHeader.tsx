@@ -95,10 +95,19 @@ function PublicHeaderInner() {
     }
   }, [tempSubcategories, mobileMenuMode, tempCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+
   return (
     <>
+      {/* ─── STAGING BANNER ──────────────────────────────────────────── */}
+      {isStaging && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-orange-500 py-1 text-xs font-bold uppercase tracking-widest text-white">
+          <span>⚠ STAGING</span>
+        </div>
+      )}
+
       {/* ─── HEADER ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 header-texture shadow-lg">
+      <header className={`sticky z-40 header-texture shadow-lg ${isStaging ? 'top-6' : 'top-0'}`}>
         <div className="container mx-auto px-4">
           <div className="flex flex-col py-2 gap-2">
 
