@@ -13,6 +13,7 @@ interface AdminFiltersState {
   immediateDeliveryFilter: boolean | undefined;
   inStockFilter: boolean | undefined;
   priceRangeFilter: string | undefined;
+  sortByFilter: string | undefined;
   page: number;
   limit: number;
 
@@ -27,6 +28,7 @@ interface AdminFiltersState {
   setImmediateDeliveryFilter: (immediateDelivery: boolean | undefined) => void;
   setInStockFilter: (inStock: boolean | undefined) => void;
   setPriceRangeFilter: (priceRange: string | undefined) => void;
+  setSortByFilter: (sortBy: string | undefined) => void;
   setPage: (page: number) => void;
   setLimit: (limit: number) => void;
   resetFilters: () => void;
@@ -43,6 +45,7 @@ const initialState = {
   immediateDeliveryFilter: undefined as boolean | undefined,
   inStockFilter: undefined as boolean | undefined,
   priceRangeFilter: undefined as string | undefined,
+  sortByFilter: undefined as string | undefined,
   page: 1,
   limit: 50,
 };
@@ -62,6 +65,7 @@ export const useAdminFilters = create<AdminFiltersState>()(
       setImmediateDeliveryFilter: (immediateDeliveryFilter) => set({ immediateDeliveryFilter, page: 1 }),
       setInStockFilter: (inStockFilter) => set({ inStockFilter, page: 1 }),
       setPriceRangeFilter: (priceRangeFilter) => set({ priceRangeFilter, page: 1 }),
+      setSortByFilter: (sortByFilter) => set({ sortByFilter, page: 1 }),
       setPage: (page) => set({ page }),
       setLimit: (limit) => set({ limit, page: 1 }),
       resetFilters: () => set(initialState),

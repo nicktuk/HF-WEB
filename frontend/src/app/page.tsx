@@ -70,6 +70,7 @@ function HomePageContent() {
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const selectedSectionId = searchParams.get('section_id') ? Number(searchParams.get('section_id')) : undefined;
+  const sortParam = searchParams.get('sort') || undefined;
 
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
 
@@ -183,6 +184,12 @@ function HomePageContent() {
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
     const items = data?.items || [];
+
+    if (sortParam === 'price_asc') return [...items].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+    if (sortParam === 'price_desc') return [...items].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+    if (sortParam === 'name_asc') return [...items].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    if (sortParam === 'name_desc') return [...items].sort((a, b) => b.name.localeCompare(a.name, 'es'));
+
     if (showFeatured || showImmediate) {
       return items;
     }
@@ -211,7 +218,7 @@ function HomePageContent() {
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
   const anyFilterActive = !!(selectedCategory || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const showGroupedByCategory = !anyFilterActive;
+  const showGroupedByCategory = !anyFilterActive && !sortParam;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -299,6 +306,27 @@ function HomePageContent() {
             </div>
           </div>
         )}
+
+        {/* ─── SORT BAR (desktop only) ──────────────────────────────── */}
+        <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
+          <span className="text-sm text-zinc-500">
+            {data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-500">Ordenar:</span>
+            <select
+              value={sortParam || ''}
+              onChange={(e) => updateParams({ sort: e.target.value || undefined })}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30 cursor-pointer"
+            >
+              <option value="">Relevancia</option>
+              <option value="price_asc">Precio: menor a mayor</option>
+              <option value="price_desc">Precio: mayor a menor</option>
+              <option value="name_asc">Nombre: A → Z</option>
+              <option value="name_desc">Nombre: Z → A</option>
+            </select>
+          </div>
+        </div>
 
         {/* ─── PRODUCT GRID ─────────────────────────────────────────── */}
         <div ref={productGridRef}>
@@ -483,7 +511,7 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
     const container = scrollRef.current;
     if (!container) return;
 
-    const STEP = 1;
+    const STEP = 0.5;
     const INTERVAL = 16;
 
     const tick = () => {
