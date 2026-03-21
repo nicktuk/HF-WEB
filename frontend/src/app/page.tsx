@@ -9,7 +9,7 @@ import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { usePublicProducts, useCategories } from '@/hooks/useProducts';
 import { ProductCardSkeleton } from '@/components/ui/skeleton';
 import { trackPublicEvent } from '@/lib/analytics';
-import { fetchPublicCatalogSettings, publicApi } from '@/lib/api';
+import { fetchPublicCatalogSettings, publicApi, resolveImageUrl } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { SectionCard } from '@/components/public/SectionCard';
 import { PublicHeader } from '@/components/public/PublicHeader';
@@ -470,12 +470,6 @@ function HomePageContent() {
 
 type CarouselSlide = { name: string; color: string; show_in_carousel: boolean; carousel_title: string | null; carousel_subtitle: string | null; carousel_image_url: string | null; carousel_bg_color: string | null; carousel_text_color: string | null; carousel_font: string | null; carousel_filter_type: string | null; carousel_glow: boolean; carousel_glow_color: string | null; display_order: number; show_in_menu: boolean; };
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1', '');
-
-function fixImageUrl(url: string | null): string | null {
-  if (!url) return null;
-  return url.replace(/^http:\/\/localhost:\d+/, API_BASE);
-}
 
 function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string, filterType: string | null) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -522,7 +516,7 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
           const bgColor = slide.carousel_bg_color || slide.color || '#0D1B2A';
           const textColor = slide.carousel_text_color || '#ffffff';
           const title = slide.carousel_title || slide.name;
-          const imageUrl = fixImageUrl(slide.carousel_image_url);
+          const imageUrl = resolveImageUrl(slide.carousel_image_url);
           const glowColor = slide.carousel_glow_color || '#ffffff';
           return (
             <div

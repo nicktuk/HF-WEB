@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveImageUrl } from '@/lib/api';
 import type { Section } from '@/types';
 
 interface SectionCardProps {
@@ -38,7 +39,7 @@ export function SectionCard({ section, onSelect }: SectionCardProps) {
       <div className="relative z-10 flex-1 w-full flex items-end justify-center px-4 pb-4 pt-2" style={{ height: 'calc(100% - 70px)' }}>
         {section.image_url ? (
           <img
-            src={section.image_url}
+            src={resolveImageUrl(section.image_url) ?? section.image_url}
             alt={section.title}
             className="max-w-full max-h-full object-contain drop-shadow-2xl"
           />

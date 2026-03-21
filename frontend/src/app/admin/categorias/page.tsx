@@ -10,7 +10,7 @@ import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import { adminApi, uploadImages } from '@/lib/api';
+import { adminApi, uploadImages, resolveImageUrl } from '@/lib/api';
 import type {
   Category,
   CategoryCreateForm,
@@ -767,7 +767,7 @@ export default function CategoriasPage() {
                       {formData.carousel_image_url && (
                         <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-200">
                           <img
-                            src={formData.carousel_image_url}
+                            src={resolveImageUrl(formData.carousel_image_url) ?? formData.carousel_image_url}
                             alt="Preview"
                             className="w-full h-full object-cover"
                           />
@@ -958,7 +958,7 @@ export default function CategoriasPage() {
                         >
                           {formData.carousel_image_url && (
                             <img
-                              src={formData.carousel_image_url}
+                              src={resolveImageUrl(formData.carousel_image_url) ?? formData.carousel_image_url}
                               alt=""
                               aria-hidden="true"
                               className="absolute inset-0 w-full h-full object-cover"
