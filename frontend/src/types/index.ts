@@ -313,6 +313,7 @@ export interface ProductUpdateForm {
   is_check_stock?: boolean;
   is_best_seller?: boolean;
   is_published?: boolean;
+  stock_low_threshold?: number | null;
   markup_percentage?: number;
   custom_name?: string;
   original_price?: number;
