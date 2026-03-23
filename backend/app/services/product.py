@@ -88,9 +88,18 @@ class ProductService:
         if not products:
             raise NotFoundError("Product", slug)
 
-        return self._to_public_response(products[0])
+        product = products[0]
+        stock_row = (
+            self.db.query(
+                func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0)
+            )
+            .filter(StockPurchase.product_id == product.id)
+            .scalar()
+        )
+        stock_qty = int(stock_row or 0)
+        return self._to_public_response(product, stock_qty=stock_qty)
 
-    def _to_public_response(self, product: Product) -> ProductPublicResponse:
+    def _to_public_response(self, product: Product, stock_qty: Optional[int] = None) -> ProductPublicResponse:
         """Convert product to public response format."""
         images = [
             {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary}
@@ -112,6 +121,8 @@ class ProductService:
             is_immediate_delivery=product.is_immediate_delivery,
             is_check_stock=product.is_check_stock,
             is_best_seller=product.is_best_seller,
+            stock_low_threshold=product.stock_low_threshold,
+            stock_qty=stock_qty,
             images=images,
             source_url=product.source_url,
         )

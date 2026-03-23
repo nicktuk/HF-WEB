@@ -77,8 +77,6 @@ export default function CategoriasPage() {
   // Catalog settings
   const [pillLabelInput, setPillLabelInput] = useState('');
   const [pillLabelSaved, setPillLabelSaved] = useState(false);
-  const [stockThresholdInput, setStockThresholdInput] = useState('5');
-  const [stockThresholdSaved, setStockThresholdSaved] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
   const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
@@ -142,20 +140,9 @@ export default function CategoriasPage() {
     },
   });
 
-  const updateStockThresholdMutation = useMutation({
-    mutationFn: (threshold: number) => adminApi.updateCatalogSettings(apiKey, { stock_low_threshold: threshold }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['catalog-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['public-catalog-settings'] });
-      setStockThresholdSaved(true);
-      setTimeout(() => setStockThresholdSaved(false), 2000);
-    },
-  });
-
   useEffect(() => {
     if (catalogSettings && !pillLabelInput) {
       setPillLabelInput(catalogSettings.featured_pill_label);
-      setStockThresholdInput(String(catalogSettings.stock_low_threshold ?? 5));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogSettings]);
@@ -582,29 +569,6 @@ export default function CategoriasPage() {
             </div>
           </div>
 
-          <div className="mt-6 border-t pt-5">
-            <p className="text-sm font-medium text-gray-700 mb-1">Umbral global de &ldquo;pocas unidades&rdquo;</p>
-            <p className="text-sm text-gray-500 mb-3">
-              Si el stock de un producto es ≤ este número, se muestra el estado de urgencia &ldquo;Pocas unidades&rdquo;. Cada producto puede sobrescribir este valor individualmente.
-            </p>
-            <div className="flex items-center gap-3 max-w-xs">
-              <input
-                type="number"
-                min="0"
-                value={stockThresholdInput}
-                onChange={(e) => setStockThresholdInput(e.target.value)}
-                className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-500">unidades</span>
-              <Button
-                onClick={() => updateStockThresholdMutation.mutate(Number(stockThresholdInput))}
-                isLoading={updateStockThresholdMutation.isPending}
-                disabled={stockThresholdInput === ''}
-              >
-                {stockThresholdSaved ? 'Guardado ✓' : 'Guardar'}
-              </Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
 

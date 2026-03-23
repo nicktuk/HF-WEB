@@ -148,6 +148,7 @@ class ProductPublicResponse(BaseModel):
     is_check_stock: bool = False
     is_best_seller: bool = False
     stock_low_threshold: Optional[int] = None
+    stock_qty: Optional[int] = None
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
 

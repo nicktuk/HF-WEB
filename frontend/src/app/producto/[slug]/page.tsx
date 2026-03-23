@@ -237,6 +237,7 @@ export default function ProductPage() {
               <StockAvailability
                 isCheckStock={product.is_check_stock}
                 isImmediateDelivery={product.is_immediate_delivery}
+                stockQty={product.stock_qty ?? undefined}
                 productName={product.name}
                 productSlug={slug}
                 productPrice={product.price}
@@ -261,6 +262,7 @@ export default function ProductPage() {
         <StockAvailability
           isCheckStock={product.is_check_stock}
           isImmediateDelivery={product.is_immediate_delivery}
+          stockQty={product.stock_qty ?? undefined}
           productName={product.name}
           productSlug={slug}
           productPrice={product.price}
