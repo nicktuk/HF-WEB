@@ -117,6 +117,14 @@ export default function ComprasPage() {
   const [productSearchResults, setProductSearchResults] = useState<Record<number, Array<{ id: number; label: string; sku: string }>>>({});
   const [manualError, setManualError] = useState('');
 
+  // Create product inline
+  const [createProductIdx, setCreateProductIdx] = useState<number | null>(null);
+  const [createProductName, setCreateProductName] = useState('');
+  const [createProductPrice, setCreateProductPrice] = useState('');
+  const [createProductSku, setCreateProductSku] = useState('');
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [createProductError, setCreateProductError] = useState('');
+
   // Payment form state
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
@@ -478,6 +486,45 @@ export default function ComprasPage() {
         i === idx ? { ...item, product_id: undefined, product_label: undefined } : item
       )
     );
+  };
+
+  const openCreateProduct = (idx: number) => {
+    setCreateProductName(productSearchTerms[idx] || '');
+    setCreateProductPrice(String(manualItems[idx]?.unit_price || ''));
+    setCreateProductSku(manualItems[idx]?.code || '');
+    setCreateProductError('');
+    setCreateProductIdx(idx);
+  };
+
+  const handleCreateProduct = async () => {
+    if (createProductIdx === null) return;
+    if (!createProductName.trim()) { setCreateProductError('El nombre es obligatorio.'); return; }
+    const price = parseFloat(createProductPrice);
+    if (!price || price <= 0) { setCreateProductError('El precio es obligatorio.'); return; }
+    setIsCreatingProduct(true);
+    setCreateProductError('');
+    try {
+      const newProduct = await adminApi.createProductManual(apiKey, {
+        name: createProductName.trim(),
+        price,
+        sku: createProductSku.trim() || undefined,
+        image_urls: [],
+        enabled: true,
+        is_featured: false,
+        is_immediate_delivery: false,
+        is_check_stock: false,
+      });
+      selectProductForItem(createProductIdx, {
+        id: newProduct.id,
+        label: newProduct.custom_name || newProduct.original_name,
+        sku: newProduct.sku || '',
+      });
+      setCreateProductIdx(null);
+    } catch {
+      setCreateProductError('Error al crear el producto. Intentá de nuevo.');
+    } finally {
+      setIsCreatingProduct(false);
+    }
   };
 
   const manualTotal = manualItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
@@ -1447,9 +1494,9 @@ export default function ComprasPage() {
                             onChange={(e) => searchProductForItem(idx, e.target.value)}
                             className="w-full border border-gray-300 rounded pl-7 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
-                          {(productSearchResults[idx] || []).length > 0 && (
-                            <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                              {productSearchResults[idx].map((p) => (
+                          {(productSearchTerms[idx]?.length >= 2) && (
+                            <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                              {(productSearchResults[idx] || []).map((p) => (
                                 <button
                                   key={p.id}
                                   type="button"
@@ -1460,6 +1507,14 @@ export default function ComprasPage() {
                                   {p.sku && <span className="text-xs text-gray-400 shrink-0">{p.sku}</span>}
                                 </button>
                               ))}
+                              <button
+                                type="button"
+                                onClick={() => openCreateProduct(idx)}
+                                className="w-full text-left px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 flex items-center gap-2 border-t border-gray-100 font-medium"
+                              >
+                                <Plus className="h-3.5 w-3.5 shrink-0" />
+                                Crear "{productSearchTerms[idx]}" en el catálogo
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1536,6 +1591,71 @@ export default function ComprasPage() {
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* ─── MINI MODAL: CREAR PRODUCTO EN CATÁLOGO ─────────────────── */}
+      {createProductIdx !== null && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-zinc-900 mb-1">Crear producto en catálogo</h3>
+            <p className="text-xs text-zinc-500 mb-4">El producto quedará activo y vinculado a este item de compra.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-zinc-600 mb-1 block">Nombre *</label>
+                <input
+                  type="text"
+                  value={createProductName}
+                  onChange={(e) => setCreateProductName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-600 mb-1 block">Precio *</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={createProductPrice}
+                  onChange={(e) => setCreateProductPrice(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-600 mb-1 block">SKU / Código</label>
+                <input
+                  type="text"
+                  value={createProductSku}
+                  onChange={(e) => setCreateProductSku(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+
+            {createProductError && (
+              <p className="text-xs text-red-600 mt-3">{createProductError}</p>
+            )}
+
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setCreateProductIdx(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-zinc-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateProduct}
+                disabled={isCreatingProduct}
+                className="flex-1 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-60"
+              >
+                {isCreatingProduct ? 'Creando...' : 'Crear y vincular'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
