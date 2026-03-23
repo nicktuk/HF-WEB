@@ -14,7 +14,7 @@ import type { ProductImage } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
-import { publicApi, resolveImageUrl } from '@/lib/api';
+import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 
 export default function ProductPage() {
   const params = useParams();
