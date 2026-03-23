@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = '037'
-down_revision = '036'
+down_revision = '036_section_position'
 branch_labels = None
 depends_on = None
 
