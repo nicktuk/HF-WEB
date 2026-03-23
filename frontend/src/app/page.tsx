@@ -81,6 +81,13 @@ function HomePageContent() {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [tempSort, setTempSort] = useState('');
   const [tempCategories, setTempCategories] = useState<string[]>([]);
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showMobileFilter && filterScrollRef.current) {
+      filterScrollRef.current.scrollTop = 0;
+    }
+  }, [showMobileFilter]);
 
   useEffect(() => {
     trackPublicEvent('page_view', {
@@ -297,7 +304,6 @@ function HomePageContent() {
 
       {/* ─── PRE-GRID GRADIENT ZONE ──────────────────────────────────── */}
       <div
-        className="relative z-10"
         style={{ background: 'linear-gradient(to bottom, #fde8d4 0%, #e0f2fe 100%)' }}
       >
         <div className="container mx-auto px-4 pt-3 pb-2">
@@ -471,7 +477,7 @@ function HomePageContent() {
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilter(false)} />
             {/* Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl flex flex-col" style={{ maxHeight: '88dvh' }}>
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl flex flex-col overflow-hidden" style={{ maxHeight: '88dvh' }}>
               {/* Header */}
               <div className="shrink-0 px-4 py-3 flex items-center justify-between border-b border-zinc-100">
                 <span className="text-base font-semibold text-zinc-900">Filtros y orden</span>
@@ -480,7 +486,7 @@ function HomePageContent() {
                 </button>
               </div>
               {/* Scrollable content */}
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 pb-2">
+              <div ref={filterScrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 pb-2">
                 {/* Sort */}
                 <div>
                   <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-3">Ordenar</p>

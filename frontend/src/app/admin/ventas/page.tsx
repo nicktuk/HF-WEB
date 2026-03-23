@@ -23,6 +23,12 @@ interface CartItem {
   paid: boolean;
 }
 
+const formatSaleDate = (dateStr?: string): string => {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
 const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   const customPrice = Number(product.custom_price ?? 0);
   if (customPrice > 0) return customPrice;
@@ -495,13 +501,13 @@ export default function VentasPage() {
         isOpen={showCreateSaleModal}
         onClose={() => setShowCreateSaleModal(false)}
         title="Nueva venta"
-        size="xl"
+        size="2xl"
       >
         <ModalContent className="space-y-4">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Left: Stock list */}
-        <div className="bg-white rounded-lg border">
-          <div className="px-4 py-3 border-b flex items-center gap-3">
+        <div className="bg-white rounded-lg border flex flex-col" style={{ minHeight: 0 }}>
+          <div className="px-4 py-3 border-b flex items-center gap-3 shrink-0">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -516,7 +522,7 @@ export default function VentasPage() {
               {sortedProducts.length} productos
             </span>
           </div>
-          <div>
+          <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
             {isLoading ? (
               <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
             ) : sortedProducts.length === 0 ? (
@@ -888,6 +894,7 @@ export default function VentasPage() {
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Venta #</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
@@ -921,6 +928,7 @@ export default function VentasPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2 text-gray-700 font-medium">#{sale.id}</td>
+                        <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatSaleDate(sale.created_at)}</td>
                         <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
                         <td className="px-3 py-2 text-gray-700">{sale.seller || '-'}</td>
                         <td className="px-3 py-2 text-right text-gray-700">{item.quantity}</td>
@@ -984,6 +992,7 @@ export default function VentasPage() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -1004,6 +1013,7 @@ export default function VentasPage() {
                             onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
                           >
                             <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
+                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatSaleDate(sale.created_at)}</td>
                             <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
                             <td className="px-3 py-2 text-right text-gray-700">
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
@@ -1056,7 +1066,7 @@ export default function VentasPage() {
                           </tr>
                           {expandedSaleId === sale.id && (
                             <tr className="bg-gray-50">
-                              <td colSpan={9} className="px-4 py-3">
+                              <td colSpan={10} className="px-4 py-3">
                                 <div className="overflow-x-auto border rounded-lg bg-white">
                                   <table className="min-w-full text-sm">
                                     <thead className="bg-gray-100">
@@ -1137,6 +1147,7 @@ export default function VentasPage() {
                       ))}
                       <tr className="bg-gray-50 font-semibold">
                         <td className="px-3 py-2 text-gray-700">Totales</td>
+                        <td className="px-3 py-2 text-gray-700">-</td>
                         <td className="px-3 py-2 text-gray-700">-</td>
                         <td className="px-3 py-2 text-right text-gray-700">
                           {group.items.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0)}

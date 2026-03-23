@@ -395,6 +395,7 @@ export interface Sale {
   delivered_amount: number;
   paid_amount: number;
   items: SaleItem[];
+  created_at?: string;
 }
 
 export interface CustomerRankingItem {

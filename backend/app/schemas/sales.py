@@ -1,6 +1,7 @@
 """Schemas for sales."""
 from typing import List, Optional
 from decimal import Decimal
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -62,6 +63,7 @@ class SaleResponse(BaseModel):
     delivered_amount: Decimal
     paid_amount: Decimal
     items: List[SaleItemResponse]
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
