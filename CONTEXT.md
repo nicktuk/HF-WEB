@@ -8,6 +8,54 @@
 
 ---
 
+## Sesión 2026-03-23
+
+### Stock qty en API pública
+
+- `ProductPublicResponse` ahora incluye `stock_qty: Optional[int]` (calculado en backend como suma de compras minus salidas).
+- `ProductPublic` en tipos TS también incluye `stock_qty?: number | null`.
+- Permite que el front tome decisiones basadas en stock real sin llamadas adicionales.
+
+### Componente StockAvailability
+
+- Nuevo: `frontend/src/components/public/StockAvailability.tsx`
+- Expone `resolveStockLevel(isCheckStock, isImmediateDelivery, stockQty?, lowStockThreshold?)` → `'high' | 'low' | 'none'`
+  - `high`: qty > umbral, o is_immediate_delivery, o sin dato y sin is_check_stock
+  - `low`: 0 < qty <= umbral
+  - `none`: qty === 0, o is_check_stock sin inmediata
+- Botón WhatsApp con mensaje contextual según nivel de stock
+- Props: `stockQty`, `isCheckStock`, `isImmediateDelivery`, `lowStockThreshold`, `productName/Slug/Price`, `whatsappNumber`
+
+### Umbral global de stock bajo (stock_low_threshold)
+
+- Backend: `app_settings.py` — clave `STOCK_LOW_THRESHOLD` en BD, default `5`
+- `GET /settings/catalog` y `GET /public/catalog-settings` ahora incluyen `stock_low_threshold: int`
+- `PATCH /settings/catalog` acepta `stock_low_threshold: Optional[int]`
+- **Configuración movida**: el control de umbral global se removió de `/admin/categorias` y se agregó a `/admin/configuracion` (página de Configuración IA)
+
+### Umbral por producto (stock_low_threshold individual)
+
+- Migración `037_add_stock_low_threshold.py`: columna `stock_low_threshold` en tabla `products` (nullable, override del global)
+- `ProductUpdateForm` en tipos TS incluye `stock_low_threshold?: number | null`
+
+### Regla: no asignar entrega inmediata sin stock
+
+- En `admin/productos/[id]/page.tsx`: toggle de "Entrega inmediata" deshabilitado (cursor-not-allowed, opacity-50) si `stock_qty === 0`
+- Mensaje: "No disponible — stock en 0"
+
+### Regla: no agregar a sección sin stock
+
+- En `admin/secciones/page.tsx`: al buscar productos para asignar a una sección manual, los sin stock aparecen con opacity-60 y el botón "Agregar" deshabilitado
+- Modal de gestión de productos ahora es `size="xl"` con imagen 64×64
+- Se muestra "Stock: N" en verde o "Sin stock" en gris
+
+### Vista ventas mejorada
+
+- En `admin/ventas/page.tsx`: lista de productos del carrusel muestra estado de stock con color (emerald si hay, gris si no)
+- Botón cambia a "Agregar igual" con estilo ghost/dashed cuando stock = 0
+
+---
+
 ## Sesión 2026-03-19/20/21
 
 ### PublicHeader — componente extraído

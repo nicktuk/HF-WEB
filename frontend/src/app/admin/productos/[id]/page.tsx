@@ -621,13 +621,19 @@ export default function ProductEditPage() {
                     Nuevo
                   </p>
                   <p className="text-sm text-gray-500">
-                    Destacar en seccion Nuevoes
+                    {Number(product?.stock_qty || 0) === 0
+                      ? 'No disponible — stock en 0'
+                      : 'Destacar en seccion Nuevos'}
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsFeatured(!isFeatured)}
+                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsFeatured(!isFeatured)}
+                  disabled={Number(product?.stock_qty || 0) === 0}
+                  title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isFeatured ? 'bg-amber-500' : 'bg-gray-200'
+                    Number(product?.stock_qty || 0) === 0
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                      : isFeatured ? 'bg-amber-500' : 'bg-gray-200'
                   }`}
                 >
                   <span

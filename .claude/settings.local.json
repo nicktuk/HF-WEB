@@ -80,7 +80,8 @@
       "Bash(netstat -ano)",
       "Bash(xargs -I{} taskkill /F /PID {})",
       "Bash(source venv/Scripts/activate)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(git:*)"
     ]
   }
 }
