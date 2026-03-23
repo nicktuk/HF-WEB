@@ -125,14 +125,17 @@ def update_ai_settings(
 # ---------------------------------------------------------------------------
 
 FEATURED_PILL_DEFAULT = "Nuevos ingresos"
+STOCK_LOW_THRESHOLD_DEFAULT = 5
 
 
 class CatalogSettingsResponse(BaseModel):
     featured_pill_label: str
+    stock_low_threshold: int
 
 
 class CatalogSettingsUpdate(BaseModel):
     featured_pill_label: Optional[str] = None
+    stock_low_threshold: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +145,9 @@ class CatalogSettingsUpdate(BaseModel):
 @router.get("/catalog", response_model=CatalogSettingsResponse, dependencies=[Depends(verify_admin)])
 def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsResponse:
     featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
-    return CatalogSettingsResponse(featured_pill_label=featured_label)
+    threshold_str = get_setting(db, "STOCK_LOW_THRESHOLD")
+    threshold = int(threshold_str) if threshold_str is not None else STOCK_LOW_THRESHOLD_DEFAULT
+    return CatalogSettingsResponse(featured_pill_label=featured_label, stock_low_threshold=threshold)
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +162,8 @@ def update_catalog_settings(
     if data.featured_pill_label is not None:
         label = data.featured_pill_label.strip() or FEATURED_PILL_DEFAULT
         set_setting(db, "FEATURED_PILL_LABEL", label)
+    if data.stock_low_threshold is not None:
+        set_setting(db, "STOCK_LOW_THRESHOLD", str(max(0, data.stock_low_threshold)))
     return get_catalog_settings(db=db)
 
 
@@ -167,4 +174,6 @@ def update_catalog_settings(
 @router.get("/public/catalog-settings")
 def get_public_catalog_settings(db: Session = Depends(get_db)):
     featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
-    return {"featured_pill_label": featured_label}
+    threshold_str = get_setting(db, "STOCK_LOW_THRESHOLD")
+    threshold = int(threshold_str) if threshold_str is not None else STOCK_LOW_THRESHOLD_DEFAULT
+    return {"featured_pill_label": featured_label, "stock_low_threshold": threshold}

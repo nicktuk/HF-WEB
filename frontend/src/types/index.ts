@@ -22,6 +22,7 @@ export interface ProductPublic {
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
   is_best_seller: boolean;
+  stock_low_threshold?: number | null;
   images: ProductImage[];
   source_url?: string;
 }

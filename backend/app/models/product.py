@@ -54,6 +54,7 @@ class Product(Base):
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")
+    stock_low_threshold = Column(Integer, nullable=True, comment="Umbral de stock bajo por producto (override del global)")
 
     # Categorias
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True, comment="Categoria maestra local")

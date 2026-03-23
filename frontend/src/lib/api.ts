@@ -1071,11 +1071,11 @@ export const adminApi = {
   // Catalog Settings
   // ============================================
 
-  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string }> {
+  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string; stock_low_threshold: number }> {
     return fetchAPI('/admin/settings/catalog', {}, apiKey);
   },
 
-  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string }): Promise<{ featured_pill_label: string }> {
+  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string; stock_low_threshold?: number }): Promise<{ featured_pill_label: string; stock_low_threshold: number }> {
     return fetchAPI('/admin/settings/catalog', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -1160,9 +1160,9 @@ export const adminApi = {
 /**
  * Fetch public catalog settings (no auth required)
  */
-export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string }> {
+export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string; stock_low_threshold: number }> {
   const res = await fetch(`${API_URL}/admin/settings/public/catalog-settings`);
-  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos' };
+  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos', stock_low_threshold: 5 };
   return res.json();
 }
 

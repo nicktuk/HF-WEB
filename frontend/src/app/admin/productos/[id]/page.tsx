@@ -44,6 +44,7 @@ export default function ProductEditPage() {
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [stockLowThreshold, setStockLowThreshold] = useState<string>('');
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -81,6 +82,7 @@ export default function ProductEditPage() {
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
       setIsCheckStock(product.is_check_stock || false);
+      setStockLowThreshold(product.stock_low_threshold != null ? String(product.stock_low_threshold) : '');
       setIsPublished(product.is_published || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
@@ -195,6 +197,7 @@ export default function ProductEditPage() {
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
         is_published: isPublished,
+        stock_low_threshold: stockLowThreshold !== '' ? Number(stockLowThreshold) : null,
         markup_percentage: markup,
         custom_name: customName || '',
         original_price: originalPrice ? parseFloat(originalPrice) : 0,
@@ -683,6 +686,24 @@ export default function ProductEditPage() {
                     }`}
                   />
                 </button>
+              </div>
+
+              {/* Stock low threshold — override por producto */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">Umbral &ldquo;pocas unidades&rdquo;</p>
+                  <p className="text-xs text-gray-500">
+                    Override del global. Vacío = usa el global.
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  value={stockLowThreshold}
+                  onChange={(e) => setStockLowThreshold(e.target.value)}
+                  placeholder="Global"
+                  className="w-24 shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
               </div>
 
               {/* Publicar toggle */}
