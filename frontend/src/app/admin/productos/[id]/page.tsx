@@ -646,13 +646,19 @@ export default function ProductEditPage() {
                     Entrega inmediata
                   </p>
                   <p className="text-sm text-gray-500">
-                    Destacar en la seccion Entrega inmediata
+                    {Number(product?.stock_qty || 0) === 0
+                      ? 'No disponible — stock en 0'
+                      : 'Destacar en la seccion Entrega inmediata'}
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsImmediateDelivery(!isImmediateDelivery)}
+                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsImmediateDelivery(!isImmediateDelivery)}
+                  disabled={Number(product?.stock_qty || 0) === 0}
+                  title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isImmediateDelivery ? 'bg-emerald-600' : 'bg-gray-200'
+                    Number(product?.stock_qty || 0) === 0
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                      : isImmediateDelivery ? 'bg-emerald-600' : 'bg-gray-200'
                   }`}
                 >
                   <span

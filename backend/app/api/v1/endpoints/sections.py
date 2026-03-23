@@ -55,7 +55,7 @@ def resolve_section_products(section: Section, db: Session) -> List[ProductInSec
 
 @router.get("/public", response_model=List[SectionResponse])
 async def list_public_sections(db: Session = Depends(get_db)):
-    sections = db.query(Section).filter(Section.is_active == True).order_by(Section.display_order).all()
+    sections = db.query(Section).filter(Section.is_active == True).order_by(Section.display_order, Section.id).all()
     result = []
     for s in sections:
         products = resolve_section_products(s, db)
@@ -73,7 +73,7 @@ async def list_public_sections(db: Session = Depends(get_db)):
 
 @router.get("", response_model=List[SectionResponse], dependencies=[Depends(verify_admin)])
 async def list_sections(db: Session = Depends(get_db)):
-    sections = db.query(Section).order_by(Section.display_order).all()
+    sections = db.query(Section).order_by(Section.display_order, Section.id).all()
     result = []
     for s in sections:
         products = resolve_section_products(s, db)
