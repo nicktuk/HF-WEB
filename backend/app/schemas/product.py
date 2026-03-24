@@ -43,6 +43,7 @@ class ProductUpdate(BaseModel):
     is_check_stock: Optional[bool] = None
     is_best_seller: Optional[bool] = None
     is_published: Optional[bool] = None
+    stock_low_threshold: Optional[int] = Field(None, ge=0)
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     original_price: Optional[Decimal] = Field(None, ge=0)
@@ -105,6 +106,7 @@ class ProductResponse(BaseModel):
     is_check_stock: bool = False
     is_best_seller: bool = False
     is_published: bool = False
+    stock_low_threshold: Optional[int] = None
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -145,6 +147,8 @@ class ProductPublicResponse(BaseModel):
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
     is_best_seller: bool = False
+    stock_low_threshold: Optional[int] = None
+    stock_qty: Optional[int] = None
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
 

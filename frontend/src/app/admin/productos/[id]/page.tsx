@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
-import { uploadImages, aiApi } from '@/lib/api';
+import { uploadImages, aiApi, resolveImageUrl } from '@/lib/api';
 import {
   useAdminProduct,
   useUpdateProduct,
@@ -44,6 +44,7 @@ export default function ProductEditPage() {
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [stockLowThreshold, setStockLowThreshold] = useState<string>('');
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -66,6 +67,7 @@ export default function ProductEditPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
@@ -81,6 +83,7 @@ export default function ProductEditPage() {
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
       setIsCheckStock(product.is_check_stock || false);
+      setStockLowThreshold(product.stock_low_threshold != null ? String(product.stock_low_threshold) : '');
       setIsPublished(product.is_published || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
@@ -120,10 +123,13 @@ export default function ProductEditPage() {
     if (files.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
     try {
       const uploadedUrls = await uploadImages(apiKey, files);
       setImageUrls(prev => [...prev, ...uploadedUrls]);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Error al subir imágenes';
+      setUploadError(msg);
       console.error('Error uploading images:', error);
     } finally {
       setIsUploading(false);
@@ -195,6 +201,7 @@ export default function ProductEditPage() {
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
         is_published: isPublished,
+        stock_low_threshold: stockLowThreshold !== '' ? Number(stockLowThreshold) : null,
         markup_percentage: markup,
         custom_name: customName || '',
         original_price: originalPrice ? parseFloat(originalPrice) : 0,
@@ -342,7 +349,7 @@ export default function ProductEditPage() {
               <div className="aspect-square relative rounded-lg overflow-hidden bg-gray-100">
                 {imageUrls.length > 0 ? (
                   <Image
-                    src={imageUrls[selectedImageIndex]}
+                    src={resolveImageUrl(imageUrls[selectedImageIndex]) ?? imageUrls[selectedImageIndex]}
                     alt={product.original_name}
                     fill
                     className="object-contain"
@@ -367,7 +374,7 @@ export default function ProductEditPage() {
                     onClick={() => setSelectedImageIndex(index)}
                   >
                     <Image
-                      src={url}
+                      src={resolveImageUrl(url) ?? url}
                       alt=""
                       width={64}
                       height={64}
@@ -460,6 +467,9 @@ export default function ProductEditPage() {
                 )}
               </div>
 
+              {uploadError && (
+                <p className="text-xs text-red-600 font-medium">{uploadError}</p>
+              )}
               <p className="text-xs text-gray-500">
                 La primera imagen es la principal. Podes subir archivos o agregar URLs.
               </p>
@@ -618,13 +628,19 @@ export default function ProductEditPage() {
                     Nuevo
                   </p>
                   <p className="text-sm text-gray-500">
-                    Destacar en seccion Nuevoes
+                    {Number(product?.stock_qty || 0) === 0
+                      ? 'No disponible — stock en 0'
+                      : 'Destacar en seccion Nuevos'}
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsFeatured(!isFeatured)}
+                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsFeatured(!isFeatured)}
+                  disabled={Number(product?.stock_qty || 0) === 0}
+                  title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isFeatured ? 'bg-amber-500' : 'bg-gray-200'
+                    Number(product?.stock_qty || 0) === 0
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                      : isFeatured ? 'bg-amber-500' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -643,13 +659,19 @@ export default function ProductEditPage() {
                     Entrega inmediata
                   </p>
                   <p className="text-sm text-gray-500">
-                    Destacar en la seccion Entrega inmediata
+                    {Number(product?.stock_qty || 0) === 0
+                      ? 'No disponible — stock en 0'
+                      : 'Destacar en la seccion Entrega inmediata'}
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsImmediateDelivery(!isImmediateDelivery)}
+                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsImmediateDelivery(!isImmediateDelivery)}
+                  disabled={Number(product?.stock_qty || 0) === 0}
+                  title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isImmediateDelivery ? 'bg-emerald-600' : 'bg-gray-200'
+                    Number(product?.stock_qty || 0) === 0
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                      : isImmediateDelivery ? 'bg-emerald-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -683,6 +705,24 @@ export default function ProductEditPage() {
                     }`}
                   />
                 </button>
+              </div>
+
+              {/* Stock low threshold — override por producto */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">Umbral &ldquo;pocas unidades&rdquo;</p>
+                  <p className="text-xs text-gray-500">
+                    Override del global. Vacío = usa el global.
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  value={stockLowThreshold}
+                  onChange={(e) => setStockLowThreshold(e.target.value)}
+                  placeholder="Global"
+                  className="w-24 shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
               </div>
 
               {/* Publicar toggle */}

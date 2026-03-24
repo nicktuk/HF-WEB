@@ -75,9 +75,33 @@ class ProductRepository(BaseRepository[Product]):
 
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
+            if featured:
+                # Solo mostrar productos con stock real > 0
+                stock_subq = (
+                    self.db.query(
+                        StockPurchase.product_id.label("product_id"),
+                        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                    )
+                    .group_by(StockPurchase.product_id)
+                    .subquery()
+                )
+                query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+                query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         if immediate_delivery is not None:
             query = query.filter(Product.is_immediate_delivery == immediate_delivery)
+            if immediate_delivery:
+                # Solo mostrar productos con stock real > 0
+                stock_subq = (
+                    self.db.query(
+                        StockPurchase.product_id.label("product_id"),
+                        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                    )
+                    .group_by(StockPurchase.product_id)
+                    .subquery()
+                )
+                query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+                query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         if category:
             immediate_first = case(
@@ -129,9 +153,31 @@ class ProductRepository(BaseRepository[Product]):
 
         if featured is not None:
             query = query.filter(Product.is_featured == featured)
+            if featured:
+                stock_subq = (
+                    self.db.query(
+                        StockPurchase.product_id.label("product_id"),
+                        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                    )
+                    .group_by(StockPurchase.product_id)
+                    .subquery()
+                )
+                query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+                query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         if immediate_delivery is not None:
             query = query.filter(Product.is_immediate_delivery == immediate_delivery)
+            if immediate_delivery:
+                stock_subq = (
+                    self.db.query(
+                        StockPurchase.product_id.label("product_id"),
+                        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                    )
+                    .group_by(StockPurchase.product_id)
+                    .subquery()
+                )
+                query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+                query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         return query.count()
 

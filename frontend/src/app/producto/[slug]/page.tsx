@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
-import { ContactButton } from '@/components/public/ContactButton';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { StockAvailability } from '@/components/public/StockAvailability';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
@@ -14,7 +14,7 @@ import type { ProductImage } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
-import { publicApi, resolveImageUrl } from '@/lib/api';
+import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 
 export default function ProductPage() {
   const params = useParams();
@@ -28,6 +28,15 @@ export default function ProductPage() {
     queryFn: () => publicApi.getSections(),
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: catalogSettings } = useQuery({
+    queryKey: ['public-catalog-settings'],
+    queryFn: fetchPublicCatalogSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Threshold: producto primero, luego global, luego default
+  const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
 
   const sortedImages = product?.images ?? [];
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
@@ -198,19 +207,6 @@ export default function ProductPage() {
               {product.brand && <span>{product.brand}</span>}
             </div>
 
-            {product.is_immediate_delivery && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 mb-3">
-                <Zap className="h-3.5 w-3.5" />
-                Entrega inmediata
-              </div>
-            )}
-
-            {product.is_check_stock && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white mb-3">
-                Consultar stock
-              </div>
-            )}
-
             {/* Name */}
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
               {product.name}
@@ -236,13 +232,17 @@ export default function ProductPage() {
               </div>
             )}
 
-            {/* Contact Buttons */}
-            <div className="hidden md:flex flex-col gap-3">
-              <ContactButton
+            {/* Stock Availability + WhatsApp CTA — desktop */}
+            <div className="hidden md:block">
+              <StockAvailability
+                isCheckStock={product.is_check_stock}
+                isImmediateDelivery={product.is_immediate_delivery}
+                stockQty={product.stock_qty ?? undefined}
                 productName={product.name}
                 productSlug={slug}
                 productPrice={product.price}
-                size="lg"
+                whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
+                lowStockThreshold={lowStockThreshold}
               />
             </div>
           </div>
@@ -257,14 +257,17 @@ export default function ProductPage() {
       )}
       </main>
 
-      {/* Mobile CTA */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t md:hidden">
-        <ContactButton
+      {/* Mobile CTA — fixed bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden">
+        <StockAvailability
+          isCheckStock={product.is_check_stock}
+          isImmediateDelivery={product.is_immediate_delivery}
+          stockQty={product.stock_qty ?? undefined}
           productName={product.name}
           productSlug={slug}
           productPrice={product.price}
-          size="lg"
-          className="w-full"
+          whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
+          lowStockThreshold={lowStockThreshold}
         />
       </div>
     </div>

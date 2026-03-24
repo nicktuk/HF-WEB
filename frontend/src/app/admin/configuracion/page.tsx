@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Settings2, Save, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useAuth';
-import { settingsApi, AISettingsResponse } from '@/lib/api';
+import { settingsApi, adminApi, AISettingsResponse } from '@/lib/api';
 
 // ─── PasswordInput ────────────────────────────────────────────────────────────
 
@@ -52,6 +52,11 @@ export default function ConfiguracionPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Catalog settings
+  const [stockThreshold, setStockThreshold] = useState('5');
+  const [savingThreshold, setSavingThreshold] = useState(false);
+  const [thresholdSaved, setThresholdSaved] = useState(false);
+
   // Valores originales (enmascarados) que llegaron del servidor
   const [original, setOriginal] = useState<AISettingsResponse | null>(null);
 
@@ -68,6 +73,9 @@ export default function ConfiguracionPage() {
   useEffect(() => {
     if (!apiKey) return;
     setLoading(true);
+    adminApi.getCatalogSettings(apiKey)
+      .then((data) => setStockThreshold(String(data.stock_low_threshold ?? 5)))
+      .catch(() => {});
     settingsApi
       .getAI(apiKey)
       .then((data) => {
@@ -115,6 +123,19 @@ export default function ConfiguracionPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveThreshold() {
+    setSavingThreshold(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, { stock_low_threshold: Number(stockThreshold) });
+      setThresholdSaved(true);
+      setTimeout(() => setThresholdSaved(false), 2000);
+    } catch {
+      showToast('error', 'Error al guardar el umbral');
+    } finally {
+      setSavingThreshold(false);
     }
   }
 
@@ -285,6 +306,39 @@ export default function ConfiguracionPage() {
             }
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y font-mono leading-relaxed"
           />
+        </div>
+      </div>
+
+      {/* Catalog settings card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Catálogo público</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Configuración de comportamiento del catálogo visible al público.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Umbral de &ldquo;pocas unidades&rdquo;
+            <span className="ml-2 text-xs font-normal text-gray-400">(global, por defecto para todos los productos)</span>
+          </label>
+          <p className="mb-3 text-xs text-gray-500">
+            Si el stock de un producto es mayor a 0 y menor o igual a este número, se muestra el aviso de urgencia &ldquo;Pocas unidades&rdquo;. Cada producto puede tener su propio umbral que tiene prioridad sobre este.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              value={stockThreshold}
+              onChange={(e) => setStockThreshold(e.target.value)}
+              className="w-24 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-right shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-500">unidades</span>
+            <Button onClick={handleSaveThreshold} disabled={savingThreshold || stockThreshold === ''} className="gap-2">
+              {savingThreshold ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {thresholdSaved ? 'Guardado ✓' : 'Guardar'}
+            </Button>
+          </div>
         </div>
       </div>
 

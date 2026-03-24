@@ -630,7 +630,7 @@ export default function SeccionesPage() {
       </Modal>
 
       {/* Products Management Modal */}
-      <Modal isOpen={showProductsModal} onClose={closeProductsModal}>
+      <Modal isOpen={showProductsModal} onClose={closeProductsModal} size="xl">
         <ModalContent>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -714,30 +714,41 @@ export default function SeccionesPage() {
                   ) : (
                     searchResults.items.map((p) => {
                       const isAssigned = assignedProductIds.has(p.id);
+                      const hasStock = Number(p.stock_qty || 0) > 0;
+                      const isDisabled = isAssigned || !hasStock || addProductMutation.isPending;
                       return (
                         <div
                           key={p.id}
-                          className="flex items-center gap-3 p-2 rounded-lg border border-gray-100 hover:bg-gray-50"
+                          className={`flex items-center gap-3 p-2 rounded-lg border ${
+                            !hasStock ? 'border-gray-100 bg-gray-50 opacity-60' : 'border-gray-100 hover:bg-gray-50'
+                          }`}
                         >
-                          {p.images[0] && (
-                            <img
-                              src={p.images[0].url}
-                              alt={p.name}
-                              className="w-10 h-10 rounded object-cover flex-shrink-0"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
-                            {p.category && (
-                              <p className="text-xs text-gray-500">{p.category}</p>
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {p.images[0] ? (
+                              <img
+                                src={resolveImageUrl(p.images[0].url) ?? p.images[0].url}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                <Package className="h-6 w-6" />
+                              </div>
                             )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">{p.name}</p>
+                            <p className={`text-xs mt-0.5 ${hasStock ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              {hasStock ? `Stock: ${p.stock_qty}` : 'Sin stock'}
+                            </p>
                           </div>
                           <Button
                             size="sm"
                             variant={isAssigned ? 'secondary' : 'primary'}
-                            disabled={isAssigned || addProductMutation.isPending}
+                            disabled={isDisabled}
+                            title={!hasStock ? 'Sin stock — no se puede agregar a la sección' : undefined}
                             onClick={() => {
-                              if (latestManagingSection && !isAssigned) {
+                              if (latestManagingSection && !isDisabled) {
                                 addProductMutation.mutate({
                                   sectionId: latestManagingSection.id,
                                   productId: p.id,

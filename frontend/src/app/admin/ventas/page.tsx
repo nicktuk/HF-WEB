@@ -529,24 +529,31 @@ export default function VentasPage() {
               <div className="p-4 text-sm text-gray-500">No hay productos.</div>
             ) : (
               <div className="divide-y">
-                {sortedProducts.map((product) => (
-                  <div key={product.id} className="p-4 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900 line-clamp-1">
-                        {product.custom_name || product.original_name}
+                {sortedProducts.map((product) => {
+                  const inStock = Number(product.stock_qty || 0) > 0;
+                  return (
+                    <div key={product.id} className="p-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 text-sm line-clamp-1">
+                          {product.custom_name || product.original_name}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-xs font-medium ${inStock ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            {inStock ? `Stock: ${product.stock_qty}` : 'Sin stock'}
+                          </span>
+                          <span className="text-xs text-gray-400">·</span>
+                          <span className="text-xs text-gray-500">{formatPrice(getProductSaleUnitPrice(product))}</span>
+                        </div>
                       </div>
-                      <div className={`text-xs ${Number(product.stock_qty || 0) > 0 ? 'text-gray-500' : 'text-amber-700'}`}>
-                        Stock: {product.stock_qty || 0} · Precio: {formatPrice(
-                          getProductSaleUnitPrice(product)
-                        )}
-                      </div>
+                      <Button size="sm" variant={inStock ? 'outline' : 'ghost'} onClick={() => addToCart(product)}
+                        className={!inStock ? 'text-gray-400 border border-dashed border-gray-300 hover:text-gray-600' : ''}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        {inStock ? 'Agregar' : 'Agregar igual'}
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => addToCart(product)}>
-                      <Plus className="h-4 w-4 mr-1.5" />
-                      Agregar
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

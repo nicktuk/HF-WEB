@@ -134,6 +134,7 @@ export default function CategoriasPage() {
     mutationFn: (label: string) => adminApi.updateCatalogSettings(apiKey, { featured_pill_label: label }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catalog-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['public-catalog-settings'] });
       setPillLabelSaved(true);
       setTimeout(() => setPillLabelSaved(false), 2000);
     },
@@ -567,6 +568,7 @@ export default function CategoriasPage() {
               </Button>
             </div>
           </div>
+
         </CardContent>
       </Card>
 
