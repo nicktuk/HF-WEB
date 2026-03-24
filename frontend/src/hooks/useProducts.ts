@@ -295,6 +295,7 @@ export function useUpdateProduct(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
+      queryClient.invalidateQueries({ queryKey: ['public-product'] });
     },
   });
 }
