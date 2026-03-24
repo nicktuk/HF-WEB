@@ -984,6 +984,7 @@ export default function ProductsPage() {
         <ManualProductForm
           onClose={() => setShowManualModal(false)}
           onSuccess={() => setShowManualModal(false)}
+          priceAsOriginal
         />
       )}
 

@@ -155,7 +155,7 @@ export function ManualProductForm({ onClose, onSuccess, initialValues, priceAsOr
           />
 
           <Input
-            label="Precio *"
+            label={priceAsOriginal ? 'Precio de origen *' : 'Precio *'}
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
