@@ -76,7 +76,11 @@ class ProductUpdate(BaseModel):
         validated = []
         for url in v:
             url = url.strip()
-            if url and (url.startswith("http://") or url.startswith("https://")):
+            if url and (
+                url.startswith("http://")
+                or url.startswith("https://")
+                or url.startswith("/uploads/")
+            ):
                 validated.append(url)
         return validated
 
@@ -291,7 +295,11 @@ class ProductCreateManual(BaseModel):
         validated = []
         for url in v:
             url = url.strip()
-            if url and (url.startswith("http://") or url.startswith("https://")):
+            if url and (
+                url.startswith("http://")
+                or url.startswith("https://")
+                or url.startswith("/uploads/")
+            ):
                 validated.append(url)
         return validated
 
