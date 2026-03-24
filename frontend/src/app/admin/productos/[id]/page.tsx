@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
-import { uploadImages, aiApi } from '@/lib/api';
+import { uploadImages, aiApi, resolveImageUrl } from '@/lib/api';
 import {
   useAdminProduct,
   useUpdateProduct,
@@ -67,6 +67,7 @@ export default function ProductEditPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
@@ -122,10 +123,13 @@ export default function ProductEditPage() {
     if (files.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
     try {
       const uploadedUrls = await uploadImages(apiKey, files);
       setImageUrls(prev => [...prev, ...uploadedUrls]);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Error al subir imágenes';
+      setUploadError(msg);
       console.error('Error uploading images:', error);
     } finally {
       setIsUploading(false);
@@ -345,7 +349,7 @@ export default function ProductEditPage() {
               <div className="aspect-square relative rounded-lg overflow-hidden bg-gray-100">
                 {imageUrls.length > 0 ? (
                   <Image
-                    src={imageUrls[selectedImageIndex]}
+                    src={resolveImageUrl(imageUrls[selectedImageIndex]) ?? imageUrls[selectedImageIndex]}
                     alt={product.original_name}
                     fill
                     className="object-contain"
@@ -370,7 +374,7 @@ export default function ProductEditPage() {
                     onClick={() => setSelectedImageIndex(index)}
                   >
                     <Image
-                      src={url}
+                      src={resolveImageUrl(url) ?? url}
                       alt=""
                       width={64}
                       height={64}
@@ -463,6 +467,9 @@ export default function ProductEditPage() {
                 )}
               </div>
 
+              {uploadError && (
+                <p className="text-xs text-red-600 font-medium">{uploadError}</p>
+              )}
               <p className="text-xs text-gray-500">
                 La primera imagen es la principal. Podes subir archivos o agregar URLs.
               </p>
