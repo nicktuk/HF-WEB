@@ -158,6 +158,7 @@ function HomePageContent() {
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
   const showBySections = !!(catalogSettings?.show_by_sections);
+  const groupByCategory = catalogSettings?.group_by_category ?? true;
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -247,7 +248,7 @@ function HomePageContent() {
   const isSectionSort = sortParam === 'section_asc' || sortParam === 'section_desc';
   // "Por secciones" reemplaza el agrupado por categoría cuando está activo y no hay filtros ni orden (o el orden es de secciones)
   const showSectionedView = showBySections && !anyFilterActive && (!sortParam || isSectionSort);
-  const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections;
+  const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -289,10 +290,10 @@ function HomePageContent() {
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
 
   // Productos agrupados por sección, sin repetir entre secciones
-  const sectionedGroups = useMemo(() => {
-    if (!showSectionedView || !sections) return [];
+  const { sectionGroups, sectionSeenIds } = useMemo(() => {
+    if (!showSectionedView || !sections) return { sectionGroups: [], sectionSeenIds: new Set<number>() };
     const seen = new Set<number>();
-    return [...sections]
+    const groups = [...sections]
       .filter(s => s.is_active)
       .sort((a, b) => sortParam === 'section_desc'
         ? b.display_order - a.display_order
@@ -306,7 +307,14 @@ function HomePageContent() {
         return { section, products };
       })
       .filter(g => g.products.length > 0);
-  }, [showSectionedView, sections]);
+    return { sectionGroups: groups, sectionSeenIds: seen };
+  }, [showSectionedView, sections, sortParam]);
+
+  // Productos activos que no aparecen en ninguna sección
+  const remainingSectionProducts = useMemo(() => {
+    if (!showSectionedView) return [];
+    return sortedProducts.filter(p => !sectionSeenIds.has(p.id));
+  }, [showSectionedView, sectionSeenIds, sortedProducts]);
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -397,7 +405,7 @@ function HomePageContent() {
         <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
           <span className="text-sm text-zinc-500">
             {showSectionedView
-              ? <><strong className="text-zinc-700">{sectionedGroups.reduce((acc, g) => acc + g.products.length, 0)}</strong> productos</>
+              ? <><strong className="text-zinc-700">{sectionGroups.reduce((acc, g) => acc + g.products.length, 0) + remainingSectionProducts.length}</strong> productos</>
               : data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>
             }
           </span>
@@ -457,11 +465,11 @@ function HomePageContent() {
           {selectedSectionId ? (
             <ProductGrid products={sectionProducts as any} isLoading={false} />
           ) : showSectionedView ? (
-            sectionedGroups.length === 0 ? (
+            sectionGroups.length === 0 && remainingSectionProducts.length === 0 ? (
               <ProductGrid products={[]} isLoading={!sections} />
             ) : (
               <div className="space-y-10">
-                {sectionedGroups.map(({ section, products }) => (
+                {sectionGroups.map(({ section, products }) => (
                   <section key={section.id} className="space-y-4">
                     <div className="flex items-center gap-3">
                       <span
@@ -482,6 +490,18 @@ function HomePageContent() {
                     <ProductGrid products={products as any} />
                   </section>
                 ))}
+                {remainingSectionProducts.length > 0 && (
+                  <section className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="h-5 w-0.5 shrink-0 rounded-full bg-zinc-400" />
+                      <p className="shrink-0 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                        Otros productos
+                      </p>
+                      <span className="h-px flex-1 bg-zinc-200" />
+                    </div>
+                    <ProductGrid products={remainingSectionProducts} />
+                  </section>
+                )}
               </div>
             )
           ) : showGroupedByCategory ? (

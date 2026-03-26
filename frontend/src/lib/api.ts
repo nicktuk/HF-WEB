@@ -1074,11 +1074,11 @@ export const adminApi = {
   // Catalog Settings
   // ============================================
 
-  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean }> {
+  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean }> {
     return fetchAPI('/admin/settings/catalog', {}, apiKey);
   },
 
-  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string; stock_low_threshold?: number; show_by_sections?: boolean }): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean }> {
+  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string; stock_low_threshold?: number; show_by_sections?: boolean; group_by_category?: boolean }): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean }> {
     return fetchAPI('/admin/settings/catalog', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -1163,9 +1163,9 @@ export const adminApi = {
 /**
  * Fetch public catalog settings (no auth required)
  */
-export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean }> {
+export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean }> {
   const res = await fetch(`${API_URL}/admin/settings/public/catalog-settings`);
-  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos', stock_low_threshold: 5, show_by_sections: false };
+  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos', stock_low_threshold: 5, show_by_sections: false, group_by_category: true };
   return res.json();
 }
 
