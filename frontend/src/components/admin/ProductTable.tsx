@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { TableRowSkeleton } from '@/components/ui/skeleton';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useUpdateProduct, useDeleteProduct, useRescrapeProduct, useAdminSubcategories } from '@/hooks/useProducts';
+import { resolveImageUrl } from '@/lib/api';
 import type { ProductAdmin, Category, Subcategory } from '@/types';
 
 interface ProductTableProps {
@@ -207,7 +208,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                     <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
                       {primaryImage ? (
                         <Image
-                          src={primaryImage.url}
+                          src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
                           alt={product.name}
                           width={64}
                           height={64}

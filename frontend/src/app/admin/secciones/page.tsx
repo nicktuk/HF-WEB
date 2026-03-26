@@ -659,7 +659,7 @@ export default function SeccionesPage() {
                     >
                       {p.images[0] && (
                         <img
-                          src={p.images[0].url}
+                          src={resolveImageUrl(p.images[0].url) ?? p.images[0].url}
                           alt={p.name}
                           className="w-10 h-10 rounded object-cover flex-shrink-0"
                         />
