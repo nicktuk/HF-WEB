@@ -290,37 +290,38 @@ function HomePageContent() {
       .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'es'));
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
 
-  // Productos agrupados por sección, sin repetir entre secciones.
-  // Aplica filtro de categoría y ordenamiento dentro de cada sección.
-  const { sectionGroups, sectionSeenIds } = useMemo(() => {
-    if (!showSectionedView || !sections) return { sectionGroups: [], sectionSeenIds: new Set<number>() };
+  // Lista plana de productos ordenada según secciones, sin repetir.
+  // Usa sortedProducts (todos los productos) filtrado por criteria_type de cada sección.
+  const { sectionOrderedProducts, sectionSeenIds } = useMemo(() => {
+    if (!showSectionedView || !sections) return { sectionOrderedProducts: [], sectionSeenIds: new Set<number>() };
     const seen = new Set<number>();
-    const groups = [...sections]
+    const manualIdSets = new Map<number, Set<number>>(
+      sections.map(s => [s.id, new Set(s.products.map(p => p.id))])
+    );
+    const ordered = [...sections]
       .filter(s => s.is_active)
       .sort((a, b) => sortParam === 'section_desc'
         ? b.display_order - a.display_order
         : a.display_order - b.display_order)
-      .map(section => {
-        // Deduplicar usando todos los productos de la sección (antes de filtrar por categoría)
-        const deduped = section.products.filter(p => {
+      .flatMap(section => {
+        const matches = sortedProducts.filter(p => {
           if (seen.has(p.id)) return false;
-          seen.add(p.id);
-          return true;
+          const ct = section.criteria_type;
+          const cv = section.criteria_value;
+          let match = false;
+          if (ct === 'featured') match = !!p.is_featured;
+          else if (ct === 'immediate_delivery') match = !!p.is_immediate_delivery;
+          else if (ct === 'best_seller') match = !!p.is_best_seller;
+          else if (ct === 'category') match = p.category === cv;
+          else if (ct === 'manual') match = manualIdSets.get(section.id)?.has(p.id) ?? false;
+          else match = false;
+          if (match) seen.add(p.id);
+          return match;
         });
-        // Filtrar por categoría activa
-        let products = effectiveCategories.length > 0
-          ? deduped.filter(p => effectiveCategories.includes(p.category || ''))
-          : deduped;
-        // Aplicar ordenamiento (excepto section_asc/desc que afecta el orden de secciones)
-        if (sortParam === 'price_asc') products = [...products].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
-        else if (sortParam === 'price_desc') products = [...products].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
-        else if (sortParam === 'name_asc') products = [...products].sort((a, b) => a.name.localeCompare(b.name, 'es'));
-        else if (sortParam === 'name_desc') products = [...products].sort((a, b) => b.name.localeCompare(a.name, 'es'));
-        return { section, products };
-      })
-      .filter(g => g.products.length > 0);
-    return { sectionGroups: groups, sectionSeenIds: seen };
-  }, [showSectionedView, sections, sortParam, effectiveCategories]);
+        return matches;
+      });
+    return { sectionOrderedProducts: ordered, sectionSeenIds: seen };
+  }, [showSectionedView, sections, sortedProducts, sortParam]);
 
   // Productos activos que no aparecen en ninguna sección.
   // Espera a que sections esté cargado para evitar que productos de secciones
@@ -329,6 +330,12 @@ function HomePageContent() {
     if (!showSectionedView || !sections) return [];
     return sortedProducts.filter(p => !sectionSeenIds.has(p.id));
   }, [showSectionedView, sections, sectionSeenIds, sortedProducts]);
+
+  // Lista completa para la vista plana por secciones
+  const allSectionViewProducts = useMemo(
+    () => [...sectionOrderedProducts, ...remainingSectionProducts],
+    [sectionOrderedProducts, remainingSectionProducts]
+  );
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -419,7 +426,7 @@ function HomePageContent() {
         <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
           <span className="text-sm text-zinc-500">
             {showSectionedView
-              ? <><strong className="text-zinc-700">{sectionGroups.reduce((acc, g) => acc + g.products.length, 0) + remainingSectionProducts.length}</strong> productos</>
+              ? <><strong className="text-zinc-700">{allSectionViewProducts.length}</strong> productos</>
               : data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>
             }
           </span>
@@ -479,45 +486,7 @@ function HomePageContent() {
           {selectedSectionId ? (
             <ProductGrid products={sectionProducts as any} isLoading={false} />
           ) : showSectionedView ? (
-            sectionGroups.length === 0 && !isLoading && remainingSectionProducts.length === 0 ? (
-              <ProductGrid products={[]} isLoading={false} />
-            ) : (
-              <div className="space-y-10">
-                {sectionGroups.map(({ section, products }) => (
-                  <section key={section.id} className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-5 w-0.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: section.bg_color || '#0D1B2A' }}
-                      />
-                      <p
-                        className="shrink-0 text-xs font-semibold uppercase tracking-widest"
-                        style={{ color: section.bg_color || '#0D1B2A' }}
-                      >
-                        {section.title}
-                      </p>
-                      <span
-                        className="h-px flex-1"
-                        style={{ backgroundColor: `${section.bg_color || '#0D1B2A'}33` }}
-                      />
-                    </div>
-                    <ProductGrid products={products as any} />
-                  </section>
-                ))}
-                {(isLoading || remainingSectionProducts.length > 0) && (
-                  <section className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <span className="h-5 w-0.5 shrink-0 rounded-full bg-zinc-400" />
-                      <p className="shrink-0 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                        Otros productos
-                      </p>
-                      <span className="h-px flex-1 bg-zinc-200" />
-                    </div>
-                    <ProductGrid products={remainingSectionProducts} isLoading={isLoading} />
-                  </section>
-                )}
-              </div>
-            )
+            <ProductGrid products={allSectionViewProducts as any} isLoading={isLoading && !sections} />
           ) : showGroupedByCategory ? (
             groupedProducts.length === 0 ? (
               <ProductGrid products={[]} isLoading={isLoading} />
