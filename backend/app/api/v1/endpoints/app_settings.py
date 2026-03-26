@@ -131,11 +131,13 @@ STOCK_LOW_THRESHOLD_DEFAULT = 5
 class CatalogSettingsResponse(BaseModel):
     featured_pill_label: str
     stock_low_threshold: int
+    show_by_sections: bool = False
 
 
 class CatalogSettingsUpdate(BaseModel):
     featured_pill_label: Optional[str] = None
     stock_low_threshold: Optional[int] = None
+    show_by_sections: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +149,13 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
     threshold_str = get_setting(db, "STOCK_LOW_THRESHOLD")
     threshold = int(threshold_str) if threshold_str is not None else STOCK_LOW_THRESHOLD_DEFAULT
-    return CatalogSettingsResponse(featured_pill_label=featured_label, stock_low_threshold=threshold)
+    show_by_sections_str = get_setting(db, "SHOW_BY_SECTIONS")
+    show_by_sections = show_by_sections_str == "true" if show_by_sections_str is not None else False
+    return CatalogSettingsResponse(
+        featured_pill_label=featured_label,
+        stock_low_threshold=threshold,
+        show_by_sections=show_by_sections,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +172,8 @@ def update_catalog_settings(
         set_setting(db, "FEATURED_PILL_LABEL", label)
     if data.stock_low_threshold is not None:
         set_setting(db, "STOCK_LOW_THRESHOLD", str(max(0, data.stock_low_threshold)))
+    if data.show_by_sections is not None:
+        set_setting(db, "SHOW_BY_SECTIONS", "true" if data.show_by_sections else "false")
     return get_catalog_settings(db=db)
 
 
@@ -176,4 +186,10 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
     featured_label = get_setting(db, "FEATURED_PILL_LABEL") or FEATURED_PILL_DEFAULT
     threshold_str = get_setting(db, "STOCK_LOW_THRESHOLD")
     threshold = int(threshold_str) if threshold_str is not None else STOCK_LOW_THRESHOLD_DEFAULT
-    return {"featured_pill_label": featured_label, "stock_low_threshold": threshold}
+    show_by_sections_str = get_setting(db, "SHOW_BY_SECTIONS")
+    show_by_sections = show_by_sections_str == "true" if show_by_sections_str is not None else False
+    return {
+        "featured_pill_label": featured_label,
+        "stock_low_threshold": threshold,
+        "show_by_sections": show_by_sections,
+    }

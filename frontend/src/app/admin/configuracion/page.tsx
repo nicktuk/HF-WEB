@@ -56,6 +56,8 @@ export default function ConfiguracionPage() {
   const [stockThreshold, setStockThreshold] = useState('5');
   const [savingThreshold, setSavingThreshold] = useState(false);
   const [thresholdSaved, setThresholdSaved] = useState(false);
+  const [showBySections, setShowBySections] = useState(false);
+  const [savingShowBySections, setSavingShowBySections] = useState(false);
 
   // Valores originales (enmascarados) que llegaron del servidor
   const [original, setOriginal] = useState<AISettingsResponse | null>(null);
@@ -74,7 +76,10 @@ export default function ConfiguracionPage() {
     if (!apiKey) return;
     setLoading(true);
     adminApi.getCatalogSettings(apiKey)
-      .then((data) => setStockThreshold(String(data.stock_low_threshold ?? 5)))
+      .then((data) => {
+        setStockThreshold(String(data.stock_low_threshold ?? 5));
+        setShowBySections(data.show_by_sections ?? false);
+      })
       .catch(() => {});
     settingsApi
       .getAI(apiKey)
@@ -136,6 +141,18 @@ export default function ConfiguracionPage() {
       showToast('error', 'Error al guardar el umbral');
     } finally {
       setSavingThreshold(false);
+    }
+  }
+
+  async function handleToggleShowBySections(value: boolean) {
+    setSavingShowBySections(true);
+    try {
+      const updated = await adminApi.updateCatalogSettings(apiKey, { show_by_sections: value });
+      setShowBySections(updated.show_by_sections);
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSavingShowBySections(false);
     }
   }
 
@@ -338,6 +355,31 @@ export default function ConfiguracionPage() {
               {savingThreshold ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {thresholdSaved ? 'Guardado ✓' : 'Guardar'}
             </Button>
+          </div>
+
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Mostrar productos por secciones</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Cuando está activo, el catálogo principal muestra los productos agrupados por las secciones creadas, sin repetir productos entre ellas. Los filtros de categoría, búsqueda y ordenamiento siguen funcionando normalmente.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={savingShowBySections}
+                onClick={() => handleToggleShowBySections(!showBySections)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  showBySections ? 'bg-blue-600' : 'bg-gray-200'
+                } ${savingShowBySections ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    showBySections ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>

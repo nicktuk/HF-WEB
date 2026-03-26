@@ -157,6 +157,7 @@ function HomePageContent() {
     staleTime: 5 * 60 * 1000,
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
+  const showBySections = !!(catalogSettings?.show_by_sections);
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -243,7 +244,9 @@ function HomePageContent() {
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const showGroupedByCategory = !anyFilterActive && !sortParam;
+  // "Por secciones" reemplaza el agrupado por categoría cuando está activo y no hay filtros ni orden
+  const showSectionedView = showBySections && !anyFilterActive && !sortParam;
+  const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
@@ -283,6 +286,24 @@ function HomePageContent() {
       })
       .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'es'));
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
+
+  // Productos agrupados por sección, sin repetir entre secciones
+  const sectionedGroups = useMemo(() => {
+    if (!showSectionedView || !sections) return [];
+    const seen = new Set<number>();
+    return [...sections]
+      .filter(s => s.is_active)
+      .sort((a, b) => a.display_order - b.display_order)
+      .map(section => {
+        const products = section.products.filter(p => {
+          if (seen.has(p.id)) return false;
+          seen.add(p.id);
+          return true;
+        });
+        return { section, products };
+      })
+      .filter(g => g.products.length > 0);
+  }, [showSectionedView, sections]);
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -325,7 +346,7 @@ function HomePageContent() {
           )}
 
           {/* ─── SECTIONS ARRIBA ───────────────────────────────────── */}
-          {sectionsArriba.length > 0 && !anyFilterActive && (
+          {sectionsArriba.length > 0 && !anyFilterActive && !showSectionedView && (
             <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
               <div className="flex gap-3 h-full">
                 {sectionsArriba.map(s => (
@@ -372,7 +393,10 @@ function HomePageContent() {
         {/* ─── SORT BAR (desktop only) ──────────────────────────────── */}
         <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
           <span className="text-sm text-zinc-500">
-            {data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>}
+            {showSectionedView
+              ? <><strong className="text-zinc-700">{sectionedGroups.reduce((acc, g) => acc + g.products.length, 0)}</strong> productos</>
+              : data && <><strong className="text-zinc-700">{sortedProducts.length}</strong> productos</>
+            }
           </span>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-zinc-500">Ordenar:</span>
@@ -427,6 +451,34 @@ function HomePageContent() {
 
           {selectedSectionId ? (
             <ProductGrid products={sectionProducts as any} isLoading={false} />
+          ) : showSectionedView ? (
+            sectionedGroups.length === 0 ? (
+              <ProductGrid products={[]} isLoading={!sections} />
+            ) : (
+              <div className="space-y-10">
+                {sectionedGroups.map(({ section, products }) => (
+                  <section key={section.id} className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="h-5 w-0.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: section.bg_color || '#0D1B2A' }}
+                      />
+                      <p
+                        className="shrink-0 text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: section.bg_color || '#0D1B2A' }}
+                      >
+                        {section.title}
+                      </p>
+                      <span
+                        className="h-px flex-1"
+                        style={{ backgroundColor: `${section.bg_color || '#0D1B2A'}33` }}
+                      />
+                    </div>
+                    <ProductGrid products={products as any} />
+                  </section>
+                ))}
+              </div>
+            )
           ) : showGroupedByCategory ? (
             groupedProducts.length === 0 ? (
               <ProductGrid products={[]} isLoading={isLoading} />
@@ -461,7 +513,7 @@ function HomePageContent() {
         </div>
 
         {/* ─── SECTIONS ABAJO ──────────────────────────────────────── */}
-        {sectionsAbajo.length > 0 && !anyFilterActive && (
+        {sectionsAbajo.length > 0 && !anyFilterActive && !showSectionedView && (
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mt-10 h-[280px] sm:h-[400px] lg:h-[440px]">
             <div className="flex gap-3 h-full">
               {sectionsAbajo.map(s => (
