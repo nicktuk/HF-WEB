@@ -159,6 +159,7 @@ function HomePageContent() {
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
   const showBySections = !!(catalogSettings?.show_by_sections);
   const groupByCategory = catalogSettings?.group_by_category ?? true;
+  const sectionSortOrder = catalogSettings?.section_sort_order ?? 'asc';
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -245,7 +246,6 @@ function HomePageContent() {
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const isSectionSort = sortParam === 'section_asc' || sortParam === 'section_desc';
   // "Por secciones" se mantiene activo con filtros de categoría y ordenamiento.
   // Solo se desactiva con búsqueda, featured, immediate_delivery o section_id específico.
   const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !searchFromUrl;
@@ -300,7 +300,7 @@ function HomePageContent() {
     );
     const ordered = [...sections]
       .filter(s => s.is_active)
-      .sort((a, b) => sortParam === 'section_desc'
+      .sort((a, b) => sectionSortOrder === 'desc'
         ? b.display_order - a.display_order
         : a.display_order - b.display_order)
       .flatMap(section => {
@@ -438,8 +438,6 @@ function HomePageContent() {
               className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30 cursor-pointer"
             >
               <option value="">Relevancia</option>
-              {showBySections && <option value="section_asc">Secciones: primero → último</option>}
-              {showBySections && <option value="section_desc">Secciones: último → primero</option>}
               <option value="price_asc">Precio: menor a mayor</option>
               <option value="price_desc">Precio: mayor a menor</option>
               <option value="name_asc">Nombre: A → Z</option>
@@ -552,10 +550,6 @@ function HomePageContent() {
                   <p className="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-3">Ordenar</p>
                   {[
                     { value: '', label: 'Relevancia' },
-                    ...(showBySections ? [
-                      { value: 'section_asc', label: 'Secciones: primero → último' },
-                      { value: 'section_desc', label: 'Secciones: último → primero' },
-                    ] : []),
                     { value: 'price_asc', label: 'Precio: menor a mayor' },
                     { value: 'price_desc', label: 'Precio: mayor a menor' },
                     { value: 'name_asc', label: 'Nombre: A → Z' },

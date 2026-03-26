@@ -133,6 +133,7 @@ class CatalogSettingsResponse(BaseModel):
     stock_low_threshold: int
     show_by_sections: bool = False
     group_by_category: bool = True
+    section_sort_order: str = "asc"
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -140,6 +141,7 @@ class CatalogSettingsUpdate(BaseModel):
     stock_low_threshold: Optional[int] = None
     show_by_sections: Optional[bool] = None
     group_by_category: Optional[bool] = None
+    section_sort_order: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -155,11 +157,13 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     show_by_sections = show_by_sections_str == "true" if show_by_sections_str is not None else False
     group_by_category_str = get_setting(db, "GROUP_BY_CATEGORY")
     group_by_category = group_by_category_str != "false" if group_by_category_str is not None else True
+    section_sort_order = get_setting(db, "SECTION_SORT_ORDER") or "asc"
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
         show_by_sections=show_by_sections,
         group_by_category=group_by_category,
+        section_sort_order=section_sort_order,
     )
 
 
@@ -181,6 +185,8 @@ def update_catalog_settings(
         set_setting(db, "SHOW_BY_SECTIONS", "true" if data.show_by_sections else "false")
     if data.group_by_category is not None:
         set_setting(db, "GROUP_BY_CATEGORY", "true" if data.group_by_category else "false")
+    if data.section_sort_order is not None:
+        set_setting(db, "SECTION_SORT_ORDER", "desc" if data.section_sort_order == "desc" else "asc")
     return get_catalog_settings(db=db)
 
 
@@ -197,9 +203,11 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
     show_by_sections = show_by_sections_str == "true" if show_by_sections_str is not None else False
     group_by_category_str = get_setting(db, "GROUP_BY_CATEGORY")
     group_by_category = group_by_category_str != "false" if group_by_category_str is not None else True
+    section_sort_order = get_setting(db, "SECTION_SORT_ORDER") or "asc"
     return {
         "featured_pill_label": featured_label,
         "stock_low_threshold": threshold,
         "show_by_sections": show_by_sections,
         "group_by_category": group_by_category,
+        "section_sort_order": section_sort_order,
     }

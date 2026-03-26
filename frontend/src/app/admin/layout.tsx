@@ -60,6 +60,7 @@ const configSubmenu = [
   { name: 'Subcategorias', href: '/admin/subcategorias', icon: FolderTree },
   { name: 'Secciones', href: '/admin/secciones', icon: LayoutGrid },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
+  { name: 'Catalogo', href: '/admin/catalogo', icon: Settings },
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
