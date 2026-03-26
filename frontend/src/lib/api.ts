@@ -70,7 +70,10 @@ async function fetchAPI<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(error.message || `HTTP error ${response.status}`);
+    const detail = error.detail
+      ? (typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail))
+      : null;
+    throw new Error(detail || error.message || `HTTP error ${response.status}`);
   }
 
   // Handle 204 No Content
