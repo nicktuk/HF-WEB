@@ -322,11 +322,13 @@ function HomePageContent() {
     return { sectionGroups: groups, sectionSeenIds: seen };
   }, [showSectionedView, sections, sortParam, effectiveCategories]);
 
-  // Productos activos que no aparecen en ninguna sección
+  // Productos activos que no aparecen en ninguna sección.
+  // Espera a que sections esté cargado para evitar que productos de secciones
+  // aparezcan en "Otros" mientras sectionSeenIds todavía está vacío.
   const remainingSectionProducts = useMemo(() => {
-    if (!showSectionedView) return [];
+    if (!showSectionedView || !sections) return [];
     return sortedProducts.filter(p => !sectionSeenIds.has(p.id));
-  }, [showSectionedView, sectionSeenIds, sortedProducts]);
+  }, [showSectionedView, sections, sectionSeenIds, sortedProducts]);
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
