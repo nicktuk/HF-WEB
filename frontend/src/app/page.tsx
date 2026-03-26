@@ -357,7 +357,7 @@ function HomePageContent() {
           )}
 
           {/* ─── SECTIONS ARRIBA ───────────────────────────────────── */}
-          {sectionsArriba.length > 0 && !anyFilterActive && !showSectionedView && (
+          {sectionsArriba.length > 0 && !anyFilterActive && (
             <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-5 h-[280px] sm:h-[400px] lg:h-[440px]">
               <div className="flex gap-3 h-full">
                 {sectionsArriba.map(s => (
@@ -465,8 +465,8 @@ function HomePageContent() {
           {selectedSectionId ? (
             <ProductGrid products={sectionProducts as any} isLoading={false} />
           ) : showSectionedView ? (
-            sectionGroups.length === 0 && remainingSectionProducts.length === 0 ? (
-              <ProductGrid products={[]} isLoading={!sections} />
+            sectionGroups.length === 0 && !isLoading && remainingSectionProducts.length === 0 ? (
+              <ProductGrid products={[]} isLoading={false} />
             ) : (
               <div className="space-y-10">
                 {sectionGroups.map(({ section, products }) => (
@@ -490,7 +490,7 @@ function HomePageContent() {
                     <ProductGrid products={products as any} />
                   </section>
                 ))}
-                {remainingSectionProducts.length > 0 && (
+                {(isLoading || remainingSectionProducts.length > 0) && (
                   <section className="space-y-4">
                     <div className="flex items-center gap-3">
                       <span className="h-5 w-0.5 shrink-0 rounded-full bg-zinc-400" />
@@ -499,7 +499,7 @@ function HomePageContent() {
                       </p>
                       <span className="h-px flex-1 bg-zinc-200" />
                     </div>
-                    <ProductGrid products={remainingSectionProducts} />
+                    <ProductGrid products={remainingSectionProducts} isLoading={isLoading} />
                   </section>
                 )}
               </div>
@@ -538,7 +538,7 @@ function HomePageContent() {
         </div>
 
         {/* ─── SECTIONS ABAJO ──────────────────────────────────────── */}
-        {sectionsAbajo.length > 0 && !anyFilterActive && !showSectionedView && (
+        {sectionsAbajo.length > 0 && !anyFilterActive && (
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mt-10 h-[280px] sm:h-[400px] lg:h-[440px]">
             <div className="flex gap-3 h-full">
               {sectionsAbajo.map(s => (
