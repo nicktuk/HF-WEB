@@ -246,8 +246,9 @@ function HomePageContent() {
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
   const isSectionSort = sortParam === 'section_asc' || sortParam === 'section_desc';
-  // "Por secciones" reemplaza el agrupado por categoría cuando está activo y no hay filtros ni orden (o el orden es de secciones)
-  const showSectionedView = showBySections && !anyFilterActive && (!sortParam || isSectionSort);
+  // "Por secciones" se mantiene activo con filtros de categoría y ordenamiento.
+  // Solo se desactiva con búsqueda, featured, immediate_delivery o section_id específico.
+  const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !searchFromUrl;
   const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory;
 
   const groupedProducts = useMemo(() => {
@@ -289,7 +290,8 @@ function HomePageContent() {
       .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'es'));
   }, [showGroupedByCategory, orderedCategories, sortedProducts]);
 
-  // Productos agrupados por sección, sin repetir entre secciones
+  // Productos agrupados por sección, sin repetir entre secciones.
+  // Aplica filtro de categoría y ordenamiento dentro de cada sección.
   const { sectionGroups, sectionSeenIds } = useMemo(() => {
     if (!showSectionedView || !sections) return { sectionGroups: [], sectionSeenIds: new Set<number>() };
     const seen = new Set<number>();
@@ -299,16 +301,26 @@ function HomePageContent() {
         ? b.display_order - a.display_order
         : a.display_order - b.display_order)
       .map(section => {
-        const products = section.products.filter(p => {
+        // Deduplicar usando todos los productos de la sección (antes de filtrar por categoría)
+        const deduped = section.products.filter(p => {
           if (seen.has(p.id)) return false;
           seen.add(p.id);
           return true;
         });
+        // Filtrar por categoría activa
+        let products = effectiveCategories.length > 0
+          ? deduped.filter(p => effectiveCategories.includes(p.category || ''))
+          : deduped;
+        // Aplicar ordenamiento (excepto section_asc/desc que afecta el orden de secciones)
+        if (sortParam === 'price_asc') products = [...products].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+        else if (sortParam === 'price_desc') products = [...products].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+        else if (sortParam === 'name_asc') products = [...products].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+        else if (sortParam === 'name_desc') products = [...products].sort((a, b) => b.name.localeCompare(a.name, 'es'));
         return { section, products };
       })
       .filter(g => g.products.length > 0);
     return { sectionGroups: groups, sectionSeenIds: seen };
-  }, [showSectionedView, sections, sortParam]);
+  }, [showSectionedView, sections, sortParam, effectiveCategories]);
 
   // Productos activos que no aparecen en ninguna sección
   const remainingSectionProducts = useMemo(() => {
