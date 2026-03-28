@@ -160,6 +160,7 @@ function HomePageContent() {
   const showBySections = !!(catalogSettings?.show_by_sections);
   const groupByCategory = catalogSettings?.group_by_category ?? true;
   const sectionSortOrder = catalogSettings?.section_sort_order ?? 'asc';
+  const showOutOfStock = catalogSettings?.show_out_of_stock ?? true;
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -207,6 +208,11 @@ function HomePageContent() {
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
   const sortedProducts = (() => {
     let items = data?.items || [];
+
+    // Filtrar sin stock si la configuración lo indica
+    if (!showOutOfStock) {
+      items = items.filter(p => (p.stock_qty ?? 0) > 0);
+    }
 
     // Client-side multi-category filter
     if (effectiveCategories.length > 1) {
