@@ -46,7 +46,8 @@ class ProductRepository(BaseRepository[Product]):
         subcategory: Optional[str] = None,
         search: Optional[str] = None,
         featured: Optional[bool] = None,
-        immediate_delivery: Optional[bool] = None
+        immediate_delivery: Optional[bool] = None,
+        hide_out_of_stock: bool = False,
     ) -> List[Product]:
         """Get enabled products for public catalog."""
         query = (
@@ -103,6 +104,23 @@ class ProductRepository(BaseRepository[Product]):
                 query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
                 query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
+        if hide_out_of_stock:
+            stock_subq = (
+                self.db.query(
+                    StockPurchase.product_id.label("product_id"),
+                    func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                )
+                .group_by(StockPurchase.product_id)
+                .subquery()
+            )
+            query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+            query = query.filter(
+                or_(
+                    func.coalesce(stock_subq.c.stock_qty, 0) > 0,
+                    Product.is_check_stock == False,
+                )
+            )
+
         if category:
             immediate_first = case(
                 (Product.is_immediate_delivery == True, 1),
@@ -124,7 +142,8 @@ class ProductRepository(BaseRepository[Product]):
         subcategory: Optional[str] = None,
         search: Optional[str] = None,
         featured: Optional[bool] = None,
-        immediate_delivery: Optional[bool] = None
+        immediate_delivery: Optional[bool] = None,
+        hide_out_of_stock: bool = False,
     ) -> int:
         """Count enabled products."""
         query = (
@@ -178,6 +197,23 @@ class ProductRepository(BaseRepository[Product]):
                 )
                 query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
                 query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
+
+        if hide_out_of_stock:
+            stock_subq = (
+                self.db.query(
+                    StockPurchase.product_id.label("product_id"),
+                    func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("stock_qty"),
+                )
+                .group_by(StockPurchase.product_id)
+                .subquery()
+            )
+            query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
+            query = query.filter(
+                or_(
+                    func.coalesce(stock_subq.c.stock_qty, 0) > 0,
+                    Product.is_check_stock == False,
+                )
+            )
 
         return query.count()
 

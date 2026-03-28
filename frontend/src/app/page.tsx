@@ -209,11 +209,6 @@ function HomePageContent() {
   const sortedProducts = (() => {
     let items = data?.items || [];
 
-    // Filtrar sin stock si la configuración lo indica
-    if (!showOutOfStock) {
-      items = items.filter(p => (p.stock_qty ?? 0) > 0);
-    }
-
     // Client-side multi-category filter
     if (effectiveCategories.length > 1) {
       items = items.filter(p => effectiveCategories.includes(p.category || ''));

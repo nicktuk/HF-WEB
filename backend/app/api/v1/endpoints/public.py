@@ -13,6 +13,9 @@ from app.schemas.common import PaginatedResponse, MessageResponse
 from app.schemas.analytics import PublicEventCreate
 from app.models.analytics_event import AnalyticsEvent
 from app.config import settings
+from app.db.session import get_db
+from app.services.app_settings import get_setting
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,6 +36,7 @@ async def get_products(
     featured: Optional[bool] = Query(default=None),
     immediate_delivery: Optional[bool] = Query(default=None),
     service: ProductService = Depends(get_product_service),
+    db: Session = Depends(get_db),
 ):
     """
     Get public product catalog.
@@ -41,7 +45,10 @@ async def get_products(
     Use featured=true to get only featured products (Novedades).
     Use immediate_delivery=true to get only products with immediate delivery.
     """
-    products, total = service.get_public_catalog(page, limit, category, subcategory, search, featured, immediate_delivery)
+    show_out_of_stock_str = get_setting(db, "SHOW_OUT_OF_STOCK")
+    show_out_of_stock = show_out_of_stock_str != "false" if show_out_of_stock_str is not None else True
+    hide_out_of_stock = not show_out_of_stock
+    products, total = service.get_public_catalog(page, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     return PaginatedResponse(
