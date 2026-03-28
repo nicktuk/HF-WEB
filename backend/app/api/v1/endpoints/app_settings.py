@@ -17,6 +17,7 @@ from app.config import settings
 from app.core.security import verify_admin
 from app.db.session import get_db
 from app.services.app_settings import get_setting, set_setting
+from app.services.cache import cache
 
 router = APIRouter()
 
@@ -194,6 +195,7 @@ def update_catalog_settings(
         set_setting(db, "SECTION_SORT_ORDER", "desc" if data.section_sort_order == "desc" else "asc")
     if data.show_out_of_stock is not None:
         set_setting(db, "SHOW_OUT_OF_STOCK", "true" if data.show_out_of_stock else "false")
+        cache.invalidate_all_products()
     return get_catalog_settings(db=db)
 
 

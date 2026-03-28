@@ -114,12 +114,7 @@ class ProductRepository(BaseRepository[Product]):
                 .subquery()
             )
             query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
-            query = query.filter(
-                or_(
-                    func.coalesce(stock_subq.c.stock_qty, 0) > 0,
-                    Product.is_check_stock == False,
-                )
-            )
+            query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         if category:
             immediate_first = case(
@@ -208,12 +203,7 @@ class ProductRepository(BaseRepository[Product]):
                 .subquery()
             )
             query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
-            query = query.filter(
-                or_(
-                    func.coalesce(stock_subq.c.stock_qty, 0) > 0,
-                    Product.is_check_stock == False,
-                )
-            )
+            query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
         return query.count()
 
