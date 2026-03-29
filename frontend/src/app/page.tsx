@@ -362,9 +362,7 @@ function HomePageContent() {
       <div
         style={{ background: 'linear-gradient(to bottom, #fde8d4 0%, #e0f2fe 100%)' }}
       >
-        <div className="container mx-auto px-4 pt-3 pb-2">
-
-          {/* ─── CATEGORY CAROUSEL ─────────────────────────────────── */}
+          {/* ─── CATEGORY CAROUSEL (full width, outside container) ─── */}
           {showCarousel && (
             <CategoryCarousel
               slides={orderedCategories.filter(c => c.show_in_carousel)}
@@ -380,6 +378,8 @@ function HomePageContent() {
               }}
             />
           )}
+
+        <div className="container mx-auto px-4 pt-3 pb-2">
 
           {/* ─── SECTIONS ARRIBA ───────────────────────────────────── */}
           {sectionsArriba.length > 0 && !anyFilterActive && (
@@ -767,16 +767,16 @@ function CategoryCarouselSlider({ slides, onSelect }: { slides: CarouselSlide[];
 
   return (
     <div
-      className="mb-6"
+      className="mb-4"
       onMouseEnter={() => { isPaused.current = true; }}
       onMouseLeave={() => { isPaused.current = false; }}
     >
-      {/* Main banner */}
+      {/* Main banner — full width, rounded solo en sm+ */}
       <button
         type="button"
         onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
         aria-label={`Filtrar por categoría: ${title}`}
-        className={`relative w-full h-[150px] sm:h-[200px] lg:h-[240px] rounded-2xl overflow-hidden flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${fontClass} ${slide.carousel_glow ? 'animate-glow-pulse' : ''}`}
+        className={`relative w-full h-[150px] sm:h-[200px] lg:h-[240px] sm:rounded-2xl overflow-hidden flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${fontClass} ${slide.carousel_glow ? 'animate-glow-pulse' : ''}`}
         style={{
           backgroundColor: bgColor,
           boxShadow: slide.carousel_glow
@@ -866,7 +866,7 @@ function CategoryCarouselScroll({ slides, onSelect }: { slides: CarouselSlide[];
   return (
     <div
       ref={scrollRef}
-      className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide"
+      className="mb-4 overflow-x-auto scrollbar-hide px-4"
       onMouseEnter={() => { isPaused.current = true; }}
       onMouseLeave={() => { isPaused.current = false; }}
       onTouchStart={() => { isPaused.current = true; }}
