@@ -161,6 +161,7 @@ function HomePageContent() {
   const groupByCategory = catalogSettings?.group_by_category ?? true;
   const sectionSortOrder = catalogSettings?.section_sort_order ?? 'asc';
   const showOutOfStock = catalogSettings?.show_out_of_stock ?? true;
+  const mobileTwo = catalogSettings?.mobile_two_columns ?? false;
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -483,12 +484,12 @@ function HomePageContent() {
           )}
 
           {selectedSectionId ? (
-            <ProductGrid products={sectionProducts as any} isLoading={false} />
+            <ProductGrid products={sectionProducts as any} isLoading={false} twoColumnsMobile={mobileTwo} />
           ) : showSectionedView ? (
-            <ProductGrid products={allSectionViewProducts as any} isLoading={isLoading && !sections} />
+            <ProductGrid products={allSectionViewProducts as any} isLoading={isLoading && !sections} twoColumnsMobile={mobileTwo} />
           ) : showGroupedByCategory ? (
             groupedProducts.length === 0 ? (
-              <ProductGrid products={[]} isLoading={isLoading} />
+              <ProductGrid products={[]} isLoading={isLoading} twoColumnsMobile={mobileTwo} />
             ) : (
               <div className="space-y-10">
                 {groupedProducts.map((group) => (
@@ -509,13 +510,13 @@ function HomePageContent() {
                         style={{ backgroundColor: `${group.color}33` }}
                       />
                     </div>
-                    <ProductGrid products={group.products} />
+                    <ProductGrid products={group.products} twoColumnsMobile={mobileTwo} />
                   </section>
                 ))}
               </div>
             )
           ) : (
-            <ProductGrid products={sortedProducts} isLoading={isLoading} />
+            <ProductGrid products={sortedProducts} isLoading={isLoading} twoColumnsMobile={mobileTwo} />
           )}
         </div>
 
