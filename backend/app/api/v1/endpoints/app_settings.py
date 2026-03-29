@@ -137,6 +137,7 @@ class CatalogSettingsResponse(BaseModel):
     section_sort_order: str = "asc"
     show_out_of_stock: bool = True
     mobile_two_columns: bool = False
+    carousel_style: str = "scroll"
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -147,6 +148,7 @@ class CatalogSettingsUpdate(BaseModel):
     section_sort_order: Optional[str] = None
     show_out_of_stock: Optional[bool] = None
     mobile_two_columns: Optional[bool] = None
+    carousel_style: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +169,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     show_out_of_stock = show_out_of_stock_str != "false" if show_out_of_stock_str is not None else True
     mobile_two_columns_str = get_setting(db, "MOBILE_TWO_COLUMNS")
     mobile_two_columns = mobile_two_columns_str == "true" if mobile_two_columns_str is not None else False
+    carousel_style = get_setting(db, "CAROUSEL_STYLE") or "scroll"
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -175,6 +178,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         section_sort_order=section_sort_order,
         show_out_of_stock=show_out_of_stock,
         mobile_two_columns=mobile_two_columns,
+        carousel_style=carousel_style,
     )
 
 
@@ -203,6 +207,8 @@ def update_catalog_settings(
         cache.invalidate_all_products()
     if data.mobile_two_columns is not None:
         set_setting(db, "MOBILE_TWO_COLUMNS", "true" if data.mobile_two_columns else "false")
+    if data.carousel_style is not None:
+        set_setting(db, "CAROUSEL_STYLE", data.carousel_style if data.carousel_style in ("scroll", "slider") else "scroll")
     return get_catalog_settings(db=db)
 
 
@@ -232,4 +238,5 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "section_sort_order": section_sort_order,
         "show_out_of_stock": show_out_of_stock,
         "mobile_two_columns": mobile_two_columns,
+        "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
     }

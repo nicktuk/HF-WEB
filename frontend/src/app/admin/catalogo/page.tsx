@@ -33,6 +33,10 @@ export default function CatalogoConfigPage() {
   const [mobileTwoColumns, setMobileTwoColumns] = useState(false);
   const [savingMobileTwoColumns, setSavingMobileTwoColumns] = useState(false);
 
+  // Carousel style
+  const [carouselStyle, setCarouselStyle] = useState<'scroll' | 'slider'>('scroll');
+  const [savingCarouselStyle, setSavingCarouselStyle] = useState(false);
+
   // Group by category
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [savingGroupByCategory, setSavingGroupByCategory] = useState(false);
@@ -53,6 +57,7 @@ export default function CatalogoConfigPage() {
         setSectionSortOrder((data.section_sort_order === 'desc' ? 'desc' : 'asc'));
         setShowOutOfStock(data.show_out_of_stock ?? true);
         setMobileTwoColumns(data.mobile_two_columns ?? false);
+        setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -104,6 +109,18 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSavingShowOutOfStock(false);
+    }
+  }
+
+  async function handleChangeCarouselStyle(value: 'scroll' | 'slider') {
+    setCarouselStyle(value);
+    setSavingCarouselStyle(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, { carousel_style: value });
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSavingCarouselStyle(false);
     }
   }
 
@@ -295,6 +312,47 @@ export default function CatalogoConfigPage() {
                 }`}
               />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Estilo de carrusel */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Estilo del carrusel</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Cómo se muestran las categorías destacadas en el catálogo público.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={savingCarouselStyle}
+              onClick={() => handleChangeCarouselStyle('scroll')}
+              className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${
+                carouselStyle === 'scroll'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <p className="font-semibold">Scroll infinito</p>
+              <p className="text-xs opacity-70 mt-0.5">Tarjetas verticales que se desplazan automáticamente</p>
+            </button>
+            <button
+              type="button"
+              disabled={savingCarouselStyle}
+              onClick={() => handleChangeCarouselStyle('slider')}
+              className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${
+                carouselStyle === 'slider'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <p className="font-semibold">Slider</p>
+              <p className="text-xs opacity-70 mt-0.5">Imagen a la izquierda que vuela, categoría a la derecha</p>
+            </button>
+            {savingCarouselStyle && <Loader2 className="h-4 w-4 animate-spin text-gray-400 self-center shrink-0" />}
           </div>
         </div>
       </div>

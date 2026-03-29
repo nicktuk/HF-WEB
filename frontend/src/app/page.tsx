@@ -162,6 +162,7 @@ function HomePageContent() {
   const sectionSortOrder = catalogSettings?.section_sort_order ?? 'asc';
   const showOutOfStock = catalogSettings?.show_out_of_stock ?? true;
   const mobileTwo = catalogSettings?.mobile_two_columns ?? false;
+  const carouselStyle = catalogSettings?.carousel_style ?? 'scroll';
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -367,6 +368,7 @@ function HomePageContent() {
           {showCarousel && (
             <CategoryCarousel
               slides={orderedCategories.filter(c => c.show_in_carousel)}
+              style={carouselStyle}
               onSelect={(name, filterType) => {
                 if (filterType === 'immediate_delivery') {
                   updateParams({ immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined });
@@ -725,21 +727,121 @@ function HomePageContent() {
 type CarouselSlide = { name: string; color: string; show_in_carousel: boolean; carousel_title: string | null; carousel_subtitle: string | null; carousel_image_url: string | null; carousel_bg_color: string | null; carousel_text_color: string | null; carousel_font: string | null; carousel_filter_type: string | null; carousel_glow: boolean; carousel_glow_color: string | null; display_order: number; show_in_menu: boolean; };
 
 
-function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string, filterType: string | null) => void }) {
+function CategoryCarousel({ slides, style, onSelect }: { slides: CarouselSlide[]; style?: string; onSelect: (name: string, filterType: string | null) => void }) {
+  if (style === 'slider') return <CategoryCarouselSlider slides={slides} onSelect={onSelect} />;
+  return <CategoryCarouselScroll slides={slides} onSelect={onSelect} />;
+}
+
+function CategoryCarouselSlider({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string, filterType: string | null) => void }) {
+  const [idx, setIdx] = useState(0);
+  const [animKey, setAnimKey] = useState(0);
+  const isPaused = useRef(false);
+  const idxRef = useRef(0);
+
+  const goTo = useCallback((next: number) => {
+    idxRef.current = next;
+    setIdx(next);
+    setAnimKey(k => k + 1);
+  }, []);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const t = setInterval(() => {
+      if (!isPaused.current) {
+        goTo((idxRef.current + 1) % slides.length);
+      }
+    }, 4500);
+    return () => clearInterval(t);
+  }, [slides.length, goTo]);
+
+  if (slides.length === 0) return null;
+
+  const slide = slides[idx];
+  const fontMap: Record<string, string> = { sans: 'font-sans', serif: 'font-serif', mono: 'font-mono' };
+  const fontClass = fontMap[slide.carousel_font ?? ''] ?? 'font-sans';
+  const bgColor = slide.carousel_bg_color || slide.color || '#0D1B2A';
+  const textColor = slide.carousel_text_color || '#ffffff';
+  const title = slide.carousel_title || slide.name;
+  const imageUrl = resolveImageUrl(slide.carousel_image_url);
+  const glowColor = slide.carousel_glow_color || '#ffffff';
+
+  return (
+    <div
+      className="mb-6"
+      onMouseEnter={() => { isPaused.current = true; }}
+      onMouseLeave={() => { isPaused.current = false; }}
+    >
+      {/* Main banner */}
+      <button
+        type="button"
+        onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
+        aria-label={`Filtrar por categoría: ${title}`}
+        className={`relative w-full h-[150px] sm:h-[200px] lg:h-[240px] rounded-2xl overflow-hidden flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${fontClass} ${slide.carousel_glow ? 'animate-glow-pulse' : ''}`}
+        style={{
+          backgroundColor: bgColor,
+          boxShadow: slide.carousel_glow
+            ? `0 0 0 4px ${glowColor}, 0 0 20px 4px ${glowColor}99, 0 0 45px 8px ${glowColor}55`
+            : undefined,
+        }}
+      >
+        {/* Left: image flies in from left */}
+        {imageUrl ? (
+          <div key={animKey} className="relative w-[58%] shrink-0 overflow-hidden animate-slide-from-left">
+            <img src={imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+            {/* Fade edge to the right for a smooth blend */}
+            <div className="absolute inset-y-0 right-0 w-12 pointer-events-none" style={{ background: `linear-gradient(to right, transparent, ${bgColor})` }} />
+          </div>
+        ) : (
+          <div className="relative w-[58%] shrink-0 flex items-center justify-center opacity-20">
+            <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+          </div>
+        )}
+
+        {/* Right: category name fades in */}
+        <div key={`t-${animKey}`} className="flex-1 flex flex-col justify-center px-5 sm:px-8 animate-fade-in-right">
+          <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight line-clamp-2" style={{ color: textColor }}>
+            {title}
+          </span>
+          {slide.carousel_subtitle && (
+            <span className="text-sm mt-2 leading-tight opacity-75 line-clamp-2" style={{ color: textColor }}>
+              {slide.carousel_subtitle}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Dots */}
+      {slides.length > 1 && (
+        <div className="flex justify-center gap-2 mt-3">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`Slide ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === idx ? 'w-6 bg-zinc-600' : 'w-1.5 bg-zinc-300 hover:bg-zinc-400'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategoryCarouselScroll({ slides, onSelect }: { slides: CarouselSlide[]; onSelect: (name: string, filterType: string | null) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPaused = useRef(false);
-  // Duplicate slides for seamless infinite loop
   const doubled = [...slides, ...slides];
 
   useEffect(() => {
     if (slides.length === 0) return;
     const container = scrollRef.current;
     if (!container) return;
-
-    const SPEED = window.innerWidth >= 768 ? 15 : 28; // px/s — slower on desktop
+    const SPEED = window.innerWidth >= 768 ? 15 : 28;
     let lastTime: number | null = null;
     let rafId: number;
-
     const tick = (timestamp: number) => {
       if (!isPaused.current && container) {
         if (lastTime !== null) {
@@ -755,7 +857,6 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
       }
       rafId = requestAnimationFrame(tick);
     };
-
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, [slides.length]);
@@ -791,43 +892,28 @@ function CategoryCarousel({ slides, onSelect }: { slides: CarouselSlide[]; onSel
                   : undefined,
               }}
             >
-            <button
-              type="button"
-              onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
-              className={`relative w-full rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass}`}
-              style={{ backgroundColor: bgColor }}
-              aria-label={`Filtrar por categoría: ${title}`}
-            >
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              )}
-              {imageUrl ? (
-                <div className="absolute inset-0 bg-black/45" />
-              ) : (
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)',
-                    backgroundSize: '16px 16px',
-                  }}
-                />
-              )}
-              <div className="relative z-10 flex flex-col justify-end h-full p-4 text-left">
-                <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: textColor }}>
-                  {title}
-                </span>
-                {slide.carousel_subtitle && (
-                  <span className="text-xs mt-1 leading-tight line-clamp-1 opacity-80" style={{ color: textColor }}>
-                    {slide.carousel_subtitle}
-                  </span>
+              <button
+                type="button"
+                onClick={() => onSelect(slide.name, slide.carousel_filter_type ?? null)}
+                className={`relative w-full rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 h-[280px] sm:h-[400px] lg:h-[440px] ${fontClass}`}
+                style={{ backgroundColor: bgColor }}
+                aria-label={`Filtrar por categoría: ${title}`}
+              >
+                {imageUrl && (
+                  <img src={imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
                 )}
-              </div>
-            </button>
+                {imageUrl ? (
+                  <div className="absolute inset-0 bg-black/45" />
+                ) : (
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                )}
+                <div className="relative z-10 flex flex-col justify-end h-full p-4 text-left">
+                  <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: textColor }}>{title}</span>
+                  {slide.carousel_subtitle && (
+                    <span className="text-xs mt-1 leading-tight line-clamp-1 opacity-80" style={{ color: textColor }}>{slide.carousel_subtitle}</span>
+                  )}
+                </div>
+              </button>
             </div>
           );
         })}

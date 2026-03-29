@@ -98,6 +98,24 @@
     animation: glow-pulse 2s ease-in-out infinite;
   }
 
+  /* Carousel: image flies in from left */
+  @keyframes slide-from-left {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  .animate-slide-from-left {
+    animation: slide-from-left 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  /* Carousel: text fades in from right */
+  @keyframes fade-in-right {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .animate-fade-in-right {
+    animation: fade-in-right 0.45s ease 0.3s both;
+  }
+
   /* Filter bar glass effect */
   .filter-bar-glass {
     background: rgba(255, 255, 255, 0.97);
