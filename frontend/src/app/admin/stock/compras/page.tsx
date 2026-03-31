@@ -456,7 +456,7 @@ export default function ComprasPage() {
       return;
     }
     try {
-      const data = await adminApi.getProducts(apiKey, { search: term, limit: 8, enabled: true });
+      const data = await adminApi.getProducts(apiKey, { search: term, limit: 20 });
       const results = (data.items || []).map((p: any) => ({
         id: p.id,
         label: p.custom_name || p.original_name,
