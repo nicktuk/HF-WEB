@@ -61,6 +61,7 @@ const configSubmenu = [
   { name: 'Secciones', href: '/admin/secciones', icon: LayoutGrid },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
   { name: 'Catalogo', href: '/admin/catalogo', icon: Settings },
+  { name: 'Pagos', href: '/admin/pagos', icon: CreditCard },
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 

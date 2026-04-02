@@ -1085,6 +1085,17 @@ export const adminApi = {
     }, apiKey);
   },
 
+  async getPaymentMethods(apiKey: string): Promise<string[]> {
+    return fetchAPI('/admin/settings/payment-methods', {}, apiKey);
+  },
+
+  async updatePaymentMethods(apiKey: string, methods: string[]): Promise<string[]> {
+    return fetchAPI('/admin/settings/payment-methods', {
+      method: 'PUT',
+      body: JSON.stringify(methods),
+    }, apiKey);
+  },
+
   /**
    * Generate a single combined WhatsApp message for multiple products
    */

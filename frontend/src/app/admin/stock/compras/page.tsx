@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState, useRef, useCallback, type ChangeEvent } from 'react';
+import { Fragment, useMemo, useState, useRef, useCallback, useEffect, type ChangeEvent } from 'react';
 import { FileDown, X, Plus, Trash2, Eye, Package, Search, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,13 +22,6 @@ import { downloadCsv } from '@/lib/csv';
 import { formatDate, formatPrice } from '@/lib/utils';
 import type { StockPreviewResponse } from '@/types';
 
-const PAYMENT_METHODS = [
-  'Efectivo',
-  'Transferencia',
-  'Tarjeta de débito',
-  'Tarjeta de crédito',
-  'MercadoPago',
-];
 
 interface Purchase {
   id: number;
@@ -129,7 +122,8 @@ export default function ComprasPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
-  const [newPaymentMethod, setNewPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [newPaymentMethod, setNewPaymentMethod] = useState('');
   const [showPurchaseItems, setShowPurchaseItems] = useState(false);
   // Data hooks
   const { data: purchasesData, isLoading } = usePurchases(apiKey, {
@@ -147,6 +141,14 @@ export default function ComprasPage() {
   const deletePayment = useDeletePayment(apiKey);
   const importStock = useImportStockWithSupplier(apiKey);
   const createManualPurchase = useCreateManualPurchase(apiKey);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    adminApi.getPaymentMethods(apiKey).then((methods) => {
+      setPaymentMethods(methods);
+      setNewPaymentMethod((prev) => prev || methods[0] || '');
+    });
+  }, [apiKey]);
 
   // Import handlers
   const handleImportStockClick = () => {
@@ -1092,7 +1094,7 @@ export default function ComprasPage() {
                           onChange={(e) => setNewPaymentMethod(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
                         >
-                          {PAYMENT_METHODS.map((method) => (
+                          {paymentMethods.map((method) => (
                             <option key={method} value={method}>
                               {method}
                             </option>

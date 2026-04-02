@@ -7,7 +7,8 @@ GET /admin/settings/catalog  → devuelve config del catálogo público
 PUT /admin/settings/catalog  → actualiza config del catálogo público
 GET /catalog-settings        → (público) devuelve config del catálogo
 """
-from typing import Optional
+import json
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -240,3 +241,29 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "mobile_two_columns": mobile_two_columns,
         "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /payment-methods  (admin)
+# PUT /payment-methods  (admin)
+# ---------------------------------------------------------------------------
+
+DEFAULT_PAYMENT_METHODS = ["Efectivo", "Transferencia", "Tarjeta de débito", "Tarjeta de crédito", "MercadoPago"]
+
+
+@router.get("/payment-methods", response_model=List[str], dependencies=[Depends(verify_admin)])
+def get_payment_methods(db: Session = Depends(get_db)) -> List[str]:
+    stored = get_setting(db, "PAYMENT_METHODS")
+    if stored:
+        try:
+            return json.loads(stored)
+        except Exception:
+            pass
+    return DEFAULT_PAYMENT_METHODS
+
+
+@router.put("/payment-methods", response_model=List[str], dependencies=[Depends(verify_admin)])
+def update_payment_methods(methods: List[str], db: Session = Depends(get_db)) -> List[str]:
+    cleaned = [m.strip() for m in methods if m.strip()]
+    set_setting(db, "PAYMENT_METHODS", json.dumps(cleaned))
+    return cleaned
