@@ -277,6 +277,18 @@ export default function AdminDashboard() {
                       <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showPayerStats ? 'rotate-180' : ''}`} />
                     </div>
                     <p className="text-xl font-bold text-slate-900 mt-1">{formatPrice(financialStats.total_purchased)}</p>
+                    {accountBalance && (
+                      <div className="mt-2 space-y-0.5 border-t pt-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-zinc-500">De bolsillo</span>
+                          <span className="font-medium text-zinc-700">{formatPrice(accountBalance.personal.reduce((s, p) => s + p.amount, 0))}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-500">Del negocio</span>
+                          <span className="font-medium text-blue-700">{formatPrice(accountBalance.business.reduce((s, a) => s + a.paid, 0))}</span>
+                        </div>
+                      </div>
+                    )}
                   </button>
                   <div className="rounded-lg border bg-white p-3">
                     <p className="text-xs text-blue-600 uppercase">Stock a costo</p>
@@ -329,6 +341,26 @@ export default function AdminDashboard() {
                       <ChevronDown className={`h-4 w-4 text-emerald-400 transition-transform ${showSellerStats ? 'rotate-180' : ''}`} />
                     </div>
                     <p className="text-xl font-bold text-emerald-700 mt-1">{formatPrice(financialStats.total_collected)}</p>
+                    {accountBalance && (accountBalance.business?.length ?? 0) > 0 && (
+                      <div className="mt-2 space-y-0.5 border-t pt-2">
+                        {accountBalance.business.map((a) => (
+                          <div key={a.name} className="flex justify-between text-xs">
+                            <span className="text-blue-500 truncate max-w-[60%]">{a.name}</span>
+                            <span className="font-medium text-emerald-700">{formatPrice(a.collected)}</span>
+                          </div>
+                        ))}
+                        {(() => {
+                          const cobradoNegocio = accountBalance.business.reduce((s, a) => s + a.collected, 0);
+                          const sinMetodo = financialStats.total_collected - cobradoNegocio;
+                          return sinMetodo > 0.01 ? (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-zinc-400">Sin método</span>
+                              <span className="font-medium text-zinc-500">{formatPrice(sinMetodo)}</span>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
                   </button>
                   <Link
                     href="/admin/ventas?pendiente=entrega"
