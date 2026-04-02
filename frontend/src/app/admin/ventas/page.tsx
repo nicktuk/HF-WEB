@@ -430,8 +430,8 @@ export default function VentasPage() {
   const amountColumnLabel = useMemo(() => {
     if (deliveredFilter === 'no' || deliveredFilter === 'partial') return 'Pendiente entrega';
     if (deliveredFilter === 'yes' && showPartials) return 'Total entregado';
-    if (paidFilter === 'no' || paidFilter === 'partial') return 'Pendiente pago';
-    if (paidFilter === 'yes' && showPartials) return 'Total pagado';
+    if (paidFilter === 'no' || paidFilter === 'partial') return 'Pendiente cobro';
+    if (paidFilter === 'yes' && showPartials) return 'Total cobrado';
     if (showPartials) return 'Total entregado';
     return 'Total';
   }, [deliveredFilter, paidFilter, showPartials]);
@@ -439,8 +439,8 @@ export default function VentasPage() {
   const filteredAmountCardLabel = useMemo(() => {
     if (deliveredFilter === 'no' || deliveredFilter === 'partial') return 'Valorizado pend. entrega';
     if (deliveredFilter === 'yes' && showPartials) return 'Valorizado entregado';
-    if (paidFilter === 'no' || paidFilter === 'partial') return 'Valorizado pend. pago';
-    if (paidFilter === 'yes' && showPartials) return 'Valorizado pagado';
+    if (paidFilter === 'no' || paidFilter === 'partial') return 'Valorizado pend. cobro';
+    if (paidFilter === 'yes' && showPartials) return 'Valorizado cobrado';
     if (showPartials) return 'Valorizado entregado';
     return 'Valorizado total';
   }, [deliveredFilter, paidFilter, showPartials]);
@@ -729,7 +729,7 @@ export default function VentasPage() {
                               onChange={(e) => updateItemCheck(item.id, 'paid', e.target.checked)}
                               className="h-4 w-4 rounded border-gray-300 text-primary-600"
                             />
-                            Pagado
+                            Cobrado
                           </label>
                         </div>
                       </div>
@@ -871,7 +871,7 @@ export default function VentasPage() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">Pagado</label>
+              <label className="text-xs text-gray-500">Cobrado</label>
               <select
                 value={paidFilter}
                 onChange={(e) => setPaidFilter(e.target.value as 'all' | 'yes' | 'no' | 'partial')}
@@ -920,7 +920,7 @@ export default function VentasPage() {
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
                     <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -1022,7 +1022,7 @@ export default function VentasPage() {
                         </th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total pagado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                       </tr>
                     </thead>
@@ -1102,7 +1102,7 @@ export default function VentasPage() {
                                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
                                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                                       </tr>

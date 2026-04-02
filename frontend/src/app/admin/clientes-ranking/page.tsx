@@ -75,7 +75,7 @@ function SaleCard({ sale }: { sale: Sale }) {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cant.</th>
                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">P. Unit.</th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
               </tr>
@@ -103,7 +103,7 @@ function SaleCard({ sale }: { sale: Sale }) {
           </table>
           <div className="flex justify-end gap-6 border-t bg-gray-50 px-4 py-2 text-xs text-gray-600">
             <span>Entregado: <strong>{formatCurrency(Number(sale.delivered_amount))}</strong></span>
-            <span>Pagado: <strong>{formatCurrency(Number(sale.paid_amount))}</strong></span>
+            <span>Cobrado: <strong>{formatCurrency(Number(sale.paid_amount))}</strong></span>
             <span>Total: <strong className="text-gray-900">{formatCurrency(total)}</strong></span>
           </div>
         </div>

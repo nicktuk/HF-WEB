@@ -314,7 +314,7 @@ export default function SaleDetailPage() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       {isEditing && <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>}
@@ -449,7 +449,7 @@ export default function SaleDetailPage() {
                 <span className="font-medium">{formatPrice(sale.delivered_amount)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Pagado</span>
+                <span className="text-gray-500">Cobrado</span>
                 <span className="font-medium">{formatPrice(sale.paid_amount)}</span>
               </div>
               {!isEditing && (
