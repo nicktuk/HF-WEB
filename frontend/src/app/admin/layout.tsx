@@ -26,6 +26,7 @@ import {
   Sparkles,
   Trophy,
   LayoutGrid,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
