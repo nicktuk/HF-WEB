@@ -11,7 +11,7 @@ import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
-import type { ProductAdmin, Sale, SaleItem, SaleItemCreate } from '@/types';
+import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, PaymentMethodConfig } from '@/types';
 
 interface CartItem {
   id: string;
@@ -67,6 +67,7 @@ export default function VentasPage() {
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
   const [togglingItemKey, setTogglingItemKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>(() => getSavedFilters()?.viewMode ?? 'ventas');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const searchParams = useSearchParams();
 
   // Persist filters to sessionStorage
@@ -90,6 +91,11 @@ export default function VentasPage() {
       setViewMode('productos');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    adminApi.getPaymentMethods(apiKey).then(setPaymentMethods).catch(() => {});
+  }, [apiKey]);
 
   const createSale = useCreateSale(apiKey);
   const updateSaleInList = useUpdateSale(apiKey);
@@ -128,6 +134,14 @@ export default function VentasPage() {
       }
     } finally {
       setTogglingItemKey(null);
+    }
+  };
+
+  const handleSetPaymentMethod = async (saleId: number, method: string) => {
+    try {
+      await updateSaleInList.mutateAsync({ saleId, data: { payment_method: method } });
+    } catch {
+      // silent
     }
   };
 
@@ -1043,12 +1057,19 @@ export default function VentasPage() {
                               )}
                             </td>
                             <td className="px-3 py-2 text-center">
-                              {renderProgressCheck(
-                                getProgressStatus(
-                                  Number(sale.total_amount || 0),
-                                  Number(sale.paid_amount || 0),
-                                ),
-                              )}
+                              <div className="flex flex-col items-center gap-1">
+                                {renderProgressCheck(
+                                  getProgressStatus(
+                                    Number(sale.total_amount || 0),
+                                    Number(sale.paid_amount || 0),
+                                  ),
+                                )}
+                                {sale.payment_method && (
+                                  <span className="text-[10px] font-medium text-blue-600 bg-blue-50 rounded px-1.5 py-0.5 leading-tight whitespace-nowrap">
+                                    {sale.payment_method}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex justify-end gap-3">
@@ -1147,6 +1168,22 @@ export default function VentasPage() {
                                     </tbody>
                                   </table>
                                 </div>
+                                {/* Método de cobro */}
+                                {Number(sale.paid_amount || 0) > 0 && (
+                                  <div className="mt-3 flex items-center gap-2 px-1">
+                                    <span className="text-xs text-gray-500">Método de cobro:</span>
+                                    <select
+                                      value={sale.payment_method || ''}
+                                      onChange={(e) => handleSetPaymentMethod(sale.id, e.target.value)}
+                                      className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                    >
+                                      <option value="">Sin especificar</option>
+                                      {paymentMethods.map((m) => (
+                                        <option key={m.name} value={m.name}>{m.name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           )}

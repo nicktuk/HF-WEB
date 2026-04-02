@@ -60,11 +60,29 @@ interface FinancialStatsResponse {
   by_seller?: Record<string, SellerStats>;
 }
 
+interface AccountBalanceItem {
+  name: string;
+  collected: number;
+  paid: number;
+  balance: number;
+}
+
+interface PersonalItem {
+  payer: string;
+  amount: number;
+}
+
+interface AccountBalanceResponse {
+  business: AccountBalanceItem[];
+  personal: PersonalItem[];
+}
+
 export default function AdminDashboard() {
   const apiKey = useApiKey();
   const [expandedRanges, setExpandedRanges] = useState<Set<string>>(new Set());
   const [showSellerStats, setShowSellerStats] = useState(false);
   const [showPayerStats, setShowPayerStats] = useState(false);
+  const [showAccountBalance, setShowAccountBalance] = useState(false);
 
   // Get counts for enabled/disabled
   const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
@@ -118,6 +136,19 @@ export default function AdminDashboard() {
   });
 
   const { data: purchasesByPayer } = usePurchasesByPayer(apiKey || '');
+
+  const { data: accountBalance } = useQuery<AccountBalanceResponse>({
+    queryKey: ['admin-stats-account-balance'],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/stats/account-balance`,
+        { headers: { 'X-Admin-API-Key': apiKey || '' } }
+      );
+      if (!response.ok) throw new Error('Error fetching account balance');
+      return response.json();
+    },
+    enabled: !!apiKey,
+  });
 
   const { data: orderStats } = useQuery<OrderStats>({
     queryKey: ['admin-order-stats'],
@@ -434,6 +465,80 @@ export default function AdminDashboard() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Account Balance */}
+            {accountBalance && (accountBalance.business.length > 0 || accountBalance.personal.length > 0) && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowAccountBalance(!showAccountBalance)}
+                  className="flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-zinc-900 mb-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Balance por cuenta
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showAccountBalance ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showAccountBalance && (
+                  <div className="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    {accountBalance.business.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Cuentas del negocio</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {accountBalance.business.map((account) => (
+                            <div key={account.name} className="rounded-lg border bg-white p-4 shadow-sm">
+                              <p className="font-semibold text-zinc-900 text-sm mb-3">{account.name}</p>
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-emerald-600">Cobrado (ventas)</span>
+                                  <span className="font-semibold text-emerald-700">+{formatPrice(account.collected)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-rose-500">Pagado (compras)</span>
+                                  <span className="font-semibold text-rose-600">−{formatPrice(account.paid)}</span>
+                                </div>
+                                <div className={`flex justify-between items-center pt-1.5 border-t font-bold ${account.balance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                  <span>Saldo</span>
+                                  <span>{formatPrice(account.balance)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {accountBalance.personal.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Inversión de bolsillo</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {accountBalance.personal.map((p) => (
+                            <div key={p.payer} className="rounded-lg border bg-white p-4 shadow-sm">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={`h-7 w-7 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                                  p.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                                }`}>
+                                  {p.payer[0]}
+                                </div>
+                                <span className="font-semibold text-zinc-900 text-sm">{p.payer}</span>
+                              </div>
+                              <p className="text-lg font-bold text-zinc-800">{formatPrice(p.amount)}</p>
+                            </div>
+                          ))}
+                          {accountBalance.personal.length > 0 && (
+                            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 flex flex-col justify-center">
+                              <p className="text-xs text-zinc-500 uppercase">Total bolsillo</p>
+                              <p className="text-lg font-bold text-zinc-800 mt-1">
+                                {formatPrice(accountBalance.personal.reduce((s, p) => s + p.amount, 0))}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

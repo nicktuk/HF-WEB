@@ -553,6 +553,80 @@ async def get_purchases_by_payer(
 
 
 @router.get(
+    "/stats/account-balance",
+    dependencies=[Depends(verify_admin)]
+)
+def get_account_balance(db: Session = Depends(get_db)):
+    """Saldo por cuenta: cobrado (ventas) vs pagado (compras) por método de pago.
+    Métodos 'del negocio': muestran balance cobrado - pagado.
+    Métodos personales: agrupados por pagador (Facu/Heber), solo egresos.
+    """
+    import json
+    from sqlalchemy import func
+    from app.models.stock import PurchasePayment
+    from app.models.sale import Sale
+    from app.services.app_settings import get_setting
+
+    # Cargar config de métodos de pago
+    stored = get_setting(db, "PAYMENT_METHODS")
+    methods_data = []
+    if stored:
+        try:
+            raw = json.loads(stored)
+            if raw and isinstance(raw[0], str):
+                methods_data = [{"name": m, "is_business": False} for m in raw]
+            else:
+                methods_data = raw
+        except Exception:
+            pass
+
+    business_names = {m["name"] for m in methods_data if m.get("is_business")}
+
+    # Egresos (pagos de compras) agrupados por método
+    paid_by_method = dict(
+        db.query(PurchasePayment.payment_method, func.sum(PurchasePayment.amount))
+        .group_by(PurchasePayment.payment_method)
+        .all()
+    )
+
+    # Ingresos (ventas cobradas) agrupados por método de cobro
+    collected_by_method = dict(
+        db.query(Sale.payment_method, func.sum(Sale.paid_amount))
+        .filter(Sale.payment_method.isnot(None), Sale.paid_amount > 0)
+        .group_by(Sale.payment_method)
+        .all()
+    )
+
+    # Egresos personales por pagador (métodos NO del negocio)
+    personal_by_payer = dict(
+        db.query(PurchasePayment.payer, func.sum(PurchasePayment.amount))
+        .filter(PurchasePayment.payment_method.notin_(business_names) if business_names else True)
+        .group_by(PurchasePayment.payer)
+        .all()
+    )
+
+    # Construir respuesta de cuentas del negocio
+    business = []
+    for m in methods_data:
+        if m.get("is_business"):
+            paid = float(paid_by_method.get(m["name"], 0) or 0)
+            collected = float(collected_by_method.get(m["name"], 0) or 0)
+            business.append({
+                "name": m["name"],
+                "collected": collected,
+                "paid": paid,
+                "balance": round(collected - paid, 2),
+            })
+
+    personal = [
+        {"payer": payer, "amount": float(amount or 0)}
+        for payer, amount in sorted(personal_by_payer.items())
+    ]
+
+    return {"business": business, "personal": personal}
+
+
+@router.get(
     "/products/pending-prices",
     response_model=PendingPriceChangeResponse,
     dependencies=[Depends(verify_admin)]
@@ -1625,11 +1699,12 @@ async def update_sale(
         sale_id,
         data.delivered,
         data.paid,
-        data.customer_name,
-        data.notes,
-        data.installments,
-        data.seller,
-        data.items,
+        payment_method=data.payment_method,
+        customer_name=data.customer_name,
+        notes=data.notes,
+        installments=data.installments,
+        seller=data.seller,
+        items=data.items,
         force=data.force,
     )
 

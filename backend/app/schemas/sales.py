@@ -22,12 +22,14 @@ class SaleCreate(BaseModel):
     seller: str = Field(default="Facu", pattern="^(Facu|Heber)$")
     delivered: bool = False
     paid: bool = False
+    payment_method: Optional[str] = None
     items: List[SaleItemCreate]
 
 
 class SaleUpdate(BaseModel):
     delivered: Optional[bool] = None
     paid: Optional[bool] = None
+    payment_method: Optional[str] = None
     customer_name: Optional[str] = None
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
@@ -59,6 +61,7 @@ class SaleResponse(BaseModel):
     seller: str
     delivered: bool
     paid: bool
+    payment_method: Optional[str] = None
     total_amount: Decimal
     delivered_amount: Decimal
     paid_amount: Decimal

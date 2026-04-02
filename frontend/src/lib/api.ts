@@ -25,6 +25,7 @@ import type {
   OrderStats,
   OrderAttachment,
   Section,
+  PaymentMethodConfig,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -725,6 +726,7 @@ export const adminApi = {
     data: {
       delivered?: boolean;
       paid?: boolean;
+      payment_method?: string;
       customer_name?: string;
       notes?: string;
       installments?: number;
@@ -1085,11 +1087,11 @@ export const adminApi = {
     }, apiKey);
   },
 
-  async getPaymentMethods(apiKey: string): Promise<string[]> {
+  async getPaymentMethods(apiKey: string): Promise<PaymentMethodConfig[]> {
     return fetchAPI('/admin/settings/payment-methods', {}, apiKey);
   },
 
-  async updatePaymentMethods(apiKey: string, methods: string[]): Promise<string[]> {
+  async updatePaymentMethods(apiKey: string, methods: PaymentMethodConfig[]): Promise<PaymentMethodConfig[]> {
     return fetchAPI('/admin/settings/payment-methods', {
       method: 'PUT',
       body: JSON.stringify(methods),

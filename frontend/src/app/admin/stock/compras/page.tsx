@@ -122,7 +122,7 @@ export default function ComprasPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ name: string; is_business: boolean }[]>([]);
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
   const [showPurchaseItems, setShowPurchaseItems] = useState(false);
   // Data hooks
@@ -146,7 +146,7 @@ export default function ComprasPage() {
     if (!apiKey) return;
     adminApi.getPaymentMethods(apiKey).then((methods) => {
       setPaymentMethods(methods);
-      setNewPaymentMethod((prev) => prev || methods[0] || '');
+      setNewPaymentMethod((prev) => prev || methods[0]?.name || '');
     });
   }, [apiKey]);
 
@@ -1095,8 +1095,8 @@ export default function ComprasPage() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
                         >
                           {paymentMethods.map((method) => (
-                            <option key={method} value={method}>
-                              {method}
+                            <option key={method.name} value={method.name}>
+                              {method.name}
                             </option>
                           ))}
                         </select>

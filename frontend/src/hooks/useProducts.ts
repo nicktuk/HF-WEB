@@ -206,6 +206,7 @@ export function useUpdateSale(apiKey: string) {
       data: {
         delivered?: boolean;
         paid?: boolean;
+        payment_method?: string;
         customer_name?: string;
         notes?: string;
         installments?: number;

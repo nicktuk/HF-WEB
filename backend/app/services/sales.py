@@ -228,6 +228,7 @@ class SalesService:
             seller=data.seller,
             delivered=data.delivered,
             paid=data.paid,
+            payment_method=getattr(data, 'payment_method', None),
             total_amount=total_amount,
             delivered_amount=Decimal("0.00"),
             paid_amount=Decimal("0.00"),
@@ -282,6 +283,7 @@ class SalesService:
         sale_id: int,
         delivered: bool | None,
         paid: bool | None,
+        payment_method: str | None = None,
         customer_name: str | None = None,
         notes: str | None = None,
         installments: int | None = None,
@@ -301,6 +303,8 @@ class SalesService:
             sale.installments = installments
         if seller is not None:
             sale.seller = seller
+        if payment_method is not None:
+            sale.payment_method = payment_method
 
         if items is not None:
             normalized_items, new_total = self._normalize_items(

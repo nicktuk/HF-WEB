@@ -394,11 +394,17 @@ export interface Sale {
   seller: 'Facu' | 'Heber';
   delivered: boolean;
   paid: boolean;
+  payment_method?: string | null;
   total_amount: number;
   delivered_amount: number;
   paid_amount: number;
   items: SaleItem[];
   created_at?: string;
+}
+
+export interface PaymentMethodConfig {
+  name: string;
+  is_business: boolean;
 }
 
 export interface CustomerRankingItem {

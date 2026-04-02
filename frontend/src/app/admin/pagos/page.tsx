@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CreditCard, Plus, Trash2, GripVertical, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Plus, Trash2, GripVertical, Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
 import { useApiKey } from '@/hooks/useAuth';
 import { adminApi } from '@/lib/api';
+import type { PaymentMethodConfig } from '@/types';
 
 export default function PagosConfigPage() {
   const apiKey = useApiKey() || '';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [methods, setMethods] = useState<string[]>([]);
+  const [methods, setMethods] = useState<PaymentMethodConfig[]>([]);
   const [newMethod, setNewMethod] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -27,7 +28,7 @@ export default function PagosConfigPage() {
       .finally(() => setLoading(false));
   }, [apiKey]);
 
-  async function save(updated: string[]) {
+  async function save(updated: PaymentMethodConfig[]) {
     setSaving(true);
     try {
       const result = await adminApi.updatePaymentMethods(apiKey, updated);
@@ -42,13 +43,20 @@ export default function PagosConfigPage() {
 
   function handleAdd() {
     const trimmed = newMethod.trim();
-    if (!trimmed || methods.includes(trimmed)) return;
+    if (!trimmed || methods.some((m) => m.name === trimmed)) return;
     setNewMethod('');
-    save([...methods, trimmed]);
+    save([...methods, { name: trimmed, is_business: false }]);
   }
 
   function handleRemove(idx: number) {
     save(methods.filter((_, i) => i !== idx));
+  }
+
+  function handleToggleBusiness(idx: number) {
+    const updated = methods.map((m, i) =>
+      i === idx ? { ...m, is_business: !m.is_business } : m
+    );
+    save(updated);
   }
 
   function handleMoveUp(idx: number) {
@@ -81,7 +89,7 @@ export default function PagosConfigPage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Métodos de pago</h1>
           <p className="text-sm text-gray-500">
-            Se usan al registrar pagos en compras de stock.
+            Configurá los métodos y marcá cuáles son cuentas del negocio.
           </p>
         </div>
       </div>
@@ -96,6 +104,12 @@ export default function PagosConfigPage() {
         </div>
       )}
 
+      {/* Leyenda */}
+      <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+        <Building2 className="h-4 w-4 shrink-0" />
+        Los métodos marcados como <strong className="mx-1">del negocio</strong> se usan para calcular el saldo por cuenta (cobrado vs pagado).
+      </div>
+
       {/* Lista */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-6 py-4">
@@ -106,9 +120,26 @@ export default function PagosConfigPage() {
             <li className="px-6 py-4 text-sm text-gray-400">Sin métodos configurados.</li>
           )}
           {methods.map((m, i) => (
-            <li key={m} className="flex items-center gap-3 px-6 py-3">
+            <li key={m.name} className="flex items-center gap-3 px-6 py-3">
               <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
-              <span className="flex-1 text-sm text-gray-800">{m}</span>
+              <span className="flex-1 text-sm text-gray-800">{m.name}</span>
+
+              {/* Toggle del negocio */}
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleToggleBusiness(i)}
+                title={m.is_business ? 'Cuenta del negocio' : 'Marcar como del negocio'}
+                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  m.is_business
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                }`}
+              >
+                <Building2 className="h-3 w-3" />
+                {m.is_business ? 'Negocio' : 'Bolsillo'}
+              </button>
+
               <div className="flex items-center gap-1">
                 <button
                   type="button"

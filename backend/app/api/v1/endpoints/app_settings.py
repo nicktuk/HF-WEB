@@ -248,22 +248,49 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
 # PUT /payment-methods  (admin)
 # ---------------------------------------------------------------------------
 
-DEFAULT_PAYMENT_METHODS = ["Efectivo", "Transferencia", "Tarjeta de débito", "Tarjeta de crédito", "MercadoPago"]
+DEFAULT_PAYMENT_METHODS = [
+    {"name": "Efectivo", "is_business": False},
+    {"name": "Transferencia", "is_business": False},
+    {"name": "Tarjeta de débito", "is_business": False},
+    {"name": "Tarjeta de crédito", "is_business": False},
+    {"name": "MercadoPago", "is_business": False},
+]
 
 
-@router.get("/payment-methods", response_model=List[str], dependencies=[Depends(verify_admin)])
-def get_payment_methods(db: Session = Depends(get_db)) -> List[str]:
+class PaymentMethodConfig(BaseModel):
+    name: str
+    is_business: bool = False
+
+
+def _load_payment_methods(stored: Optional[str]) -> List[PaymentMethodConfig]:
+    """Lee métodos de pago del JSON guardado, soportando formato viejo (List[str])."""
+    if not stored:
+        return [PaymentMethodConfig(**m) for m in DEFAULT_PAYMENT_METHODS]
+    try:
+        data = json.loads(stored)
+        if data and isinstance(data[0], str):
+            # Formato viejo: lista de strings → convertir
+            return [PaymentMethodConfig(name=m, is_business=False) for m in data]
+        return [PaymentMethodConfig(**m) for m in data]
+    except Exception:
+        return [PaymentMethodConfig(**m) for m in DEFAULT_PAYMENT_METHODS]
+
+
+@router.get("/payment-methods", response_model=List[PaymentMethodConfig], dependencies=[Depends(verify_admin)])
+def get_payment_methods(db: Session = Depends(get_db)) -> List[PaymentMethodConfig]:
     stored = get_setting(db, "PAYMENT_METHODS")
-    if stored:
-        try:
-            return json.loads(stored)
-        except Exception:
-            pass
-    return DEFAULT_PAYMENT_METHODS
+    return _load_payment_methods(stored)
 
 
-@router.put("/payment-methods", response_model=List[str], dependencies=[Depends(verify_admin)])
-def update_payment_methods(methods: List[str], db: Session = Depends(get_db)) -> List[str]:
-    cleaned = [m.strip() for m in methods if m.strip()]
-    set_setting(db, "PAYMENT_METHODS", json.dumps(cleaned))
+@router.put("/payment-methods", response_model=List[PaymentMethodConfig], dependencies=[Depends(verify_admin)])
+def update_payment_methods(methods: List[PaymentMethodConfig], db: Session = Depends(get_db)) -> List[PaymentMethodConfig]:
+    cleaned = [m for m in methods if m.name.strip()]
+    set_setting(db, "PAYMENT_METHODS", json.dumps([m.model_dump() for m in cleaned]))
     return cleaned
+
+
+@router.get("/public/payment-methods", response_model=List[str])
+def get_public_payment_methods(db: Session = Depends(get_db)) -> List[str]:
+    """Endpoint público: devuelve solo los nombres (para selects en ventas/compras)."""
+    stored = get_setting(db, "PAYMENT_METHODS")
+    return [m.name for m in _load_payment_methods(stored)]

@@ -16,6 +16,7 @@ class Sale(Base):
     seller = Column(String(20), nullable=False, default="Facu")
     delivered = Column(Boolean, default=False, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
+    payment_method = Column(String(100), nullable=True)
     total_amount = Column(Numeric(12, 2), nullable=False, default=0)
     delivered_amount = Column(Numeric(12, 2), nullable=False, default=0)
     paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
