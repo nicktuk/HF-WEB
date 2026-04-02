@@ -8,6 +8,51 @@
 
 ---
 
+## Sesión 2026-04-02
+
+### Métodos de pago configurables con flag is_business
+
+- `PAYMENT_METHODS` en AppSetting cambió de `["Efectivo", ...]` a `[{"name": "Efectivo", "is_business": false}, ...]`
+- Retrocompatible: si lee formato viejo (lista de strings), los convierte automáticamente
+- Endpoint admin: `GET/PUT /admin/settings/payment-methods` → `List[PaymentMethodConfig]`
+- Endpoint público nuevo: `GET /admin/settings/public/payment-methods` → `List[str]` (solo nombres)
+- `/admin/pagos/page.tsx`: toggle "Negocio / Bolsillo" por método con icono Building2
+
+### payment_method en ventas
+
+- Migración `038_add_payment_method_to_sales.py`: columna `payment_method VARCHAR(100) nullable` en tabla `sales`
+- `Sale` model, `SaleCreate`, `SaleUpdate`, `SaleResponse` actualizados
+- `update_sale` en service acepta `payment_method`; `create_sale` también
+- Al marcar un item como cobrado (`paid=true`) en ventas: se asigna automáticamente el primer método del negocio si la venta no tenía método
+- UI ventas: selector de método de cobro en fila expandida (visible si `paid_amount > 0`); badge del método en la columna de cobrado
+
+### Terminología: "Pagado" → "Cobrado" en ventas
+
+- Todos los labels en `ventas/page.tsx`, `ventas/[id]/page.tsx`, `clientes-ranking/page.tsx` cambiados de "Pagado" a "Cobrado"
+- Los "pagado" en contexto de compras (proveedores) se mantienen
+
+### Dashboard: balance por cuenta y desglose de inversión
+
+- Nuevo endpoint `GET /admin/stats/account-balance`:
+  - `business[]`: por cada método del negocio → `{name, collected, paid, balance}`
+  - `personal[]`: por pagador (solo métodos de bolsillo) → `{payer, amount}`
+- Card "Total comprado": desglose inline "De bolsillo" / "Del negocio"
+- Card "Total cobrado": desglose inline por cuenta del negocio + "Sin método"
+- Sección colapsable "Balance por cuenta" en el dashboard
+
+### Filtro por pagador en compras
+
+- `GET /admin/purchases` acepta `payer` query param
+- Cuando hay filtro: devuelve `payer_amount` por compra + `payer_total` acumulado (sin paginar)
+- Frontend: select "Pagador" en filtros; columna extra con monto del pagador; fila de totales en pie de tabla
+- `types/index.ts`: nuevo tipo `PaymentMethodConfig { name, is_business }`
+
+### Menú admin actualizado
+
+- Agregado `{ name: 'Pagos', href: '/admin/pagos', icon: CreditCard }` en `configSubmenu` de `layout.tsx`
+
+---
+
 ## Sesión 2026-03-23
 
 ### Stock qty en API pública

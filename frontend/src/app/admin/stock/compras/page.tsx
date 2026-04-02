@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState, useRef, useCallback, useEffect, type ChangeEvent } from 'react';
-import { FileDown, X, Plus, Trash2, Eye, Package, Search, ShoppingCart } from 'lucide-react';
+import { FileDown, X, Plus, Trash2, Eye, Package, Search, ShoppingCart, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,9 +90,8 @@ export default function ComprasPage() {
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const stockFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Detail modal state
+  // Expanded row state
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Manual purchase modal state
   const [showManualModal, setShowManualModal] = useState(false);
@@ -248,17 +247,15 @@ export default function ComprasPage() {
     await deletePayment.mutateAsync({ purchaseId: selectedPurchaseId, paymentId });
   };
 
-  const openDetailModal = (purchaseId: number) => {
-    setSelectedPurchaseId(purchaseId);
-    setShowDetailModal(true);
-    setShowPaymentForm(false);
-  };
-
-  const closeDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedPurchaseId(null);
-    setShowPaymentForm(false);
-    setNewPaymentAmount('');
+  const togglePurchaseExpand = (purchaseId: number) => {
+    if (selectedPurchaseId === purchaseId) {
+      setSelectedPurchaseId(null);
+      setShowPaymentForm(false);
+      setNewPaymentAmount('');
+    } else {
+      setSelectedPurchaseId(purchaseId);
+      setShowPaymentForm(false);
+    }
   };
 
   const clearFilters = () => {
@@ -908,12 +905,171 @@ export default function ComprasPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openDetailModal(purchase.id)}
+                            onClick={() => togglePurchaseExpand(purchase.id)}
                           >
-                            <Eye className="h-4 w-4" />
+                            {selectedPurchaseId === purchase.id
+                              ? <ChevronDown className="h-4 w-4" />
+                              : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         </td>
                       </tr>
+                      {selectedPurchaseId === purchase.id && (
+                        <tr key={`detail-${purchase.id}`}>
+                          <td colSpan={payerFilter ? 8 : 7} className="px-0 py-0 bg-blue-50/20">
+                            <div className="px-6 py-4 space-y-4 border-t border-b border-blue-100">
+                              {isLoadingDetail ? (
+                                <div className="py-4 text-center text-gray-500 text-sm">Cargando...</div>
+                              ) : detail ? (
+                                <>
+                                  {detail.notes && (
+                                    <p className="text-sm text-gray-600 italic">{detail.notes}</p>
+                                  )}
+
+                                  {/* Items */}
+                                  <div>
+                                    <div className="mb-2 flex items-center justify-between gap-3">
+                                      <h3 className="text-sm font-semibold text-gray-700">Items ({detail.items.length})</h3>
+                                      <Button size="sm" variant="outline" onClick={handleExportPurchaseDetailItemsCsv} disabled={!detail.items.length}>
+                                        <FileDown className="h-4 w-4 mr-1" />
+                                        Exportar CSV
+                                      </Button>
+                                    </div>
+                                    <div className="border rounded-lg overflow-hidden">
+                                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                        <thead className="bg-gray-50">
+                                          <tr>
+                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P.Unit</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                          {detail.items.map((item) => (
+                                            <tr key={item.id}>
+                                              <td className="px-3 py-2">
+                                                <div className="font-medium text-gray-900">{item.product_name || item.description || '-'}</div>
+                                                {item.code && <div className="text-xs text-gray-500">{item.code}</div>}
+                                              </td>
+                                              <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                              <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                              <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_amount)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+
+                                  {/* Payments */}
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h3 className="text-sm font-semibold text-gray-700">Pagos</h3>
+                                      <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" onClick={handleExportPurchaseDetailPaymentsCsv} disabled={!detail.payments.length}>
+                                          <FileDown className="h-4 w-4 mr-1" />
+                                          Exportar CSV
+                                        </Button>
+                                        {!showPaymentForm && (
+                                          <Button size="sm" variant="outline" onClick={() => setShowPaymentForm(true)}>
+                                            <Plus className="h-4 w-4 mr-1" />
+                                            Agregar pago
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {showPaymentForm && (
+                                      <div className="border rounded-lg p-4 mb-3 bg-blue-50">
+                                        <div className="grid grid-cols-3 gap-3">
+                                          <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Pagador</label>
+                                            <select
+                                              value={newPaymentPayer}
+                                              onChange={(e) => setNewPaymentPayer(e.target.value as 'Facu' | 'Heber')}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                                            >
+                                              <option value="Facu">Facu</option>
+                                              <option value="Heber">Heber</option>
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              placeholder={remaining > 0 ? remaining.toFixed(2) : '0.00'}
+                                              value={newPaymentAmount}
+                                              onChange={(e) => setNewPaymentAmount(e.target.value)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Método</label>
+                                            <select
+                                              value={newPaymentMethod}
+                                              onChange={(e) => setNewPaymentMethod(e.target.value)}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                                            >
+                                              {paymentMethods.map((method) => (
+                                                <option key={method.name} value={method.name}>{method.name}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2 mt-3">
+                                          <Button size="sm" variant="ghost" onClick={() => { setShowPaymentForm(false); setNewPaymentAmount(''); }}>
+                                            Cancelar
+                                          </Button>
+                                          <Button size="sm" onClick={handleAddPayment} disabled={!newPaymentAmount || addPayment.isPending} isLoading={addPayment.isPending}>
+                                            Guardar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {detail.payments.length > 0 ? (
+                                      <div className="space-y-2">
+                                        {detail.payments.map((p) => (
+                                          <div key={p.id} className="flex items-center justify-between bg-white rounded-lg border px-4 py-3">
+                                            <div className="flex items-center gap-4">
+                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.payer === 'Facu' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                                {p.payer}
+                                              </span>
+                                              <span className="text-gray-600 text-sm">{p.payment_method}</span>
+                                              <span className="text-xs text-gray-400">{formatDate(p.created_at)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              <span className="font-semibold text-gray-900">{formatPrice(p.amount)}</span>
+                                              <button onClick={() => handleDeletePayment(p.id)} className="text-red-500 hover:text-red-700 p-1" disabled={deletePayment.isPending}>
+                                                <Trash2 className="h-4 w-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500 py-4 text-center border rounded-lg bg-gray-50">No hay pagos registrados.</p>
+                                    )}
+
+                                    <div className="mt-4 pt-4 border-t flex justify-end gap-6 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Total pagado:</span>
+                                        <span className="ml-2 font-semibold text-green-600">{formatPrice(detail.total_paid)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Pendiente:</span>
+                                        <span className={`ml-2 font-semibold ${remaining > 0 ? 'text-red-600' : 'text-gray-600'}`}>{formatPrice(remaining)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="py-4 text-center text-gray-500 text-sm">Error al cargar la compra.</div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                       {showPurchaseItems && (
                         <tr key={`items-${purchase.id}`} className="bg-gray-50/70">
                           <td colSpan={payerFilter ? 8 : 7} className="px-4 py-3">
@@ -1006,242 +1162,6 @@ export default function ComprasPage() {
         )}
       </div>
       </>)}
-
-      {/* Purchase detail modal */}
-      <Modal
-        isOpen={showDetailModal}
-        onClose={closeDetailModal}
-        title="Detalle de compra"
-        size="xl"
-      >
-        <ModalContent className="space-y-4">
-          {isLoadingDetail ? (
-            <div className="py-8 text-center text-gray-500">Cargando...</div>
-          ) : detail ? (
-            <>
-              {/* Header info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Mayorista</p>
-                    <p className="font-semibold text-gray-900">{detail.supplier}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Fecha</p>
-                    <p className="font-semibold text-gray-900">{formatDate(detail.purchase_date)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Total</p>
-                    <p className="font-semibold text-gray-900">{formatPrice(detail.total_amount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Pendiente</p>
-                    <p className={`font-semibold ${remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {formatPrice(remaining)}
-                    </p>
-                  </div>
-                </div>
-                {detail.notes && (
-                  <p className="mt-3 text-sm text-gray-600 border-t pt-3">{detail.notes}</p>
-                )}
-              </div>
-
-              {/* Items */}
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Items ({detail.items.length})</h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleExportPurchaseDetailItemsCsv}
-                    disabled={!detail.items.length}
-                  >
-                    <FileDown className="h-4 w-4 mr-1" />
-                    Exportar CSV
-                  </Button>
-                </div>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cant.</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">P.Unit</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {detail.items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-3 py-2">
-                            <div className="font-medium text-gray-900">
-                              {item.product_name || item.description || '-'}
-                            </div>
-                            {item.code && (
-                              <div className="text-xs text-gray-500">{item.code}</div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-right">{item.quantity}</td>
-                          <td className="px-3 py-2 text-right">{formatPrice(item.unit_price)}</td>
-                          <td className="px-3 py-2 text-right font-medium">{formatPrice(item.total_amount)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Payments */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-700">Pagos</h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleExportPurchaseDetailPaymentsCsv}
-                      disabled={!detail.payments.length}
-                    >
-                      <FileDown className="h-4 w-4 mr-1" />
-                      Exportar CSV
-                    </Button>
-                    {!showPaymentForm && (
-                      <Button size="sm" variant="outline" onClick={() => setShowPaymentForm(true)}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Agregar pago
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment form */}
-                {showPaymentForm && (
-                  <div className="border rounded-lg p-4 mb-3 bg-blue-50">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Pagador</label>
-                        <select
-                          value={newPaymentPayer}
-                          onChange={(e) => setNewPaymentPayer(e.target.value as 'Facu' | 'Heber')}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                        >
-                          <option value="Facu">Facu</option>
-                          <option value="Heber">Heber</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Monto</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder={remaining > 0 ? remaining.toFixed(2) : '0.00'}
-                          value={newPaymentAmount}
-                          onChange={(e) => setNewPaymentAmount(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Método</label>
-                        <select
-                          value={newPaymentMethod}
-                          onChange={(e) => setNewPaymentMethod(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                        >
-                          {paymentMethods.map((method) => (
-                            <option key={method.name} value={method.name}>
-                              {method.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-3">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setShowPaymentForm(false);
-                          setNewPaymentAmount('');
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleAddPayment}
-                        disabled={!newPaymentAmount || addPayment.isPending}
-                        isLoading={addPayment.isPending}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Payments list */}
-                {detail.payments.length > 0 ? (
-                  <div className="space-y-2">
-                    {detail.payments.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between bg-white rounded-lg border px-4 py-3"
-                      >
-                        <div className="flex items-center gap-4">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              p.payer === 'Facu'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
-                            {p.payer}
-                          </span>
-                          <span className="text-gray-600 text-sm">{p.payment_method}</span>
-                          <span className="text-xs text-gray-400">{formatDate(p.created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-gray-900">{formatPrice(p.amount)}</span>
-                          <button
-                            onClick={() => handleDeletePayment(p.id)}
-                            className="text-red-500 hover:text-red-700 p-1"
-                            disabled={deletePayment.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 py-4 text-center border rounded-lg bg-gray-50">
-                    No hay pagos registrados.
-                  </p>
-                )}
-
-                {/* Summary */}
-                <div className="mt-4 pt-4 border-t flex justify-end gap-6 text-sm">
-                  <div>
-                    <span className="text-gray-500">Total pagado:</span>
-                    <span className="ml-2 font-semibold text-green-600">{formatPrice(detail.total_paid)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Pendiente:</span>
-                    <span className={`ml-2 font-semibold ${remaining > 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                      {formatPrice(remaining)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="py-8 text-center text-gray-500">Error al cargar la compra.</div>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="outline" onClick={closeDetailModal}>
-            Cerrar
-          </Button>
-        </ModalFooter>
-      </Modal>
 
       {/* Supplier input modal (before confirming import) */}
       <Modal
@@ -1417,7 +1337,8 @@ export default function ComprasPage() {
                     size="sm"
                     className="mt-2"
                     onClick={() => {
-                      openDetailModal(stockImportResult.purchase_id);
+                      setSelectedPurchaseId(stockImportResult.purchase_id);
+                      setShowPaymentForm(false);
                       setStockImportResult(null);
                     }}
                   >
