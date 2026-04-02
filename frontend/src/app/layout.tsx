@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     template: `%s | ${process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos'}`,
   },
   description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Catálogo de productos',
+   other: {
+    "facebook-domain-verification": "53w6gpprzxqdjlc23ungr77mi88duv",
+  },
 };
 
 export default function RootLayout({
