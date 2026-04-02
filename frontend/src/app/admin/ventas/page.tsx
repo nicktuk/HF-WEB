@@ -117,14 +117,19 @@ export default function VentasPage() {
       delivered: field === 'delivered' && i.id === item.id ? newValue : i.delivered,
       paid: field === 'paid' && i.id === item.id ? newValue : i.paid,
     }));
+    const firstBusinessMethod = paymentMethods.find((m) => m.is_business)?.name;
+    const autoPaymentMethod =
+      field === 'paid' && newValue && !sale.payment_method && firstBusinessMethod
+        ? firstBusinessMethod
+        : undefined;
     try {
-      await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items } });
+      await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, ...(autoPaymentMethod ? { payment_method: autoPaymentMethod } : {}) } });
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
       if (msg.includes('stock') || msg.includes('revertir')) {
         if (confirm('No se pudo revertir el stock (ya fue consumido). ¿Guardar el cambio de todas formas?')) {
           try {
-            await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, force: true } });
+            await updateSaleInList.mutateAsync({ saleId: sale.id, data: { items, force: true, ...(autoPaymentMethod ? { payment_method: autoPaymentMethod } : {}) } });
           } catch (e2) {
             alert(e2 instanceof Error ? e2.message : 'Error al guardar el cambio');
           }
