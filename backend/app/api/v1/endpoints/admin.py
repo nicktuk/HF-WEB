@@ -350,6 +350,7 @@ async def get_purchases(
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),
     product_id: Optional[int] = Query(default=None),
+    payer: Optional[str] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
     """Get all purchases with filters and pagination."""
@@ -363,20 +364,21 @@ async def get_purchases(
     if date_to:
         date_to_parsed = datetime.strptime(date_to, "%Y-%m-%d").date()
 
-    purchases, total = service.get_purchases(
+    purchases, total, payer_total = service.get_purchases(
         page=page,
         limit=limit,
         supplier=supplier,
         date_from=date_from_parsed,
         date_to=date_to_parsed,
         product_id=product_id,
+        payer=payer,
     )
 
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     items = []
     for p in purchases:
-        items.append({
+        item = {
             "id": p.id,
             "supplier": p.supplier,
             "purchase_date": p.purchase_date,
@@ -385,7 +387,12 @@ async def get_purchases(
             "total_paid": Decimal(str(p.total_paid)),
             "item_count": len(p.items),
             "created_at": p.created_at,
-        })
+        }
+        if payer:
+            item["payer_amount"] = float(
+                sum(pay.amount for pay in p.payments if pay.payer == payer)
+            )
+        items.append(item)
 
     return {
         "items": items,
@@ -393,6 +400,7 @@ async def get_purchases(
         "page": page,
         "limit": limit,
         "pages": pages,
+        **({"payer_total": payer_total} if payer else {}),
     }
 
 

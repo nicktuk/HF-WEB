@@ -73,6 +73,7 @@ export default function ComprasPage() {
   const [supplier, setSupplier] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [payerFilter, setPayerFilter] = useState<string>('');
 
   // Import state
   const [isImportingStock, setIsImportingStock] = useState(false);
@@ -132,6 +133,7 @@ export default function ComprasPage() {
     supplier: supplier || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
+    payer: payerFilter || undefined,
   });
 
   const { data: suppliersData } = useSuppliers(apiKey);
@@ -263,6 +265,7 @@ export default function ComprasPage() {
     setSupplier('');
     setDateFrom('');
     setDateTo('');
+    setPayerFilter('');
     setPage(1);
   };
 
@@ -767,6 +770,22 @@ export default function ComprasPage() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pagador</label>
+            <select
+              value={payerFilter}
+              onChange={(e) => {
+                setPayerFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Todos</option>
+              <option value="Facu">Facu</option>
+              <option value="Heber">Heber</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
             <Input
@@ -844,6 +863,7 @@ export default function ComprasPage() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                  {payerFilter && <th className="px-4 py-2 text-right text-xs font-medium text-blue-500 uppercase">{payerFilter}</th>}
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pendiente</th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
@@ -874,6 +894,11 @@ export default function ComprasPage() {
                             {formatPrice(purchase.total_paid)}
                           </span>
                         </td>
+                        {payerFilter && (
+                          <td className="px-4 py-3 text-right font-medium text-blue-700">
+                            {formatPrice((purchase as any).payer_amount ?? 0)}
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-right">
                           <span className={pendingAmount > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
                             {formatPrice(pendingAmount)}
@@ -891,7 +916,7 @@ export default function ComprasPage() {
                       </tr>
                       {showPurchaseItems && (
                         <tr key={`items-${purchase.id}`} className="bg-gray-50/70">
-                          <td colSpan={7} className="px-4 py-3">
+                          <td colSpan={payerFilter ? 8 : 7} className="px-4 py-3">
                             {purchaseItems.length === 0 ? (
                               <p className="text-xs text-gray-500">Sin items cargados para esta compra.</p>
                             ) : (
@@ -927,6 +952,33 @@ export default function ComprasPage() {
                   );
                 })}
               </tbody>
+              {purchasesData.items.length > 0 && (
+                <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                  <tr className="font-semibold text-sm">
+                    <td className="px-4 py-3 text-gray-700" colSpan={2}>
+                      Total ({purchasesData.total} compras)
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-500">
+                      {purchasesData.items.reduce((s: number, p: any) => s + p.item_count, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-900">
+                      {formatPrice(purchasesData.items.reduce((s: number, p: any) => s + Number(p.total_amount), 0))}
+                    </td>
+                    <td className="px-4 py-3 text-right text-green-700">
+                      {formatPrice(purchasesData.items.reduce((s: number, p: any) => s + Number(p.total_paid), 0))}
+                    </td>
+                    {payerFilter && (
+                      <td className="px-4 py-3 text-right text-blue-700">
+                        {formatPrice(purchasesData.payer_total ?? 0)}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-right text-red-600">
+                      {formatPrice(purchasesData.items.reduce((s: number, p: any) => s + Math.max(0, Number(p.total_amount) - Number(p.total_paid)), 0))}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           )}
         </div>

@@ -2214,9 +2214,14 @@ class ProductService:
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
         product_id: Optional[int] = None,
-    ) -> Tuple[list, int]:
-        """Get all purchases with filters and pagination."""
-        from app.models.stock import Purchase
+        payer: Optional[str] = None,
+    ) -> Tuple[list, int, Optional[float]]:
+        """Get all purchases with filters and pagination.
+        Returns (purchases, total, payer_total) where payer_total is the sum
+        paid by the filtered payer across all matching purchases (None if no payer filter).
+        """
+        from app.models.stock import Purchase, PurchasePayment
+        from sqlalchemy import func
 
         query = self.db.query(Purchase)
 
@@ -2230,7 +2235,6 @@ class ProductService:
             query = query.filter(Purchase.purchase_date <= date_to)
 
         if product_id:
-            # Filter purchases that contain this product
             query = query.filter(
                 Purchase.id.in_(
                     self.db.query(StockPurchase.purchase_id)
@@ -2239,7 +2243,32 @@ class ProductService:
                 )
             )
 
+        if payer:
+            query = query.filter(
+                Purchase.id.in_(
+                    self.db.query(PurchasePayment.purchase_id)
+                    .filter(PurchasePayment.payer == payer)
+                    .distinct()
+                )
+            )
+
         total = query.count()
+
+        # Total pagado por ese pagador en todas las compras filtradas (sin paginar)
+        payer_total: Optional[float] = None
+        if payer:
+            matching_ids = query.with_entities(Purchase.id).subquery()
+            result = (
+                self.db.query(func.sum(PurchasePayment.amount))
+                .filter(
+                    PurchasePayment.payer == payer,
+                    PurchasePayment.purchase_id.in_(
+                        self.db.query(matching_ids.c.id)
+                    ),
+                )
+                .scalar()
+            )
+            payer_total = float(result or 0)
 
         purchases = (
             query
@@ -2249,7 +2278,7 @@ class ProductService:
             .all()
         )
 
-        return purchases, total
+        return purchases, total, payer_total
 
     def get_purchase_detail(self, purchase_id: int):
         """Get a purchase with items and payments."""

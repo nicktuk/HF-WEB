@@ -1025,7 +1025,7 @@ export default function VentasPage() {
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                           {amountColumnLabel}
                         </th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total pagado</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total cobrado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entregado</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrado</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>

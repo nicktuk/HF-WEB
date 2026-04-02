@@ -836,6 +836,7 @@ export const adminApi = {
       date_from?: string;
       date_to?: string;
       product_id?: number;
+      payer?: string;
     } = {}
   ): Promise<{
     items: any[];
@@ -843,6 +844,7 @@ export const adminApi = {
     page: number;
     limit: number;
     pages: number;
+    payer_total?: number;
   }> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', params.page.toString());
@@ -851,6 +853,7 @@ export const adminApi = {
     if (params.date_from) searchParams.set('date_from', params.date_from);
     if (params.date_to) searchParams.set('date_to', params.date_to);
     if (params.product_id) searchParams.set('product_id', params.product_id.toString());
+    if (params.payer) searchParams.set('payer', params.payer);
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/purchases${query ? `?${query}` : ''}`, {}, apiKey);

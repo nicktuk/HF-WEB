@@ -483,6 +483,7 @@ export function usePurchases(
     date_from?: string;
     date_to?: string;
     product_id?: number;
+    payer?: string;
   } = {}
 ) {
   return useQuery({
