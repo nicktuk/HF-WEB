@@ -83,7 +83,7 @@ class ProductService:
             .join(Category, Product.category_id == Category.id)
             .filter(
                 Product.slug == slug,
-                Product.enabled == True,
+                or_(Product.enabled == True, Product.publish_without_stock == True),
                 Category.is_active == True,
             )
             .all()
