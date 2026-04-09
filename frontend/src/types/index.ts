@@ -22,6 +22,7 @@ export interface ProductPublic {
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
   is_best_seller: boolean;
+  publish_without_stock: boolean;
   stock_low_threshold?: number | null;
   stock_qty?: number | null;
   images: ProductImage[];
@@ -314,6 +315,7 @@ export interface ProductUpdateForm {
   is_check_stock?: boolean;
   is_best_seller?: boolean;
   is_published?: boolean;
+  publish_without_stock?: boolean;
   stock_low_threshold?: number | null;
   markup_percentage?: number;
   custom_name?: string;

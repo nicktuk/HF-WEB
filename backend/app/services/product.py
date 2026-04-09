@@ -74,7 +74,10 @@ class ProductService:
         return result
 
     def get_public_product(self, slug: str) -> ProductPublicResponse:
-        """Get a single enabled product for public view."""
+        """Get a single enabled product for public view.
+
+        Accessible even when publish_without_stock=True (hidden from catalog but reachable by direct URL).
+        """
         products = (
             self.db.query(Product)
             .join(Category, Product.category_id == Category.id)
@@ -122,6 +125,7 @@ class ProductService:
             is_immediate_delivery=product.is_immediate_delivery,
             is_check_stock=product.is_check_stock,
             is_best_seller=product.is_best_seller,
+            publish_without_stock=product.publish_without_stock,
             stock_low_threshold=product.stock_low_threshold,
             stock_qty=stock_qty,
             images=images,

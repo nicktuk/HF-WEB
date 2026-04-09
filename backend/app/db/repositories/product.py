@@ -54,6 +54,7 @@ class ProductRepository(BaseRepository[Product]):
             self.db.query(Product)
             .options(joinedload(Product.images), joinedload(Product.category_ref))
             .filter(Product.enabled == True)
+            .filter(Product.publish_without_stock == False)
             .join(Category, Product.category_id == Category.id)
             .filter(Category.is_active == True)
         )
@@ -146,6 +147,7 @@ class ProductRepository(BaseRepository[Product]):
             .join(Category, Product.category_id == Category.id)
             .filter(
                 Product.enabled == True,
+                Product.publish_without_stock == False,
                 Category.is_active == True,
             )
         )

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon, Send, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -44,6 +44,7 @@ export default function ProductEditPage() {
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [publishWithoutStock, setPublishWithoutStock] = useState(false);
   const [stockLowThreshold, setStockLowThreshold] = useState<string>('');
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
@@ -85,6 +86,7 @@ export default function ProductEditPage() {
       setIsCheckStock(product.is_check_stock || false);
       setStockLowThreshold(product.stock_low_threshold != null ? String(product.stock_low_threshold) : '');
       setIsPublished(product.is_published || false);
+      setPublishWithoutStock(product.publish_without_stock || false);
       setMarkup(Number(product.markup_percentage));
       setCustomName(product.custom_name || '');
       setOriginalPrice(product.original_price ? String(product.original_price) : '');
@@ -201,6 +203,7 @@ export default function ProductEditPage() {
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
         is_published: isPublished,
+        publish_without_stock: publishWithoutStock,
         stock_low_threshold: stockLowThreshold !== '' ? Number(stockLowThreshold) : null,
         markup_percentage: markup,
         custom_name: customName || '',
@@ -745,6 +748,31 @@ export default function ProductEditPage() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       isPublished ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Publicar sin stock toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Link2 className="h-4 w-4 text-violet-600" />
+                    Publicar sin stock
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    URL directa activa, no aparece en el catálogo
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPublishWithoutStock(!publishWithoutStock)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    publishWithoutStock ? 'bg-violet-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      publishWithoutStock ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
