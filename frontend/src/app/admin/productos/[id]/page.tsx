@@ -754,28 +754,45 @@ export default function ProductEditPage() {
               </div>
 
               {/* Publicar sin stock toggle */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium flex items-center gap-2">
-                    <Link2 className="h-4 w-4 text-violet-600" />
-                    Publicar sin stock
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    URL directa activa, no aparece en el catálogo
-                  </p>
-                </div>
-                <button
-                  onClick={() => setPublishWithoutStock(!publishWithoutStock)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    publishWithoutStock ? 'bg-violet-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      publishWithoutStock ? 'translate-x-6' : 'translate-x-1'
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium flex items-center gap-2">
+                      <Link2 className="h-4 w-4 text-violet-600" />
+                      Publicar sin stock
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      URL directa activa, no aparece en el catálogo
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPublishWithoutStock(!publishWithoutStock)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      publishWithoutStock ? 'bg-violet-600' : 'bg-gray-200'
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        publishWithoutStock ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {publishWithoutStock && product?.slug && (
+                  <div className="flex items-center gap-2 rounded-lg bg-violet-50 border border-violet-200 px-3 py-2">
+                    <span className="text-xs text-violet-700 truncate flex-1 font-mono select-all">
+                      {`https://www.hefaproductos.com.ar/producto/${product.slug}`}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://www.hefaproductos.com.ar/producto/${product.slug}`);
+                      }}
+                      className="shrink-0 text-xs font-medium text-violet-700 hover:text-violet-900 border border-violet-300 rounded px-2 py-0.5 hover:bg-violet-100 transition-colors"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Original Price */}
