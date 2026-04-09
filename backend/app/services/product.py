@@ -791,6 +791,12 @@ class ProductService:
                 product.is_immediate_delivery = False
         if data.is_best_seller is not None:
             product.is_best_seller = data.is_best_seller
+        if data.is_published is not None:
+            product.is_published = data.is_published
+        if data.publish_without_stock is not None:
+            product.publish_without_stock = data.publish_without_stock
+        if 'stock_low_threshold' in data.model_fields_set:
+            product.stock_low_threshold = data.stock_low_threshold
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:
