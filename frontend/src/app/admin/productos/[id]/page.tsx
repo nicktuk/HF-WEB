@@ -291,7 +291,14 @@ export default function ProductEditPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">{product.slug}</p>
+              <a
+                href={`/producto/${product.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-400 hover:text-violet-600 transition-colors"
+              >
+                /producto/{product.slug}
+              </a>
             </div>
           </div>
           <div className="flex items-center gap-2">
