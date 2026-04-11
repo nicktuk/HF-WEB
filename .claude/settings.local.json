@@ -81,7 +81,11 @@
       "Bash(xargs -I{} taskkill /F /PID {})",
       "Bash(source venv/Scripts/activate)",
       "Bash(python -c \":*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(tail -n +21 \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
+      "Read(//tmp/**)",
+      "Bash(head -19 \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
+      "Bash(cp /tmp/page_clean.tmp \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")"
     ]
   }
 }

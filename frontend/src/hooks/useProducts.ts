@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -24,12 +24,13 @@ export function usePublicProducts(params: {
   });
 }
 
-export function usePublicProduct(slug: string) {
+export function usePublicProduct(slug: string, initialData?: ProductPublic) {
   return useQuery({
     queryKey: ['public-product', slug],
     queryFn: () => publicApi.getProduct(slug),
     staleTime: 5 * 60 * 1000,
     enabled: !!slug,
+    initialData,
   });
 }
 

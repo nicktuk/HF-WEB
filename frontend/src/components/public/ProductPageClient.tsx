@@ -10,17 +10,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
 import { trackPublicEvent } from '@/lib/analytics';
-import type { ProductImage } from '@/types';
+import type { ProductImage, ProductPublic } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 
-export default function ProductPageClient() {
+export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  const { data: product, isLoading, error } = usePublicProduct(slug);
+  const { data: product, isLoading, error } = usePublicProduct(slug, initialData);
   const [selectedImage, setSelectedImage] = useState<ProductImage | null>(null);
 
   const { data: sections } = useQuery({
