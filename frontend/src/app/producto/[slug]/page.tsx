@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import ProductPageClient from '@/components/public/ProductPageClient';
 import type { ProductPublic } from '@/types';
 
@@ -90,6 +91,8 @@ export default async function ProductPage({
   params: { slug: string };
 }) {
   const product = await fetchProduct(params.slug);
+
+  if (!product) notFound();
 
   const primaryImage = product?.images?.find((img) => img.is_primary) || product?.images?.[0];
   const ogImageUrl = resolveOgImageUrl(primaryImage?.url ?? null);

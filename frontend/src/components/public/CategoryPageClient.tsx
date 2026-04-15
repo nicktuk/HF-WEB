@@ -5,18 +5,20 @@ import { ChevronLeft } from 'lucide-react';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { usePublicProducts } from '@/hooks/useProducts';
+import type { ProductPublic } from '@/types';
 
 interface CategoryPageClientProps {
   categoryName: string;
+  initialProducts?: ProductPublic[];
 }
 
-export default function CategoryPageClient({ categoryName }: CategoryPageClientProps) {
+export default function CategoryPageClient({ categoryName, initialProducts }: CategoryPageClientProps) {
   const { data, isLoading } = usePublicProducts({
     category: categoryName,
     limit: 200,
   });
 
-  const products = data?.items ?? [];
+  const products = data?.items ?? initialProducts ?? [];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>

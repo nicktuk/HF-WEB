@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import CategoryPageClient from '@/components/public/CategoryPageClient';
+import type { ProductPublic, PaginatedResponse } from '@/types';
 
 const SERVER_API_URL =
   process.env.INTERNAL_API_URL ||
@@ -20,9 +21,23 @@ async function fetchCategories(): Promise<{ name: string }[]> {
   }
 }
 
+async function fetchProductsByCategory(category: string): Promise<ProductPublic[]> {
+  try {
+    const params = new URLSearchParams({ category, limit: '200' });
+    const res = await fetch(`${SERVER_API_URL}/public/products?${params}`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data: PaginatedResponse<ProductPublic> = await res.json();
+    return data.items ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateStaticParams() {
   const categories = await fetchCategories();
-  return categories.map((c) => ({ slug: encodeURIComponent(c.name) }));
+  return categories.map((c) => ({ slug: c.name }));
 }
 
 export async function generateMetadata({
@@ -51,7 +66,8 @@ export async function generateMetadata({
   };
 }
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const categoryName = decodeURIComponent(params.slug);
-  return <CategoryPageClient categoryName={categoryName} />;
+  const initialProducts = await fetchProductsByCategory(categoryName);
+  return <CategoryPageClient categoryName={categoryName} initialProducts={initialProducts} />;
 }
