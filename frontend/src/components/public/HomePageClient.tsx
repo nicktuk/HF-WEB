@@ -631,8 +631,20 @@ export function HomePageContent() {
         )}
       </main>
 
+      {/* ─── ZONA DE ENVÍOS — contenido SEO local ────────────────────── */}
+      <section className="bg-white border-t border-gray-200 py-8">
+        <div className="container mx-auto px-4 text-center max-w-2xl">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            <strong className="text-gray-800">Enviamos a toda la zona sur del GBA</strong> — Ezeiza, Canning, Monte Grande, Tristán Suárez, Guernica y más. Entregas en <strong>24–48hs</strong>. A todo el país en 3–5 días hábiles.{' '}
+            <a href="/envios" className="text-primary-600 hover:underline font-medium">
+              Ver información de envíos →
+            </a>
+          </p>
+        </div>
+      </section>
+
       {/* ─── FOOTER ──────────────────────────────────────────────────── */}
-      <footer className="mt-16 bg-[#0D1B2A]">
+      <footer className="mt-0 bg-[#0D1B2A]">
         {/* Top accent line */}
         <div className="h-1 bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600" />
 
@@ -687,6 +699,11 @@ export function HomePageContent() {
                   >
                     ¿Cómo funciona?
                   </button>
+                </li>
+                <li>
+                  <a href="/envios" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                    Información de envíos
+                  </a>
                 </li>
                 <li>
                   <span className="text-sm text-zinc-500">
