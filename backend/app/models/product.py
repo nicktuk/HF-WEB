@@ -50,6 +50,8 @@ class Product(Base):
     is_best_seller = Column(Boolean, default=False, nullable=False, index=True, comment="Lo mÃ¡s vendido")
     is_published = Column(Boolean, default=False, nullable=False, index=True, comment="Marcado para publicar en WhatsApp")
     publish_without_stock = Column(Boolean, default=False, nullable=False, index=True, comment="URL directa activa pero oculto en el catálogo público")
+    installments_3 = Column(Boolean, default=False, nullable=False, index=True, comment="Pago en 3 cuotas sin interés habilitado")
+    custom_installment_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo por cuota (si no se define, se calcula con markup)")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
     wholesale_markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup mayorista en porcentaje")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
@@ -94,6 +96,19 @@ class Product(Base):
         if self.original_price is not None:
             price = float(self.original_price) * (1 + float(self.markup_percentage) / 100)
             return math.ceil(price)
+        return None
+
+    @property
+    def installment_price(self) -> int | None:
+        """Precio por cuota para 3 cuotas sin interés, redondeado hacia arriba."""
+        import math
+        if not self.installments_3:
+            return None
+        if self.custom_installment_price is not None:
+            return math.ceil(float(self.custom_installment_price))
+        fp = self.final_price
+        if fp is not None:
+            return math.ceil(fp / 3)
         return None
 
     @property

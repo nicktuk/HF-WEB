@@ -44,6 +44,8 @@ class ProductUpdate(BaseModel):
     is_best_seller: Optional[bool] = None
     is_published: Optional[bool] = None
     publish_without_stock: Optional[bool] = None
+    installments_3: Optional[bool] = None
+    custom_installment_price: Optional[Decimal] = Field(None, ge=0)
     stock_low_threshold: Optional[int] = Field(None, ge=0)
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
@@ -112,6 +114,8 @@ class ProductResponse(BaseModel):
     is_best_seller: bool = False
     is_published: bool = False
     publish_without_stock: bool = False
+    installments_3: bool = False
+    custom_installment_price: Optional[Decimal] = None
     stock_low_threshold: Optional[int] = None
     images: List[ProductImageResponse] = []
     created_at: datetime
@@ -129,6 +133,19 @@ class ProductResponse(BaseModel):
             return self.custom_price
         if self.original_price is not None:
             return self.original_price * (1 + self.markup_percentage / 100)
+        return None
+
+    @computed_field
+    @property
+    def installment_price(self) -> Optional[Decimal]:
+        import math
+        if not self.installments_3:
+            return None
+        if self.custom_installment_price is not None:
+            return Decimal(math.ceil(float(self.custom_installment_price)))
+        fp = self.final_price
+        if fp is not None:
+            return Decimal(math.ceil(float(fp) / 3))
         return None
 
     class Config:
@@ -154,6 +171,8 @@ class ProductPublicResponse(BaseModel):
     is_check_stock: bool = False
     is_best_seller: bool = False
     publish_without_stock: bool = False
+    installments_3: bool = False
+    installment_price: Optional[Decimal] = None
     stock_low_threshold: Optional[int] = None
     stock_qty: Optional[int] = None
     images: List[ProductImageResponse] = []

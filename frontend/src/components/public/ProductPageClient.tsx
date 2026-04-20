@@ -217,6 +217,12 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               <p className="text-4xl font-bold text-primary-600">
                 {formatPrice(product.price)}
               </p>
+              {product.installments_3 && product.installment_price && (
+                <p className="mt-1 text-2xl font-bold text-teal-700">
+                  3 x {formatPrice(product.installment_price)}{' '}
+                  <span className="text-lg font-semibold">sin interés</span>
+                </p>
+              )}
               <p className="mt-2 text-sm text-gray-500">
                 Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
               </p>

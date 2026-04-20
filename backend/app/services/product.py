@@ -126,6 +126,8 @@ class ProductService:
             is_check_stock=product.is_check_stock,
             is_best_seller=product.is_best_seller,
             publish_without_stock=product.publish_without_stock,
+            installments_3=product.installments_3,
+            installment_price=product.installment_price,
             stock_low_threshold=product.stock_low_threshold,
             stock_qty=stock_qty,
             images=images,

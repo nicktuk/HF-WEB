@@ -98,13 +98,18 @@ export function ProductCard({ product }: ProductCardProps) {
         </h3>
 
         {/* Price row */}
-        <div className="flex items-end justify-between mt-1 pt-2 border-t border-zinc-100">
+        <div className="flex items-start justify-between mt-1 pt-2 border-t border-zinc-100">
           <div>
             <span className="text-xl font-extrabold text-zinc-900 tabular-nums tracking-tight">
               {formatPrice(product.price)}
             </span>
+            {product.installments_3 && product.installment_price && (
+              <p className="text-[11px] font-semibold text-teal-600 mt-0.5 tabular-nums">
+                3 x {formatPrice(product.installment_price)} sin interés
+              </p>
+            )}
           </div>
-          <span className="text-xs font-semibold text-primary-600 flex items-center gap-0.5 group-hover:gap-1.5 transition-all duration-200">
+          <span className="text-xs font-semibold text-primary-600 flex items-center gap-0.5 group-hover:gap-1.5 transition-all duration-200 mt-1">
             Ver
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
