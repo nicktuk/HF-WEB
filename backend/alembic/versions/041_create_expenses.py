@@ -19,7 +19,7 @@ def upgrade():
     op.create_table(
         'expenses',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('date', sa.Date(), nullable=False, index=True),
+        sa.Column('date', sa.Date(), nullable=False),
         sa.Column('description', sa.String(500), nullable=False),
         sa.Column('payment_method', sa.String(100), nullable=True),
         sa.Column('amount', sa.Numeric(12, 2), nullable=False),
