@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useExpenses, useCreateExpense, useDeleteExpense } from '@/hooks/useProducts';
+import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
-import type { ExpenseCreateForm } from '@/types';
+import type { ExpenseCreateForm, PaymentMethodConfig } from '@/types';
 
 const formatDate = (dateStr: string) => {
   const [y, m, d] = dateStr.split('-');
@@ -37,6 +38,11 @@ export default function GastosPage() {
   });
   const createMutation = useCreateExpense(apiKey);
   const deleteMutation = useDeleteExpense(apiKey);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
+
+  useEffect(() => {
+    if (apiKey) adminApi.getPaymentMethods(apiKey).then(setPaymentMethods).catch(() => {});
+  }, [apiKey]);
 
   const expenses = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -222,12 +228,19 @@ export default function GastosPage() {
               onChange={(e) => setFormAmount(e.target.value)}
               placeholder="0"
             />
-            <Input
-              label="Forma de pago (opcional)"
-              value={formPaymentMethod}
-              onChange={(e) => setFormPaymentMethod(e.target.value)}
-              placeholder="Efectivo, transferencia..."
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Forma de pago (opcional)</label>
+              <select
+                value={formPaymentMethod}
+                onChange={(e) => setFormPaymentMethod(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">— Sin especificar —</option>
+                {paymentMethods.map((m) => (
+                  <option key={m.name} value={m.name}>{m.name}</option>
+                ))}
+              </select>
+            </div>
             <Input
               label="Notas (opcional)"
               value={formNotes}

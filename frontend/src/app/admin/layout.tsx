@@ -48,7 +48,6 @@ const productosSubmenu = [
 
 const ventasSubmenu = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
-  { name: 'Gastos', href: '/admin/gastos', icon: TrendingDown },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];
@@ -299,6 +298,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 onToggle={() => toggle('ventas')}
                 pathname={pathname}
               />
+              <Link
+                href="/admin/gastos"
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  pathname.startsWith('/admin/gastos') ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                )}
+              >
+                <TrendingDown className="h-5 w-5" />
+                Gastos
+              </Link>
             </div>
 
             <div>
@@ -397,6 +406,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               onToggle={() => toggle('ventas')}
               pathname={pathname}
             />
+            <Link
+              href="/admin/gastos"
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                pathname.startsWith('/admin/gastos') ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+              )}
+            >
+              <TrendingDown className="h-4 w-4" />
+              Gastos
+            </Link>
             <MobileSubmenu
               label="Analítica"
               icon={LineChart}
