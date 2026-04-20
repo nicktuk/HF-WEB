@@ -214,13 +214,18 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
             {/* Price */}
             <div className="mb-6">
-              <p className="text-4xl font-bold text-primary-600">
-                {formatPrice(product.price)}
-              </p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-bold text-primary-600">
+                  {formatPrice(product.price)}
+                </p>
+                {product.installments_3 && (
+                  <span className="text-sm font-medium text-gray-400">efectivo / transferencia</span>
+                )}
+              </div>
               {product.installments_3 && product.installment_price && (
                 <p className="mt-1 text-2xl font-bold text-teal-700">
-                  3 x {formatPrice(product.installment_price)}{' '}
-                  <span className="text-lg font-semibold">sin interés</span>
+                  3 de {formatPrice(product.installment_price)}{' '}
+                  <span className="text-base font-semibold text-teal-600">con tarjeta</span>
                 </p>
               )}
               <p className="mt-2 text-sm text-gray-500">

@@ -51,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Status badges overlaid on image */}
-        {(product.is_featured || product.is_immediate_delivery || product.is_check_stock) && (
+        {(product.is_featured || product.is_immediate_delivery || product.is_check_stock || product.installments_3) && (
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             {product.is_featured && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
@@ -72,6 +72,14 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.is_check_stock && (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
                 Consultar
+              </span>
+            )}
+            {product.installments_3 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Cuotas
               </span>
             )}
           </div>
@@ -100,12 +108,17 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Price row */}
         <div className="flex items-start justify-between mt-1 pt-2 border-t border-zinc-100">
           <div>
-            <span className="text-xl font-extrabold text-zinc-900 tabular-nums tracking-tight">
-              {formatPrice(product.price)}
-            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-extrabold text-zinc-900 tabular-nums tracking-tight">
+                {formatPrice(product.price)}
+              </span>
+              {product.installments_3 && (
+                <span className="text-[10px] font-medium text-zinc-400 leading-none">efectivo / transf.</span>
+              )}
+            </div>
             {product.installments_3 && product.installment_price && (
               <p className="text-[11px] font-semibold text-teal-600 mt-0.5 tabular-nums">
-                3 x {formatPrice(product.installment_price)} sin interés
+                3 de {formatPrice(product.installment_price)} con tarjeta
               </p>
             )}
           </div>
