@@ -797,6 +797,10 @@ class ProductService:
             product.is_published = data.is_published
         if data.publish_without_stock is not None:
             product.publish_without_stock = data.publish_without_stock
+        if data.installments_3 is not None:
+            product.installments_3 = data.installments_3
+        if 'custom_installment_price' in data.model_fields_set:
+            product.custom_installment_price = data.custom_installment_price
         if 'stock_low_threshold' in data.model_fields_set:
             product.stock_low_threshold = data.stock_low_threshold
         if data.markup_percentage is not None:
