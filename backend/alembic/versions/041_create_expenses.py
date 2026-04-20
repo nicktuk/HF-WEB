@@ -24,8 +24,8 @@ def upgrade():
         sa.Column('payment_method', sa.String(100), nullable=True),
         sa.Column('amount', sa.Numeric(12, 2), nullable=False),
         sa.Column('notes', sa.Text(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     )
     op.create_index('ix_expenses_date', 'expenses', ['date'])
 
