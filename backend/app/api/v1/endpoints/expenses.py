@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.core.deps import get_db, verify_admin_api_key
+from app.db.session import get_db
+from app.core.security import verify_admin
 from app.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseResponse, ExpenseListResponse
 
@@ -18,7 +19,7 @@ def list_expenses(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin_api_key),
+    _: bool = Depends(verify_admin),
 ):
     q = db.query(Expense)
     if date_from:
@@ -34,7 +35,7 @@ def list_expenses(
 def create_expense(
     data: ExpenseCreate,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin_api_key),
+    _: bool = Depends(verify_admin),
 ):
     expense = Expense(
         date=data.date,
@@ -54,7 +55,7 @@ def update_expense(
     expense_id: int,
     data: ExpenseUpdate,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin_api_key),
+    _: bool = Depends(verify_admin),
 ):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
@@ -78,7 +79,7 @@ def update_expense(
 def delete_expense(
     expense_id: int,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin_api_key),
+    _: bool = Depends(verify_admin),
 ):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
