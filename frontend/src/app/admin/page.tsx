@@ -64,6 +64,7 @@ interface AccountBalanceItem {
   name: string;
   collected: number;
   paid: number;
+  expenses: number;
   balance: number;
 }
 
@@ -530,6 +531,12 @@ export default function AdminDashboard() {
                                   <span className="text-rose-500">Pagado (compras)</span>
                                   <span className="font-semibold text-rose-600">−{formatPrice(account.paid)}</span>
                                 </div>
+                                {account.expenses > 0 && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-orange-500">Gastos</span>
+                                    <span className="font-semibold text-orange-600">−{formatPrice(account.expenses)}</span>
+                                  </div>
+                                )}
                                 <div className={`flex justify-between items-center pt-1.5 border-t font-bold ${account.balance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                                   <span>Saldo</span>
                                   <span>{formatPrice(account.balance)}</span>

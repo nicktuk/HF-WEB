@@ -577,6 +577,7 @@ def get_account_balance(db: Session = Depends(get_db)):
     from sqlalchemy import func
     from app.models.stock import PurchasePayment
     from app.models.sale import Sale
+    from app.models.expense import Expense
     from app.services.app_settings import get_setting
 
     # Cargar config de métodos de pago
@@ -609,6 +610,14 @@ def get_account_balance(db: Session = Depends(get_db)):
         .all()
     )
 
+    # Gastos agrupados por método de pago
+    expenses_by_method = dict(
+        db.query(Expense.payment_method, func.sum(Expense.amount))
+        .filter(Expense.payment_method.isnot(None))
+        .group_by(Expense.payment_method)
+        .all()
+    )
+
     # Egresos personales por pagador (métodos NO del negocio)
     personal_by_payer = dict(
         db.query(PurchasePayment.payer, func.sum(PurchasePayment.amount))
@@ -623,11 +632,13 @@ def get_account_balance(db: Session = Depends(get_db)):
         if m.get("is_business"):
             paid = float(paid_by_method.get(m["name"], 0) or 0)
             collected = float(collected_by_method.get(m["name"], 0) or 0)
+            expenses = float(expenses_by_method.get(m["name"], 0) or 0)
             business.append({
                 "name": m["name"],
                 "collected": collected,
                 "paid": paid,
-                "balance": round(collected - paid, 2),
+                "expenses": expenses,
+                "balance": round(collected - paid - expenses, 2),
             })
 
     personal = [
