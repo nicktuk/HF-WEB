@@ -27,6 +27,7 @@ import {
   Trophy,
   LayoutGrid,
   CreditCard,
+  TrendingDown,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ const productosSubmenu = [
 
 const ventasSubmenu = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
+  { name: 'Gastos', href: '/admin/gastos', icon: TrendingDown },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];

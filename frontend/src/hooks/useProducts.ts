@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -587,6 +587,47 @@ export function useImportStockWithSupplier(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+
+export function useExpenses(apiKey: string, params: { date_from?: string; date_to?: string } = {}) {
+  return useQuery({
+    queryKey: ['expenses', params],
+    queryFn: () => adminApi.listExpenses(apiKey, params),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useCreateExpense(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ExpenseCreateForm) => adminApi.createExpense(apiKey, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+}
+
+export function useUpdateExpense(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<ExpenseCreateForm> }) =>
+      adminApi.updateExpense(apiKey, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+}
+
+export function useDeleteExpense(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteExpense(apiKey, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

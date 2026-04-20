@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useExpenses } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, PaymentMethodConfig } from '@/types';
@@ -100,6 +100,7 @@ export default function VentasPage() {
   const createSale = useCreateSale(apiKey);
   const updateSaleInList = useUpdateSale(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
+  const { data: expensesData } = useExpenses(apiKey);
 
   const handleToggleItem = async (
     sale: Sale,
@@ -851,6 +852,27 @@ export default function VentasPage() {
               </div>
             </div>
           )}
+          {/* Resumen financiero: cobros vs gastos */}
+          {expensesData && Number(expensesData.total) > 0 && deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && !showPartials && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-xs text-emerald-600 uppercase font-semibold">Cobrado</p>
+                <p className="text-2xl font-bold text-emerald-700">{formatPrice(totals.totalAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <p className="text-xs text-rose-500 uppercase font-semibold">Gastos</p>
+                <p className="text-2xl font-bold text-rose-700">{formatPrice(Number(expensesData.total))}</p>
+                <p className="text-xs text-rose-400 mt-0.5">{expensesData.items.length} registros</p>
+              </div>
+              <div className={`rounded-lg border p-3 ${totals.totalAmount - Number(expensesData.total) >= 0 ? 'border-blue-200 bg-blue-50' : 'border-orange-200 bg-orange-50'}`}>
+                <p className={`text-xs uppercase font-semibold ${totals.totalAmount - Number(expensesData.total) >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Resultado neto</p>
+                <p className={`text-2xl font-bold ${totals.totalAmount - Number(expensesData.total) >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  {formatPrice(totals.totalAmount - Number(expensesData.total))}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-3">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

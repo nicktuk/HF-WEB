@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses
 
 api_router = APIRouter()
 
@@ -59,4 +59,11 @@ api_router.include_router(
     sections.router,
     prefix="/sections",
     tags=["sections"]
+)
+
+# Expenses
+api_router.include_router(
+    expenses.router,
+    prefix="/admin/expenses",
+    tags=["expenses"]
 )

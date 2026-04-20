@@ -414,6 +414,30 @@ export interface PaymentMethodConfig {
   is_business: boolean;
 }
 
+export interface Expense {
+  id: number;
+  date: string;
+  description: string;
+  payment_method?: string | null;
+  amount: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExpenseCreateForm {
+  date: string;
+  description: string;
+  payment_method?: string;
+  amount: number;
+  notes?: string;
+}
+
+export interface ExpenseListResponse {
+  items: Expense[];
+  total: number;
+}
+
 export interface CustomerRankingItem {
   customer_name: string;
   purchase_count: number;

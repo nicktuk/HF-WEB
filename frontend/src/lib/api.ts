@@ -26,6 +26,9 @@ import type {
   OrderAttachment,
   Section,
   PaymentMethodConfig,
+  ExpenseCreateForm,
+  ExpenseListResponse,
+  Expense,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -1173,6 +1176,26 @@ export const adminApi = {
       throw new Error(error.detail || `HTTP error ${response.status}`);
     }
     return response.json();
+  },
+
+  async listExpenses(apiKey: string, params: { date_from?: string; date_to?: string } = {}): Promise<ExpenseListResponse> {
+    const p = new URLSearchParams();
+    if (params.date_from) p.append('date_from', params.date_from);
+    if (params.date_to) p.append('date_to', params.date_to);
+    const qs = p.toString();
+    return fetchAPI(`/admin/expenses${qs ? `?${qs}` : ''}`, {}, apiKey);
+  },
+
+  async createExpense(apiKey: string, data: ExpenseCreateForm): Promise<Expense> {
+    return fetchAPI('/admin/expenses', { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async updateExpense(apiKey: string, id: number, data: Partial<ExpenseCreateForm>): Promise<Expense> {
+    return fetchAPI(`/admin/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async deleteExpense(apiKey: string, id: number): Promise<void> {
+    return fetchAPI(`/admin/expenses/${id}`, { method: 'DELETE' }, apiKey);
   },
 };
 
