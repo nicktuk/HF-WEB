@@ -29,6 +29,7 @@ export interface ProductPublic {
   stock_qty?: number | null;
   images: ProductImage[];
   source_url?: string;
+  updated_at?: string;
 }
 
 export interface ProductAdmin extends ProductPublic {

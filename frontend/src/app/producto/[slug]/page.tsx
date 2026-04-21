@@ -32,6 +32,31 @@ async function fetchProduct(slug: string): Promise<ProductPublic | null> {
   }
 }
 
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  const slugs: string[] = [];
+  let page = 1;
+  while (true) {
+    try {
+      const res = await fetch(
+        `${SERVER_API_URL}/public/products?page=${page}&limit=200`,
+        { cache: 'no-store' }
+      );
+      if (!res.ok) break;
+      const data = await res.json();
+      const items: { slug: string }[] = data.items ?? [];
+      if (!items.length) break;
+      slugs.push(...items.map((p) => p.slug));
+      if (items.length < 200) break;
+      page++;
+    } catch {
+      break;
+    }
+  }
+  return slugs.map((slug) => ({ slug }));
+}
+
 export async function generateMetadata({
   params,
 }: {

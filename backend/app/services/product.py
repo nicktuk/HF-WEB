@@ -132,6 +132,7 @@ class ProductService:
             stock_qty=stock_qty,
             images=images,
             source_url=product.source_url,
+            updated_at=product.updated_at,
         )
 
     @staticmethod

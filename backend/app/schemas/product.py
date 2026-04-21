@@ -177,6 +177,7 @@ class ProductPublicResponse(BaseModel):
     stock_qty: Optional[int] = None
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
