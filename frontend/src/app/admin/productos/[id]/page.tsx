@@ -40,11 +40,6 @@ export default function ProductEditPage() {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
-  const { data: adminCategoriesRaw } = useAdminCategories();
-  const adminCategories = adminCategoriesRaw as Category[] | undefined;
-  const selectedCategoryObj = adminCategories?.find((c: Category) => c.name === category);
-  const { data: adminSubcategoriesRaw } = useAdminSubcategories(selectedCategoryObj?.id);
-  const adminSubcategories = adminSubcategoriesRaw as Subcategory[] | undefined;
 
   // Form state
   const [enabled, setEnabled] = useState(false);
@@ -85,6 +80,13 @@ export default function ProductEditPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
   const [nextProductId, setNextProductId] = useState<number | null>(null);
+
+  // Category/subcategory data — must come after `category` useState
+  const { data: adminCategoriesRaw } = useAdminCategories();
+  const adminCategories = adminCategoriesRaw as Category[] | undefined;
+  const selectedCategoryObj = adminCategories?.find((c: Category) => c.name === category);
+  const { data: adminSubcategoriesRaw } = useAdminSubcategories(selectedCategoryObj?.id);
+  const adminSubcategories = adminSubcategoriesRaw as Subcategory[] | undefined;
 
   // Initialize form when product loads — only once per product ID to avoid
   // React Query background refetches resetting unsaved user changes.
