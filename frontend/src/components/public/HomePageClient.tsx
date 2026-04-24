@@ -62,6 +62,7 @@ export function HomePageContent() {
   const selectedSubcategory = searchParams.get('subcategory') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
+  const showOnDemand = searchParams.get('on_demand') === 'true';
   const selectedSectionId = searchParams.get('section_id') ? Number(searchParams.get('section_id')) : undefined;
   const sortParam = searchParams.get('sort') || undefined;
   const categoriesParam = searchParams.get('categories') || '';
@@ -173,8 +174,9 @@ export function HomePageContent() {
     }
     if (showFeatured) return '#f59e0b';
     if (showImmediate) return '#10b981';
+    if (showOnDemand) return '#7c3aed';
     return '#94a3b8';
-  }, [selectedCategory, orderedCategories, showFeatured, showImmediate]);
+  }, [selectedCategory, orderedCategories, showFeatured, showImmediate, showOnDemand]);
 
   // Products for a manual section selected via section_id param
   const selectedSection = selectedSectionId ? sections?.find(s => s.id === selectedSectionId) : undefined;
@@ -209,6 +211,11 @@ export function HomePageContent() {
       items = items.filter(p => effectiveCategories.includes(p.category || ''));
     }
 
+    // Client-side on-demand filter
+    if (showOnDemand) {
+      items = items.filter(p => p.is_on_demand);
+    }
+
     if (sortParam === 'price_asc') return [...items].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
     if (sortParam === 'price_desc') return [...items].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
     if (sortParam === 'name_asc') return [...items].sort((a, b) => a.name.localeCompare(b.name, 'es'));
@@ -240,11 +247,9 @@ export function HomePageContent() {
   })();
 
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
-  const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || selectedSectionId || searchFromUrl);
+  const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  // "Por secciones" se mantiene activo con filtros de categoría y ordenamiento.
-  // Solo se desactiva con búsqueda, featured, immediate_delivery o section_id específico.
-  const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !searchFromUrl;
+  const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !searchFromUrl;
   const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory;
 
   const groupedProducts = useMemo(() => {
@@ -468,12 +473,21 @@ export function HomePageContent() {
                   <Zap className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-emerald-800">
-                    Entrega inmediata
-                  </p>
-                  <p className="text-xs text-emerald-700 mt-0.5">
-                    Productos listos para retirar o enviar sin demoras.
-                  </p>
+                  <p className="text-sm font-bold text-emerald-800">Entrega inmediata</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">Productos listos para retirar o enviar sin demoras.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {showOnDemand && (
+            <div className="mb-5 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-violet-50 px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
+                  <span className="text-lg leading-none">📦</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-violet-800">Por pedido</p>
+                  <p className="text-xs text-violet-700 mt-0.5">Productos que conseguimos especialmente para vos.</p>
                 </div>
               </div>
             </div>

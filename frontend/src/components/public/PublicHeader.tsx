@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Search, Star, Zap, Lightbulb } from 'lucide-react';
+import { Search, Star, Zap, Lightbulb, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
@@ -22,6 +22,7 @@ function PublicHeaderInner() {
   const selectedSubcategory = searchParams.get('subcategory') || undefined;
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
+  const showOnDemand = searchParams.get('on_demand') === 'true';
   const sortParam = searchParams.get('sort') || '';
 
   // Local state
@@ -159,9 +160,9 @@ function PublicHeaderInner() {
 
             {/* Ver todo */}
             <button
-              onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined })}
+              onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                !selectedCategory && !showFeatured && !showImmediate
+                !selectedCategory && !showFeatured && !showImmediate && !showOnDemand
                   ? 'bg-white text-[#0D1B2A]'
                   : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
               }`}
@@ -171,7 +172,7 @@ function PublicHeaderInner() {
 
             {/* Novedades */}
             <button
-              onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showFeatured ? 'bg-amber-500 text-white' : 'bg-white/10 text-amber-300 border border-white/20 hover:bg-white/20'
               }`}
@@ -182,13 +183,24 @@ function PublicHeaderInner() {
 
             {/* Inmediata */}
             <button
-              onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showImmediate ? 'bg-emerald-600 text-white' : 'bg-white/10 text-emerald-300 border border-white/20 hover:bg-white/20'
               }`}
             >
               <Zap className={`h-3 w-3 ${showImmediate ? 'fill-current' : ''}`} />
               Inmediata
+            </button>
+
+            {/* Por pedido */}
+            <button
+              onClick={() => updateParams(showOnDemand ? { on_demand: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                showOnDemand ? 'bg-violet-600 text-white' : 'bg-white/10 text-violet-300 border border-white/20 hover:bg-white/20'
+              }`}
+            >
+              <Package className="h-3 w-3" />
+              Por pedido
             </button>
 
             {/* Category pills */}
