@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Search, Star, Zap, Lightbulb, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -29,8 +29,14 @@ function PublicHeaderInner() {
   const [searchInput, setSearchInput] = useState(searchFromUrl);
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
 
-  // Sync search input when URL changes
-  useEffect(() => { setSearchInput(searchFromUrl); }, [searchFromUrl]);
+  // Sync input only when URL search changes from outside (e.g. clicking "Ver todo")
+  const prevSearchFromUrl = useRef(searchFromUrl);
+  useEffect(() => {
+    if (searchFromUrl !== prevSearchFromUrl.current) {
+      prevSearchFromUrl.current = searchFromUrl;
+      setSearchInput(searchFromUrl);
+    }
+  }, [searchFromUrl]);
 
   // updateParams: on home update URL in-place, on other pages navigate to home
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
@@ -55,15 +61,11 @@ function PublicHeaderInner() {
     else router.push(url, { scroll: false });
   }, [isHome, searchParams, router, selectedCategory, selectedSubcategory]);
 
-  // Debounce search
-  useEffect(() => {
-    const id = setTimeout(() => {
-      if (searchInput !== searchFromUrl) {
-        updateParams({ search: searchInput || undefined, section_id: undefined });
-      }
-    }, 300);
-    return () => clearTimeout(id);
-  }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+  const commitSearch = useCallback(() => {
+    if (searchInput !== searchFromUrl) {
+      updateParams({ search: searchInput || undefined, section_id: undefined });
+    }
+  }, [searchInput, searchFromUrl, updateParams]);
 
   // Data
   const { data: categories } = useCategories();
@@ -142,9 +144,11 @@ function PublicHeaderInner() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: '1rem', height: '1rem', color: 'rgba(255,255,255,0.4)' }} />
               <Input
                 type="search"
-                placeholder="Buscar productos..."
+                placeholder="Buscar productos... (Enter para buscar)"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && commitSearch()}
+                onBlur={commitSearch}
                 className="pl-9 h-10 w-full rounded-xl border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all"
               />
             </div>
