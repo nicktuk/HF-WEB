@@ -140,18 +140,17 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 </div>
               )}
 
-              {/* Delivery badge overlay */}
+              {/* Delivery badge — corner ribbon */}
               {(product.is_on_demand || product.is_immediate_delivery) && (
-                <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-                  {product.is_immediate_delivery ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg uppercase tracking-wide">
-                      ⚡ Entrega inmediata
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg uppercase tracking-wide">
-                      📦 Por pedido
-                    </span>
-                  )}
+                <div className="absolute top-0 left-0 z-10 pointer-events-none overflow-hidden w-32 h-32">
+                  <div
+                    className={`absolute -top-1 -left-10 w-36 py-1.5 text-center text-[10px] font-bold text-white uppercase tracking-widest shadow-md rotate-[-45deg] origin-center ${
+                      product.is_immediate_delivery ? 'bg-emerald-600' : 'bg-violet-600'
+                    }`}
+                    style={{ top: '28px', left: '-36px' }}
+                  >
+                    {product.is_immediate_delivery ? '⚡ Inmediata' : '📦 Por pedido'}
+                  </div>
                 </div>
               )}
 

@@ -13,6 +13,7 @@ import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
 import { uploadImages, aiApi, resolveImageUrl } from '@/lib/api';
+import type { Category, Subcategory } from '@/types';
 import {
   useAdminProduct,
   useUpdateProduct,
@@ -21,6 +22,8 @@ import {
   useStockPurchases,
   useStockSummary,
   useUpdateStockPurchase,
+  useAdminCategories,
+  useAdminSubcategories,
 } from '@/hooks/useProducts';
 
 export default function ProductEditPage() {
@@ -37,6 +40,11 @@ export default function ProductEditPage() {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
+  const { data: adminCategoriesRaw } = useAdminCategories();
+  const adminCategories = adminCategoriesRaw as Category[] | undefined;
+  const selectedCategoryObj = adminCategories?.find((c: Category) => c.name === category);
+  const { data: adminSubcategoriesRaw } = useAdminSubcategories(selectedCategoryObj?.id);
+  const adminSubcategories = adminSubcategoriesRaw as Subcategory[] | undefined;
 
   // Form state
   const [enabled, setEnabled] = useState(false);
@@ -54,6 +62,7 @@ export default function ProductEditPage() {
   const [originalPrice, setOriginalPrice] = useState('');
   const [customPrice, setCustomPrice] = useState('');
   const [category, setCategory] = useState('');
+  const [subcategory, setSubcategory] = useState('');
   const [description, setDescription] = useState('');
   const [shortDescription, setShortDescription] = useState('');
   const [brand, setBrand] = useState('');
@@ -98,6 +107,7 @@ export default function ProductEditPage() {
       setOriginalPrice(product.original_price ? String(product.original_price) : '');
       setCustomPrice(product.custom_price ? String(product.custom_price) : '');
       setCategory(product.category || '');
+      setSubcategory(product.subcategory || '');
       setDescription(product.description || '');
       setShortDescription(product.short_description || '');
       setBrand(product.brand || '');
@@ -219,6 +229,7 @@ export default function ProductEditPage() {
         original_price: originalPrice ? parseFloat(originalPrice) : undefined,
         custom_price: customPrice ? parseFloat(customPrice) : undefined,
         category: category || '',
+        subcategory: subcategory || '',
         description: description || '',
         short_description: shortDescription || '',
         brand: brand || '',
@@ -268,6 +279,7 @@ export default function ProductEditPage() {
   }
 
   const isManualProduct = product.source_website_name === 'Producto Manual';
+  const canEnable = markup > 0 || (!!customPrice && parseFloat(customPrice) > 0) || (!!originalPrice && parseFloat(originalPrice) > 0);
   const grossStock = (stockPurchases || []).reduce((acc, item) => acc + (item.quantity - item.out_quantity), 0);
   const reservedQty = Number(stockSummary?.items?.find(i => i.product_id === productId)?.reserved_qty || 0);
   const netStock = grossStock - reservedQty;
@@ -524,12 +536,35 @@ export default function ProductEditPage() {
                 />
               </div>
 
-              <Input
-                label="Categoria"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Ej: Electrodomesticos"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <select
+                  value={category}
+                  onChange={(e) => { setCategory(e.target.value); setSubcategory(''); }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-sm"
+                >
+                  <option value="">Sin categoría</option>
+                  {(adminCategories || []).map((c: Category) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {adminSubcategories && adminSubcategories.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategoria</label>
+                  <select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-sm"
+                  >
+                    <option value="">Sin subcategoría</option>
+                    {adminSubcategories.map((s: Subcategory) => (
+                      <option key={s.id} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -622,13 +657,19 @@ export default function ProductEditPage() {
                 <div>
                   <p className="font-medium">Estado</p>
                   <p className="text-sm text-gray-500">
-                    Mostrar en catalogo publico
+                    {!canEnable && !enabled
+                      ? 'Requiere markup o precio para activar'
+                      : 'Mostrar en catalogo publico'}
                   </p>
                 </div>
                 <button
-                  onClick={() => setEnabled(!enabled)}
+                  onClick={() => (canEnable || enabled) && setEnabled(!enabled)}
+                  disabled={!canEnable && !enabled}
+                  title={!canEnable && !enabled ? 'Configurá un markup o precio antes de activar' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    enabled ? 'bg-primary-600' : 'bg-gray-200'
+                    !canEnable && !enabled
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                      : enabled ? 'bg-primary-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
