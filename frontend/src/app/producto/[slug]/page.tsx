@@ -23,7 +23,7 @@ function resolveOgImageUrl(url: string | null | undefined): string | null {
 async function fetchProduct(slug: string): Promise<ProductPublic | null> {
   try {
     const res = await fetch(`${SERVER_API_URL}/public/products/${slug}`, {
-      next: { revalidate: 3600 },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return res.json();

@@ -31,6 +31,7 @@ export function usePublicProduct(slug: string, initialData?: ProductPublic) {
     staleTime: 5 * 60 * 1000,
     enabled: !!slug,
     initialData,
+    initialDataUpdatedAt: 0,
   });
 }
 
