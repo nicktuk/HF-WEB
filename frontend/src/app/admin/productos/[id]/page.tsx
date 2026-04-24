@@ -43,6 +43,7 @@ export default function ProductEditPage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
+  const [isOnDemand, setIsOnDemand] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [publishWithoutStock, setPublishWithoutStock] = useState(false);
   const [installments3, setInstallments3] = useState(false);
@@ -86,6 +87,7 @@ export default function ProductEditPage() {
       setIsFeatured(product.is_featured || false);
       setIsImmediateDelivery(product.is_immediate_delivery || false);
       setIsCheckStock(product.is_check_stock || false);
+      setIsOnDemand(product.is_on_demand ?? true);
       setStockLowThreshold(product.stock_low_threshold != null ? String(product.stock_low_threshold) : '');
       setIsPublished(product.is_published || false);
       setPublishWithoutStock(product.publish_without_stock || false);
@@ -206,6 +208,7 @@ export default function ProductEditPage() {
         is_featured: isFeatured,
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
+        is_on_demand: isOnDemand,
         is_published: isPublished,
         publish_without_stock: publishWithoutStock,
         installments_3: installments3,
@@ -718,6 +721,31 @@ export default function ProductEditPage() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       isCheckStock ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* On demand toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <span className="text-base leading-none">📦</span>
+                    Por pedido
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Se muestra el badge &quot;Por pedido&quot; en el catálogo
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsOnDemand(!isOnDemand)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isOnDemand ? 'bg-violet-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isOnDemand ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>

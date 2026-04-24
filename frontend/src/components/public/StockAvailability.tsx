@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageCircle, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { MessageCircle, CheckCircle2, AlertTriangle, Clock, Package } from 'lucide-react';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
 
@@ -15,6 +15,7 @@ export interface StockAvailabilityProps {
   stockQty?: number;
   isCheckStock: boolean;
   isImmediateDelivery: boolean;
+  isOnDemand?: boolean;
   productName: string;
   productSlug?: string;
   productPrice?: number | null;
@@ -28,11 +29,12 @@ export interface StockAvailabilityProps {
 }
 
 /**
- * high   → stock_qty > 5, o is_immediate_delivery, o (!is_check_stock y sin qty)
- * low    → stock_qty > 0 && <= 5
- * none   → stock_qty === 0, o is_check_stock sin delivery inmediata
+ * high      → stock_qty > 5, o is_immediate_delivery, o (!is_check_stock y sin qty)
+ * low       → stock_qty > 0 && <= 5
+ * on_demand → is_on_demand=true y sin stock
+ * none      → stock_qty === 0, o is_check_stock sin delivery inmediata
  */
-export type StockLevel = 'high' | 'low' | 'none';
+export type StockLevel = 'high' | 'low' | 'on_demand' | 'none';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -41,16 +43,18 @@ export function resolveStockLevel(
   isImmediateDelivery: boolean,
   stockQty?: number,
   lowStockThreshold = 5,
+  isOnDemand = false,
 ): StockLevel {
   // Si tenemos el dato exacto de stock, lo usamos como fuente de verdad
   if (typeof stockQty === 'number') {
-    if (stockQty <= 0) return 'none';
+    if (stockQty <= 0) return isOnDemand ? 'on_demand' : 'none';
     if (stockQty <= lowStockThreshold) return 'low';
     return 'high';
   }
 
   // Sin dato de qty, derivamos de los flags del producto
   if (isImmediateDelivery) return 'high';
+  if (isOnDemand) return 'on_demand';
   if (isCheckStock) return 'none';
   return 'high';
 }
@@ -78,6 +82,8 @@ function buildWhatsAppMessage(
     lines.push(`Hola! Quiero comprar el siguiente producto:`);
   } else if (level === 'low') {
     lines.push(`Hola! Vi que quedan pocas unidades y quiero reservar:`);
+  } else if (level === 'on_demand') {
+    lines.push(`Hola! Quiero hacer un pedido especial del siguiente producto:`);
   } else {
     lines.push(`Hola! Quiero consultar disponibilidad del producto:`);
   }
@@ -107,12 +113,14 @@ function StockBar({ level }: { level: StockLevel }) {
   const fills: Record<StockLevel, [boolean, boolean, boolean]> = {
     high: [true, true, true],
     low: [true, true, false],
+    on_demand: [true, false, false],
     none: [false, false, false],
   };
 
   const colors: Record<StockLevel, string> = {
     high: 'bg-emerald-500',
     low: 'bg-amber-500',
+    on_demand: 'bg-violet-500',
     none: 'bg-zinc-300',
   };
 
@@ -149,6 +157,10 @@ function WhatsAppCTA({ level, href, productName, productSlug, productPrice }: Wh
       primary: 'Reservar ahora por WhatsApp',
       sub: 'Últimas unidades — asegurá la tuya',
     },
+    on_demand: {
+      primary: 'Pedir por encargo',
+      sub: 'Lo conseguimos para vos · Consultanos',
+    },
     none: {
       primary: 'Consultar disponibilidad',
       sub: 'Te avisamos cuando ingresa stock',
@@ -179,7 +191,9 @@ function WhatsAppCTA({ level, href, productName, productSlug, productPrice }: Wh
         'active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         level === 'none'
           ? 'bg-zinc-700 hover:bg-zinc-800 focus-visible:ring-zinc-600'
-          : 'bg-green-600 hover:bg-green-700 focus-visible:ring-green-500',
+          : level === 'on_demand'
+            ? 'bg-violet-600 hover:bg-violet-700 focus-visible:ring-violet-500'
+            : 'bg-green-600 hover:bg-green-700 focus-visible:ring-green-500',
       )}
       aria-label={`${primary} - ${productName}`}
     >
@@ -227,6 +241,14 @@ const stripConfig: Record<
     sublabel: 'Alta demanda — puede agotarse',
     showPing: true,
   },
+  on_demand: {
+    container: 'bg-violet-50 border-violet-200',
+    labelColor: 'text-violet-800',
+    subColor: 'text-violet-600',
+    label: 'Por pedido',
+    sublabel: 'Lo conseguimos para vos',
+    showPing: false,
+  },
   none: {
     container: 'bg-zinc-100 border-zinc-200',
     labelColor: 'text-zinc-600',
@@ -240,6 +262,7 @@ const stripConfig: Record<
 const stripIcon: Record<StockLevel, React.ReactNode> = {
   high: <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" aria-hidden="true" />,
   low: <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" aria-hidden="true" />,
+  on_demand: <Package className="h-5 w-5 text-violet-600 shrink-0" aria-hidden="true" />,
   none: <Clock className="h-5 w-5 text-zinc-500 shrink-0" aria-hidden="true" />,
 };
 
@@ -249,6 +272,7 @@ export function StockAvailability({
   stockQty,
   isCheckStock,
   isImmediateDelivery,
+  isOnDemand = false,
   productName,
   productSlug,
   productPrice,
@@ -256,7 +280,7 @@ export function StockAvailability({
   lowStockThreshold = 5,
   className,
 }: StockAvailabilityProps) {
-  const level = resolveStockLevel(isCheckStock, isImmediateDelivery, stockQty, lowStockThreshold);
+  const level = resolveStockLevel(isCheckStock, isImmediateDelivery, stockQty, lowStockThreshold, isOnDemand);
   const { container, labelColor, subColor, label, sublabel, showPing } = stripConfig[level];
 
   const message = buildWhatsAppMessage(level, productName, productPrice, productSlug);

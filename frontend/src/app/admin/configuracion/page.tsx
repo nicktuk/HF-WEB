@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Settings2, Save, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useAuth';
-import { settingsApi, AISettingsResponse } from '@/lib/api';
+import { settingsApi, adminApi, AISettingsResponse } from '@/lib/api';
 
 // ─── PasswordInput ────────────────────────────────────────────────────────────
 
@@ -62,22 +62,27 @@ export default function ConfiguracionPage() {
   const [braveKey, setBraveKey] = useState('');
   const [batchConcurrency, setBatchConcurrency] = useState(5);
   const [promptExtra, setPromptExtra] = useState('');
+  const [onDemandDescription, setOnDemandDescription] = useState('');
+  const [savingCatalog, setSavingCatalog] = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!apiKey) return;
     setLoading(true);
-    settingsApi
-      .getAI(apiKey)
-      .then((data) => {
-        setOriginal(data);
-        setProvider(data.provider);
-        setAnthropicKey(data.anthropic_key);
-        setOpenaiKey(data.openai_key);
-        setBraveKey(data.brave_key);
-        setBatchConcurrency(data.batch_concurrency);
-        setPromptExtra(data.prompt_extra);
+    Promise.all([
+      settingsApi.getAI(apiKey),
+      adminApi.getCatalogSettings(apiKey),
+    ])
+      .then(([aiData, catalogData]) => {
+        setOriginal(aiData);
+        setProvider(aiData.provider);
+        setAnthropicKey(aiData.anthropic_key);
+        setOpenaiKey(aiData.openai_key);
+        setBraveKey(aiData.brave_key);
+        setBatchConcurrency(aiData.batch_concurrency);
+        setPromptExtra(aiData.prompt_extra);
+        setOnDemandDescription(catalogData.on_demand_description);
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -115,6 +120,18 @@ export default function ConfiguracionPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveCatalog() {
+    setSavingCatalog(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, { on_demand_description: onDemandDescription });
+      showToast('success', 'Descripción de pedido guardada');
+    } catch {
+      showToast('error', 'Error al guardar');
+    } finally {
+      setSavingCatalog(false);
     }
   }
 
@@ -294,6 +311,36 @@ export default function ConfiguracionPage() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Guardando...' : 'Guardar configuracion'}
         </Button>
+      </div>
+
+      {/* On-demand description card */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Catálogo por pedido</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Texto que se muestra en el detalle de los productos marcados como &quot;Por pedido&quot;.
+          </p>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Descripción de pedido
+            </label>
+            <textarea
+              value={onDemandDescription}
+              onChange={(e) => setOnDemandDescription(e.target.value)}
+              rows={3}
+              placeholder="Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos."
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveCatalog} disabled={savingCatalog} className="gap-2">
+              {savingCatalog ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {savingCatalog ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -51,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Status badges overlaid on image */}
-        {(product.is_featured || product.is_immediate_delivery || product.is_check_stock || product.installments_3) && (
+        {(product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             {product.is_featured && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
@@ -67,6 +67,11 @@ export function ProductCard({ product }: ProductCardProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Inmediata
+              </span>
+            )}
+            {product.is_on_demand && !product.is_immediate_delivery && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                Por pedido
               </span>
             )}
             {product.is_check_stock && (

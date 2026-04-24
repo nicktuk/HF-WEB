@@ -42,6 +42,7 @@ class ProductUpdate(BaseModel):
     is_immediate_delivery: Optional[bool] = None
     is_check_stock: Optional[bool] = None
     is_best_seller: Optional[bool] = None
+    is_on_demand: Optional[bool] = None
     is_published: Optional[bool] = None
     publish_without_stock: Optional[bool] = None
     installments_3: Optional[bool] = None
@@ -112,6 +113,7 @@ class ProductResponse(BaseModel):
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
     is_best_seller: bool = False
+    is_on_demand: bool = True
     is_published: bool = False
     publish_without_stock: bool = False
     installments_3: bool = False
@@ -170,6 +172,7 @@ class ProductPublicResponse(BaseModel):
     is_immediate_delivery: bool = False
     is_check_stock: bool = False
     is_best_seller: bool = False
+    is_on_demand: bool = True
     publish_without_stock: bool = False
     installments_3: bool = False
     installment_price: Optional[Decimal] = None

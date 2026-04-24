@@ -22,6 +22,7 @@ export interface ProductPublic {
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
   is_best_seller: boolean;
+  is_on_demand: boolean;
   publish_without_stock: boolean;
   installments_3: boolean;
   installment_price?: number | null;
@@ -317,6 +318,7 @@ export interface ProductUpdateForm {
   is_featured?: boolean;
   is_immediate_delivery?: boolean;
   is_check_stock?: boolean;
+  is_on_demand?: boolean;
   is_best_seller?: boolean;
   is_published?: boolean;
   publish_without_stock?: boolean;

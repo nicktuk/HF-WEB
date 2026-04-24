@@ -289,6 +289,7 @@ class ScrapeJobManager:
             kit_content=scraped.kit_content,
             enabled=False,
             is_featured=True,
+            is_on_demand=True,
             markup_percentage=Decimal("0"),
             source_category=scraped.categories[0] if scraped.categories else None,
             category=scraped.categories[0] if scraped.categories else None,

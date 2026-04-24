@@ -58,6 +58,16 @@ class SalesService:
 
         if remaining > 0:
             raise ValidationError("No se pudo descontar el stock completo")
+        self._sync_on_demand_flag(product_id)
+
+    def _sync_on_demand_flag(self, product_id: int | None) -> None:
+        if product_id is None:
+            return
+        stock = self._get_available_stock(product_id)
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if product is None:
+            return
+        product.is_on_demand = stock <= 0
 
     def _restore_stock(self, product_id: int | None, quantity: int) -> None:
         """Restore stock to purchases by decreasing out_quantity (LIFO)."""
@@ -85,6 +95,7 @@ class SalesService:
 
         if remaining > 0:
             raise ValidationError("No se pudo revertir el stock completo")
+        self._sync_on_demand_flag(product_id)
 
     def _normalize_items(
         self,
@@ -464,6 +475,20 @@ class SalesService:
             # Keep delivered flags/amounts consistent with delivered quantities.
             self._sync_sale_state(sale)
 
+        # Sync is_on_demand flag for all products based on current stock
+        from app.models.product import Product as ProductModel
+        from sqlalchemy import text as sa_text
+        self.db.execute(sa_text("""
+            UPDATE products
+            SET is_on_demand = CASE
+                WHEN id IN (
+                    SELECT product_id FROM stock_purchases
+                    GROUP BY product_id
+                    HAVING SUM(quantity - out_quantity) > 0
+                ) THEN false
+                ELSE true
+            END
+        """))
         self.db.commit()
         return {
             "sales_processed": len(sales),

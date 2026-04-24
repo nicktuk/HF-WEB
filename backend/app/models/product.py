@@ -52,6 +52,7 @@ class Product(Base):
     publish_without_stock = Column(Boolean, default=False, nullable=False, index=True, comment="URL directa activa pero oculto en el catálogo público")
     installments_3 = Column(Boolean, default=False, nullable=False, index=True, comment="Pago en 3 cuotas sin interés habilitado")
     custom_installment_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo por cuota (si no se define, se calcula con markup)")
+    is_on_demand = Column(Boolean, default=True, nullable=False, index=True, comment="Producto disponible solo por pedido (sin stock físico)")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
     wholesale_markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup mayorista en porcentaje")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")

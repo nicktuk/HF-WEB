@@ -130,6 +130,9 @@ FEATURED_PILL_DEFAULT = "Nuevos ingresos"
 STOCK_LOW_THRESHOLD_DEFAULT = 5
 
 
+ON_DEMAND_DESCRIPTION_DEFAULT = "Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos."
+
+
 class CatalogSettingsResponse(BaseModel):
     featured_pill_label: str
     stock_low_threshold: int
@@ -139,6 +142,7 @@ class CatalogSettingsResponse(BaseModel):
     show_out_of_stock: bool = True
     mobile_two_columns: bool = False
     carousel_style: str = "scroll"
+    on_demand_description: str = ON_DEMAND_DESCRIPTION_DEFAULT
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -150,6 +154,7 @@ class CatalogSettingsUpdate(BaseModel):
     show_out_of_stock: Optional[bool] = None
     mobile_two_columns: Optional[bool] = None
     carousel_style: Optional[str] = None
+    on_demand_description: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +176,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     mobile_two_columns_str = get_setting(db, "MOBILE_TWO_COLUMNS")
     mobile_two_columns = mobile_two_columns_str == "true" if mobile_two_columns_str is not None else False
     carousel_style = get_setting(db, "CAROUSEL_STYLE") or "scroll"
+    on_demand_description = get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -180,6 +186,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         show_out_of_stock=show_out_of_stock,
         mobile_two_columns=mobile_two_columns,
         carousel_style=carousel_style,
+        on_demand_description=on_demand_description,
     )
 
 
@@ -210,6 +217,8 @@ def update_catalog_settings(
         set_setting(db, "MOBILE_TWO_COLUMNS", "true" if data.mobile_two_columns else "false")
     if data.carousel_style is not None:
         set_setting(db, "CAROUSEL_STYLE", data.carousel_style if data.carousel_style in ("scroll", "slider") else "scroll")
+    if data.on_demand_description is not None:
+        set_setting(db, "ON_DEMAND_DESCRIPTION", data.on_demand_description.strip() or ON_DEMAND_DESCRIPTION_DEFAULT)
     return get_catalog_settings(db=db)
 
 
@@ -240,6 +249,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "show_out_of_stock": show_out_of_stock,
         "mobile_two_columns": mobile_two_columns,
         "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
+        "on_demand_description": get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT,
     }
 
 

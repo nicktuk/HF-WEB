@@ -125,6 +125,7 @@ class ProductService:
             is_immediate_delivery=product.is_immediate_delivery,
             is_check_stock=product.is_check_stock,
             is_best_seller=product.is_best_seller,
+            is_on_demand=product.is_on_demand,
             publish_without_stock=product.publish_without_stock,
             installments_3=product.installments_3,
             installment_price=product.installment_price,

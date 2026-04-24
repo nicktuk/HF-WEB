@@ -140,6 +140,21 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 </div>
               )}
 
+              {/* Delivery badge overlay */}
+              {(product.is_on_demand || product.is_immediate_delivery) && (
+                <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+                  {product.is_immediate_delivery ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg uppercase tracking-wide">
+                      ⚡ Entrega inmediata
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg uppercase tracking-wide">
+                      📦 Por pedido
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Navigation arrows */}
               {sortedImages.length > 1 && (
                 <>
@@ -233,6 +248,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               </p>
             </div>
 
+            {/* On-demand notice */}
+            {product.is_on_demand && !product.is_immediate_delivery && catalogSettings?.on_demand_description && (
+              <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3.5 flex items-start gap-3">
+                <span className="text-lg shrink-0 leading-tight">📦</span>
+                <p className="text-sm text-violet-800 leading-relaxed">{catalogSettings.on_demand_description}</p>
+              </div>
+            )}
+
             {/* Description */}
             {product.short_description && (
               <div className="mb-6">
@@ -248,6 +271,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               <StockAvailability
                 isCheckStock={product.is_check_stock}
                 isImmediateDelivery={product.is_immediate_delivery}
+                isOnDemand={product.is_on_demand}
                 stockQty={product.stock_qty ?? undefined}
                 productName={product.name}
                 productSlug={slug}
