@@ -40,6 +40,7 @@ export function ManualProductForm({ onClose, onSuccess, initialValues, priceAsOr
   const [isFeatured, setIsFeatured] = useState(false);
   const [isImmediateDelivery, setIsImmediateDelivery] = useState(false);
   const [isCheckStock, setIsCheckStock] = useState(false);
+  const [isOnDemand, setIsOnDemand] = useState(true);
 
   // Image upload state
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('upload');
@@ -127,6 +128,7 @@ export function ManualProductForm({ onClose, onSuccess, initialValues, priceAsOr
         is_featured: isFeatured,
         is_immediate_delivery: isImmediateDelivery,
         is_check_stock: isCheckStock,
+        is_on_demand: isOnDemand,
       });
       onSuccess(created?.id);
       onClose();
@@ -394,6 +396,20 @@ export function ManualProductForm({ onClose, onSuccess, initialValues, priceAsOr
               <label htmlFor="is_check_stock" className="text-sm text-gray-700 flex items-center gap-2">
                 <HelpCircle className="h-4 w-4 text-orange-500" />
                 Consultar stock
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="is_on_demand"
+                checked={isOnDemand}
+                onChange={(e) => setIsOnDemand(e.target.checked)}
+                className="h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+              />
+              <label htmlFor="is_on_demand" className="text-sm text-gray-700 flex items-center gap-2">
+                <span className="text-base leading-none">📦</span>
+                Por pedido
               </label>
             </div>
           </div>

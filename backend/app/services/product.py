@@ -784,14 +784,17 @@ class ProductService:
                 product.is_check_stock = False
         if data.is_immediate_delivery is not None:
             product.is_immediate_delivery = data.is_immediate_delivery
-            # When setting immediate delivery, remove check_stock
             if data.is_immediate_delivery:
                 product.is_check_stock = False
+                product.is_on_demand = False
         if data.is_check_stock is not None:
             product.is_check_stock = data.is_check_stock
-            # When setting check_stock, remove featured and immediate delivery
             if data.is_check_stock:
                 product.is_featured = False
+                product.is_immediate_delivery = False
+        if data.is_on_demand is not None:
+            product.is_on_demand = data.is_on_demand
+            if data.is_on_demand:
                 product.is_immediate_delivery = False
         if data.is_best_seller is not None:
             product.is_best_seller = data.is_best_seller
@@ -1000,6 +1003,7 @@ class ProductService:
             enabled=data.enabled,
             is_featured=data.is_featured,
             is_immediate_delivery=data.is_immediate_delivery,
+            is_on_demand=data.is_on_demand if not data.is_immediate_delivery else False,
             markup_percentage=Decimal("0"),
             category_id=target_category.id if target_category else None,
             source_category=None,

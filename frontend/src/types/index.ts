@@ -363,6 +363,7 @@ export interface ProductCreateManualForm {
   is_featured: boolean;
   is_immediate_delivery: boolean;
   is_check_stock: boolean;
+  is_on_demand?: boolean;
 }
 
 // Sales Types
