@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Store, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Store, Save, Loader2, CheckCircle, AlertCircle, Upload, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useAuth';
-import { adminApi } from '@/lib/api';
+import { adminApi, uploadImages, resolveImageUrl } from '@/lib/api';
+import { useRef } from 'react';
 
 export default function CatalogoConfigPage() {
   const apiKey = useApiKey() || '';
@@ -43,8 +44,11 @@ export default function CatalogoConfigPage() {
 
   // Popup
   const [popupEnabled, setPopupEnabled] = useState(false);
-  const [popupImageUrl, setPopupImageUrl] = useState('');
+  const [popupImages, setPopupImages] = useState<string[]>([]);
   const [savingPopup, setSavingPopup] = useState(false);
+  const [uploadingPopup, setUploadingPopup] = useState(false);
+  const [newPopupUrl, setNewPopupUrl] = useState('');
+  const popupFileRef = useRef<HTMLInputElement>(null);
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
@@ -64,7 +68,7 @@ export default function CatalogoConfigPage() {
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
         setPopupEnabled(data.popup_enabled ?? false);
-        setPopupImageUrl(data.popup_image_url ?? '');
+        setPopupImages(data.popup_images ?? []);
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -143,12 +147,35 @@ export default function CatalogoConfigPage() {
     }
   }
 
+  async function handlePopupFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingPopup(true);
+    try {
+      const urls = await uploadImages(apiKey, files);
+      setPopupImages(prev => [...prev, ...urls]);
+    } catch {
+      showToast('error', 'Error al subir imágenes');
+    } finally {
+      setUploadingPopup(false);
+      if (popupFileRef.current) popupFileRef.current.value = '';
+    }
+  }
+
+  function handleAddPopupUrl() {
+    const url = newPopupUrl.trim();
+    if (url) {
+      setPopupImages(prev => [...prev, url]);
+      setNewPopupUrl('');
+    }
+  }
+
   async function handleSavePopup() {
     setSavingPopup(true);
     try {
       await adminApi.updateCatalogSettings(apiKey, {
         popup_enabled: popupEnabled,
-        popup_image_url: popupImageUrl || null,
+        popup_images: popupImages,
       });
       showToast('success', 'Popup guardado');
     } catch {
@@ -448,10 +475,12 @@ export default function CatalogoConfigPage() {
         <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="font-medium text-gray-800">Popup de sesión</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Aparece una sola vez por sesión al ingresar al catálogo. Ideal para novedades o promociones.
+            Carrusel que aparece una sola vez por sesión al ingresar al catálogo. Ideal para novedades o promociones.
           </p>
         </div>
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-5">
+
+          {/* Toggle */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-700">Activar popup</p>
             <button
@@ -461,24 +490,75 @@ export default function CatalogoConfigPage() {
                 popupEnabled ? 'bg-blue-600' : 'bg-gray-200'
               }`}
             >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  popupEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${popupEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">URL de la imagen</label>
+
+          {/* Image grid */}
+          {popupImages.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {popupImages.map((url, i) => {
+                const src = resolveImageUrl(url) ?? url;
+                return (
+                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPopupImages(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                      aria-label="Eliminar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="absolute bottom-1 left-1 rounded bg-black/40 px-1 text-[10px] text-white font-medium">{i + 1}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Upload + URL */}
+          <div className="space-y-3">
             <input
-              type="text"
-              value={popupImageUrl}
-              onChange={(e) => setPopupImageUrl(e.target.value)}
-              placeholder="https://... o ruta relativa"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              ref={popupFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePopupFileUpload}
             />
+            <button
+              type="button"
+              onClick={() => popupFileRef.current?.click()}
+              disabled={uploadingPopup}
+              className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors w-full justify-center disabled:opacity-50"
+            >
+              {uploadingPopup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploadingPopup ? 'Subiendo...' : 'Subir imágenes'}
+            </button>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newPopupUrl}
+                onChange={e => setNewPopupUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddPopupUrl()}
+                placeholder="O pegá una URL..."
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddPopupUrl}
+                disabled={!newPopupUrl.trim()}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </button>
+            </div>
           </div>
-          <div className="flex justify-end">
+
+          <div className="flex justify-end pt-1">
             <Button onClick={handleSavePopup} disabled={savingPopup} className="gap-2">
               {savingPopup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {savingPopup ? 'Guardando...' : 'Guardar'}
