@@ -5,7 +5,10 @@ import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/api';
 
-const SESSION_KEY = 'hefa_popup_shown';
+// LS_KEY: marcado mientras el navegador está abierto; se borra en beforeunload (cierre)
+// SS_KEY: evita mostrar más de una vez por pestaña/carga
+const LS_KEY = 'hefa_browser_open';
+const SS_KEY = 'hefa_popup_seen';
 
 interface SessionPopupProps {
   images: string[];
@@ -17,9 +20,19 @@ export function SessionPopup({ images }: SessionPopupProps) {
   const isPaused = useRef(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY)) return;
-    sessionStorage.setItem(SESSION_KEY, '1');
-    setVisible(true);
+    const browserOpen = localStorage.getItem(LS_KEY) === '1';
+    const seenThisLoad = sessionStorage.getItem(SS_KEY) === '1';
+
+    localStorage.setItem(LS_KEY, '1');
+
+    if (!browserOpen || !seenThisLoad) {
+      sessionStorage.setItem(SS_KEY, '1');
+      setVisible(true);
+    }
+
+    const onUnload = () => localStorage.removeItem(LS_KEY);
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
 
   const prev = useCallback(() => setIdx(i => (i - 1 + images.length) % images.length), [images.length]);
