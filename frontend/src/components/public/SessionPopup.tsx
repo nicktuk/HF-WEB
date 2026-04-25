@@ -15,9 +15,10 @@ interface PopupSlide {
 
 interface SessionPopupProps {
   slides: PopupSlide[];
+  interval?: number;
 }
 
-export function SessionPopup({ slides }: SessionPopupProps) {
+export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
   const [visible, setVisible] = useState(false);
   const [idx, setIdx] = useState(0);
   const isPaused = useRef(false);
@@ -45,9 +46,9 @@ export function SessionPopup({ slides }: SessionPopupProps) {
     if (!visible || slides.length <= 1) return;
     const t = setInterval(() => {
       if (!isPaused.current) next();
-    }, 4000);
+    }, interval * 1000);
     return () => clearInterval(t);
-  }, [visible, slides.length, next]);
+  }, [visible, slides.length, next, interval]);
 
   if (!visible) return null;
 

@@ -149,6 +149,7 @@ class CatalogSettingsResponse(BaseModel):
     carousel_style: str = "scroll"
     on_demand_description: str = ON_DEMAND_DESCRIPTION_DEFAULT
     popup_enabled: bool = False
+    popup_interval: int = 2
     popup_slides: List[PopupSlide] = []
 
 
@@ -163,6 +164,7 @@ class CatalogSettingsUpdate(BaseModel):
     carousel_style: Optional[str] = None
     on_demand_description: Optional[str] = None
     popup_enabled: Optional[bool] = None
+    popup_interval: Optional[int] = None
     popup_slides: Optional[List[PopupSlide]] = None
 
 
@@ -188,6 +190,8 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     on_demand_description = get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT
     popup_enabled_str = get_setting(db, "POPUP_ENABLED")
     popup_enabled = popup_enabled_str == "true" if popup_enabled_str is not None else False
+    popup_interval_str = get_setting(db, "POPUP_INTERVAL")
+    popup_interval = int(popup_interval_str) if popup_interval_str is not None else 2
     popup_slides_raw = get_setting(db, "POPUP_SLIDES")
     if popup_slides_raw:
         try:
@@ -196,7 +200,6 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         except Exception:
             popup_slides = []
     else:
-        # backward compat: migrate from popup_images (no links)
         images_raw = get_setting(db, "POPUP_IMAGES")
         if images_raw:
             try:
@@ -217,6 +220,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         carousel_style=carousel_style,
         on_demand_description=on_demand_description,
         popup_enabled=popup_enabled,
+        popup_interval=popup_interval,
         popup_slides=popup_slides,
     )
 
@@ -252,6 +256,8 @@ def update_catalog_settings(
         set_setting(db, "ON_DEMAND_DESCRIPTION", data.on_demand_description.strip() or ON_DEMAND_DESCRIPTION_DEFAULT)
     if data.popup_enabled is not None:
         set_setting(db, "POPUP_ENABLED", "true" if data.popup_enabled else "false")
+    if data.popup_interval is not None:
+        set_setting(db, "POPUP_INTERVAL", str(max(1, data.popup_interval)))
     if data.popup_slides is not None:
         set_setting(db, "POPUP_SLIDES", json.dumps([s.model_dump() for s in data.popup_slides]))
     return get_catalog_settings(db=db)
@@ -304,6 +310,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
         "on_demand_description": get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT,
         "popup_enabled": popup_enabled,
+        "popup_interval": int(get_setting(db, "POPUP_INTERVAL") or 2),
         "popup_slides": popup_slides,
     }
 

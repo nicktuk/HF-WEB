@@ -44,6 +44,7 @@ export default function CatalogoConfigPage() {
 
   // Popup
   const [popupEnabled, setPopupEnabled] = useState(false);
+  const [popupInterval, setPopupInterval] = useState(2);
   const [popupSlides, setPopupSlides] = useState<Array<{ image: string; link: string }>>([]);
   const [savingPopup, setSavingPopup] = useState(false);
   const [uploadingPopup, setUploadingPopup] = useState(false);
@@ -68,6 +69,7 @@ export default function CatalogoConfigPage() {
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
         setPopupEnabled(data.popup_enabled ?? false);
+        setPopupInterval(data.popup_interval ?? 2);
         setPopupSlides(data.popup_slides ?? []);
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
@@ -175,6 +177,7 @@ export default function CatalogoConfigPage() {
     try {
       await adminApi.updateCatalogSettings(apiKey, {
         popup_enabled: popupEnabled,
+        popup_interval: popupInterval,
         popup_slides: popupSlides,
       });
       showToast('success', 'Popup guardado');
@@ -492,6 +495,20 @@ export default function CatalogoConfigPage() {
             >
               <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${popupEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
+          </div>
+
+          {/* Interval */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 shrink-0">Segundos por imagen</label>
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={popupInterval}
+              onChange={e => setPopupInterval(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-20 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <span className="text-xs text-gray-400">seg</span>
           </div>
 
           {/* Slides list */}

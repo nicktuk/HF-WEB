@@ -746,7 +746,7 @@ export function HomePageContent() {
 
       {/* Session Popup */}
       {catalogSettings?.popup_enabled && catalogSettings?.popup_slides?.length > 0 && (
-        <SessionPopup slides={catalogSettings.popup_slides} />
+        <SessionPopup slides={catalogSettings.popup_slides} interval={catalogSettings.popup_interval} />
       )}
 
       {/* Floating WhatsApp Button (mobile) */}
