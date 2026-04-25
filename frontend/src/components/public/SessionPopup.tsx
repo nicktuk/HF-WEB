@@ -5,16 +5,19 @@ import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/api';
 
-// LS_KEY: marcado mientras el navegador está abierto; se borra en beforeunload (cierre)
-// SS_KEY: evita mostrar más de una vez por pestaña/carga
 const LS_KEY = 'hefa_browser_open';
 const SS_KEY = 'hefa_popup_seen';
 
-interface SessionPopupProps {
-  images: string[];
+interface PopupSlide {
+  image: string;
+  link: string;
 }
 
-export function SessionPopup({ images }: SessionPopupProps) {
+interface SessionPopupProps {
+  slides: PopupSlide[];
+}
+
+export function SessionPopup({ slides }: SessionPopupProps) {
   const [visible, setVisible] = useState(false);
   const [idx, setIdx] = useState(0);
   const isPaused = useRef(false);
@@ -35,20 +38,21 @@ export function SessionPopup({ images }: SessionPopupProps) {
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
 
-  const prev = useCallback(() => setIdx(i => (i - 1 + images.length) % images.length), [images.length]);
-  const next = useCallback(() => setIdx(i => (i + 1) % images.length), [images.length]);
+  const prev = useCallback(() => setIdx(i => (i - 1 + slides.length) % slides.length), [slides.length]);
+  const next = useCallback(() => setIdx(i => (i + 1) % slides.length), [slides.length]);
 
   useEffect(() => {
-    if (!visible || images.length <= 1) return;
+    if (!visible || slides.length <= 1) return;
     const t = setInterval(() => {
       if (!isPaused.current) next();
     }, 4000);
     return () => clearInterval(t);
-  }, [visible, images.length, next]);
+  }, [visible, slides.length, next]);
 
   if (!visible) return null;
 
-  const srcs = images.map(url => resolveImageUrl(url) ?? url);
+  const slide = slides[idx];
+  const src = resolveImageUrl(slide.image) ?? slide.image;
 
   return (
     <div
@@ -56,7 +60,7 @@ export function SessionPopup({ images }: SessionPopupProps) {
       onClick={() => setVisible(false)}
     >
       <div
-        className="relative max-w-lg w-full rounded-2xl overflow-hidden shadow-2xl"
+        className="relative max-w-lg md:max-w-2xl w-full rounded-2xl overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
         onMouseEnter={() => { isPaused.current = true; }}
         onMouseLeave={() => { isPaused.current = false; }}
@@ -70,19 +74,33 @@ export function SessionPopup({ images }: SessionPopupProps) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Image */}
-        <Image
-          key={srcs[idx]}
-          src={srcs[idx]}
-          alt={`Novedad ${idx + 1}`}
-          width={600}
-          height={600}
-          className="w-full h-auto block"
-          priority
-        />
+        {/* Image — clickable if link exists */}
+        {slide.link ? (
+          <a href={slide.link} target="_blank" rel="noopener noreferrer" onClick={() => setVisible(false)}>
+            <Image
+              key={src}
+              src={src}
+              alt={`Novedad ${idx + 1}`}
+              width={900}
+              height={900}
+              className="w-full h-auto block cursor-pointer"
+              priority
+            />
+          </a>
+        ) : (
+          <Image
+            key={src}
+            src={src}
+            alt={`Novedad ${idx + 1}`}
+            width={900}
+            height={900}
+            className="w-full h-auto block"
+            priority
+          />
+        )}
 
-        {/* Nav arrows (only if multiple) */}
-        {images.length > 1 && (
+        {/* Nav arrows + dots */}
+        {slides.length > 1 && (
           <>
             <button
               onClick={prev}
@@ -98,10 +116,8 @@ export function SessionPopup({ images }: SessionPopupProps) {
             >
               <ChevronRight className="w-5 h-5" />
             </button>
-
-            {/* Dots */}
             <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
-              {images.map((_, i) => (
+              {slides.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setIdx(i)}

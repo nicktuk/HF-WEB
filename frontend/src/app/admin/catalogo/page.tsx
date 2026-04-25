@@ -44,7 +44,7 @@ export default function CatalogoConfigPage() {
 
   // Popup
   const [popupEnabled, setPopupEnabled] = useState(false);
-  const [popupImages, setPopupImages] = useState<string[]>([]);
+  const [popupSlides, setPopupSlides] = useState<Array<{ image: string; link: string }>>([]);
   const [savingPopup, setSavingPopup] = useState(false);
   const [uploadingPopup, setUploadingPopup] = useState(false);
   const [newPopupUrl, setNewPopupUrl] = useState('');
@@ -68,7 +68,7 @@ export default function CatalogoConfigPage() {
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
         setPopupEnabled(data.popup_enabled ?? false);
-        setPopupImages(data.popup_images ?? []);
+        setPopupSlides(data.popup_slides ?? []);
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -153,7 +153,7 @@ export default function CatalogoConfigPage() {
     setUploadingPopup(true);
     try {
       const urls = await uploadImages(apiKey, files);
-      setPopupImages(prev => [...prev, ...urls]);
+      setPopupSlides(prev => [...prev, ...urls.map(image => ({ image, link: '' }))]);
     } catch {
       showToast('error', 'Error al subir imágenes');
     } finally {
@@ -165,7 +165,7 @@ export default function CatalogoConfigPage() {
   function handleAddPopupUrl() {
     const url = newPopupUrl.trim();
     if (url) {
-      setPopupImages(prev => [...prev, url]);
+      setPopupSlides(prev => [...prev, { image: url, link: '' }]);
       setNewPopupUrl('');
     }
   }
@@ -175,7 +175,7 @@ export default function CatalogoConfigPage() {
     try {
       await adminApi.updateCatalogSettings(apiKey, {
         popup_enabled: popupEnabled,
-        popup_images: popupImages,
+        popup_slides: popupSlides,
       });
       showToast('success', 'Popup guardado');
     } catch {
@@ -494,23 +494,38 @@ export default function CatalogoConfigPage() {
             </button>
           </div>
 
-          {/* Image grid */}
-          {popupImages.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              {popupImages.map((url, i) => {
-                const src = resolveImageUrl(url) ?? url;
+          {/* Slides list */}
+          {popupSlides.length > 0 && (
+            <div className="space-y-3">
+              {popupSlides.map((slide, i) => {
+                const src = resolveImageUrl(slide.image) ?? slide.image;
                 return (
-                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                    <img src={src} alt="" className="w-full h-full object-cover" />
+                  <div key={i} className="flex gap-3 items-start rounded-lg border border-gray-200 p-2 bg-gray-50">
+                    {/* Thumbnail */}
+                    <div className="relative shrink-0 w-16 h-16 rounded-md overflow-hidden border border-gray-200 bg-white">
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0.5 left-0.5 rounded bg-black/40 px-1 text-[10px] text-white font-medium leading-none py-0.5">{i + 1}</div>
+                    </div>
+                    {/* Link input */}
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs text-gray-500 mb-1 block">URL de destino (opcional)</label>
+                      <input
+                        type="text"
+                        value={slide.link}
+                        onChange={e => setPopupSlides(prev => prev.map((s, j) => j === i ? { ...s, link: e.target.value } : s))}
+                        placeholder="https://..."
+                        className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    {/* Remove */}
                     <button
                       type="button"
-                      onClick={() => setPopupImages(prev => prev.filter((_, j) => j !== i))}
-                      className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                      onClick={() => setPopupSlides(prev => prev.filter((_, j) => j !== i))}
+                      className="shrink-0 mt-5 flex items-center justify-center w-7 h-7 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                       aria-label="Eliminar"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
-                    <div className="absolute bottom-1 left-1 rounded bg-black/40 px-1 text-[10px] text-white font-medium">{i + 1}</div>
                   </div>
                 );
               })}

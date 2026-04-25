@@ -745,8 +745,8 @@ export function HomePageContent() {
       <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
 
       {/* Session Popup */}
-      {catalogSettings?.popup_enabled && catalogSettings?.popup_images?.length > 0 && (
-        <SessionPopup images={catalogSettings.popup_images} />
+      {catalogSettings?.popup_enabled && catalogSettings?.popup_slides?.length > 0 && (
+        <SessionPopup slides={catalogSettings.popup_slides} />
       )}
 
       {/* Floating WhatsApp Button (mobile) */}

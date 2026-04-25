@@ -133,6 +133,11 @@ STOCK_LOW_THRESHOLD_DEFAULT = 5
 ON_DEMAND_DESCRIPTION_DEFAULT = "Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos."
 
 
+class PopupSlide(BaseModel):
+    image: str
+    link: str = ""
+
+
 class CatalogSettingsResponse(BaseModel):
     featured_pill_label: str
     stock_low_threshold: int
@@ -144,7 +149,7 @@ class CatalogSettingsResponse(BaseModel):
     carousel_style: str = "scroll"
     on_demand_description: str = ON_DEMAND_DESCRIPTION_DEFAULT
     popup_enabled: bool = False
-    popup_images: List[str] = []
+    popup_slides: List[PopupSlide] = []
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -158,7 +163,7 @@ class CatalogSettingsUpdate(BaseModel):
     carousel_style: Optional[str] = None
     on_demand_description: Optional[str] = None
     popup_enabled: Optional[bool] = None
-    popup_images: Optional[List[str]] = None
+    popup_slides: Optional[List[PopupSlide]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -183,16 +188,24 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     on_demand_description = get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT
     popup_enabled_str = get_setting(db, "POPUP_ENABLED")
     popup_enabled = popup_enabled_str == "true" if popup_enabled_str is not None else False
-    popup_images_raw = get_setting(db, "POPUP_IMAGES")
-    if popup_images_raw:
+    popup_slides_raw = get_setting(db, "POPUP_SLIDES")
+    if popup_slides_raw:
         try:
-            popup_images = json.loads(popup_images_raw)
+            slides_data = json.loads(popup_slides_raw)
+            popup_slides = [PopupSlide(**s) for s in slides_data]
         except Exception:
-            popup_images = []
+            popup_slides = []
     else:
-        # backward compat: migrate from single URL
-        old_url = get_setting(db, "POPUP_IMAGE_URL")
-        popup_images = [old_url] if old_url else []
+        # backward compat: migrate from popup_images (no links)
+        images_raw = get_setting(db, "POPUP_IMAGES")
+        if images_raw:
+            try:
+                popup_slides = [PopupSlide(image=img) for img in json.loads(images_raw)]
+            except Exception:
+                popup_slides = []
+        else:
+            old_url = get_setting(db, "POPUP_IMAGE_URL")
+            popup_slides = [PopupSlide(image=old_url)] if old_url else []
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -204,7 +217,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         carousel_style=carousel_style,
         on_demand_description=on_demand_description,
         popup_enabled=popup_enabled,
-        popup_images=popup_images,
+        popup_slides=popup_slides,
     )
 
 
@@ -239,8 +252,8 @@ def update_catalog_settings(
         set_setting(db, "ON_DEMAND_DESCRIPTION", data.on_demand_description.strip() or ON_DEMAND_DESCRIPTION_DEFAULT)
     if data.popup_enabled is not None:
         set_setting(db, "POPUP_ENABLED", "true" if data.popup_enabled else "false")
-    if data.popup_images is not None:
-        set_setting(db, "POPUP_IMAGES", json.dumps(data.popup_images))
+    if data.popup_slides is not None:
+        set_setting(db, "POPUP_SLIDES", json.dumps([s.model_dump() for s in data.popup_slides]))
     return get_catalog_settings(db=db)
 
 
@@ -264,16 +277,22 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
     mobile_two_columns = mobile_two_columns_str == "true" if mobile_two_columns_str is not None else False
     popup_enabled_str = get_setting(db, "POPUP_ENABLED")
     popup_enabled = popup_enabled_str == "true" if popup_enabled_str is not None else False
-    popup_images_raw = get_setting(db, "POPUP_IMAGES")
-    if popup_images_raw:
+    popup_slides_raw = get_setting(db, "POPUP_SLIDES")
+    if popup_slides_raw:
         try:
-            popup_images = json.loads(popup_images_raw)
+            popup_slides = json.loads(popup_slides_raw)
         except Exception:
-            popup_images = []
+            popup_slides = []
     else:
-        # backward compat: migrate from single URL
-        old_url = get_setting(db, "POPUP_IMAGE_URL")
-        popup_images = [old_url] if old_url else []
+        images_raw = get_setting(db, "POPUP_IMAGES")
+        if images_raw:
+            try:
+                popup_slides = [{"image": img, "link": ""} for img in json.loads(images_raw)]
+            except Exception:
+                popup_slides = []
+        else:
+            old_url = get_setting(db, "POPUP_IMAGE_URL")
+            popup_slides = [{"image": old_url, "link": ""}] if old_url else []
     return {
         "featured_pill_label": featured_label,
         "stock_low_threshold": threshold,
@@ -285,7 +304,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
         "on_demand_description": get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT,
         "popup_enabled": popup_enabled,
-        "popup_images": popup_images,
+        "popup_slides": popup_slides,
     }
 
 
