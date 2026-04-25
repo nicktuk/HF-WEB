@@ -13,6 +13,7 @@ import { fetchPublicCatalogSettings, publicApi, resolveImageUrl } from '@/lib/ap
 import { useQuery } from '@tanstack/react-query';
 import { SectionCard } from '@/components/public/SectionCard';
 import { PublicHeader } from '@/components/public/PublicHeader';
+import { SessionPopup } from '@/components/public/SessionPopup';
 
 export function HomePageSkeleton() {
   return (
@@ -742,6 +743,11 @@ export function HomePageContent() {
 
       {/* How We Work Modal */}
       <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
+
+      {/* Session Popup */}
+      {catalogSettings?.popup_enabled && catalogSettings?.popup_image_url && (
+        <SessionPopup imageUrl={catalogSettings.popup_image_url} />
+      )}
 
       {/* Floating WhatsApp Button (mobile) */}
       <FloatingWhatsAppButton />

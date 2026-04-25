@@ -44,9 +44,14 @@ const config: Config = {
           '0%, 100%': { transform: 'scale(1)', opacity: '1' },
           '50%': { transform: 'scale(1.05)', opacity: '0.9' },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
       },
       animation: {
         'attention-pulse': 'attention-pulse 2s ease-in-out infinite',
+        'fade-in': 'fade-in 0.25s ease-out forwards',
       },
     },
   },

@@ -143,6 +143,8 @@ class CatalogSettingsResponse(BaseModel):
     mobile_two_columns: bool = False
     carousel_style: str = "scroll"
     on_demand_description: str = ON_DEMAND_DESCRIPTION_DEFAULT
+    popup_enabled: bool = False
+    popup_image_url: Optional[str] = None
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -155,6 +157,8 @@ class CatalogSettingsUpdate(BaseModel):
     mobile_two_columns: Optional[bool] = None
     carousel_style: Optional[str] = None
     on_demand_description: Optional[str] = None
+    popup_enabled: Optional[bool] = None
+    popup_image_url: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +181,9 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     mobile_two_columns = mobile_two_columns_str == "true" if mobile_two_columns_str is not None else False
     carousel_style = get_setting(db, "CAROUSEL_STYLE") or "scroll"
     on_demand_description = get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT
+    popup_enabled_str = get_setting(db, "POPUP_ENABLED")
+    popup_enabled = popup_enabled_str == "true" if popup_enabled_str is not None else False
+    popup_image_url = get_setting(db, "POPUP_IMAGE_URL") or None
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -187,6 +194,8 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         mobile_two_columns=mobile_two_columns,
         carousel_style=carousel_style,
         on_demand_description=on_demand_description,
+        popup_enabled=popup_enabled,
+        popup_image_url=popup_image_url,
     )
 
 
@@ -219,6 +228,10 @@ def update_catalog_settings(
         set_setting(db, "CAROUSEL_STYLE", data.carousel_style if data.carousel_style in ("scroll", "slider") else "scroll")
     if data.on_demand_description is not None:
         set_setting(db, "ON_DEMAND_DESCRIPTION", data.on_demand_description.strip() or ON_DEMAND_DESCRIPTION_DEFAULT)
+    if data.popup_enabled is not None:
+        set_setting(db, "POPUP_ENABLED", "true" if data.popup_enabled else "false")
+    if data.popup_image_url is not None:
+        set_setting(db, "POPUP_IMAGE_URL", data.popup_image_url.strip() or None)
     return get_catalog_settings(db=db)
 
 
@@ -240,6 +253,9 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
     show_out_of_stock = show_out_of_stock_str != "false" if show_out_of_stock_str is not None else True
     mobile_two_columns_str = get_setting(db, "MOBILE_TWO_COLUMNS")
     mobile_two_columns = mobile_two_columns_str == "true" if mobile_two_columns_str is not None else False
+    popup_enabled_str = get_setting(db, "POPUP_ENABLED")
+    popup_enabled = popup_enabled_str == "true" if popup_enabled_str is not None else False
+    popup_image_url = get_setting(db, "POPUP_IMAGE_URL") or None
     return {
         "featured_pill_label": featured_label,
         "stock_low_threshold": threshold,
@@ -250,6 +266,8 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "mobile_two_columns": mobile_two_columns,
         "carousel_style": get_setting(db, "CAROUSEL_STYLE") or "scroll",
         "on_demand_description": get_setting(db, "ON_DEMAND_DESCRIPTION") or ON_DEMAND_DESCRIPTION_DEFAULT,
+        "popup_enabled": popup_enabled,
+        "popup_image_url": popup_image_url,
     }
 
 
