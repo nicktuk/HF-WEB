@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import ProductPageClient from '@/components/public/ProductPageClient';
 import type { ProductPublic } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 const SERVER_API_URL =
   process.env.INTERNAL_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
