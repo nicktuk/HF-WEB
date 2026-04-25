@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Store, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Store, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useAuth';
 import { adminApi } from '@/lib/api';
@@ -41,6 +41,11 @@ export default function CatalogoConfigPage() {
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [savingGroupByCategory, setSavingGroupByCategory] = useState(false);
 
+  // Popup
+  const [popupEnabled, setPopupEnabled] = useState(false);
+  const [popupImageUrl, setPopupImageUrl] = useState('');
+  const [savingPopup, setSavingPopup] = useState(false);
+
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
@@ -58,6 +63,8 @@ export default function CatalogoConfigPage() {
         setShowOutOfStock(data.show_out_of_stock ?? true);
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
+        setPopupEnabled(data.popup_enabled ?? false);
+        setPopupImageUrl(data.popup_image_url ?? '');
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -133,6 +140,21 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSavingMobileTwoColumns(false);
+    }
+  }
+
+  async function handleSavePopup() {
+    setSavingPopup(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, {
+        popup_enabled: popupEnabled,
+        popup_image_url: popupImageUrl || null,
+      });
+      showToast('success', 'Popup guardado');
+    } catch {
+      showToast('error', 'Error al guardar');
+    } finally {
+      setSavingPopup(false);
     }
   }
 
@@ -418,6 +440,49 @@ export default function CatalogoConfigPage() {
                 }`}
               />
             </button>
+          </div>
+        </div>
+      </div>
+      {/* Popup de sesión */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Popup de sesión</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Aparece una sola vez por sesión al ingresar al catálogo. Ideal para novedades o promociones.
+          </p>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">Activar popup</p>
+            <button
+              type="button"
+              onClick={() => setPopupEnabled(v => !v)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                popupEnabled ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  popupEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">URL de la imagen</label>
+            <input
+              type="text"
+              value={popupImageUrl}
+              onChange={(e) => setPopupImageUrl(e.target.value)}
+              placeholder="https://... o ruta relativa"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSavePopup} disabled={savingPopup} className="gap-2">
+              {savingPopup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {savingPopup ? 'Guardando...' : 'Guardar'}
+            </Button>
           </div>
         </div>
       </div>

@@ -64,9 +64,6 @@ export default function ConfiguracionPage() {
   const [promptExtra, setPromptExtra] = useState('');
   const [onDemandDescription, setOnDemandDescription] = useState('');
   const [savingCatalog, setSavingCatalog] = useState(false);
-  const [popupEnabled, setPopupEnabled] = useState(false);
-  const [popupImageUrl, setPopupImageUrl] = useState('');
-  const [savingPopup, setSavingPopup] = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
@@ -86,8 +83,6 @@ export default function ConfiguracionPage() {
         setBatchConcurrency(aiData.batch_concurrency);
         setPromptExtra(aiData.prompt_extra);
         setOnDemandDescription(catalogData.on_demand_description);
-        setPopupEnabled(catalogData.popup_enabled ?? false);
-        setPopupImageUrl(catalogData.popup_image_url ?? '');
       })
       .catch(() => showToast('error', 'No se pudo cargar la configuración'))
       .finally(() => setLoading(false));
@@ -125,21 +120,6 @@ export default function ConfiguracionPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleSavePopup() {
-    setSavingPopup(true);
-    try {
-      await adminApi.updateCatalogSettings(apiKey, {
-        popup_enabled: popupEnabled,
-        popup_image_url: popupImageUrl || null,
-      });
-      showToast('success', 'Configuración del popup guardada');
-    } catch {
-      showToast('error', 'Error al guardar');
-    } finally {
-      setSavingPopup(false);
     }
   }
 
@@ -331,52 +311,6 @@ export default function ConfiguracionPage() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Guardando...' : 'Guardar configuracion'}
         </Button>
-      </div>
-
-      {/* Popup card */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="font-medium text-gray-800">Popup de sesión</h2>
-          <p className="mt-0.5 text-xs text-gray-500">
-            Aparece una sola vez por sesión al ingresar al catálogo. Ideal para novedades o promociones.
-          </p>
-        </div>
-        <div className="px-6 py-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">Activar popup</label>
-            <button
-              type="button"
-              onClick={() => setPopupEnabled(v => !v)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                popupEnabled ? 'bg-blue-600' : 'bg-gray-200'
-              }`}
-              role="switch"
-              aria-checked={popupEnabled}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                  popupEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">URL de la imagen</label>
-            <input
-              type="text"
-              value={popupImageUrl}
-              onChange={(e) => setPopupImageUrl(e.target.value)}
-              placeholder="https://... o ruta relativa"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSavePopup} disabled={savingPopup} className="gap-2">
-              {savingPopup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {savingPopup ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* On-demand description card */}
