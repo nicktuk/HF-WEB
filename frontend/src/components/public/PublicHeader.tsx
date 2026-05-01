@@ -8,6 +8,7 @@ import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
 import { fetchPublicCatalogSettings } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
+import { slugifyCategory } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 
 function PublicHeaderInner() {
@@ -212,14 +213,15 @@ function PublicHeaderInner() {
 
             {/* Category pills */}
             {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
-              <button
+              <a
                 key={category.name}
-                onClick={() => updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined })}
+                href={`/categoria/${slugifyCategory(category.name)}`}
+                onClick={() => trackPublicEvent('category_click', { category: category.name })}
                 className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
                 style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
               >
                 {category.name}
-              </button>
+              </a>
             ))}
 
             {/* Subcategory pills */}
