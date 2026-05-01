@@ -39,9 +39,8 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => publicApi.getCategories(),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 }
 

@@ -216,7 +216,13 @@ function PublicHeaderInner() {
               <a
                 key={category.name}
                 href={`/categoria/${slugifyCategory(category.name)}`}
-                onClick={() => trackPublicEvent('category_click', { category: category.name })}
+                onClick={(e) => {
+                  trackPublicEvent('category_click', { category: category.name });
+                  if (isHome) {
+                    e.preventDefault();
+                    updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+                  }
+                }}
                 className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
                 style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
               >
