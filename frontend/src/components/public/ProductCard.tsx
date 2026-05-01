@@ -35,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
               src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
               alt={primaryImage.alt_text || product.name}
               fill
-              className="object-cover group-hover:scale-[1.07] transition-transform duration-500 ease-out"
+              className="object-contain group-hover:scale-[1.07] transition-transform duration-500 ease-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
             {/* Gradient overlay that fades in on hover */}
