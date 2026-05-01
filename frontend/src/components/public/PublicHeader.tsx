@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Search, Star, Zap, Lightbulb, Package } from 'lucide-react';
+import { Search, Star, Zap, Lightbulb, Package, Menu, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
@@ -29,6 +29,7 @@ function PublicHeaderInner() {
   // Local state
   const [searchInput, setSearchInput] = useState(searchFromUrl);
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
 
   // Sync input only when URL search changes from outside (e.g. clicking "Ver todo")
   const prevSearchFromUrl = useRef(searchFromUrl);
@@ -83,6 +84,7 @@ function PublicHeaderInner() {
     staleTime: 5 * 60 * 1000,
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
+  const categoryNavStyle = catalogSettings?.category_nav_style || 'pills';
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
@@ -211,24 +213,40 @@ function PublicHeaderInner() {
               Por pedido
             </button>
 
-            {/* Category pills */}
-            {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
-              <a
-                key={category.name}
-                href={`/categoria/${slugifyCategory(category.name)}`}
-                onClick={(e) => {
-                  trackPublicEvent('category_click', { category: category.name });
-                  if (isHome) {
-                    e.preventDefault();
-                    updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
-                  }
-                }}
-                className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
-                style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
-              >
-                {category.name}
-              </a>
-            ))}
+            {/* Category pills OR menu button */}
+            {categoryNavStyle === 'menu' ? (
+              !selectedCategory && (
+                <button
+                  onClick={() => setCategoryMenuOpen(o => !o)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                    categoryMenuOpen
+                      ? 'bg-white text-[#0D1B2A] border-white'
+                      : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                  }`}
+                >
+                  {categoryMenuOpen ? <X className="h-3.5 w-3.5" /> : <Menu className="h-3.5 w-3.5" />}
+                  Categorías
+                </button>
+              )
+            ) : (
+              !selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
+                <a
+                  key={category.name}
+                  href={`/categoria/${slugifyCategory(category.name)}`}
+                  onClick={(e) => {
+                    trackPublicEvent('category_click', { category: category.name });
+                    if (isHome) {
+                      e.preventDefault();
+                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+                    }
+                  }}
+                  className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
+                  style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
+                >
+                  {category.name}
+                </a>
+              ))
+            )}
 
             {/* Subcategory pills */}
             {selectedCategory && subcategories && subcategories.length > 0 && subcategories.map((sub) => (
@@ -249,6 +267,42 @@ function PublicHeaderInner() {
           </div>
         </div>{/* /container */}
       </div>{/* /subheader */}
+
+      {/* ─── CATEGORY MENU PANEL ──────────────────────────────────── */}
+      {categoryNavStyle === 'menu' && categoryMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[38]"
+            onClick={() => setCategoryMenuOpen(false)}
+          />
+          {/* Panel */}
+          <div className="fixed left-0 right-0 z-[39] shadow-xl" style={{ top: isStaging ? '171px' : '147px', backgroundColor: '#1a3050', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex flex-wrap gap-2">
+                {orderedCategories.filter(c => c.show_in_menu).map((category) => (
+                  <a
+                    key={category.name}
+                    href={`/categoria/${slugifyCategory(category.name)}`}
+                    onClick={(e) => {
+                      trackPublicEvent('category_click', { category: category.name });
+                      setCategoryMenuOpen(false);
+                      if (isHome) {
+                        e.preventDefault();
+                        updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold border transition-all hover:scale-105"
+                    style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20` }}
+                  >
+                    {category.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
     </>

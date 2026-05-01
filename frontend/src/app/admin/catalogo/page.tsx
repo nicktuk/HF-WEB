@@ -42,6 +42,10 @@ export default function CatalogoConfigPage() {
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [savingGroupByCategory, setSavingGroupByCategory] = useState(false);
 
+  // Category nav style
+  const [categoryNavStyle, setCategoryNavStyle] = useState<'pills' | 'menu'>('pills');
+  const [savingCategoryNavStyle, setSavingCategoryNavStyle] = useState(false);
+
   // Popup
   const [popupEnabled, setPopupEnabled] = useState(false);
   const [popupInterval, setPopupInterval] = useState(2);
@@ -68,6 +72,7 @@ export default function CatalogoConfigPage() {
         setShowOutOfStock(data.show_out_of_stock ?? true);
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
+        setCategoryNavStyle(data.category_nav_style === 'menu' ? 'menu' : 'pills');
         setPopupEnabled(data.popup_enabled ?? false);
         setPopupInterval(data.popup_interval ?? 2);
         setPopupSlides(data.popup_slides ?? []);
@@ -197,6 +202,18 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSavingGroupByCategory(false);
+    }
+  }
+
+  async function handleChangeCategoryNavStyle(value: 'pills' | 'menu') {
+    setCategoryNavStyle(value);
+    setSavingCategoryNavStyle(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, { category_nav_style: value });
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSavingCategoryNavStyle(false);
     }
   }
 
@@ -405,6 +422,47 @@ export default function CatalogoConfigPage() {
               <p className="text-xs opacity-70 mt-0.5">Imagen a la izquierda que vuela, categoría a la derecha</p>
             </button>
             {savingCarouselStyle && <Loader2 className="h-4 w-4 animate-spin text-gray-400 self-center shrink-0" />}
+          </div>
+        </div>
+      </div>
+
+      {/* Navegación de categorías */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Navegación de categorías</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Cómo se muestran las categorías en el submenú del catálogo. Las categorías deben tener &ldquo;Mostrar en menú&rdquo; activado.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={savingCategoryNavStyle}
+              onClick={() => handleChangeCategoryNavStyle('pills')}
+              className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${
+                categoryNavStyle === 'pills'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <p className="font-semibold">Píldoras</p>
+              <p className="text-xs opacity-70 mt-0.5">Botones visibles con scroll horizontal</p>
+            </button>
+            <button
+              type="button"
+              disabled={savingCategoryNavStyle}
+              onClick={() => handleChangeCategoryNavStyle('menu')}
+              className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${
+                categoryNavStyle === 'menu'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <p className="font-semibold">Botón menú</p>
+              <p className="text-xs opacity-70 mt-0.5">Un botón de 3 líneas que despliega las categorías</p>
+            </button>
+            {savingCategoryNavStyle && <Loader2 className="h-4 w-4 animate-spin text-gray-400 self-center shrink-0" />}
           </div>
         </div>
       </div>

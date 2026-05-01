@@ -151,6 +151,7 @@ class CatalogSettingsResponse(BaseModel):
     popup_enabled: bool = False
     popup_interval: int = 2
     popup_slides: List[PopupSlide] = []
+    category_nav_style: str = 'pills'
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -166,6 +167,7 @@ class CatalogSettingsUpdate(BaseModel):
     popup_enabled: Optional[bool] = None
     popup_interval: Optional[int] = None
     popup_slides: Optional[List[PopupSlide]] = None
+    category_nav_style: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +211,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         else:
             old_url = get_setting(db, "POPUP_IMAGE_URL")
             popup_slides = [PopupSlide(image=old_url)] if old_url else []
+    category_nav_style = get_setting(db, "CATEGORY_NAV_STYLE") or "pills"
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -222,6 +225,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         popup_enabled=popup_enabled,
         popup_interval=popup_interval,
         popup_slides=popup_slides,
+        category_nav_style=category_nav_style,
     )
 
 
@@ -260,6 +264,8 @@ def update_catalog_settings(
         set_setting(db, "POPUP_INTERVAL", str(max(1, data.popup_interval)))
     if data.popup_slides is not None:
         set_setting(db, "POPUP_SLIDES", json.dumps([s.model_dump() for s in data.popup_slides]))
+    if data.category_nav_style is not None:
+        set_setting(db, "CATEGORY_NAV_STYLE", "menu" if data.category_nav_style == "menu" else "pills")
     return get_catalog_settings(db=db)
 
 
@@ -312,6 +318,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "popup_enabled": popup_enabled,
         "popup_interval": int(get_setting(db, "POPUP_INTERVAL") or 2),
         "popup_slides": popup_slides,
+        "category_nav_style": get_setting(db, "CATEGORY_NAV_STYLE") or "pills",
     }
 
 
