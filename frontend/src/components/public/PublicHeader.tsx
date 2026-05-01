@@ -204,7 +204,7 @@ function PublicHeaderInner() {
 
             {/* Por pedido */}
             <button
-              onClick={() => updateParams(showOnDemand ? { on_demand: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showOnDemand ? 'bg-violet-600 text-white' : 'bg-white/10 text-violet-300 border border-white/20 hover:bg-white/20'
               }`}
@@ -237,7 +237,7 @@ function PublicHeaderInner() {
                     trackPublicEvent('category_click', { category: category.name });
                     if (isHome) {
                       e.preventDefault();
-                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
                     }
                   }}
                   className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
@@ -289,7 +289,7 @@ function PublicHeaderInner() {
                       setCategoryMenuOpen(false);
                       if (isHome) {
                         e.preventDefault();
-                        updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, section_id: undefined });
+                        updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
                       }
                     }}
                     className="px-4 py-2 rounded-xl text-sm font-semibold border transition-all hover:scale-105"
