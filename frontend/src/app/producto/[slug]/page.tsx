@@ -3,8 +3,6 @@ import { notFound } from 'next/navigation';
 import ProductPageClient from '@/components/public/ProductPageClient';
 import type { ProductPublic } from '@/types';
 
-export const dynamic = 'force-dynamic';
-
 const SERVER_API_URL =
   process.env.INTERNAL_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
@@ -25,7 +23,7 @@ function resolveOgImageUrl(url: string | null | undefined): string | null {
 async function fetchProduct(slug: string): Promise<ProductPublic | null> {
   try {
     const res = await fetch(`${SERVER_API_URL}/public/products/${slug}`, {
-      cache: 'no-store',
+      next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
     return res.json();
