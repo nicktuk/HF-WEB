@@ -35,9 +35,27 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               '@context': 'https://schema.org',
-              '@type': 'Organization',
+              '@type': 'LocalBusiness',
               name: 'He·Fa Productos',
               url: 'https://www.hefaproductos.com.ar',
+              telephone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+                ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`
+                : undefined,
+              priceRange: '$$',
+              address: {
+                '@type': 'PostalAddress',
+                addressRegion: 'Buenos Aires',
+                addressCountry: 'AR',
+              },
+              areaServed: [
+                { '@type': 'City', name: 'Ezeiza' },
+                { '@type': 'City', name: 'Canning' },
+                { '@type': 'City', name: 'Monte Grande' },
+                { '@type': 'City', name: 'Tristán Suárez' },
+                { '@type': 'City', name: 'Guernica' },
+                { '@type': 'City', name: 'Lomas de Zamora' },
+                { '@type': 'AdministrativeArea', name: 'GBA Sur' },
+              ],
               sameAs: ['https://www.instagram.com/hefa.productos'],
             }),
           }}

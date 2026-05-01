@@ -138,6 +138,7 @@ export default async function ProductPage({
         name: product.name,
         description: product.short_description || product.name,
         url: `${SITE_URL}/producto/${params.slug}`,
+        sku: params.slug,
         brand: product.brand
           ? { '@type': 'Brand', name: product.brand }
           : undefined,
@@ -146,7 +147,8 @@ export default async function ProductPage({
         offers: {
           '@type': 'Offer',
           priceCurrency: product.currency || 'ARS',
-          price: product.price ?? undefined,
+          price: product.price != null ? String(product.price) : undefined,
+          itemCondition: 'https://schema.org/NewCondition',
           availability:
             (product.stock_qty ?? 1) > 0
               ? 'https://schema.org/InStock'
@@ -159,12 +161,32 @@ export default async function ProductPage({
       }
     : null;
 
+  const breadcrumbLd = product
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'He·Fa Productos', item: SITE_URL },
+          ...(product.category
+            ? [{ '@type': 'ListItem', position: 2, name: product.category, item: `${SITE_URL}/categoria/${encodeURIComponent(product.category)}` }]
+            : []),
+          { '@type': 'ListItem', position: product.category ? 3 : 2, name: product.name },
+        ],
+      }
+    : null;
+
   return (
     <>
       {jsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      {breadcrumbLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
         />
       )}
       <ProductPageClient initialData={product ?? undefined} />
