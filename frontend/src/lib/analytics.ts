@@ -19,6 +19,11 @@ type PublicEventPayload = {
   metadata?: Record<string, unknown>;
 };
 
+type ExternalWindow = Window & {
+  gtag?: (...args: unknown[]) => void;
+  fbq?: (...args: unknown[]) => void;
+};
+
 const SESSION_KEY = 'hf_public_session_id';
 
 function getOrCreateSessionId(): string {
@@ -39,6 +44,30 @@ function getOrCreateSessionId(): string {
   return generated;
 }
 
+function fireExternalEvents(eventName: PublicEventName, payload: PublicEventPayload): void {
+  const { gtag, fbq } = window as ExternalWindow;
+
+  if (eventName === 'page_view' && payload.product_id) {
+    gtag?.('event', 'view_item', {
+      items: [{ item_id: String(payload.product_id), item_name: payload.product_slug }],
+    });
+    fbq?.('track', 'ViewContent', {
+      content_ids: [String(payload.product_id)],
+      content_type: 'product',
+    });
+  }
+
+  if (eventName === 'search' && payload.search_query) {
+    gtag?.('event', 'search', { search_term: payload.search_query });
+    fbq?.('track', 'Search', { search_string: payload.search_query });
+  }
+
+  if (eventName === 'whatsapp_click') {
+    fbq?.('track', 'Contact');
+    gtag?.('event', 'generate_lead', { method: 'whatsapp' });
+  }
+}
+
 export function trackPublicEvent(eventName: PublicEventName, payload: PublicEventPayload = {}): void {
   if (typeof window === 'undefined') {
     return;
@@ -51,6 +80,8 @@ export function trackPublicEvent(eventName: PublicEventName, payload: PublicEven
     referrer: document.referrer || undefined,
     ...payload,
   };
+
+  fireExternalEvents(eventName, payload);
 
   publicApi.trackEvent(eventPayload).catch(() => {
     // Tracking must never affect UX.

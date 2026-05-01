@@ -82,15 +82,16 @@ export async function generateMetadata({
 
   const primaryImage = product.images?.find((img) => img.is_primary) || product.images?.[0];
   const ogImageUrl = resolveOgImageUrl(primaryImage?.url ?? null);
+  const title = product.brand ? `${product.name} — ${product.brand}` : product.name;
 
   return {
-    title: product.name,
+    title,
     description,
     alternates: {
       canonical: `${SITE_URL}/producto/${params.slug}`,
     },
     openGraph: {
-      title: product.name,
+      title,
       description,
       url: `${SITE_URL}/producto/${params.slug}`,
       siteName: 'He·Fa Productos',
@@ -108,6 +109,12 @@ export async function generateMetadata({
             ],
           }
         : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(ogImageUrl ? { images: [ogImageUrl] } : {}),
     },
   };
 }

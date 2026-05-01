@@ -63,6 +63,9 @@ function PublicHeaderInner() {
 
   const commitSearch = useCallback(() => {
     if (searchInput !== searchFromUrl) {
+      if (searchInput) {
+        trackPublicEvent('search', { search_query: searchInput });
+      }
       updateParams({ search: searchInput || undefined, section_id: undefined });
     }
   }, [searchInput, searchFromUrl, updateParams]);

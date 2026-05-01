@@ -818,7 +818,7 @@ function CategoryCarouselSlider({ slides, onSelect }: { slides: CarouselSlide[];
         {/* Left: image flies in from left */}
         {imageUrl ? (
           <div key={animKey} className="relative w-[58%] shrink-0 overflow-hidden animate-slide-from-left">
-            <img src={imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+            <img src={imageUrl} alt="" aria-hidden loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-cover" />
             {/* Fade edge to the right for a smooth blend */}
             <div className="absolute inset-y-0 right-0 w-12 pointer-events-none" style={{ background: `linear-gradient(to right, transparent, ${bgColor})` }} />
           </div>
@@ -912,6 +912,7 @@ function CategoryCarouselScroll({ slides, onSelect }: { slides: CarouselSlide[];
           const title = slide.carousel_title || slide.name;
           const imageUrl = resolveImageUrl(slide.carousel_image_url);
           const glowColor = slide.carousel_glow_color || '#ffffff';
+          const isFirst = i === 0;
           return (
             <div
               key={`${slide.name}-${i}`}
@@ -931,7 +932,7 @@ function CategoryCarouselScroll({ slides, onSelect }: { slides: CarouselSlide[];
                 aria-label={`Filtrar por categoría: ${title}`}
               >
                 {imageUrl && (
-                  <img src={imageUrl} alt="" aria-hidden loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                  <img src={imageUrl} alt="" aria-hidden loading={isFirst ? 'eager' : 'lazy'} fetchPriority={isFirst ? 'high' : 'auto'} className="absolute inset-0 w-full h-full object-cover" />
                 )}
                 {imageUrl ? (
                   <div className="absolute inset-0 bg-black/45" />

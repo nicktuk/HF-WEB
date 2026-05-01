@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     template: '%s | He·Fa Productos',
   },
   description: 'He·Fa Productos: electrodomésticos, bazar, herramientas y más para el hogar en Argentina. Distribución mayorista y minorista.',
+  twitter: {
+    card: 'summary_large_image',
+    site: '@hefaproductos',
+  },
   other: {
     'facebook-domain-verification': '53w6gpprzxqdjlc23ungr77mi88duv',
   },
