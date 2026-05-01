@@ -171,12 +171,12 @@ function PublicHeaderInner() {
           <div className="md:hidden">
 
             {/* Fila 1 mobile: filtros fijos */}
-            <div className="flex items-center gap-2 h-10 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide">
 
               {/* Ver todo */}
               <button
                 onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined })}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   !selectedCategory && !showFeatured && !showImmediate && !showOnDemand
                     ? 'bg-white text-[#0D1B2A]'
                     : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
@@ -188,7 +188,7 @@ function PublicHeaderInner() {
               {/* Novedades */}
               <button
                 onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showFeatured ? 'bg-amber-500 text-white' : 'bg-white/10 text-amber-300 border border-white/20 hover:bg-white/20'
                 }`}
               >
@@ -199,7 +199,7 @@ function PublicHeaderInner() {
               {/* Inmediata */}
               <button
                 onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showImmediate ? 'bg-emerald-600 text-white' : 'bg-white/10 text-emerald-300 border border-white/20 hover:bg-white/20'
                 }`}
               >
@@ -210,7 +210,7 @@ function PublicHeaderInner() {
               {/* Por pedido */}
               <button
                 onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showOnDemand ? 'bg-violet-600 text-white' : 'bg-white/10 text-violet-300 border border-white/20 hover:bg-white/20'
                 }`}
               >
@@ -222,7 +222,7 @@ function PublicHeaderInner() {
               {categoryNavStyle === 'menu' && !selectedCategory && (
                 <button
                   onClick={() => setCategoryMenuOpen(o => !o)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                     categoryMenuOpen
                       ? 'bg-white text-[#0D1B2A] border-white'
                       : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
@@ -240,7 +240,7 @@ function PublicHeaderInner() {
               <>
                 {/* Categorías dinámicas */}
                 {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).length > 0 && (
-                  <div className="flex items-center gap-2 h-9 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                     {orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
                       <a
                         key={category.name}
@@ -252,7 +252,7 @@ function PublicHeaderInner() {
                             updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
                           }
                         }}
-                        className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
+                        className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
                         style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
                       >
                         {category.name}
@@ -263,11 +263,11 @@ function PublicHeaderInner() {
 
                 {/* Categoría activa + subcategorías */}
                 {selectedCategory && (
-                  <div className="flex items-center gap-2 h-9 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                     {/* Chip de categoría activa */}
                     <button
                       onClick={() => updateParams({ category: undefined, subcategory: undefined, section_id: undefined })}
-                      className="shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-white transition-all hover:opacity-80"
+                      className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-white transition-all hover:opacity-80"
                       style={{ backgroundColor: orderedCategories.find(c => c.name === selectedCategory)?.color ?? '#3b82f6' }}
                     >
                       {selectedCategory}
@@ -278,7 +278,7 @@ function PublicHeaderInner() {
                       <button
                         key={sub.name}
                         onClick={() => updateParams({ subcategory: selectedSubcategory === sub.name ? undefined : sub.name })}
-                        className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                        className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
                         style={{
                           backgroundColor: selectedSubcategory === sub.name ? sub.color : `${sub.color}25`,
                           color: selectedSubcategory === sub.name ? 'white' : sub.color,
@@ -418,7 +418,16 @@ function PublicHeaderInner() {
             onClick={() => setCategoryMenuOpen(false)}
           />
           {/* Panel */}
-          <div className="fixed left-0 right-0 z-[39] shadow-xl" style={{ top: isStaging ? '171px' : '147px', backgroundColor: '#1a3050', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          {/* top mobile: header(104/128) + subheader two rows (~80px) = 184/208px */}
+          {/* top desktop (md:): header(104/128) + subheader one row (44px) = 148/172px */}
+          <div
+            className={`fixed left-0 right-0 z-[39] shadow-xl ${
+              isStaging
+                ? 'top-[208px] md:top-[172px]'
+                : 'top-[184px] md:top-[148px]'
+            }`}
+            style={{ backgroundColor: '#1a3050', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+          >
             <div className="container mx-auto px-4 py-4">
               <div className="flex flex-wrap gap-2">
                 {orderedCategories.filter(c => c.show_in_menu).map((category) => (
