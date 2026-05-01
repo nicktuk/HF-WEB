@@ -171,7 +171,8 @@ function PublicHeaderInner() {
           <div className="md:hidden">
 
             {/* Fila 1 mobile: filtros fijos */}
-            <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide">
+            <div className="-mx-4 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 py-2 px-4">
 
               {/* Ver todo */}
               <button
@@ -234,13 +235,15 @@ function PublicHeaderInner() {
               )}
 
             </div>
+            </div>
 
             {/* Fila 2 mobile: categorías o subcategorías (solo en modo pills) */}
             {categoryNavStyle !== 'menu' && (
               <>
                 {/* Categorías dinámicas */}
                 {!selectedCategory && orderedCategories.filter(c => c.show_in_menu).length > 0 && (
-                  <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="-mx-4 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-center gap-2 py-2 px-4">
                     {orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
                       <a
                         key={category.name}
@@ -252,18 +255,20 @@ function PublicHeaderInner() {
                             updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
                           }
                         }}
-                        className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
-                        style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20`, animationDelay: `${index * 150}ms` }}
+                        className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                        style={{ borderColor: category.color, color: category.color, backgroundColor: `${category.color}20` }}
                       >
                         {category.name}
                       </a>
                     ))}
                   </div>
+                  </div>
                 )}
 
                 {/* Categoría activa + subcategorías */}
                 {selectedCategory && (
-                  <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="-mx-4 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-center gap-2 py-2 px-4">
                     {/* Chip de categoría activa */}
                     <button
                       onClick={() => updateParams({ category: undefined, subcategory: undefined, section_id: undefined })}
@@ -288,6 +293,7 @@ function PublicHeaderInner() {
                         {sub.name}
                       </button>
                     ))}
+                  </div>
                   </div>
                 )}
               </>
