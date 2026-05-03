@@ -79,6 +79,7 @@ export default function ProductEditPage() {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
   const [nextProductId, setNextProductId] = useState<number | null>(null);
@@ -414,16 +415,20 @@ export default function ProductEditPage() {
                     key={`${url}-${index}`}
                     className="flex flex-col items-center gap-0.5 flex-shrink-0"
                     draggable
-                    onDragStart={() => setDragIndex(index)}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                    onDragStart={() => { dragIndexRef.current = index; setDragIndex(index); }}
+                    onDragOver={(e) => {
+                      if (dragIndexRef.current === null) return;
+                      e.preventDefault();
+                      setDragOverIndex(prev => prev === index ? prev : index);
+                    }}
                     onDrop={() => {
-                      if (dragIndex !== null && dragIndex !== index) {
-                        handleMoveImage(dragIndex, index);
-                      }
+                      const from = dragIndexRef.current;
+                      if (from !== null && from !== index) handleMoveImage(from, index);
+                      dragIndexRef.current = null;
                       setDragIndex(null);
                       setDragOverIndex(null);
                     }}
-                    onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                    onDragEnd={() => { dragIndexRef.current = null; setDragIndex(null); setDragOverIndex(null); }}
                   >
                     <div
                       className={`relative w-16 h-16 rounded overflow-hidden cursor-grab border-2 transition-opacity ${
