@@ -106,7 +106,7 @@ class ProductService:
     def _to_public_response(self, product: Product, stock_qty: Optional[int] = None) -> ProductPublicResponse:
         """Convert product to public response format."""
         images = [
-            {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary}
+            {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary, "color": img.color}
             for img in sorted(product.images, key=lambda x: (not x.is_primary, x.display_order))
         ]
 

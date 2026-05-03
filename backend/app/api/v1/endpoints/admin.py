@@ -177,7 +177,8 @@ async def get_products_admin(
                 "id": img.id,
                 "url": img.url,
                 "alt_text": img.alt_text,
-                "is_primary": img.is_primary
+                "is_primary": img.is_primary,
+                "color": img.color,
             } for img in p.images],
             created_at=p.created_at,
             updated_at=p.updated_at,
