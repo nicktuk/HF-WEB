@@ -8,7 +8,7 @@ export function useBadgeLabels() {
   return useQuery<BadgeLabels>({
     queryKey: ['badge-labels'],
     queryFn: fetchBadgeLabels,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
 }
 
