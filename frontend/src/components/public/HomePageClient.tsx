@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SectionCard } from '@/components/public/SectionCard';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { SessionPopup } from '@/components/public/SessionPopup';
+import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 
 export function HomePageSkeleton() {
   return (
@@ -152,6 +153,9 @@ export function HomePageContent() {
     staleTime: 5 * 60 * 1000,
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
+  const { data: badgeLabels } = useBadgeLabels();
+  const immediateLabel = badgeLabels?.badge_text_immediate_delivery || 'Inmediata';
+  const onDemandLabel = badgeLabels?.badge_text_on_demand || 'Por pedido';
   const showBySections = !!(catalogSettings?.show_by_sections);
   const groupByCategory = catalogSettings?.group_by_category ?? true;
   const sectionSortOrder = catalogSettings?.section_sort_order ?? 'asc';
@@ -474,7 +478,7 @@ export function HomePageContent() {
                   <Zap className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-emerald-800">Entrega inmediata</p>
+                  <p className="text-sm font-bold text-emerald-800">{immediateLabel}</p>
                   <p className="text-xs text-emerald-700 mt-0.5">Productos listos para retirar o enviar sin demoras.</p>
                 </div>
               </div>
@@ -487,7 +491,7 @@ export function HomePageContent() {
                   <span className="text-lg leading-none">📦</span>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-violet-800">Por pedido</p>
+                  <p className="text-sm font-bold text-violet-800">{onDemandLabel}</p>
                   <p className="text-xs text-violet-700 mt-0.5">Productos que conseguimos especialmente para vos.</p>
                 </div>
               </div>

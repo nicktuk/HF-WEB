@@ -10,6 +10,7 @@ import { fetchPublicCatalogSettings } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 import { slugifyCategory } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
+import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 
 function PublicHeaderInner() {
   const router = useRouter();
@@ -85,6 +86,9 @@ function PublicHeaderInner() {
   });
   const featuredLabel = catalogSettings?.featured_pill_label || 'Nuevos ingresos';
   const categoryNavStyle = catalogSettings?.category_nav_style || 'pills';
+  const { data: badgeLabels } = useBadgeLabels();
+  const immediateLabel = badgeLabels?.badge_text_immediate_delivery || 'Inmediata';
+  const onDemandLabel = badgeLabels?.badge_text_on_demand || 'Por pedido';
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
@@ -198,7 +202,7 @@ function PublicHeaderInner() {
                 }`}
               >
                 <Zap className={`h-3 w-3 ${showImmediate ? 'fill-current' : ''}`} />
-                Inmediata
+                {immediateLabel}
               </button>
               <button
                 onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
@@ -207,7 +211,7 @@ function PublicHeaderInner() {
                 }`}
               >
                 <Package className="h-3 w-3" />
-                Por pedido
+                {onDemandLabel}
               </button>
               {categoryNavStyle === 'menu' && !selectedCategory && (
                 <button
