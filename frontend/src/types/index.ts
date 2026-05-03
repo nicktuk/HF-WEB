@@ -5,6 +5,7 @@ export interface ProductImage {
   url: string;
   alt_text?: string;
   is_primary: boolean;
+  color?: string | null;
 }
 
 export interface ProductPublic {
@@ -339,6 +340,7 @@ export interface ProductUpdateForm {
   brand?: string;
   sku?: string;
   image_urls?: string[];
+  image_colors?: (string | null)[];
   video_url?: string | null;
 }
 

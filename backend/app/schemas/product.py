@@ -12,6 +12,7 @@ class ProductImageResponse(BaseModel):
     url: str
     alt_text: Optional[str] = None
     is_primary: bool = False
+    color: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -61,6 +62,7 @@ class ProductUpdate(BaseModel):
     brand: Optional[str] = Field(None, max_length=100)
     sku: Optional[str] = Field(None, max_length=100)
     image_urls: Optional[List[str]] = Field(None, max_length=10)
+    image_colors: Optional[List[Optional[str]]] = Field(None, max_length=10)
     video_url: Optional[str] = None
 
     @field_validator("custom_name")

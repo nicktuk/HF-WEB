@@ -73,6 +73,7 @@ export default function ProductEditPage() {
 
   // Image state
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageColors, setImageColors] = useState<(string | null)[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -124,10 +125,9 @@ export default function ProductEditPage() {
       setBrand(product.brand || '');
       setSku(product.sku || '');
       // Initialize images
-      const urls = product.images
-        .sort((a, b) => (a.is_primary ? -1 : 1))
-        .map(img => img.url);
-      setImageUrls(urls);
+      const sortedImgs = [...product.images].sort((a, b) => (a.is_primary ? -1 : 1));
+      setImageUrls(sortedImgs.map(img => img.url));
+      setImageColors(sortedImgs.map(img => img.color || null));
       setSelectedImageIndex(0);
       setVideoUrl(product.video_url || '');
     }
@@ -157,6 +157,7 @@ export default function ProductEditPage() {
     try {
       const uploadedUrls = await uploadImages(apiKey, files);
       setImageUrls(prev => [...prev, ...uploadedUrls]);
+      setImageColors(prev => [...prev, ...uploadedUrls.map(() => null)]);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error al subir imágenes';
       setUploadError(msg);
@@ -171,6 +172,7 @@ export default function ProductEditPage() {
 
   const handleRemoveImage = (index: number) => {
     setImageUrls(prev => prev.filter((_, i) => i !== index));
+    setImageColors(prev => prev.filter((_, i) => i !== index));
     if (selectedImageIndex >= index && selectedImageIndex > 0) {
       setSelectedImageIndex(selectedImageIndex - 1);
     }
@@ -184,13 +186,29 @@ export default function ProductEditPage() {
       arr.splice(to, 0, moved);
       return arr;
     });
+    setImageColors(prev => {
+      const arr = [...prev];
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      return arr;
+    });
     setSelectedImageIndex(to);
+  };
+
+  const handleSetImageColor = (index: number, color: string | null) => {
+    setImageColors(prev => {
+      const arr = [...prev];
+      while (arr.length <= index) arr.push(null);
+      arr[index] = color;
+      return arr;
+    });
   };
 
   const handleAddImageUrl = () => {
     const url = newImageUrl.trim();
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       setImageUrls(prev => [...prev, url]);
+      setImageColors(prev => [...prev, null]);
       setNewImageUrl('');
     }
   };
@@ -275,6 +293,7 @@ export default function ProductEditPage() {
         brand: brand || '',
         sku: sku || '',
         image_urls: imageUrls,
+        image_colors: imageColors,
         video_url: videoUrl || null,
       },
     });
@@ -502,6 +521,26 @@ export default function ProductEditPage() {
                       >
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
+                    </div>
+                    {/* Color picker */}
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <input
+                        type="color"
+                        value={imageColors[index] || '#ffffff'}
+                        onChange={(e) => handleSetImageColor(index, e.target.value)}
+                        className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Asignar color"
+                        style={{ WebkitAppearance: 'none' }}
+                      />
+                      {imageColors[index] && (
+                        <button
+                          onClick={() => handleSetImageColor(index, null)}
+                          className="text-gray-300 hover:text-red-400"
+                          title="Quitar color"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

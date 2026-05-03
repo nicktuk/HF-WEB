@@ -133,6 +133,7 @@ class ProductImage(Base):
     alt_text = Column(String(500), nullable=True)
     display_order = Column(Integer, default=0)
     is_primary = Column(Boolean, default=False)
+    color = Column(String(20), nullable=True, comment="Color hex asociado a la imagen (ej: #FF0000)")
 
     # RelaciÃ³n
     product = relationship("Product", back_populates="images")

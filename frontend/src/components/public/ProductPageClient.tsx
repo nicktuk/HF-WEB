@@ -193,8 +193,27 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               )}
             </div>
 
-            {/* Thumbnails */}
-            {sortedImages.length > 1 && (
+            {/* Color swatches (when any image has a color) */}
+            {sortedImages.some(img => img.color) && (
+              <div className="flex gap-2 flex-wrap">
+                {sortedImages.filter(img => img.color).map((image) => (
+                  <button
+                    key={image.id}
+                    onClick={() => setSelectedImage(image)}
+                    title={image.color ?? undefined}
+                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
+                      selectedImage?.id === image.id
+                        ? 'border-gray-800 scale-110 shadow-md'
+                        : 'border-white shadow-sm'
+                    }`}
+                    style={{ backgroundColor: image.color ?? undefined, outline: `2px solid ${image.color ?? 'transparent'}`, outlineOffset: '2px' }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Thumbnails (only when no colors assigned) */}
+            {sortedImages.length > 1 && !sortedImages.some(img => img.color) && (
               <div className="flex gap-2 overflow-x-auto">
                 {sortedImages.map((image, index) => (
                   <button
