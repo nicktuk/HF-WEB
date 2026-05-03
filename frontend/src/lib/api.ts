@@ -1352,4 +1352,49 @@ export const settingsApi = {
       body: JSON.stringify(data),
     }, apiKey);
   },
+
+  async getBadges(apiKey: string): Promise<BadgeSetting[]> {
+    return fetchAPI<BadgeSetting[]>('/admin/settings/badges', {}, apiKey);
+  },
+
+  async updateBadge(apiKey: string, key: string, text: string): Promise<void> {
+    await fetchAPI(`/admin/settings/badges/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ text }),
+    }, apiKey);
+  },
+
+  async resetBadge(apiKey: string, key: string): Promise<void> {
+    await fetchAPI(`/admin/settings/badges/${key}`, { method: 'DELETE' }, apiKey);
+  },
 };
+
+export interface BadgeSetting {
+  key: string;
+  label: string;
+  default: string;
+  current: string | null;
+  is_custom: boolean;
+}
+
+export interface BadgeLabels {
+  badge_text_immediate_delivery: string;
+  badge_text_featured: string;
+  badge_text_on_demand: string;
+  badge_text_check_stock: string;
+  badge_text_installments: string;
+}
+
+export async function fetchBadgeLabels(): Promise<BadgeLabels> {
+  const res = await fetch(`${API_URL}/badge-labels`);
+  if (!res.ok) {
+    return {
+      badge_text_immediate_delivery: 'Inmediata',
+      badge_text_featured: 'Nuevo',
+      badge_text_on_demand: 'Por pedido',
+      badge_text_check_stock: 'Consultar',
+      badge_text_installments: 'Cuotas',
+    };
+  }
+  return res.json();
+}

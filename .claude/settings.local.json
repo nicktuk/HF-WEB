@@ -85,7 +85,10 @@
       "Bash(tail -n +21 \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
       "Read(//tmp/**)",
       "Bash(head -19 \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
-      "Bash(cp /tmp/page_clean.tmp \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")"
+      "Bash(cp /tmp/page_clean.tmp \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\Desarrollo\\\\HF WEB\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(New-Item *)"
     ]
   }
 }

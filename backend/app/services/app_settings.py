@@ -5,6 +5,14 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.app_setting import AppSetting
 
+BADGE_DEFAULTS: dict[str, str] = {
+    "badge_text_immediate_delivery": "Inmediata",
+    "badge_text_featured": "Nuevo",
+    "badge_text_on_demand": "Por pedido",
+    "badge_text_check_stock": "Consultar",
+    "badge_text_installments": "Cuotas",
+}
+
 
 def get_setting(db: Session, key: str, default: Optional[str] = None) -> Optional[str]:
     """Obtiene un valor de configuración desde DB."""
@@ -23,6 +31,11 @@ def set_setting(db: Session, key: str, value: Optional[str]) -> None:
     else:
         row.value = value
     db.commit()
+
+
+def get_badge_labels(db: Session) -> dict[str, str]:
+    """Devuelve todos los textos de etiquetas, con fallback a defaults."""
+    return {key: (get_setting(db, key) or default) for key, default in BADGE_DEFAULTS.items()}
 
 
 def get_ai_config(db: Session) -> dict:

@@ -28,6 +28,7 @@ import {
   LayoutGrid,
   CreditCard,
   TrendingDown,
+  Tag,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -61,6 +62,7 @@ const configSubmenu = [
   { name: 'Categorias', href: '/admin/categorias', icon: Tags },
   { name: 'Subcategorias', href: '/admin/subcategorias', icon: FolderTree },
   { name: 'Secciones', href: '/admin/secciones', icon: LayoutGrid },
+  { name: 'Etiquetas', href: '/admin/etiquetas', icon: Tag },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
   { name: 'Catalogo', href: '/admin/catalogo', icon: Settings },
   { name: 'Pagos', href: '/admin/pagos', icon: CreditCard },

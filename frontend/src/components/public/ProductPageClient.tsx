@@ -15,6 +15,7 @@ import { SectionStrip } from '@/components/public/SectionStrip';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
+import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 
 export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
   const params = useParams();
@@ -34,6 +35,8 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     queryFn: fetchPublicCatalogSettings,
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: badgeLabels } = useBadgeLabels();
 
   // Threshold: producto primero, luego global, luego default
   const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
@@ -149,7 +152,9 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                     }`}
                     style={{ top: '28px', left: '-36px' }}
                   >
-                    {product.is_immediate_delivery ? '⚡ Inmediata' : '📦 Por pedido'}
+                    {product.is_immediate_delivery
+                      ? `⚡ ${badgeLabels?.badge_text_immediate_delivery ?? 'Inmediata'}`
+                      : `📦 ${badgeLabels?.badge_text_on_demand ?? 'Por pedido'}`}
                   </div>
                 </div>
               )}

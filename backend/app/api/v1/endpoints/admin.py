@@ -2320,3 +2320,67 @@ async def delete_order_attachment(
     """Delete an attachment from an order."""
     service.delete_attachment(order_id, attachment_id)
     return MessageResponse(message="Adjunto eliminado")
+
+
+# ============================================
+# Badge Label Settings
+# ============================================
+
+from pydantic import BaseModel as _PydanticBase, Field as _PydanticField  # noqa: E402
+
+_BADGE_LABEL_META = {
+    "badge_text_immediate_delivery": {"label": "Entrega inmediata", "default": "Inmediata"},
+    "badge_text_featured": {"label": "Destacado / Nuevo", "default": "Nuevo"},
+    "badge_text_on_demand": {"label": "A pedido", "default": "Por pedido"},
+    "badge_text_check_stock": {"label": "Consultar stock", "default": "Consultar"},
+    "badge_text_installments": {"label": "Cuotas", "default": "Cuotas"},
+}
+
+
+class BadgeLabelUpdate(_PydanticBase):
+    text: str = _PydanticField(..., min_length=1, max_length=50)
+
+
+@router.get("/settings/badges", dependencies=[Depends(verify_admin)])
+async def list_badge_settings(db: Session = Depends(get_db)):
+    """Lista todos los textos de etiquetas configurables."""
+    from app.services.app_settings import get_setting
+    return [
+        {
+            "key": key,
+            "label": meta["label"],
+            "default": meta["default"],
+            "current": get_setting(db, key),
+            "is_custom": get_setting(db, key) is not None,
+        }
+        for key, meta in _BADGE_LABEL_META.items()
+    ]
+
+
+@router.put("/settings/badges/{badge_key}", dependencies=[Depends(verify_admin)])
+async def update_badge_setting(
+    badge_key: str,
+    data: BadgeLabelUpdate,
+    db: Session = Depends(get_db),
+):
+    """Actualiza el texto de una etiqueta."""
+    if badge_key not in _BADGE_LABEL_META:
+        raise HTTPException(status_code=404, detail="Badge key inválida")
+    from app.services.app_settings import set_setting
+    set_setting(db, badge_key, data.text.strip())
+    return {"key": badge_key, "text": data.text.strip()}
+
+
+@router.delete(
+    "/settings/badges/{badge_key}",
+    response_model=MessageResponse,
+    dependencies=[Depends(verify_admin)],
+)
+async def reset_badge_setting(badge_key: str, db: Session = Depends(get_db)):
+    """Restablece una etiqueta a su texto por defecto."""
+    if badge_key not in _BADGE_LABEL_META:
+        raise HTTPException(status_code=404, detail="Badge key inválida")
+    from app.models.app_setting import AppSetting
+    db.query(AppSetting).filter(AppSetting.key == badge_key).delete()
+    db.commit()
+    return MessageResponse(message="Etiqueta restablecida al valor por defecto")

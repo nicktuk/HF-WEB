@@ -24,6 +24,13 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
+@router.get("/badge-labels")
+async def get_public_badge_labels(db: Session = Depends(get_db)):
+    """Textos de etiquetas de productos para el catálogo público."""
+    from app.services.app_settings import get_badge_labels
+    return get_badge_labels(db)
+
+
 @router.get("/products", response_model=PaginatedResponse[ProductPublicResponse])
 @limiter.limit(settings.RATE_LIMIT_PUBLIC)
 async def get_products(
