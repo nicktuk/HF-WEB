@@ -779,23 +779,21 @@ class ProductService:
             product.enabled = data.enabled
         if data.is_featured is not None:
             product.is_featured = data.is_featured
-            # When setting featured, remove check_stock
-            if data.is_featured:
-                product.is_check_stock = False
         if data.is_immediate_delivery is not None:
             product.is_immediate_delivery = data.is_immediate_delivery
-            if data.is_immediate_delivery:
-                product.is_check_stock = False
-                product.is_on_demand = False
         if data.is_check_stock is not None:
             product.is_check_stock = data.is_check_stock
-            if data.is_check_stock:
-                product.is_featured = False
-                product.is_immediate_delivery = False
         if data.is_on_demand is not None:
             product.is_on_demand = data.is_on_demand
-            if data.is_on_demand:
-                product.is_immediate_delivery = False
+        # Enforce constraints after applying all values.
+        # is_immediate_delivery has priority: clears check_stock and on_demand.
+        if product.is_immediate_delivery:
+            product.is_check_stock = False
+            product.is_on_demand = False
+        # is_check_stock conflicts with featured and immediate_delivery.
+        if product.is_check_stock:
+            product.is_featured = False
+            product.is_immediate_delivery = False
         if data.is_best_seller is not None:
             product.is_best_seller = data.is_best_seller
         if data.is_published is not None:

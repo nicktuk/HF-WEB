@@ -744,7 +744,12 @@ export default function ProductEditPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsFeatured(!isFeatured)}
+                  onClick={() => {
+                    if (Number(product?.stock_qty || 0) === 0) return;
+                    const next = !isFeatured;
+                    setIsFeatured(next);
+                    if (next) setIsCheckStock(false);
+                  }}
                   disabled={Number(product?.stock_qty || 0) === 0}
                   title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -775,7 +780,12 @@ export default function ProductEditPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => Number(product?.stock_qty || 0) > 0 && setIsImmediateDelivery(!isImmediateDelivery)}
+                  onClick={() => {
+                    if (Number(product?.stock_qty || 0) === 0) return;
+                    const next = !isImmediateDelivery;
+                    setIsImmediateDelivery(next);
+                    if (next) { setIsOnDemand(false); setIsCheckStock(false); }
+                  }}
                   disabled={Number(product?.stock_qty || 0) === 0}
                   title={Number(product?.stock_qty || 0) === 0 ? 'El producto no tiene stock' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -804,7 +814,11 @@ export default function ProductEditPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsCheckStock(!isCheckStock)}
+                  onClick={() => {
+                    const next = !isCheckStock;
+                    setIsCheckStock(next);
+                    if (next) { setIsFeatured(false); setIsImmediateDelivery(false); }
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     isCheckStock ? 'bg-orange-500' : 'bg-gray-200'
                   }`}
@@ -829,7 +843,11 @@ export default function ProductEditPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsOnDemand(!isOnDemand)}
+                  onClick={() => {
+                    const next = !isOnDemand;
+                    setIsOnDemand(next);
+                    if (next) setIsImmediateDelivery(false);
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     isOnDemand ? 'bg-violet-600' : 'bg-gray-200'
                   }`}

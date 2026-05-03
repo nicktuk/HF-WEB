@@ -293,9 +293,11 @@ export function useUpdateProduct(apiKey: string) {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: ProductUpdateForm }) =>
       adminApi.updateProduct(apiKey, id, data),
-    onSuccess: (_, { id }) => {
+    onSuccess: (updatedProduct, { id }) => {
+      // Write server response directly to cache so navigating away+back
+      // before the background refetch completes doesn't show stale data.
+      queryClient.setQueryData(['admin-product', id], updatedProduct);
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-product'] });
     },
