@@ -77,6 +77,8 @@ export default function ProductEditPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
   const [nextProductId, setNextProductId] = useState<number | null>(null);
@@ -164,6 +166,17 @@ export default function ProductEditPage() {
     if (selectedImageIndex >= index && selectedImageIndex > 0) {
       setSelectedImageIndex(selectedImageIndex - 1);
     }
+  };
+
+  const handleMoveImage = (from: number, to: number) => {
+    if (to < 0 || to >= imageUrls.length) return;
+    setImageUrls(prev => {
+      const arr = [...prev];
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      return arr;
+    });
+    setSelectedImageIndex(to);
   };
 
   const handleAddImageUrl = () => {
@@ -395,53 +408,88 @@ export default function ProductEditPage() {
               </div>
 
               {/* Thumbnail selector */}
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 items-start">
                 {imageUrls.map((url, index) => (
                   <div
-                    key={index}
-                    className={`relative w-16 h-16 flex-shrink-0 rounded overflow-hidden cursor-pointer border-2 ${
-                      selectedImageIndex === index
-                        ? 'border-primary-500'
-                        : 'border-transparent'
-                    }`}
-                    onClick={() => setSelectedImageIndex(index)}
+                    key={`${url}-${index}`}
+                    className="flex flex-col items-center gap-0.5 flex-shrink-0"
+                    draggable
+                    onDragStart={() => setDragIndex(index)}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                    onDrop={() => {
+                      if (dragIndex !== null && dragIndex !== index) {
+                        handleMoveImage(dragIndex, index);
+                      }
+                      setDragIndex(null);
+                      setDragOverIndex(null);
+                    }}
+                    onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                   >
-                    <Image
-                      src={resolveImageUrl(url) ?? url}
-                      alt=""
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveImage(index);
-                      }}
-                      className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    <div
+                      className={`relative w-16 h-16 rounded overflow-hidden cursor-grab border-2 transition-opacity ${
+                        selectedImageIndex === index
+                          ? 'border-primary-500'
+                          : dragOverIndex === index
+                          ? 'border-blue-400'
+                          : 'border-transparent'
+                      } ${dragIndex === index ? 'opacity-40' : 'opacity-100'}`}
+                      onClick={() => setSelectedImageIndex(index)}
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                    {index === 0 && (
-                      <span className="absolute bottom-0 left-0 right-0 text-[10px] bg-primary-600 text-white text-center">
-                        Principal
-                      </span>
-                    )}
+                      <Image
+                        src={resolveImageUrl(url) ?? url}
+                        alt=""
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImage(index);
+                        }}
+                        className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {index === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 text-[10px] bg-primary-600 text-white text-center">
+                          Principal
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => handleMoveImage(index, index - 1)}
+                        disabled={index === 0}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleMoveImage(index, index + 1)}
+                        disabled={index === imageUrls.length - 1}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
 
                 {/* Add image button */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-16 h-16 flex-shrink-0 rounded border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary-400 hover:text-primary-500"
-                >
-                  {isUploading ? (
-                    <RefreshCw className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Plus className="h-5 w-5" />
-                  )}
-                </button>
+                <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-16 h-16 rounded border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary-400 hover:text-primary-500"
+                  >
+                    {isUploading ? (
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Plus className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
