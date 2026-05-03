@@ -1386,7 +1386,7 @@ export interface BadgeLabels {
 }
 
 export async function fetchBadgeLabels(): Promise<BadgeLabels> {
-  const res = await fetch(`${API_URL}/badge-labels`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}/public/badge-labels`, { cache: 'no-store' });
   if (!res.ok) {
     return {
       badge_text_immediate_delivery: 'Inmediata',
