@@ -1238,6 +1238,27 @@ export async function uploadImages(apiKey: string, files: File[]): Promise<strin
   return data.urls as string[];
 }
 
+export async function uploadVideo(apiKey: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_URL}/admin/upload/video`, {
+    method: 'POST',
+    headers: {
+      'X-Admin-API-Key': apiKey,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error al subir video' }));
+    throw new Error(error.detail || error.message || 'Error al subir video');
+  }
+
+  const data = await response.json();
+  return data.url as string;
+}
+
 // ============================================
 // AI Description Generation
 // ============================================

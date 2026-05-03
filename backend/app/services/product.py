@@ -836,6 +836,8 @@ class ProductService:
             product.brand = data.brand if data.brand else None
         if data.sku is not None:
             product.sku = data.sku if data.sku else None
+        if 'video_url' in data.model_fields_set:
+            product.video_url = data.video_url if data.video_url else None
 
         # Update images if provided
         if data.image_urls is not None:

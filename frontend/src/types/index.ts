@@ -28,6 +28,7 @@ export interface ProductPublic {
   installment_price?: number | null;
   stock_low_threshold?: number | null;
   stock_qty?: number | null;
+  video_url?: string | null;
   images: ProductImage[];
   source_url?: string;
   updated_at?: string;
@@ -338,6 +339,7 @@ export interface ProductUpdateForm {
   brand?: string;
   sku?: string;
   image_urls?: string[];
+  video_url?: string | null;
 }
 
 export interface SourceWebsiteCreateForm {

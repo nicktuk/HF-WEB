@@ -61,6 +61,7 @@ class ProductUpdate(BaseModel):
     brand: Optional[str] = Field(None, max_length=100)
     sku: Optional[str] = Field(None, max_length=100)
     image_urls: Optional[List[str]] = Field(None, max_length=10)
+    video_url: Optional[str] = None
 
     @field_validator("custom_name")
     @classmethod
@@ -119,6 +120,7 @@ class ProductResponse(BaseModel):
     installments_3: bool = False
     custom_installment_price: Optional[Decimal] = None
     stock_low_threshold: Optional[int] = None
+    video_url: Optional[str] = None
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -178,6 +180,7 @@ class ProductPublicResponse(BaseModel):
     installment_price: Optional[Decimal] = None
     stock_low_threshold: Optional[int] = None
     stock_qty: Optional[int] = None
+    video_url: Optional[str] = None
     images: List[ProductImageResponse] = []
     source_url: Optional[str] = None
     updated_at: Optional[datetime] = None

@@ -68,6 +68,8 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
     ALLOWED_IMAGE_TYPES_STR: str = "image/jpeg,image/png,image/webp,image/gif"
+    MAX_VIDEO_SIZE: int = 100 * 1024 * 1024  # 100 MB
+    ALLOWED_VIDEO_TYPES_STR: str = "video/mp4,video/webm,video/ogg"
 
     # AI Description Generation
     AI_PROVIDER: str = "claude"           # "claude" or "openai"
@@ -90,6 +92,18 @@ class Settings(BaseSettings):
     def ALLOWED_IMAGE_TYPES(self) -> List[str]:
         """Parse ALLOWED_IMAGE_TYPES from string."""
         v = self.ALLOWED_IMAGE_TYPES_STR
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        return [t.strip() for t in v.split(',') if t.strip()]
+
+    @property
+    def ALLOWED_VIDEO_TYPES(self) -> List[str]:
+        """Parse ALLOWED_VIDEO_TYPES from string."""
+        v = self.ALLOWED_VIDEO_TYPES_STR
         try:
             parsed = json.loads(v)
             if isinstance(parsed, list):

@@ -215,6 +215,18 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 ))}
               </div>
             )}
+
+            {/* Video */}
+            {product.video_url && (
+              <div className="rounded-lg overflow-hidden bg-black aspect-video">
+                <video
+                  src={resolveImageUrl(product.video_url) ?? product.video_url}
+                  controls
+                  className="w-full h-full object-contain"
+                  preload="metadata"
+                />
+              </div>
+            )}
           </div>
 
           {/* Product Info */}

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon, Send, Link2, CreditCard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Trash2, Star, Upload, X, Plus, Zap, HelpCircle, Sparkles, Image as ImageIcon, Send, Link2, CreditCard, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey } from '@/hooks/useAuth';
-import { uploadImages, aiApi, resolveImageUrl } from '@/lib/api';
+import { uploadImages, uploadVideo, aiApi, resolveImageUrl } from '@/lib/api';
 import type { Category, Subcategory } from '@/types';
 import {
   useAdminProduct,
@@ -81,6 +81,12 @@ export default function ProductEditPage() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragIndexRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Video state
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [prevProductId, setPrevProductId] = useState<number | null>(null);
   const [nextProductId, setNextProductId] = useState<number | null>(null);
 
@@ -123,6 +129,7 @@ export default function ProductEditPage() {
         .map(img => img.url);
       setImageUrls(urls);
       setSelectedImageIndex(0);
+      setVideoUrl(product.video_url || '');
     }
   }, [product]);
 
@@ -185,6 +192,23 @@ export default function ProductEditPage() {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       setImageUrls(prev => [...prev, url]);
       setNewImageUrl('');
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingVideo(true);
+    setVideoUploadError(null);
+    try {
+      const url = await uploadVideo(apiKey, file);
+      setVideoUrl(url);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Error al subir video';
+      setVideoUploadError(msg);
+    } finally {
+      setIsUploadingVideo(false);
+      if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
 
@@ -251,6 +275,7 @@ export default function ProductEditPage() {
         brand: brand || '',
         sku: sku || '',
         image_urls: imageUrls,
+        video_url: videoUrl || null,
       },
     });
   };
@@ -558,6 +583,61 @@ export default function ProductEditPage() {
               )}
               <p className="text-xs text-gray-500">
                 La primera imagen es la principal. Podes subir archivos o agregar URLs.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Video */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Video className="h-5 w-5 text-gray-500" />
+                Video del producto
+              </h2>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {videoUrl && (
+                <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+                  <video
+                    src={resolveImageUrl(videoUrl) || videoUrl}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVideoUrl('')}
+                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={isUploadingVideo}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {isUploadingVideo
+                    ? <RefreshCw className="h-4 w-4 animate-spin" />
+                    : <Upload className="h-4 w-4" />
+                  }
+                  {isUploadingVideo ? 'Subiendo...' : videoUrl ? 'Reemplazar video' : 'Subir video'}
+                </button>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/ogg"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
+              </div>
+              {videoUploadError && (
+                <p className="text-xs text-red-600 font-medium">{videoUploadError}</p>
+              )}
+              <p className="text-xs text-gray-500">
+                MP4, WebM u OGG. Máximo 100MB. Guardá los cambios para aplicar.
               </p>
             </CardContent>
           </Card>

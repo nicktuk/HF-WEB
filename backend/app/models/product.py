@@ -69,6 +69,9 @@ class Product(Base):
     category = Column(String(100), nullable=True, index=True)
     subcategory = Column(String(100), nullable=True, index=True)
 
+    # Video
+    video_url = Column(Text, nullable=True, comment="URL del video del producto (subido al servidor)")
+
     # Metadatos de scraping
     last_scraped_at = Column(DateTime, nullable=True)
     scrape_error_count = Column(Integer, default=0)

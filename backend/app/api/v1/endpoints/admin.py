@@ -943,6 +943,48 @@ async def upload_images(
     return {"urls": uploaded_urls}
 
 
+@router.post(
+    "/upload/video",
+    dependencies=[Depends(verify_admin)]
+)
+@limiter.limit("20/minute")
+async def upload_video(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """
+    Upload a video for a product.
+
+    Returns the URL of the uploaded video.
+    Supports MP4, WebM, OGG. Max 100MB.
+    """
+    if file.content_type not in settings.ALLOWED_VIDEO_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type {file.content_type} not allowed. Allowed: {settings.ALLOWED_VIDEO_TYPES}"
+        )
+
+    content = await file.read()
+
+    if len(content) > settings.MAX_VIDEO_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Max size: {settings.MAX_VIDEO_SIZE // (1024*1024)}MB"
+        )
+
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'mp4'
+    filename = f"video_{uuid.uuid4().hex}.{ext}"
+    filepath = upload_dir / filename
+
+    with open(filepath, 'wb') as f:
+        f.write(content)
+
+    return {"url": f"/uploads/{filename}"}
+
+
 @router.get("/upload/sync-from-prod", dependencies=[Depends(verify_admin)])
 async def sync_uploads_from_prod(
     db: Session = Depends(get_db),
