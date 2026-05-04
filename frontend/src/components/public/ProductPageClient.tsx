@@ -41,6 +41,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   // Threshold: producto primero, luego global, luego default
   const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
 
+  // Stock efectivo: si hay color seleccionado con stock definido, usa ese; si no, el global
+  const selectedColor = selectedImage?.color ?? null;
+  const colorStockMap = Object.fromEntries((product?.color_stock ?? []).map(s => [s.color, s.quantity]));
+  const hasColorStock = (product?.color_stock ?? []).length > 0;
+  const effectiveStockQty = hasColorStock && selectedColor && colorStockMap[selectedColor] !== undefined
+    ? colorStockMap[selectedColor]
+    : product?.stock_qty ?? undefined;
+
   const sortedImages = product?.images ?? [];
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
 
@@ -332,7 +340,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 isCheckStock={product.is_check_stock}
                 isImmediateDelivery={product.is_immediate_delivery}
                 isOnDemand={product.is_on_demand}
-                stockQty={product.stock_qty ?? undefined}
+                stockQty={effectiveStockQty}
                 productName={product.name}
                 productSlug={slug}
                 productPrice={product.price}
