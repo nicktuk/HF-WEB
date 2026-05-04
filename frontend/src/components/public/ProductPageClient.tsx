@@ -208,13 +208,10 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                     return (
                       <div key={image.id} className="flex flex-col items-center gap-1">
                         <button
-                          onClick={() => !outOfStock && setSelectedImage(image)}
+                          onClick={() => setSelectedImage(image)}
                           title={outOfStock ? 'Sin stock' : image.color ?? undefined}
-                          disabled={outOfStock}
-                          className={`w-8 h-8 rounded-full border-2 transition-all relative ${
-                            outOfStock
-                              ? 'opacity-35 cursor-not-allowed'
-                              : 'hover:scale-110 cursor-pointer'
+                          className={`w-8 h-8 rounded-full border-2 transition-all relative hover:scale-110 cursor-pointer ${
+                            outOfStock ? 'opacity-40' : ''
                           } ${
                             isActive
                               ? 'border-gray-800 scale-110 shadow-md'
