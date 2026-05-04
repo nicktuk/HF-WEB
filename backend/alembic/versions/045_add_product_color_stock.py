@@ -21,6 +21,8 @@ def upgrade() -> None:
         sa.Column('product_id', sa.Integer(), nullable=False),
         sa.Column('color', sa.String(20), nullable=False, comment='Color hex'),
         sa.Column('quantity', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(['product_id'], ['products.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
     )
