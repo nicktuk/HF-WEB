@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -161,6 +161,27 @@ export function useUpdateStockPurchase(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
       queryClient.invalidateQueries({ queryKey: ['stock-purchases-unmatched'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+export function useColorStock(apiKey: string, productId: number) {
+  return useQuery({
+    queryKey: ['color-stock', productId],
+    queryFn: () => adminApi.getColorStock(apiKey, productId),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && !!productId,
+  });
+}
+
+export function useSetColorStock(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, items }: { productId: number; items: ColorStockItem[] }) =>
+      adminApi.setColorStock(apiKey, productId, items),
+    onSuccess: (_, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: ['color-stock', productId] });
+      queryClient.invalidateQueries({ queryKey: ['public-product'] });
     },
   });
 }

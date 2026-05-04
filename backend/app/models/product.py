@@ -144,3 +144,19 @@ class ProductImage(Base):
 
     def __repr__(self):
         return f"<ProductImage(product_id={self.product_id}, is_primary={self.is_primary})>"
+
+
+class ProductColorStock(Base):
+    """Stock por variante de color de un producto."""
+    __tablename__ = "product_color_stock"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    color = Column(String(20), nullable=False, comment="Color hex (ej: #FF0000)")
+    quantity = Column(Integer, default=0, nullable=False)
+
+    product = relationship("Product")
+
+    __table_args__ = (
+        Index("ix_product_color_stock_product_color", "product_id", "color", unique=True),
+    )

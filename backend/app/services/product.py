@@ -17,7 +17,8 @@ from app.models.stock import StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
-from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse
+from app.models.product import ProductColorStock
+from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem
 from app.scrapers.registry import ScraperRegistry
 from app.scrapers.base import ScrapedProduct
 from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
@@ -109,6 +110,8 @@ class ProductService:
             {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary, "color": img.color}
             for img in sorted(product.images, key=lambda x: (not x.is_primary, x.display_order))
         ]
+        color_stock_rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product.id).all()
+        color_stock = [ColorStockItem(color=r.color, quantity=r.quantity) for r in color_stock_rows]
 
         return ProductPublicResponse(
             id=product.id,
@@ -134,8 +137,21 @@ class ProductService:
             images=images,
             source_url=product.source_url,
             video_url=product.video_url,
+            color_stock=color_stock,
             updated_at=product.updated_at,
         )
+
+    def get_color_stock(self, product_id: int) -> List[ColorStockItem]:
+        rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product_id).all()
+        return [ColorStockItem(color=r.color, quantity=r.quantity) for r in rows]
+
+    def set_color_stock(self, product_id: int, items: List[ColorStockItem]) -> List[ColorStockItem]:
+        self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product_id).delete()
+        for item in items:
+            row = ProductColorStock(product_id=product_id, color=item.color, quantity=item.quantity)
+            self.db.add(row)
+        self.db.commit()
+        return items
 
     @staticmethod
     def _normalize_source_category(value: Optional[str]) -> str:

@@ -194,23 +194,51 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             </div>
 
             {/* Color swatches (when any image has a color) */}
-            {sortedImages.some(img => img.color) && (
-              <div className="flex gap-2 flex-wrap">
-                {sortedImages.filter(img => img.color).map((image) => (
-                  <button
-                    key={image.id}
-                    onClick={() => setSelectedImage(image)}
-                    title={image.color ?? undefined}
-                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
-                      selectedImage?.id === image.id
-                        ? 'border-gray-800 scale-110 shadow-md'
-                        : 'border-white shadow-sm'
-                    }`}
-                    style={{ backgroundColor: image.color ?? undefined, outline: `2px solid ${image.color ?? 'transparent'}`, outlineOffset: '2px' }}
-                  />
-                ))}
-              </div>
-            )}
+            {sortedImages.some(img => img.color) && (() => {
+              const stockMap = Object.fromEntries(
+                (product.color_stock ?? []).map(s => [s.color, s.quantity])
+              );
+              const hasStockData = (product.color_stock ?? []).length > 0;
+              return (
+                <div className="flex gap-3 flex-wrap items-center">
+                  {sortedImages.filter(img => img.color).map((image) => {
+                    const qty = stockMap[image.color!];
+                    const outOfStock = hasStockData && qty === 0;
+                    const isActive = selectedImage?.id === image.id;
+                    return (
+                      <div key={image.id} className="flex flex-col items-center gap-1">
+                        <button
+                          onClick={() => !outOfStock && setSelectedImage(image)}
+                          title={outOfStock ? 'Sin stock' : image.color ?? undefined}
+                          disabled={outOfStock}
+                          className={`w-8 h-8 rounded-full border-2 transition-all relative ${
+                            outOfStock
+                              ? 'opacity-35 cursor-not-allowed'
+                              : 'hover:scale-110 cursor-pointer'
+                          } ${
+                            isActive
+                              ? 'border-gray-800 scale-110 shadow-md'
+                              : 'border-white shadow-sm'
+                          }`}
+                          style={{
+                            backgroundColor: image.color ?? undefined,
+                            outline: isActive ? `2px solid ${image.color ?? 'transparent'}` : undefined,
+                            outlineOffset: '2px',
+                          }}
+                        >
+                          {outOfStock && (
+                            <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs">✕</span>
+                          )}
+                        </button>
+                        {hasStockData && qty !== undefined && qty > 0 && qty <= 3 && (
+                          <span className="text-[10px] text-amber-600 font-semibold leading-none">último{qty > 1 ? 's' : ''}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Thumbnails (only when no colors assigned) */}
             {sortedImages.length > 1 && !sortedImages.some(img => img.color) && (

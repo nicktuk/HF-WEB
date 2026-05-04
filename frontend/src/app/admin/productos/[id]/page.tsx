@@ -24,6 +24,8 @@ import {
   useUpdateStockPurchase,
   useAdminCategories,
   useAdminSubcategories,
+  useColorStock,
+  useSetColorStock,
 } from '@/hooks/useProducts';
 
 export default function ProductEditPage() {
@@ -40,6 +42,8 @@ export default function ProductEditPage() {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
+  const { data: colorStockData } = useColorStock(apiKey, productId);
+  const setColorStockMutation = useSetColorStock(apiKey);
 
   // Form state
   const [enabled, setEnabled] = useState(false);
@@ -82,6 +86,9 @@ export default function ProductEditPage() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragIndexRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Color stock state: map of hex color → quantity
+  const [colorStockQty, setColorStockQty] = useState<Record<string, number>>({});
 
   // Video state
   const [videoUrl, setVideoUrl] = useState<string>('');
@@ -132,6 +139,15 @@ export default function ProductEditPage() {
       setVideoUrl(product.video_url || '');
     }
   }, [product]);
+
+  // Initialize color stock quantities when API data arrives
+  useEffect(() => {
+    if (colorStockData) {
+      const map: Record<string, number> = {};
+      colorStockData.forEach(item => { map[item.color] = item.quantity; });
+      setColorStockQty(map);
+    }
+  }, [colorStockData]);
 
   useEffect(() => {
     try {
@@ -297,6 +313,13 @@ export default function ProductEditPage() {
         video_url: videoUrl || null,
       },
     });
+    // Save color stock for colors that are still assigned to images
+    const activeColors = new Set(imageColors.filter(Boolean) as string[]);
+    const colorStockItems = Array.from(activeColors).map(color => ({
+      color,
+      quantity: colorStockQty[color] ?? 0,
+    }));
+    await setColorStockMutation.mutateAsync({ productId, items: colorStockItems });
   };
 
   const handleDelete = async () => {
@@ -623,6 +646,29 @@ export default function ProductEditPage() {
               <p className="text-xs text-gray-500">
                 La primera imagen es la principal. Podes subir archivos o agregar URLs.
               </p>
+
+              {/* Stock por color */}
+              {imageColors.some(Boolean) && (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por color</p>
+                  {Array.from(new Set(imageColors.filter(Boolean) as string[])).map(color => (
+                    <div key={color} className="flex items-center gap-3">
+                      <span
+                        className="w-5 h-5 rounded-full border border-gray-200 shrink-0"
+                        style={{ backgroundColor: color }}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        value={colorStockQty[color] ?? 0}
+                        onChange={e => setColorStockQty(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
+                      />
+                      <span className="text-xs text-gray-500">unidades</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

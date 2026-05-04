@@ -1,6 +1,7 @@
 import type {
   ProductPublic,
   ProductAdmin,
+  ColorStockItem,
   SourceWebsite,
   MarketPriceStats,
   PriceComparison,
@@ -305,6 +306,17 @@ export const adminApi = {
   async deleteProduct(apiKey: string, id: number): Promise<void> {
     return fetchAPI(`/admin/products/${id}`, {
       method: 'DELETE',
+    }, apiKey);
+  },
+
+  async getColorStock(apiKey: string, productId: number): Promise<ColorStockItem[]> {
+    return fetchAPI(`/admin/products/${productId}/color-stock`, {}, apiKey);
+  },
+
+  async setColorStock(apiKey: string, productId: number, items: ColorStockItem[]): Promise<ColorStockItem[]> {
+    return fetchAPI(`/admin/products/${productId}/color-stock`, {
+      method: 'PUT',
+      body: JSON.stringify(items),
     }, apiKey);
   },
 

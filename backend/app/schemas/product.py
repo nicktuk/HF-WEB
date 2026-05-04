@@ -6,6 +6,14 @@ from pydantic import BaseModel, Field, field_validator, computed_field
 import re
 
 
+class ColorStockItem(BaseModel):
+    color: str
+    quantity: int
+
+    class Config:
+        from_attributes = True
+
+
 class ProductImageResponse(BaseModel):
     """Response schema for product image."""
     id: int
@@ -184,6 +192,7 @@ class ProductPublicResponse(BaseModel):
     stock_qty: Optional[int] = None
     video_url: Optional[str] = None
     images: List[ProductImageResponse] = []
+    color_stock: List[ColorStockItem] = []
     source_url: Optional[str] = None
     updated_at: Optional[datetime] = None
 

@@ -119,6 +119,29 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </h3>
 
+        {/* Color swatches */}
+        {product.images.some(img => img.color) && (() => {
+          const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
+          const hasStock = (product.color_stock ?? []).length > 0;
+          const coloredImages = product.images.filter(img => img.color);
+          const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
+          return (
+            <div className="flex gap-1.5 flex-wrap">
+              {uniqueColors.map(color => {
+                const outOfStock = hasStock && stockMap[color] === 0;
+                return (
+                  <span
+                    key={color}
+                    className={`w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 transition-opacity ${outOfStock ? 'opacity-25' : 'opacity-100'}`}
+                    style={{ backgroundColor: color }}
+                    title={outOfStock ? 'Sin stock' : undefined}
+                  />
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* Price row */}
         <div className="flex items-start justify-between mt-1 pt-2 border-t border-zinc-100">
           <div>

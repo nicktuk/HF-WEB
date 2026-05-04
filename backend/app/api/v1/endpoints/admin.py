@@ -36,6 +36,7 @@ from app.schemas.product import (
     PendingPriceAction,
     ProductBulkWholesaleMarkup,
     ProductSelectedExport,
+    ColorStockItem,
 )
 from app.schemas.whatsapp import (
     WhatsAppFilterRequest,
@@ -1125,6 +1126,29 @@ async def update_product(
         market_max_price=stats.max_price if stats else None,
         market_sample_count=stats.sample_count if stats else 0,
     )
+
+
+@router.get(
+    "/products/{product_id}/color-stock",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_color_stock(
+    product_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    return service.get_color_stock(product_id)
+
+
+@router.put(
+    "/products/{product_id}/color-stock",
+    dependencies=[Depends(verify_admin)]
+)
+async def set_color_stock(
+    product_id: int,
+    items: List[ColorStockItem],
+    service: ProductService = Depends(get_product_service),
+):
+    return service.set_color_stock(product_id, items)
 
 
 @router.post(

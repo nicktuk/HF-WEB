@@ -1,5 +1,10 @@
 // Product Types
 
+export interface ColorStockItem {
+  color: string;
+  quantity: number;
+}
+
 export interface ProductImage {
   id: number;
   url: string;
@@ -31,6 +36,7 @@ export interface ProductPublic {
   stock_qty?: number | null;
   video_url?: string | null;
   images: ProductImage[];
+  color_stock?: ColorStockItem[];
   source_url?: string;
   updated_at?: string;
 }
