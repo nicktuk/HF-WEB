@@ -1431,3 +1431,112 @@ export async function fetchBadgeLabels(): Promise<BadgeLabels> {
   }
   return res.json();
 }
+
+// ─── Import Scorer API ─────────────────────────────────────────────────────────
+import type {
+  ISRubroTemplate, ISRubroTemplateCreate,
+  ISRetailer, ISRetailerCreate,
+  ISOutlet, ISOutletCreate,
+  ISRubro, ISRubroCreate,
+  ISMepRate, ISConfig,
+} from '@/types';
+
+const IS = '/admin/import-scorer';
+
+export const importScorerApi = {
+  // ── MEP ──
+  async getMep(apiKey: string): Promise<ISMepRate> {
+    return fetchAPI<ISMepRate>(`${IS}/mep`, {}, apiKey);
+  },
+  async refreshMep(apiKey: string): Promise<ISMepRate> {
+    return fetchAPI<ISMepRate>(`${IS}/mep/refresh`, { method: 'POST' }, apiKey);
+  },
+  async getResumen(apiKey: string) {
+    return fetchAPI(`${IS}/resumen`, {}, apiKey);
+  },
+
+  // ── Templates ──
+  async getTemplates(apiKey: string): Promise<ISRubroTemplate[]> {
+    return fetchAPI<ISRubroTemplate[]>(`${IS}/templates`, {}, apiKey);
+  },
+  async getTemplate(apiKey: string, id: string): Promise<ISRubroTemplate> {
+    return fetchAPI<ISRubroTemplate>(`${IS}/templates/${id}`, {}, apiKey);
+  },
+  async createTemplate(apiKey: string, data: ISRubroTemplateCreate): Promise<ISRubroTemplate> {
+    return fetchAPI<ISRubroTemplate>(`${IS}/templates`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateTemplate(apiKey: string, id: string, data: Partial<ISRubroTemplateCreate>): Promise<ISRubroTemplate> {
+    return fetchAPI<ISRubroTemplate>(`${IS}/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async deleteTemplate(apiKey: string, id: string): Promise<void> {
+    await fetchAPI(`${IS}/templates/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  // ── Retailers ──
+  async getRetailers(apiKey: string, activo?: boolean): Promise<ISRetailer[]> {
+    const qs = activo !== undefined ? `?activo=${activo}` : '';
+    return fetchAPI<ISRetailer[]>(`${IS}/retailers${qs}`, {}, apiKey);
+  },
+  async getRetailer(apiKey: string, id: string): Promise<ISRetailer> {
+    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}`, {}, apiKey);
+  },
+  async createRetailer(apiKey: string, data: ISRetailerCreate): Promise<ISRetailer> {
+    return fetchAPI<ISRetailer>(`${IS}/retailers`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateRetailer(apiKey: string, id: string, data: Partial<ISRetailerCreate>): Promise<ISRetailer> {
+    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async deleteRetailer(apiKey: string, id: string): Promise<void> {
+    await fetchAPI(`${IS}/retailers/${id}`, { method: 'DELETE' }, apiKey);
+  },
+  async pausarRetailer(apiKey: string, id: string, horas = 6): Promise<ISRetailer> {
+    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}/pausar?horas=${horas}`, { method: 'POST' }, apiKey);
+  },
+  async reactivarRetailer(apiKey: string, id: string): Promise<ISRetailer> {
+    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}/reactivar`, { method: 'POST' }, apiKey);
+  },
+
+  // ── Outlets ──
+  async getOutlets(apiKey: string, activo?: boolean): Promise<ISOutlet[]> {
+    const qs = activo !== undefined ? `?activo=${activo}` : '';
+    return fetchAPI<ISOutlet[]>(`${IS}/outlets${qs}`, {}, apiKey);
+  },
+  async getOutlet(apiKey: string, id: string): Promise<ISOutlet> {
+    return fetchAPI<ISOutlet>(`${IS}/outlets/${id}`, {}, apiKey);
+  },
+  async createOutlet(apiKey: string, data: ISOutletCreate): Promise<ISOutlet> {
+    return fetchAPI<ISOutlet>(`${IS}/outlets`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateOutlet(apiKey: string, id: string, data: Partial<ISOutletCreate>): Promise<ISOutlet> {
+    return fetchAPI<ISOutlet>(`${IS}/outlets/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async deleteOutlet(apiKey: string, id: string): Promise<void> {
+    await fetchAPI(`${IS}/outlets/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  // ── Rubros ──
+  async getRubros(apiKey: string, activo?: boolean): Promise<ISRubro[]> {
+    const qs = activo !== undefined ? `?activo=${activo}` : '';
+    return fetchAPI<ISRubro[]>(`${IS}/rubros${qs}`, {}, apiKey);
+  },
+  async getRubro(apiKey: string, id: string): Promise<ISRubro> {
+    return fetchAPI<ISRubro>(`${IS}/rubros/${id}`, {}, apiKey);
+  },
+  async createRubro(apiKey: string, data: ISRubroCreate): Promise<ISRubro> {
+    return fetchAPI<ISRubro>(`${IS}/rubros`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateRubro(apiKey: string, id: string, data: Partial<ISRubroCreate>): Promise<ISRubro> {
+    return fetchAPI<ISRubro>(`${IS}/rubros/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async deleteRubro(apiKey: string, id: string): Promise<void> {
+    await fetchAPI(`${IS}/rubros/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  // ── Config ──
+  async getConfig(apiKey: string): Promise<ISConfig> {
+    return fetchAPI<ISConfig>(`${IS}/config`, {}, apiKey);
+  },
+  async updateConfig(apiKey: string, data: Partial<ISConfig>): Promise<ISConfig> {
+    return fetchAPI<ISConfig>(`${IS}/config`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+};

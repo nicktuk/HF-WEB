@@ -29,6 +29,7 @@ import {
   CreditCard,
   TrendingDown,
   Tag,
+  Plane,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -69,7 +70,18 @@ const configSubmenu = [
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
-type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config';
+const importScorerSubmenu = [
+  { name: 'Dashboard', href: '/admin/import-scorer', icon: Plane },
+  { name: 'Templates', href: '/admin/import-scorer/templates', icon: Tags },
+  { name: 'Retailers', href: '/admin/import-scorer/retailers', icon: Globe },
+  { name: 'Outlets', href: '/admin/import-scorer/outlets', icon: Package },
+  { name: 'Rubros', href: '/admin/import-scorer/rubros', icon: FolderTree },
+  { name: 'Carritos', href: '/admin/import-scorer/carritos', icon: ShoppingCart },
+  { name: 'Analytics', href: '/admin/import-scorer/analytics', icon: LineChart },
+  { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
+];
+
+type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer';
 
 function useSubmenuState(pathname: string) {
   const [open, setOpen] = useState<Record<SubmenuKey, boolean>>({
@@ -77,6 +89,7 @@ function useSubmenuState(pathname: string) {
     ventas: false,
     analitica: false,
     config: false,
+    importScorer: false,
   });
 
   useEffect(() => {
@@ -86,6 +99,7 @@ function useSubmenuState(pathname: string) {
       ventas: ventasSubmenu.some((i) => pathname.startsWith(i.href)),
       analitica: analiticaSubmenu.some((i) => pathname.startsWith(i.href)),
       config: configSubmenu.some((i) => pathname.startsWith(i.href)),
+      importScorer: pathname.startsWith('/admin/import-scorer'),
     }));
   }, [pathname]);
 
@@ -339,6 +353,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 pathname={pathname}
               />
             </div>
+
+            <div>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Importación
+              </p>
+              <SidebarSubmenu
+                label="Import Scorer"
+                icon={Plane}
+                items={importScorerSubmenu}
+                isOpen={open.importScorer}
+                onToggle={() => toggle('importScorer')}
+                pathname={pathname}
+              />
+            </div>
           </nav>
 
           <div className="border-t border-white/10 px-4 py-4">
@@ -432,6 +460,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               items={configSubmenu}
               isOpen={open.config}
               onToggle={() => toggle('config')}
+              pathname={pathname}
+            />
+            <MobileSubmenu
+              label="Import Scorer"
+              icon={Plane}
+              items={importScorerSubmenu}
+              isOpen={open.importScorer}
+              onToggle={() => toggle('importScorer')}
               pathname={pathname}
             />
           </nav>

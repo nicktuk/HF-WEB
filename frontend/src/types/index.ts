@@ -587,3 +587,183 @@ export interface Section {
   position: 'arriba' | 'abajo';
   products: ProductInSection[];
 }
+
+// ─── Import Scorer ─────────────────────────────────────────────────────────────
+
+export interface ISRubroTemplate {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  retailers_recomendados: string[];
+  outlets_recomendados: string[];
+  margen_minimo_verde: number;
+  margen_minimo_amarillo: number;
+  top_n_scraping_default: number;
+  dias_rotacion_esperada: number | null;
+  flag_restriccion: string | null;
+  palabras_clave_default: string[];
+  blacklist_default: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ISRubroTemplateCreate {
+  nombre: string;
+  descripcion?: string;
+  retailers_recomendados?: string[];
+  outlets_recomendados?: string[];
+  margen_minimo_verde?: number;
+  margen_minimo_amarillo?: number;
+  top_n_scraping_default?: number;
+  dias_rotacion_esperada?: number;
+  flag_restriccion?: string;
+  palabras_clave_default?: string[];
+  blacklist_default?: string[];
+}
+
+export interface ISRetailer {
+  id: string;
+  nombre: string;
+  slug: string;
+  tipo: 'online' | 'ambos';
+  base_url: string;
+  search_url_template: string;
+  scraper_implementacion: string;
+  requiere_auth: boolean;
+  cobra_tax_fl: boolean;
+  envio_gratis_umbral: number | null;
+  delay_min_ms: number;
+  delay_max_ms: number;
+  requiere_stealth: boolean;
+  activo: boolean;
+  pausado_hasta: string | null;
+  ultimo_error: string | null;
+  veces_usado: number;
+  productos_comprados_total: number;
+  margen_real_promedio: number | null;
+  scraper_disponible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ISRetailerCreate {
+  nombre: string;
+  slug: string;
+  tipo?: 'online' | 'ambos';
+  base_url: string;
+  search_url_template: string;
+  scraper_implementacion?: string;
+  requiere_auth?: boolean;
+  cobra_tax_fl?: boolean;
+  envio_gratis_umbral?: number;
+  delay_min_ms?: number;
+  delay_max_ms?: number;
+  requiere_stealth?: boolean;
+  activo?: boolean;
+}
+
+export interface ISOutlet {
+  id: string;
+  nombre: string;
+  tipo: 'tienda' | 'mall_outlet';
+  ciudad: string;
+  estado: string;
+  direccion: string | null;
+  rubros_tipicos: string[];
+  activo: boolean;
+  fee_agencia_usd: number;
+  visitas_pasadas: number;
+  efectividad_historica: number | null;
+  notas_internas: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ISOutletCreate {
+  nombre: string;
+  tipo?: 'tienda' | 'mall_outlet';
+  ciudad: string;
+  estado: string;
+  direccion?: string;
+  rubros_tipicos?: string[];
+  activo?: boolean;
+  fee_agencia_usd?: number;
+  notas_internas?: string;
+}
+
+export interface ISRubro {
+  id: string;
+  nombre: string;
+  template_id: string | null;
+  ml_category_id: string | null;
+  ml_listado_url: string | null;
+  top_n_scraping: number;
+  filtro_vendidos_min: number | null;
+  retailers_activos: string[];
+  palabras_busqueda_usa: string[];
+  palabras_busqueda_traducciones: Record<string, string> | null;
+  marcas_whitelist: string[];
+  blacklist_palabras: string[];
+  peso_min_kg: number | null;
+  peso_max_kg: number | null;
+  margen_minimo_verde: number;
+  margen_minimo_amarillo: number;
+  dias_rotacion_esperada: number | null;
+  outlets_activos: string[];
+  es_estacional: boolean;
+  meses_alta_demanda: number[];
+  activo: boolean;
+  prioridad: 'alta' | 'media' | 'baja';
+  frecuencia_scraping: 'diaria' | 'semanal' | 'manual';
+  flag_restriccion: string | null;
+  notas_internas: string | null;
+  total_productos: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ISRubroCreate {
+  nombre: string;
+  template_id?: string;
+  ml_category_id?: string;
+  ml_listado_url?: string;
+  top_n_scraping?: number;
+  filtro_vendidos_min?: number;
+  retailers_activos?: string[];
+  palabras_busqueda_usa?: string[];
+  marcas_whitelist?: string[];
+  blacklist_palabras?: string[];
+  peso_min_kg?: number;
+  peso_max_kg?: number;
+  margen_minimo_verde?: number;
+  margen_minimo_amarillo?: number;
+  dias_rotacion_esperada?: number;
+  outlets_activos?: string[];
+  es_estacional?: boolean;
+  meses_alta_demanda?: number[];
+  activo?: boolean;
+  prioridad?: 'alta' | 'media' | 'baja';
+  frecuencia_scraping?: 'diaria' | 'semanal' | 'manual';
+  flag_restriccion?: string;
+  notas_internas?: string;
+}
+
+export interface ISMepRate {
+  cotizacion: number;
+  fuente: string;
+  timestamp: string;
+}
+
+export interface ISConfig {
+  id: string;
+  costo_flete_usd_por_kg: number;
+  sales_tax_fl: number;
+  margen_minimo_verde_global: number;
+  margen_minimo_amarillo_global: number;
+  fee_agencia_compra_fisica: number;
+  umbral_lista_caza_usd: number;
+  peso_minimo_envio: number;
+  peso_optimo_envio: number;
+  peso_maximo_envio: number;
+  capital_maximo_envio: number;
+}

@@ -88,7 +88,11 @@
       "Bash(cp /tmp/page_clean.tmp \"D:/Desarrollo/HF WEB/frontend/src/app/page.tsx\")",
       "Bash(Get-ChildItem -Path \"D:\\\\Desarrollo\\\\HF WEB\" -Directory)",
       "Bash(Select-Object Name)",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\models\\\\import_scorer\")",
+      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\schemas\\\\import_scorer\")",
+      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\services\\\\import_scorer\")",
+      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\import_scorer\")"
     ]
   }
 }
