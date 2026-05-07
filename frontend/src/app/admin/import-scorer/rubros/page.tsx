@@ -95,7 +95,7 @@ function RubroModal({ initial, templates, retailers, outlets, onSave, onClose, s
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <input type="text" value={(form[k] as string) ?? ''} placeholder={placeholder}
-        onChange={(e) => set(k, e.target.value || undefined)}
+        onChange={(e) => set(k, e.target.value || null)}
         className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
     </div>
   );

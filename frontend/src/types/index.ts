@@ -724,9 +724,9 @@ export interface ISRubro {
 
 export interface ISRubroCreate {
   nombre: string;
-  template_id?: string;
-  ml_category_id?: string;
-  ml_listado_url?: string;
+  template_id?: string | null;
+  ml_category_id?: string | null;
+  ml_listado_url?: string | null;
   top_n_scraping?: number;
   filtro_vendidos_min?: number;
   retailers_activos?: string[];
