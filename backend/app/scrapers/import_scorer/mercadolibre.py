@@ -73,9 +73,38 @@ async def _fetch_by_category(client, category_id: str, limit: int) -> list:
 
 
 async def _fetch_by_url(client, url: str, limit: int) -> list:
-    cat = re.search(r'/c/(MLA\d+)', url)
+    # Caso 1: ya tiene ID numérico /c/MLA####
+    cat = re.search(r'[/_](MLA\d+)', url)
     if cat:
         return await _fetch_by_category(client, cat.group(1), limit)
+
+    # Caso 2: slug de texto (ej: mercadolibre.com.ar/c/celulares-y-telefonos)
+    # Seguimos el redirect y extraemos el ID de la URL final
+    if 'mercadolibre.com' in url:
+        try:
+            r = await client.get(url, follow_redirects=True)
+            final_url = str(r.url)
+            cat = re.search(r'[/_](MLA\d+)', final_url)
+            if cat:
+                logger.info(f"Slug resuelto → {cat.group(1)} desde {url}")
+                return await _fetch_by_category(client, cat.group(1), limit)
+            # Si no encontramos ID en la URL final, intentamos extraer por búsqueda de keyword
+            slug = re.search(r'/c/([^/?#]+)', url)
+            if slug:
+                keywords = slug.group(1).replace('-', ' ')
+                r2 = await client.get(
+                    f"{ML_API}/sites/MLA/search",
+                    params={"q": keywords, "limit": 1},
+                )
+                r2.raise_for_status()
+                category_id = r2.json().get("results", [{}])[0].get("category_id")
+                if category_id:
+                    logger.info(f"Categoría resuelta por keyword → {category_id}")
+                    return await _fetch_by_category(client, category_id, limit)
+        except Exception as e:
+            logger.error(f"ML slug resolve error: {e}")
+
+    # Caso 3: búsqueda por query string ?q=
     q = re.search(r'[?&]q=([^&]+)', url)
     if q:
         try:
@@ -87,6 +116,7 @@ async def _fetch_by_url(client, url: str, limit: int) -> list:
             return r.json().get("results", [])
         except Exception as e:
             logger.error(f"ML URL fetch error: {e}")
+
     return []
 
 
