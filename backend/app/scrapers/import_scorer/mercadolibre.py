@@ -79,28 +79,25 @@ async def _fetch_by_url(client, url: str, limit: int) -> list:
         return await _fetch_by_category(client, cat.group(1), limit)
 
     # Caso 2: slug de texto (ej: mercadolibre.com.ar/c/celulares-y-telefonos)
-    # Seguimos el redirect y extraemos el ID de la URL final
+    # Cargamos la página HTML y buscamos el category_id embebido en el JS
     if 'mercadolibre.com' in url:
         try:
             r = await client.get(url, follow_redirects=True)
-            final_url = str(r.url)
-            cat = re.search(r'[/_](MLA\d+)', final_url)
+            # Primero intentamos extraer de la URL final
+            cat = re.search(r'[/_](MLA\d+)', str(r.url))
             if cat:
-                logger.info(f"Slug resuelto → {cat.group(1)} desde {url}")
+                logger.info(f"Slug resuelto desde URL final → {cat.group(1)}")
                 return await _fetch_by_category(client, cat.group(1), limit)
-            # Si no encontramos ID en la URL final, intentamos extraer por búsqueda de keyword
-            slug = re.search(r'/c/([^/?#]+)', url)
-            if slug:
-                keywords = slug.group(1).replace('-', ' ')
-                r2 = await client.get(
-                    f"{ML_API}/sites/MLA/search",
-                    params={"q": keywords, "limit": 1},
-                )
-                r2.raise_for_status()
-                category_id = r2.json().get("results", [{}])[0].get("category_id")
-                if category_id:
-                    logger.info(f"Categoría resuelta por keyword → {category_id}")
-                    return await _fetch_by_category(client, category_id, limit)
+            # Buscamos el ID embebido en el HTML/JS de la página
+            cat = re.search(r'"category_id"\s*:\s*"(MLA\d+)"', r.text)
+            if not cat:
+                cat = re.search(r'["\']category["\']:\s*["\']?(MLA\d+)', r.text)
+            if not cat:
+                cat = re.search(r'(MLA\d{4,})', r.text)
+            if cat:
+                logger.info(f"Slug resuelto desde HTML → {cat.group(1)}")
+                return await _fetch_by_category(client, cat.group(1), limit)
+            logger.warning(f"No se pudo resolver categoría ML desde URL: {url}")
         except Exception as e:
             logger.error(f"ML slug resolve error: {e}")
 
