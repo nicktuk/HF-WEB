@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Pin, Trash2, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
 import { useApiKey } from '@/hooks/useAuth';
 import { importScorerApi } from '@/lib/api';
-import type { ISProducto, ISRubro } from '@/types';
+import type { ISProducto, ISProductoUpdate, ISRubro } from '@/types';
 
 const SEMAFORO: Record<string, { cls: string; label: string }> = {
   verde:    { cls: 'bg-green-100 text-green-700',  label: 'Verde'    },
@@ -19,7 +19,7 @@ function SemaforoBadge({ semaforo }: { semaforo: string | null }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
 }
 
-function ProductoRow({ p, onUpdate }: { p: ISProducto; onUpdate: (id: string, data: Partial<ISProducto>) => void }) {
+function ProductoRow({ p, onUpdate }: { p: ISProducto; onUpdate: (id: string, data: ISProductoUpdate) => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -129,7 +129,7 @@ export default function ProductosPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ISProducto> }) => importScorerApi.updateProducto(apiKey, id, data),
+    mutationFn: ({ id, data }: { id: string; data: ISProductoUpdate }) => importScorerApi.updateProducto(apiKey, id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['is-productos'] }),
   });
 
