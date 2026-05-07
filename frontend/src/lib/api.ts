@@ -1439,6 +1439,9 @@ import type {
   ISOutlet, ISOutletCreate,
   ISRubro, ISRubroCreate,
   ISMepRate, ISConfig,
+  ISProducto, ISProductoUpdate,
+  ISCarrito, ISCarritoCreate, ISCarritoItem, ISCarritoItemCreate,
+  ISListaCaza, ISListaCazaCreate,
 } from '@/types';
 
 const IS = '/admin/import-scorer';
@@ -1538,5 +1541,99 @@ export const importScorerApi = {
   },
   async updateConfig(apiKey: string, data: Partial<ISConfig>): Promise<ISConfig> {
     return fetchAPI<ISConfig>(`${IS}/config`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+
+  // ── Productos ──
+  async getProductos(
+    apiKey: string,
+    params?: { rubro_id?: string; semaforo?: string; solo_pinned?: boolean; q?: string; limit?: number }
+  ): Promise<ISProducto[]> {
+    const qs = new URLSearchParams();
+    if (params?.rubro_id) qs.set('rubro_id', params.rubro_id);
+    if (params?.semaforo) qs.set('semaforo', params.semaforo);
+    if (params?.solo_pinned) qs.set('solo_pinned', 'true');
+    if (params?.q) qs.set('q', params.q);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return fetchAPI<ISProducto[]>(`${IS}/productos${q ? `?${q}` : ''}`, {}, apiKey);
+  },
+  async updateProducto(apiKey: string, id: string, data: ISProductoUpdate): Promise<ISProducto> {
+    return fetchAPI<ISProducto>(`${IS}/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async recalcularScoring(apiKey: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/productos/recalcular-scoring`, { method: 'POST' }, apiKey);
+  },
+
+  // ── Carritos ──
+  async getCarritos(apiKey: string, estado?: string): Promise<ISCarrito[]> {
+    const qs = estado ? `?estado=${estado}` : '';
+    return fetchAPI<ISCarrito[]>(`${IS}/carritos${qs}`, {}, apiKey);
+  },
+  async getCarrito(apiKey: string, id: string): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}`, {}, apiKey);
+  },
+  async createCarrito(apiKey: string, data: ISCarritoCreate): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateCarrito(apiKey: string, id: string, data: Partial<ISCarritoCreate>): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async deleteCarrito(apiKey: string, id: string): Promise<void> {
+    await fetchAPI(`${IS}/carritos/${id}`, { method: 'DELETE' }, apiKey);
+  },
+  async cambiarEstadoCarrito(apiKey: string, id: string, estado: string): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}/estado?estado=${estado}`, { method: 'POST' }, apiKey);
+  },
+  async cotizarCarrito(apiKey: string, id: string): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}/cotizar`, { method: 'POST' }, apiKey);
+  },
+  async addItemCarrito(apiKey: string, carritoId: string, data: ISCarritoItemCreate): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateItemCarrito(apiKey: string, carritoId: string, itemId: string, data: Partial<ISCarritoItemCreate>): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items/${itemId}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  async removeItemCarrito(apiKey: string, carritoId: string, itemId: string): Promise<ISCarrito> {
+    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items/${itemId}`, { method: 'DELETE' }, apiKey);
+  },
+  async optimizarCarrito(apiKey: string, rubro_id?: string): Promise<Record<string, unknown>> {
+    const qs = rubro_id ? `?rubro_id=${rubro_id}` : '';
+    return fetchAPI(`${IS}/carritos/optimizar${qs}`, { method: 'POST' }, apiKey);
+  },
+  async generarListaCaza(apiKey: string, carritoId: string): Promise<{ lista_caza_id: string }> {
+    return fetchAPI(`${IS}/carritos/${carritoId}/generar-lista-caza`, { method: 'POST' }, apiKey);
+  },
+
+  // ── Lista caza ──
+  async getListasCaza(apiKey: string): Promise<ISListaCaza[]> {
+    return fetchAPI<ISListaCaza[]>(`${IS}/listas-caza`, {}, apiKey);
+  },
+  async getListaCaza(apiKey: string, id: string): Promise<ISListaCaza> {
+    return fetchAPI<ISListaCaza>(`${IS}/listas-caza/${id}`, {}, apiKey);
+  },
+  async createListaCaza(apiKey: string, data: ISListaCazaCreate): Promise<ISListaCaza> {
+    return fetchAPI<ISListaCaza>(`${IS}/listas-caza`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+  async updateListaCaza(apiKey: string, id: string, data: Partial<ISListaCaza>): Promise<ISListaCaza> {
+    return fetchAPI<ISListaCaza>(`${IS}/listas-caza/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
+  },
+  exportListaCazaPdfUrl(id: string): string {
+    return `${API_URL}/admin/import-scorer/listas-caza/${id}/pdf`;
+  },
+
+  // ── Scrape ──
+  async triggerScrape(apiKey: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/scrape`, { method: 'POST' }, apiKey);
+  },
+  async triggerScrapeRubro(apiKey: string, rubroId: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/scrape/rubro/${rubroId}`, { method: 'POST' }, apiKey);
+  },
+
+  // ── Analytics ──
+  async getAnalytics(apiKey: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/analytics`, {}, apiKey);
+  },
+  async getCalibracion(apiKey: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/analytics/calibracion`, {}, apiKey);
   },
 };

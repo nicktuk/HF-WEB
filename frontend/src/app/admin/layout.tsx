@@ -76,7 +76,9 @@ const importScorerSubmenu = [
   { name: 'Retailers', href: '/admin/import-scorer/retailers', icon: Globe },
   { name: 'Outlets', href: '/admin/import-scorer/outlets', icon: Package },
   { name: 'Rubros', href: '/admin/import-scorer/rubros', icon: FolderTree },
+  { name: 'Productos', href: '/admin/import-scorer/productos', icon: PackageX },
   { name: 'Carritos', href: '/admin/import-scorer/carritos', icon: ShoppingCart },
+  { name: 'Listas de caza', href: '/admin/import-scorer/listas-caza', icon: ClipboardList },
   { name: 'Analytics', href: '/admin/import-scorer/analytics', icon: LineChart },
   { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
 ];

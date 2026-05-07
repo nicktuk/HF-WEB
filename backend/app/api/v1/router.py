@@ -13,6 +13,7 @@ from app.api.v1.endpoints.import_scorer import (
     scrape as is_scrape,
     analytics as is_analytics,
     config_endpoint as is_config,
+    lista_caza as is_lista_caza,
 )
 
 api_router = APIRouter()
@@ -130,4 +131,9 @@ api_router.include_router(
     is_config.router,
     prefix="/admin/import-scorer/config",
     tags=["import-scorer-config"],
+)
+api_router.include_router(
+    is_lista_caza.router,
+    prefix="/admin/import-scorer/listas-caza",
+    tags=["import-scorer-listas-caza"],
 )

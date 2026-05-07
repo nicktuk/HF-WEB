@@ -767,3 +767,151 @@ export interface ISConfig {
   peso_maximo_envio: number;
   capital_maximo_envio: number;
 }
+
+export interface ISOferta {
+  id: string;
+  retailer_id: string;
+  retailer_nombre: string | null;
+  precio_usd: number;
+  url: string;
+  en_clearance: boolean;
+  en_stock: boolean;
+  envio_gratis: boolean;
+  fecha: string;
+}
+
+export interface ISProducto {
+  id: string;
+  nombre: string;
+  marca: string | null;
+  modelo: string | null;
+  rubro_id: string;
+  rubro_nombre: string | null;
+  imagen_url: string | null;
+  ml_url: string | null;
+  ml_precio_ars: number | null;
+  ml_vendidos: number | null;
+  ml_posicion_ranking: number | null;
+  mejor_retailer_id: string | null;
+  mejor_retailer_nombre: string | null;
+  mejor_precio_usd: number | null;
+  mejor_precio_url: string | null;
+  peso_kg: number | null;
+  sales_tax_usd: number | null;
+  costo_flete_usd: number | null;
+  costo_puesto_usd: number | null;
+  precio_venta_usd: number | null;
+  ratio_margen: number | null;
+  semaforo: 'verde' | 'amarillo' | 'rojo' | null;
+  modo_caza: boolean;
+  precio_objetivo_usd: number | null;
+  cantidad_sugerida: number | null;
+  score_online: number | null;
+  score_caza: number | null;
+  flag_restriccion: string | null;
+  pinned: boolean;
+  descartado: boolean;
+  veces_importado: number;
+  total_unidades_importadas: number;
+  total_unidades_vendidas: number;
+  dias_promedio_venta: number | null;
+  margen_real_promedio: number | null;
+  notas_manual: string | null;
+  ofertas: ISOferta[];
+  updated_at: string;
+}
+
+export interface ISProductoUpdate {
+  peso_kg?: number;
+  precio_objetivo_usd?: number;
+  cantidad_sugerida?: number;
+  modo_caza?: boolean;
+  pinned?: boolean;
+  descartado?: boolean;
+  notas_manual?: string;
+}
+
+export interface ISCarritoItem {
+  id: string;
+  carrito_id: string;
+  producto_id: string;
+  producto_nombre: string | null;
+  producto_imagen_url: string | null;
+  retailer_id: string | null;
+  retailer_nombre: string | null;
+  precio_usd_locked: number;
+  peso_kg_locked: number;
+  cantidad: number;
+  en_clearance_at_add: boolean;
+  modo_compra: 'online' | 'outlet';
+  outlet_esperado_id: string | null;
+  comprado: boolean;
+  fecha_compra: string | null;
+  precio_real_usd: number | null;
+  unidades_recibidas: number;
+  unidades_vendidas: number;
+  precio_venta_promedio_ars: number | null;
+  margen_real_ratio: number | null;
+  notas: string | null;
+}
+
+export interface ISCarritoItemCreate {
+  producto_id: string;
+  retailer_id?: string;
+  precio_usd_locked: number;
+  peso_kg_locked: number;
+  cantidad?: number;
+  en_clearance_at_add?: boolean;
+  modo_compra?: 'online' | 'outlet';
+  outlet_esperado_id?: string;
+}
+
+export interface ISCarrito {
+  id: string;
+  nombre: string;
+  estado: 'borrador' | 'cotizado' | 'comprado' | 'en_transito' | 'recibido' | 'cancelado';
+  notas: string | null;
+  cotizacion_mep_snapshot: number | null;
+  fecha_cotizacion: string | null;
+  fecha_compra: string | null;
+  fecha_arribo: string | null;
+  costo_total_real_usd: number | null;
+  costo_flete_real_usd: number | null;
+  fee_agencia_usd: number | null;
+  peso_real_kg: number | null;
+  es_plantilla: boolean;
+  items: ISCarritoItem[];
+  total_items: number;
+  resumen: Record<string, unknown> | null;
+  alertas: Array<Record<string, unknown>>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ISCarritoCreate {
+  nombre: string;
+  notas?: string;
+  es_plantilla?: boolean;
+}
+
+export interface ISListaCaza {
+  id: string;
+  fecha: string;
+  carrito_origen_id: string | null;
+  estado: string;
+  productos: Array<Record<string, unknown>>;
+  total_estimado_usd: number;
+  outlets_recomendados_ids: string[];
+  fee_agencia_usd: number | null;
+  notas_agencia: string | null;
+  resultados_agencia: Record<string, unknown> | null;
+}
+
+export interface ISListaCazaCreate {
+  carrito_origen_id?: string;
+  productos?: Array<Record<string, unknown>>;
+  total_estimado_usd?: number;
+  outlets_recomendados_ids?: string[];
+  fee_agencia_usd?: number;
+  notas_agencia?: string;
+}

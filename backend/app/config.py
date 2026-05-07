@@ -88,6 +88,15 @@ class Settings(BaseSettings):
     WHATSAPP_NUMBER: str = "5492274402761"
     CATALOG_URL: str = "https://www.hefaproductos.com.ar"
 
+    # Import Scorer
+    IMPORT_SCORER_CRON_SECRET: str = ""
+    IS_EMAIL_HOST: str = ""
+    IS_EMAIL_PORT: int = 587
+    IS_EMAIL_USER: str = ""
+    IS_EMAIL_PASSWORD: str = ""
+    IS_EMAIL_FROM: str = ""
+    IS_EMAIL_TO: str = ""
+
     @property
     def ALLOWED_IMAGE_TYPES(self) -> List[str]:
         """Parse ALLOWED_IMAGE_TYPES from string."""
