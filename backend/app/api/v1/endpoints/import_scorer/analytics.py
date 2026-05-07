@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from app.db.session import get_db
 from app.core.security import verify_admin
-from app.models.import_scorer.producto import ImportProducto, ImportCarritoItem
+from app.models.import_scorer.producto import ImportProducto
 from app.models.import_scorer.rubro import ImportRubro
 from app.models.import_scorer.carrito import ImportCarrito, ImportCarritoItem as CI
 from app.models.import_scorer.scrape_log import ImportScrapeLog
