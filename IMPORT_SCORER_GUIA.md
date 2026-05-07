@@ -1,13 +1,25 @@
 # Import Scorer — Guía de uso
 
+## Visión del proyecto
+
+**Radar de productos virales + herramienta de precio puesto en Argentina.**
+
+Dos radares independientes:
+- **Radar Argentina** — qué está demandando la gente acá ahora
+- **Radar USA** — qué podés traer hoy con buen margen + qué va a ser viral en AR en ~6 meses
+
+La lógica de anticipación: lo que pega en USA hoy suele llegar a Argentina 6 meses después. El radar USA es tanto operativo (comprar ahora) como predictivo (prepararse para después).
+
+---
+
 ## Orden de configuración (primera vez)
 
 ### 1. Configuración global
 `Import Scorer → Config`
 
-Establecé los parámetros base antes de arrancar:
-- **Costo flete USD/kg** — cuánto cuesta traer 1 kg de USA
-- **Sales tax FL** — impuesto de Florida (ej: `0.07` = 7%)
+Parámetros base del sistema:
+- **Costo flete USD/kg** — costo de traer 1 kg desde USA
+- **Sales tax FL** — impuesto Florida (ej: `0.07` = 7%)
 - **Margen mínimo verde / amarillo** — umbrales del semáforo (ej: verde = 2.5×, amarillo = 1.8×)
 - **Peso máximo envío** — límite del knapsack (ej: 23 kg)
 - **Capital máximo envío** — límite de capital por carrito (ej: USD 1500)
@@ -17,95 +29,117 @@ Establecé los parámetros base antes de arrancar:
 ### 2. Retailers (tiendas USA)
 `Import Scorer → Retailers → +`
 
-Creá uno por tienda. Los únicos con scraper implementado son:
+Scrapers implementados:
 
-| Nombre  | Slug      | Notas            |
-|---------|-----------|------------------|
-| Walmart | `walmart` | Parsea la web    |
-| Target  | `target`  | Usa RedSky API   |
+| Nombre   | Slug       | Método              | Requiere              |
+|----------|------------|---------------------|-----------------------|
+| Walmart  | `walmart`  | Scraping HTML       | Proxy si se bloquea   |
+| Target   | `target`   | RedSky API pública  | Proxy si se bloquea   |
+| Best Buy | `bestbuy`  | API oficial         | `BESTBUY_API_KEY`     |
 
-El **slug** es lo que conecta el retailer con el scraper. Tiene que coincidir exactamente.
+El **slug** conecta el retailer con el scraper — tiene que coincidir exactamente.
+
+**Best Buy API key:** gratuita en `developers.bestbuy.com`. Una vez obtenida, agregarla como variable de entorno `BESTBUY_API_KEY` en Railway.
+
+**Proxy:** si Walmart o Target se bloquean desde Railway, agregar la variable `SCRAPER_PROXY_URL` con formato `https://scraperapi:KEY@proxy.scraperapi.com:8001`. Activa el proxy en todos los scrapers automáticamente.
 
 ---
 
 ### 3. Rubros (categorías a monitorear)
 `Import Scorer → Rubros → +`
 
-Este es el paso clave. Sin rubros bien configurados el scraper no hace nada.
+Este es el paso clave. Sin rubros configurados no hay radar ni scraping.
 
 **Tab General:**
 - Nombre del rubro (ej: "Celulares")
-- Prioridad: número mayor = se scrapea primero
+- Prioridad: número mayor = se procesa primero
 
-**Tab ML (MercadoLibre):**
-- `ml_category_id`: el ID numérico de categoría MLA (formato `MLA####`). Si no lo sabés, dejalo vacío y usá `ml_listado_url`.
-- `ml_listado_url`: podés pegar directamente la URL de la categoría de ML, por ejemplo `https://www.mercadolibre.com.ar/c/celulares-y-telefonos`. El scraper resuelve el ID automáticamente siguiendo el redirect.
+**Tab ML (MercadoLibre Argentina):**
+- `ml_category_id`: ID numérico de categoría (formato `MLA####`)
+- `ml_listado_url`: alternativa — pegá la URL de la categoría de ML directamente (ej: `https://www.mercadolibre.com.ar/c/celulares-y-telefonos`). El scraper resuelve el ID automáticamente.
 - `top_n_scraping`: cuántos productos traer (50–200)
 
 **Tab USA:**
-- Marcá los retailers activos (Walmart, Target)
-- `palabras_busqueda_usa`: términos para buscar en cada tienda (ej: "iphone 15", "samsung galaxy")
+- Marcá los retailers activos para este rubro (Walmart, Target, Best Buy)
+- `palabras_busqueda_usa`: términos de búsqueda en cada tienda **y también para Google Trends** (ej: "iphone 15", "samsung galaxy s24"). El primer keyword se usa para el radar.
 
 **Tab Scoring:**
 - Márgenes mínimos propios del rubro (sobreescriben los globales si están definidos)
 
 ---
 
-### 4. Hacer el primer scraping
+## Radar
+`Import Scorer → Radar`
+
+Muestra la tendencia de cada rubro en Argentina y USA basada en Google Trends (últimos 3 meses).
+
+**Cómo leer el radar:**
+- Barras azules = tendencia en Argentina
+- Barras violetas = tendencia en USA
+- **Oportunidad** (badge ámbar): está subiendo en USA pero no en Argentina → anticipación de viral
+
+**Tab Oportunidades:** filtra solo los rubros con señal de anticipación activa.
+
+**Botón "Actualizar radar":** dispara la consulta a Google Trends en background para todos los rubros. Puede tardar 1-2 minutos. También podés actualizar rubro por rubro con el ícono de refresh en cada card.
+
+> **Nota:** Google Trends puede bloquearse desde IPs de servidores cloud. Si el radar no actualiza, activar `SCRAPER_PROXY_URL` en Railway.
+
+---
+
+## Scraping de productos
 `Import Scorer → Analytics → "Scrapear ahora"`
 
 O desde el listado de Rubros, el botón ▶ al lado de cada rubro.
 
-El scraping corre en background. Cuando termina aparece en "Últimos scrapings" con:
-- cuántos productos se actualizaron
-- cuántos errores hubo
-- duración
+El scraping hace:
+1. ML → trae los top N productos de la categoría con su precio ARS y vendidos
+2. Walmart / Target / Best Buy → busca los keywords del rubro y trae precios USD
 
-**Si aparece 0 actualizados con 0 errores:** el rubro no tiene `ml_category_id` configurado.
-**Si aparece 0 actualizados con errores:** revisá los logs del backend en Railway.
+Cuando termina aparece en "Últimos scrapings" con productos actualizados, errores y duración.
+
+**Si aparece 0 actualizados con 0 errores:** el rubro no tiene `ml_category_id` ni `ml_listado_url` configurados.
+**Si aparece 0 actualizados con errores:** el scraper está siendo bloqueado → activar proxy.
 
 ---
 
-### 5. Ver productos
+## Productos
 `Import Scorer → Productos`
 
-Cada producto tiene un semáforo:
-- Verde: margen > umbral verde → conviene importar
-- Amarillo: margen entre umbrales → analizar
+Cada producto tiene un semáforo calculado como `ratio = precio_ARS / (precio_USD × dólar_MEP)`:
+- Verde: ratio > margen mínimo verde → conviene importar
+- Amarillo: ratio entre umbrales → analizar
 - Rojo: no conviene
 
-Podés filtrar por rubro, semáforo, o buscar por nombre.
-Clic en un producto expande las ofertas USA y el link a ML.
+Filtros por rubro, semáforo y búsqueda de texto. Clic en un producto expande ofertas USA, link a ML y datos de detalle.
 
 ---
 
 ## Flujo de un envío
 
-### 6. Crear carrito
+### Crear carrito
 `Import Scorer → Carritos → +`
 
-Nombre + parámetros opcionales (peso máx, capital máx). El carrito arranca en estado **borrador**.
+Nombre + parámetros opcionales (peso máx, capital máx). Arranca en estado **borrador**.
 
-### 7. Agregar productos
-En el detalle del carrito → "Agregar producto". Buscás de la lista de productos ya scrapeados, elegís cantidad.
+### Agregar productos
+Desde el detalle del carrito → "Agregar producto". Buscás de la lista scrapeada, elegís cantidad.
 
-### 8. Cotizar
-Botón **Cotizar** → toma el dólar MEP del momento y calcula costos. El carrito pasa a estado **cotizado** con snapshot de la cotización.
+### Cotizar
+Toma el dólar MEP del momento y calcula costos. El carrito pasa a **cotizado** con snapshot de la cotización.
 
-### 9. Optimizar con Knapsack
-Botón **Optimizar** → el algoritmo reordena/sugiere qué llevar para maximizar el margen respetando el peso y capital máximos.
+### Optimizar ⚡
+Algoritmo knapsack: sugiere qué llevar para maximizar margen respetando peso y capital máximos.
 
-### 10. Generar Lista de Caza
-Si el carrito tiene ítems en modo outlet → botón **Lista de caza** → genera la lista para compra física en Miami.
+### Generar Lista de Caza
+Para ítems en modo outlet → genera la lista para compra física en Miami.
 
 ---
 
 ## Lista de caza
 `Import Scorer → Listas de caza`
 
-Muestra las listas generadas. Podés:
-- Descargar el PDF para llevar al outlet
-- Cambiar el estado (pendiente → en_progreso → completada)
+- Descargar PDF para llevar al outlet
+- Cambiar estado: pendiente → en_progreso → completada
 - Agregar notas internas
 
 ---
@@ -120,9 +154,26 @@ borrador → cotizado → comprado → en_transito → recibido
 
 ---
 
-## Problema más común
+## Variables de entorno en Railway
+
+| Variable             | Descripción                                      | Requerida     |
+|----------------------|--------------------------------------------------|---------------|
+| `BESTBUY_API_KEY`    | API key de Best Buy (gratis en developers.bestbuy.com) | Para Best Buy |
+| `SCRAPER_PROXY_URL`  | URL del proxy (ej: ScraperAPI). Activa proxy en todos los scrapers | Si hay bloqueos |
+
+---
+
+## Problemas comunes
 
 **"Scrapeo pero no aparecen productos"**
-1. ¿El rubro tiene `ml_category_id`? → sin eso no scrapea ML
-2. ¿El ID de categoría es válido? → probalo en el browser: `https://api.mercadolibre.com/sites/MLA/search?category=TU_ID`
-3. ¿Los logs de Railway muestran error HTTP? → puede ser rate limiting de ML
+1. ¿El rubro tiene `ml_category_id` o `ml_listado_url`? → sin eso no scrapea ML
+2. ¿El ID de categoría es válido? → verificar en el browser: `https://api.mercadolibre.com/sites/MLA/search?category=TU_ID`
+3. ¿Los logs de Railway muestran 403? → activar `SCRAPER_PROXY_URL`
+
+**"El radar no actualiza / muestra sin_datos"**
+1. ¿El rubro tiene `palabras_busqueda_usa`? → el primer keyword se usa para Google Trends
+2. ¿Hay error en los logs? → probablemente bloqueo de Google → activar proxy
+
+**"Best Buy no scrapeó nada"**
+- Verificar que `BESTBUY_API_KEY` esté configurada en Railway
+- El scraper logea "BESTBUY_API_KEY no configurada" si falta

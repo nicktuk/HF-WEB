@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
-from app.db.base_class import Base
+from app.models.base import Base
 
 
 class ImportTrendSnapshot(Base):
