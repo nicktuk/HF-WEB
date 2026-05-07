@@ -1,20 +1,22 @@
-"""Scraper Target USA para Import Scorer (usa RedSky API pública)."""
+"""Scraper Best Buy USA via API oficial (developers.bestbuy.com)."""
 import logging
-import httpx
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models.import_scorer.producto import ImportProducto, ImportOfertaRetailer
 from app.models.import_scorer.rubro import ImportRubro
 from app.models.import_scorer.retailer import ImportRetailer
-
 from app.scrapers.import_scorer.utils import get_client
 
 logger = logging.getLogger(__name__)
-REDSKY = "https://redsky.target.com/redsky_aggregations/v1/web/plp_search_v2"
-REDSKY_KEY = "9f36aeafbe60771e321a7cc95a78140772ab3e96"
+BB_API = "https://api.bestbuy.com/v1/products"
 
 
 async def scrape_rubro(rubro: ImportRubro, retailer: ImportRetailer, db: Session) -> dict:
+    if not settings.BESTBUY_API_KEY:
+        logger.warning("BESTBUY_API_KEY no configurada — saltando Best Buy")
+        return {"actualizados": 0, "error": "sin_api_key"}
+
     total = 0
     for termino in (rubro.palabras_busqueda_usa or []):
         try:
@@ -23,55 +25,51 @@ async def scrape_rubro(rubro: ImportRubro, retailer: ImportRetailer, db: Session
                 _upsert_oferta(db, rubro, retailer, p)
                 total += 1
         except Exception as e:
-            logger.error(f"Target error '{termino}': {e}")
+            logger.error(f"Best Buy error '{termino}': {e}")
             retailer.ultimo_error = str(e)[:500]
     db.commit()
     return {"actualizados": total}
 
 
 async def _buscar(query: str) -> list:
-    results = []
     params = {
-        "key": REDSKY_KEY,
-        "channel": "WEB",
-        "count": "20",
-        "default_purchasability_filter": "true",
-        "keyword": query,
-        "offset": "0",
-        "page": f"/s/{query.replace(' ', '-')}",
-        "platform": "desktop",
-        "pricing_store_id": "3991",
-        "store_ids": "3991",
-        "useragent": "Mozilla/5.0",
-        "visitor_id": "018DB7A3EA0202018D7F3875E2BE3985",
+        "apiKey": settings.BESTBUY_API_KEY,
+        "format": "json",
+        "show": "name,regularPrice,salePrice,customerReviewAverage,customerReviewCount,bestSellingRank,url,thumbnailImage,inStoreAvailability,onlineAvailability",
+        "pageSize": "20",
+        "sort": "bestSellingRank.asc",
+        "q": query,
     }
-    async with get_client(timeout=20, extra_headers={"Origin": "https://www.target.com", "Referer": "https://www.target.com/"}) as client:
+    results = []
+    async with get_client(timeout=20, extra_headers={"Accept": "application/json"}) as client:
         try:
-            r = await client.get(REDSKY, params=params)
+            r = await client.get(BB_API, params=params)
             r.raise_for_status()
-            items = r.json().get("data", {}).get("search", {}).get("products", [])
-            for item in items[:20]:
-                price_info = item.get("price", {})
-                p_usd = price_info.get("current_retail") or price_info.get("reg_retail") or 0
-                if not p_usd:
+            for item in r.json().get("products", []):
+                price = item.get("salePrice") or item.get("regularPrice") or 0
+                if not price:
                     continue
-                tcin = item.get("tcin", "")
                 results.append({
-                    "nombre": item.get("item", {}).get("product_description", {}).get("title", ""),
-                    "precio_usd": float(p_usd),
-                    "url": f"https://www.target.com/p/-/A-{tcin}" if tcin else "",
-                    "en_stock": not item.get("fulfillment", {}).get("is_out_of_stock_in_all_store_locations", False),
-                    "imagen_url": item.get("item", {}).get("enrichment", {}).get("images", {}).get("primary_image_url", ""),
+                    "nombre": item.get("name", ""),
+                    "precio_usd": float(price),
+                    "precio_regular_usd": float(item.get("regularPrice") or price),
+                    "url": item.get("url", ""),
+                    "imagen_url": item.get("thumbnailImage", ""),
+                    "en_stock": item.get("onlineAvailability", False),
+                    "rating": item.get("customerReviewAverage"),
+                    "reviews": item.get("customerReviewCount"),
+                    "bestselling_rank": item.get("bestSellingRank"),
                 })
         except Exception as e:
-            logger.warning(f"Target API error: {e}")
+            logger.warning(f"Best Buy API error: {e}")
     return results
 
 
-def _upsert_oferta(db, rubro, retailer, data):
+def _upsert_oferta(db: Session, rubro: ImportRubro, retailer: ImportRetailer, data: dict):
     nombre, url = data.get("nombre", ""), data.get("url", "")
-    if not nombre or not url:
+    if not nombre:
         return
+
     producto = (
         db.query(ImportProducto)
         .filter(ImportProducto.rubro_id == rubro.id, ImportProducto.nombre == nombre)

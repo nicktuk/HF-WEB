@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from app.models.import_scorer.producto import ImportProducto, ImportHistorico
 from app.models.import_scorer.rubro import ImportRubro
 
+from app.scrapers.import_scorer.utils import get_client
+
 logger = logging.getLogger(__name__)
 ML_API = "https://api.mercadolibre.com"
-HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
 
 async def scrape_rubro(rubro: ImportRubro, db: Session) -> dict:
@@ -17,7 +18,7 @@ async def scrape_rubro(rubro: ImportRubro, db: Session) -> dict:
         return {"actualizados": 0, "error": "sin_categoria_ml"}
 
     items = []
-    async with httpx.AsyncClient(timeout=30, headers=HEADERS) as client:
+    async with get_client(timeout=30, extra_headers={"Accept": "application/json"}) as client:
         if rubro.ml_category_id:
             items = await _fetch_by_category(client, rubro.ml_category_id, rubro.top_n_scraping)
         else:

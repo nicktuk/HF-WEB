@@ -14,6 +14,7 @@ from app.api.v1.endpoints.import_scorer import (
     analytics as is_analytics,
     config_endpoint as is_config,
     lista_caza as is_lista_caza,
+    radar as is_radar,
 )
 
 api_router = APIRouter()
@@ -136,4 +137,9 @@ api_router.include_router(
     is_lista_caza.router,
     prefix="/admin/import-scorer/listas-caza",
     tags=["import-scorer-listas-caza"],
+)
+api_router.include_router(
+    is_radar.router,
+    prefix="/admin/import-scorer/radar",
+    tags=["import-scorer-radar"],
 )

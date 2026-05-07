@@ -9,12 +9,9 @@ from app.models.import_scorer.producto import ImportProducto, ImportOfertaRetail
 from app.models.import_scorer.rubro import ImportRubro
 from app.models.import_scorer.retailer import ImportRetailer
 
+from app.scrapers.import_scorer.utils import get_client
+
 logger = logging.getLogger(__name__)
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-}
 
 
 async def scrape_rubro(rubro: ImportRubro, retailer: ImportRetailer, db: Session) -> dict:
@@ -35,7 +32,7 @@ async def scrape_rubro(rubro: ImportRubro, retailer: ImportRetailer, db: Session
 async def _buscar(query: str, retailer: ImportRetailer) -> list:
     url = retailer.search_url_template.replace("{query}", query.replace(" ", "+"))
     results = []
-    async with httpx.AsyncClient(headers=HEADERS, timeout=20, follow_redirects=True) as client:
+    async with get_client(timeout=20) as client:
         try:
             r = await client.get(url)
             r.raise_for_status()

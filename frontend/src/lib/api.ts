@@ -1442,6 +1442,7 @@ import type {
   ISProducto, ISProductoUpdate,
   ISCarrito, ISCarritoCreate, ISCarritoItem, ISCarritoItemCreate,
   ISListaCaza, ISListaCazaCreate,
+  ISTrendSnapshot,
 } from '@/types';
 
 const IS = '/admin/import-scorer';
@@ -1635,5 +1636,14 @@ export const importScorerApi = {
   },
   async getCalibracion(apiKey: string): Promise<Record<string, unknown>> {
     return fetchAPI(`${IS}/analytics/calibracion`, {}, apiKey);
+  },
+  async getRadar(apiKey: string): Promise<ISTrendSnapshot[]> {
+    return fetchAPI(`${IS}/radar`, {}, apiKey);
+  },
+  async actualizarRadar(apiKey: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/radar/actualizar`, { method: 'POST' }, apiKey);
+  },
+  async actualizarRadarRubro(apiKey: string, rubroId: string): Promise<Record<string, unknown>> {
+    return fetchAPI(`${IS}/radar/actualizar/${rubroId}`, { method: 'POST' }, apiKey);
   },
 };

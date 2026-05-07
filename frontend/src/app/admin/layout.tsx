@@ -72,6 +72,7 @@ const configSubmenu = [
 
 const importScorerSubmenu = [
   { name: 'Dashboard', href: '/admin/import-scorer', icon: Plane },
+  { name: 'Radar', href: '/admin/import-scorer/radar', icon: LineChart },
   { name: 'Templates', href: '/admin/import-scorer/templates', icon: Tags },
   { name: 'Retailers', href: '/admin/import-scorer/retailers', icon: Globe },
   { name: 'Outlets', href: '/admin/import-scorer/outlets', icon: Package },

@@ -754,6 +754,19 @@ export interface ISMepRate {
   timestamp: string;
 }
 
+export interface ISTrendSnapshot {
+  rubro_id: string;
+  rubro_nombre: string;
+  keyword: string | null;
+  data_ar: number[];
+  data_usa: number[];
+  score_ar: number | null;
+  score_usa: number | null;
+  tendencia_ar: 'subiendo' | 'bajando' | 'estable' | 'sin_datos';
+  tendencia_usa: 'subiendo' | 'bajando' | 'estable' | 'sin_datos';
+  updated_at: string | null;
+}
+
 export interface ISConfig {
   id: string;
   costo_flete_usd_por_kg: number;
