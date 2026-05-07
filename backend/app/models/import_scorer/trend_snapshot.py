@@ -21,5 +21,3 @@ class ImportTrendSnapshot(Base):
     score_usa = Column(Float, default=0.0)
     tendencia_ar = Column(String, default="sin_datos")
     tendencia_usa = Column(String, default="sin_datos")
-
-    updated_at = Column(DateTime, default=datetime.utcnow)
