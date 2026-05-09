@@ -1734,6 +1734,93 @@ async def get_financial_stats(
     return service.get_financial_stats()
 
 
+@router.get(
+    "/stats/monthly-summary",
+    dependencies=[Depends(verify_admin)]
+)
+async def get_monthly_summary(
+    year: int = Query(default=2026, ge=2020, le=2035),
+    db: Session = Depends(get_db),
+):
+    """Monthly aggregated summary: purchases, sales, expenses per month for a given year."""
+    from sqlalchemy import func, extract
+    from app.models.stock import Purchase, StockPurchase
+    from app.models.sale import Sale
+    from app.models.expense import Expense
+
+    purchases_q = (
+        db.query(
+            extract('month', Purchase.purchase_date).label('month'),
+            func.count(Purchase.id).label('num_compras'),
+        )
+        .filter(extract('year', Purchase.purchase_date) == year)
+        .group_by('month')
+        .all()
+    )
+    purchases_map = {int(r.month): int(r.num_compras) for r in purchases_q}
+
+    items_q = (
+        db.query(
+            extract('month', Purchase.purchase_date).label('month'),
+            func.count(func.distinct(StockPurchase.product_id)).label('items_distintos'),
+            func.coalesce(func.sum(StockPurchase.quantity), 0).label('items_totales'),
+            func.coalesce(func.sum(StockPurchase.total_amount), 0).label('total_invertido'),
+        )
+        .join(Purchase, StockPurchase.purchase_id == Purchase.id)
+        .filter(extract('year', Purchase.purchase_date) == year)
+        .group_by('month')
+        .all()
+    )
+    items_map = {int(r.month): r for r in items_q}
+
+    sales_q = (
+        db.query(
+            extract('month', Sale.created_at).label('month'),
+            func.count(Sale.id).label('num_ventas'),
+            func.coalesce(func.sum(Sale.total_amount), 0).label('importe_ventas'),
+        )
+        .filter(extract('year', Sale.created_at) == year)
+        .group_by('month')
+        .all()
+    )
+    sales_map = {int(r.month): r for r in sales_q}
+
+    expenses_q = (
+        db.query(
+            extract('month', Expense.date).label('month'),
+            func.coalesce(func.sum(Expense.amount), 0).label('total_gastos'),
+        )
+        .filter(extract('year', Expense.date) == year)
+        .group_by('month')
+        .all()
+    )
+    expenses_map = {int(r.month): float(r.total_gastos) for r in expenses_q}
+
+    labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+    result = []
+    for m in range(1, 13):
+        p = items_map.get(m)
+        s = sales_map.get(m)
+        total_invertido = float(p.total_invertido) if p else 0.0
+        importe_ventas = float(s.importe_ventas) if s else 0.0
+        total_gastos = expenses_map.get(m, 0.0)
+        result.append({
+            'month': m,
+            'label': labels[m - 1],
+            'num_compras': purchases_map.get(m, 0),
+            'items_distintos': int(p.items_distintos) if p else 0,
+            'items_totales': int(p.items_totales) if p else 0,
+            'total_invertido': total_invertido,
+            'num_ventas': int(s.num_ventas) if s else 0,
+            'importe_ventas': importe_ventas,
+            'total_gastos': total_gastos,
+            'balance': importe_ventas - (total_invertido + total_gastos),
+        })
+
+    return result
+
+
 @router.post(
     "/products/mark-new-by-date",
     response_model=MessageResponse,

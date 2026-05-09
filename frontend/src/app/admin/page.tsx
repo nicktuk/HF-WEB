@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { MonthlySummaryCard } from '@/components/admin/MonthlySummaryCard';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites, usePurchasesByPayer } from '@/hooks/useProducts';
 import { useQuery } from '@tanstack/react-query';
@@ -916,6 +917,9 @@ export default function AdminDashboard() {
           </Link>
         </CardContent>
       </Card>
+
+      {/* Monthly Summary Chart */}
+      <MonthlySummaryCard apiKey={apiKey || ''} />
     </div>
   );
 }
