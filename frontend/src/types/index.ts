@@ -391,6 +391,7 @@ export interface SaleCreateForm {
   customer_name?: string;
   notes?: string;
   installments?: number;
+  installment_amounts?: number[];
   seller: 'Facu' | 'Heber';
   items: SaleItemCreate[];
 }
@@ -407,6 +408,14 @@ export interface SaleItem {
   total_price: number;
 }
 
+export interface SaleInstallment {
+  id: number;
+  number: number;
+  amount: number;
+  paid: boolean;
+  paid_at?: string;
+}
+
 export interface Sale {
   id: number;
   customer_name?: string;
@@ -420,6 +429,7 @@ export interface Sale {
   delivered_amount: number;
   paid_amount: number;
   items: SaleItem[];
+  installment_list: SaleInstallment[];
   created_at?: string;
 }
 

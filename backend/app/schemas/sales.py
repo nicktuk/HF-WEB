@@ -19,6 +19,7 @@ class SaleCreate(BaseModel):
     customer_name: Optional[str] = None
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
+    installment_amounts: Optional[List[Decimal]] = None
     seller: str = Field(default="Facu", pattern="^(Facu|Heber)$")
     delivered: bool = False
     paid: bool = False
@@ -33,9 +34,15 @@ class SaleUpdate(BaseModel):
     customer_name: Optional[str] = None
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
+    installment_amounts: Optional[List[Decimal]] = None
     seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
     items: Optional[List[SaleItemCreate]] = None
     force: bool = False
+
+
+class SaleInstallmentUpdate(BaseModel):
+    amount: Optional[Decimal] = Field(default=None, gt=0)
+    paid: Optional[bool] = None
 
 
 class SaleItemResponse(BaseModel):
@@ -48,6 +55,17 @@ class SaleItemResponse(BaseModel):
     paid: bool
     unit_price: Decimal
     total_price: Decimal
+
+    class Config:
+        from_attributes = True
+
+
+class SaleInstallmentResponse(BaseModel):
+    id: int
+    number: int
+    amount: Decimal
+    paid: bool
+    paid_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -66,6 +84,7 @@ class SaleResponse(BaseModel):
     delivered_amount: Decimal
     paid_amount: Decimal
     items: List[SaleItemResponse]
+    installment_list: List[SaleInstallmentResponse] = []
     created_at: Optional[datetime] = None
 
     class Config:

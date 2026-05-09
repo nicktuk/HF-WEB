@@ -247,6 +247,25 @@ export function useUpdateSale(apiKey: string) {
   });
 }
 
+export function useUpdateSaleInstallment(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      saleId,
+      installmentId,
+      data,
+    }: {
+      saleId: number;
+      installmentId: number;
+      data: { paid?: boolean; amount?: number };
+    }) => adminApi.updateSaleInstallment(apiKey, saleId, installmentId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sale'] });
+    },
+  });
+}
+
 export function useDeleteSale(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({

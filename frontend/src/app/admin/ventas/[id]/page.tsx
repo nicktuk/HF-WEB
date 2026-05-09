@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useDeleteSale, useSale, useUpdateSale } from '@/hooks/useProducts';
+import { useAdminProducts, useDeleteSale, useSale, useUpdateSale, useUpdateSaleInstallment } from '@/hooks/useProducts';
 import { formatPrice } from '@/lib/utils';
-import type { ProductAdmin } from '@/types';
+import type { ProductAdmin, SaleInstallment } from '@/types';
 
 interface EditItem {
   line_id: string;
@@ -41,6 +41,8 @@ export default function SaleDetailPage() {
   const { data: sale, isLoading } = useSale(apiKey, saleId);
   const deleteSale = useDeleteSale(apiKey);
   const updateSale = useUpdateSale(apiKey);
+  const updateInstallmentMutation = useUpdateSaleInstallment(apiKey);
+  const [togglingInstallmentId, setTogglingInstallmentId] = useState<number | null>(null);
 
   const [isEditing, setIsEditing] = useState(() => searchParams?.get('mode') === 'edit');
   const [editCustomer, setEditCustomer] = useState('');
@@ -212,6 +214,18 @@ export default function SaleDetailPage() {
       } else {
         alert(msg || 'Error al guardar los cambios');
       }
+    }
+  };
+
+  const handleToggleInstallment = async (inst: SaleInstallment, newPaid: boolean) => {
+    if (!sale) return;
+    setTogglingInstallmentId(inst.id);
+    try {
+      await updateInstallmentMutation.mutateAsync({ saleId: sale.id, installmentId: inst.id, data: { paid: newPaid } });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al actualizar la cuota');
+    } finally {
+      setTogglingInstallmentId(null);
     }
   };
 
@@ -485,6 +499,58 @@ export default function SaleDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {sale.installment_list && sale.installment_list.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Cuotas</h2>
+              <span className="text-sm text-gray-500">
+                Cobrado: {formatPrice(Number(sale.paid_amount || 0))} / {formatPrice(Number(sale.total_amount || 0))}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {sale.installment_list.map((inst) => (
+                <div
+                  key={inst.id}
+                  className={`rounded-lg border p-3 flex items-center justify-between gap-3 ${
+                    inst.paid ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs text-gray-500">Cuota {inst.number}</p>
+                    <p className="text-base font-semibold text-gray-900">{formatPrice(Number(inst.amount))}</p>
+                    {inst.paid_at && (
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        Pagada {new Date(inst.paid_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleToggleInstallment(inst, !inst.paid)}
+                    disabled={togglingInstallmentId === inst.id}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
+                      inst.paid
+                        ? 'bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200'
+                        : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {togglingInstallmentId === inst.id ? (
+                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                    ) : inst.paid ? (
+                      'Pagada'
+                    ) : (
+                      'Marcar como pagada'
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

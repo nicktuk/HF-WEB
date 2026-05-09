@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useExpenses } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useUpdateSaleInstallment, useExpenses } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
-import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, PaymentMethodConfig } from '@/types';
+import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, SaleInstallment, PaymentMethodConfig } from '@/types';
 
 interface CartItem {
   id: string;
@@ -64,8 +64,10 @@ export default function VentasPage() {
   const [manualProductName, setManualProductName] = useState('');
   const [manualProductPrice, setManualProductPrice] = useState('');
   const [manualProductQty, setManualProductQty] = useState('1');
+  const [installmentAmounts, setInstallmentAmounts] = useState<string[]>([]);
   const [isReconcilingStock, setIsReconcilingStock] = useState(false);
   const [togglingItemKey, setTogglingItemKey] = useState<string | null>(null);
+  const [togglingInstallmentId, setTogglingInstallmentId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>(() => getSavedFilters()?.viewMode ?? 'ventas');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const searchParams = useSearchParams();
@@ -99,6 +101,7 @@ export default function VentasPage() {
 
   const createSale = useCreateSale(apiKey);
   const updateSaleInList = useUpdateSale(apiKey);
+  const updateInstallment = useUpdateSaleInstallment(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
   const { data: expensesData } = useExpenses(apiKey);
 
@@ -253,6 +256,35 @@ export default function VentasPage() {
     return cartItems.reduce((acc, item) => acc + item.quantity * item.unit_price, 0);
   }, [cartItems]);
 
+  const installmentsCount = Number(installments) || 0;
+
+  useEffect(() => {
+    if (installmentsCount <= 0) {
+      setInstallmentAmounts([]);
+      return;
+    }
+    const base = totalAmount > 0 ? Math.floor((totalAmount / installmentsCount) * 100) / 100 : 0;
+    const remainder = totalAmount > 0
+      ? Math.round((totalAmount - base * (installmentsCount - 1)) * 100) / 100
+      : 0;
+    const amounts = Array.from({ length: installmentsCount }, (_, i) =>
+      (i < installmentsCount - 1 ? base : remainder).toFixed(2)
+    );
+    setInstallmentAmounts(amounts);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [installmentsCount]);
+
+  const handleToggleInstallment = async (sale: Sale, inst: SaleInstallment, newPaid: boolean) => {
+    setTogglingInstallmentId(inst.id);
+    try {
+      await updateInstallment.mutateAsync({ saleId: sale.id, installmentId: inst.id, data: { paid: newPaid } });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al actualizar la cuota');
+    } finally {
+      setTogglingInstallmentId(null);
+    }
+  };
+
   const handleCreateSale = async () => {
     const items: SaleItemCreate[] = cartItems.map((item) => ({
       product_id: item.product?.id,
@@ -263,10 +295,16 @@ export default function VentasPage() {
       paid: item.paid,
     }));
 
+    const installmentsNum = installments ? Number(installments) : undefined;
+    const parsedAmounts = installmentsNum && installmentsNum > 0 && installmentAmounts.length === installmentsNum
+      ? installmentAmounts.map(Number)
+      : undefined;
+
     await createSale.mutateAsync({
       customer_name: customerName || undefined,
       notes: notes || undefined,
-      installments: installments ? Number(installments) : undefined,
+      installments: installmentsNum,
+      installment_amounts: parsedAmounts,
       seller,
       items,
     });
@@ -275,6 +313,7 @@ export default function VentasPage() {
     setCustomerName('');
     setNotes('');
     setInstallments('');
+    setInstallmentAmounts([]);
     setShowCreateSaleModal(false);
   };
 
@@ -746,13 +785,39 @@ export default function VentasPage() {
             </div>
 
             <div className="flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-gray-600">
-                Total
-              </div>
-              <div className="text-2xl font-bold text-gray-900">
-                {formatPrice(totalAmount)}
-              </div>
+              <div className="text-sm text-gray-600">Total</div>
+              <div className="text-2xl font-bold text-gray-900">{formatPrice(totalAmount)}</div>
             </div>
+
+            {installmentsCount > 0 && (
+              <div className="border rounded-lg p-3 bg-blue-50 space-y-2">
+                <p className="text-sm font-medium text-blue-800">Cuotas ({installmentsCount})</p>
+                <div className="space-y-2">
+                  {installmentAmounts.map((amt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-xs text-blue-700 w-16 shrink-0">Cuota {idx + 1}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={amt}
+                        onChange={(e) => {
+                          const next = [...installmentAmounts];
+                          next[idx] = e.target.value;
+                          setInstallmentAmounts(next);
+                        }}
+                        className="w-full rounded border border-blue-200 px-2 py-1 text-right text-sm focus:ring-1 focus:ring-blue-400"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {Math.abs(installmentAmounts.reduce((s, a) => s + Number(a), 0) - totalAmount) > 0.02 && (
+                  <p className="text-xs text-amber-700">
+                    La suma de cuotas ({formatPrice(installmentAmounts.reduce((s, a) => s + Number(a), 0))}) no coincide con el total.
+                  </p>
+                )}
+              </div>
+            )}
 
             <Button
               className="w-full"
@@ -1195,6 +1260,36 @@ export default function VentasPage() {
                                     </tbody>
                                   </table>
                                 </div>
+                                {/* Cuotas */}
+                                {sale.installment_list && sale.installment_list.length > 0 && (
+                                  <div className="mt-3 px-1">
+                                    <p className="text-xs font-medium text-gray-600 mb-1">
+                                      Cuotas — Cobrado: {formatPrice(Number(sale.paid_amount || 0))} / {formatPrice(Number(sale.total_amount || 0))}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {sale.installment_list.map((inst) => (
+                                        <button
+                                          key={inst.id}
+                                          onClick={() => handleToggleInstallment(sale, inst, !inst.paid)}
+                                          disabled={togglingInstallmentId === inst.id}
+                                          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                                            inst.paid
+                                              ? 'bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200'
+                                              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                                          }`}
+                                        >
+                                          {togglingInstallmentId === inst.id ? (
+                                            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                                          ) : (
+                                            <span className={`inline-block h-2 w-2 rounded-full ${inst.paid ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                                          )}
+                                          {inst.number}. {formatPrice(Number(inst.amount))}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Método de cobro */}
                                 {Number(sale.paid_amount || 0) > 0 && (
                                   <div className="mt-3 flex items-center gap-2 px-1">

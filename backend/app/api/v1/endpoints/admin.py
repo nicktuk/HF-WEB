@@ -67,6 +67,7 @@ from app.schemas.sales import (
     SaleCreate,
     SaleUpdate,
     SaleResponse,
+    SaleInstallmentUpdate,
 )
 from app.schemas.order import (
     OrderCreate,
@@ -1828,6 +1829,7 @@ async def update_sale(
         customer_name=data.customer_name,
         notes=data.notes,
         installments=data.installments,
+        installment_amounts=data.installment_amounts,
         seller=data.seller,
         items=data.items,
         force=data.force,
@@ -1847,6 +1849,21 @@ async def reconcile_delivered_stock(
     """
     result = service.reconcile_delivered_stock()
     return result
+
+
+@router.patch(
+    "/sales/{sale_id}/installments/{installment_id}",
+    response_model=SaleResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def update_sale_installment(
+    sale_id: int,
+    installment_id: int,
+    data: SaleInstallmentUpdate,
+    service=Depends(get_sales_service),
+):
+    """Mark a sale installment as paid/unpaid or update its amount."""
+    return service.update_installment(sale_id, installment_id, data)
 
 
 @router.get(

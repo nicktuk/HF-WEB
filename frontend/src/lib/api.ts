@@ -757,6 +757,21 @@ export const adminApi = {
   },
 
   /**
+   * Update a sale installment (paid status or amount)
+   */
+  async updateSaleInstallment(
+    apiKey: string,
+    saleId: number,
+    installmentId: number,
+    data: { paid?: boolean; amount?: number },
+  ): Promise<Sale> {
+    return fetchAPI(`/admin/sales/${saleId}/installments/${installmentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  /**
    * Delete sale
    */
   async deleteSale(apiKey: string, saleId: number, force?: boolean): Promise<MessageResponse> {

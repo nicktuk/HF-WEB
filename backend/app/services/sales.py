@@ -1,10 +1,11 @@
 """Service for Sales operations."""
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.models.sale import Sale, SaleItem
+from app.models.sale import Sale, SaleItem, SaleInstallment
 from app.models.product import Product
 from app.models.stock import StockPurchase
 from sqlalchemy import or_
@@ -175,29 +176,37 @@ class SalesService:
 
     def _sync_sale_state(self, sale: Sale) -> None:
         delivered_amount = Decimal("0.00")
-        paid_amount = Decimal("0.00")
         delivered_all = True
-        paid_all = True
-        has_items = False
+        has_items = bool(sale.items)
 
         for item in sale.items:
-            has_items = True
             qty = int(item.quantity or 0)
             delivered_full = qty > 0 and int(item.delivered_quantity or 0) >= qty
             if not delivered_full:
                 delivered_all = False
-            if not item.is_paid:
-                paid_all = False
-            line_total = Decimal(str(item.total_price or 0)).quantize(Decimal("0.01"))
             if delivered_full:
-                delivered_amount += line_total
-            if item.is_paid:
-                paid_amount += line_total
+                delivered_amount += Decimal(str(item.total_price or 0)).quantize(Decimal("0.01"))
 
         sale.delivered_amount = delivered_amount.quantize(Decimal("0.01"))
-        sale.paid_amount = paid_amount.quantize(Decimal("0.01"))
         sale.delivered = has_items and delivered_all
-        sale.paid = has_items and paid_all
+
+        if sale.installment_list:
+            paid_amount = sum(
+                (Decimal(str(inst.amount or 0)) for inst in sale.installment_list if inst.paid),
+                Decimal("0"),
+            ).quantize(Decimal("0.01"))
+            sale.paid_amount = paid_amount
+            sale.paid = all(inst.paid for inst in sale.installment_list)
+        else:
+            paid_amount = Decimal("0.00")
+            paid_all = True
+            for item in sale.items:
+                if not item.is_paid:
+                    paid_all = False
+                else:
+                    paid_amount += Decimal(str(item.total_price or 0)).quantize(Decimal("0.01"))
+            sale.paid_amount = paid_amount.quantize(Decimal("0.01"))
+            sale.paid = has_items and paid_all
 
     def _apply_item_states(
         self,
@@ -223,6 +232,24 @@ class SalesService:
                 item.is_paid = bool(paid_targets_by_ref.get(item_ref, item.is_paid))
 
         self._sync_sale_state(sale)
+
+    def _create_installments(
+        self,
+        sale: Sale,
+        n: int,
+        total_amount: Decimal,
+        custom_amounts: list | None = None,
+    ) -> None:
+        if custom_amounts and len(custom_amounts) == n:
+            amounts = [Decimal(str(a)).quantize(Decimal("0.01")) for a in custom_amounts]
+        else:
+            base = (total_amount / Decimal(n)).quantize(Decimal("0.01"))
+            remainder = total_amount - base * Decimal(n - 1)
+            amounts = [base] * (n - 1) + [remainder]
+
+        for i, amt in enumerate(amounts, 1):
+            self.db.add(SaleInstallment(sale_id=sale.id, number=i, amount=amt, paid=False))
+        self.db.flush()
 
     def create_sale(self, data) -> Sale:
         items, total_amount = self._normalize_items(
@@ -268,6 +295,9 @@ class SalesService:
             {item["item_ref"]: item["is_paid"] for item in items},
         )
 
+        if data.installments and data.installments > 0:
+            self._create_installments(sale, data.installments, total_amount, getattr(data, "installment_amounts", None))
+
         self.db.commit()
         self.db.refresh(sale)
         return sale
@@ -289,6 +319,33 @@ class SalesService:
 
         return query.order_by(Sale.created_at.desc()).limit(limit).all()
 
+    def update_installment(self, sale_id: int, installment_id: int, data) -> Sale:
+        sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
+        if not sale:
+            raise NotFoundError("Sale", str(sale_id))
+
+        installment = (
+            self.db.query(SaleInstallment)
+            .filter(SaleInstallment.id == installment_id, SaleInstallment.sale_id == sale_id)
+            .first()
+        )
+        if not installment:
+            raise NotFoundError("SaleInstallment", str(installment_id))
+
+        if data.amount is not None:
+            installment.amount = data.amount
+        if data.paid is not None:
+            installment.paid = data.paid
+            if data.paid and installment.paid_at is None:
+                installment.paid_at = datetime.now(timezone.utc)
+            elif not data.paid:
+                installment.paid_at = None
+
+        self._sync_sale_state(sale)
+        self.db.commit()
+        self.db.refresh(sale)
+        return sale
+
     def update_sale(
         self,
         sale_id: int,
@@ -298,6 +355,7 @@ class SalesService:
         customer_name: str | None = None,
         notes: str | None = None,
         installments: int | None = None,
+        installment_amounts: list | None = None,
         seller: str | None = None,
         items: list | None = None,
         force: bool = False,
@@ -310,12 +368,20 @@ class SalesService:
             sale.customer_name = customer_name
         if notes is not None:
             sale.notes = notes
-        if installments is not None:
-            sale.installments = installments
         if seller is not None:
             sale.seller = seller
         if payment_method is not None:
             sale.payment_method = payment_method
+
+        if installments is not None:
+            sale.installments = installments
+            for inst in list(sale.installment_list):
+                self.db.delete(inst)
+            self.db.flush()
+            if installments > 0:
+                current_total = Decimal(str(sale.total_amount or 0))
+                self._create_installments(sale, installments, current_total, installment_amounts)
+                self.db.refresh(sale, attribute_names=["installment_list"])
 
         if items is not None:
             normalized_items, new_total = self._normalize_items(

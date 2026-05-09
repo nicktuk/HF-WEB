@@ -1,7 +1,7 @@
 """
 Sales models - Ventas y sus items.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey, Index, Text
+from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey, Index, Text, DateTime
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -22,6 +22,25 @@ class Sale(Base):
     paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
 
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+    installment_list = relationship(
+        "SaleInstallment",
+        back_populates="sale",
+        cascade="all, delete-orphan",
+        order_by="SaleInstallment.number",
+    )
+
+
+class SaleInstallment(Base):
+    __tablename__ = "sale_installments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=False, index=True)
+    number = Column(Integer, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    paid = Column(Boolean, nullable=False, default=False)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+    sale = relationship("Sale", back_populates="installment_list")
 
 
 class SaleItem(Base):
