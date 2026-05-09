@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Cell,
+  LabelList,
 } from 'recharts';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';
@@ -30,19 +31,22 @@ interface MonthData {
   balance: number;
 }
 
-const COLORS = {
-  ventas:        '#93c5fd',
-  invertido:     '#fda4af',
-  gastos:        '#86efac',
-  balancePos:    '#c4b5fd',
-  balanceNeg:    '#f9a8d4',
-  numCompras:    '#fda4af',
-  numVentas:     '#93c5fd',
-  itemsDistintos:'#86efac',
-  itemsTotales:  '#fde68a',
+const C = {
+  ventas:         '#3b82f6',
+  invertido:      '#f43f5e',
+  gastos:         '#10b981',
+  balancePos:     '#8b5cf6',
+  balanceNeg:     '#f97316',
+  numCompras:     '#f43f5e',
+  numVentas:      '#3b82f6',
+  itemsDistintos: '#10b981',
+  itemsTotales:   '#f59e0b',
 };
 
-const $ = (n: number) =>
+const $k = (n: number) =>
+  n === 0 ? '' : `$${Math.abs(n / 1000).toFixed(0)}k`;
+
+const $fmt = (n: number) =>
   new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -51,30 +55,49 @@ const $ = (n: number) =>
 
 function MoneyTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload as MonthData | undefined;
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[160px]">
+    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[170px]">
       <p className="font-semibold text-zinc-700 mb-2">{label}</p>
-      {payload.map((entry: any) => (
-        <div key={entry.dataKey} className="flex justify-between gap-4">
-          <span style={{ color: entry.color }}>{entry.name}</span>
-          <span className="font-medium text-zinc-800">{$(entry.value)}</span>
-        </div>
-      ))}
+      {payload.map((e: any) => {
+        const count =
+          e.dataKey === 'importe_ventas' ? row?.num_ventas
+          : e.dataKey === 'total_invertido' ? row?.num_compras
+          : null;
+        return (
+          <div key={e.dataKey} className="flex justify-between gap-4">
+            <span style={{ color: e.color }} className="font-medium">
+              {e.name}{count != null ? ` (×${count})` : ''}
+            </span>
+            <span className="text-zinc-800">{$fmt(e.value)}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function CountTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload as MonthData | undefined;
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[160px]">
+    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[170px]">
       <p className="font-semibold text-zinc-700 mb-2">{label}</p>
-      {payload.map((entry: any) => (
-        <div key={entry.dataKey} className="flex justify-between gap-4">
-          <span style={{ color: entry.color }}>{entry.name}</span>
-          <span className="font-medium text-zinc-800">{entry.value}</span>
-        </div>
-      ))}
+      {payload.map((e: any) => {
+        const amount =
+          e.dataKey === 'num_ventas' ? row?.importe_ventas
+          : e.dataKey === 'num_compras' ? row?.total_invertido
+          : null;
+        return (
+          <div key={e.dataKey} className="flex justify-between gap-4">
+            <span style={{ color: e.color }} className="font-medium">{e.name}</span>
+            <span className="text-zinc-800">
+              {e.value}
+              {amount != null && amount > 0 ? ` · ${$fmt(amount)}` : ''}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -131,13 +154,18 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
           </div>
         ) : (
           <>
-            {/* — Montos — */}
+            {/* Montos */}
             <div>
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
                 Montos ($)
               </p>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2} barCategoryGap="25%">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={data}
+                  margin={{ top: 20, right: 8, left: 0, bottom: 0 }}
+                  barGap={2}
+                  barCategoryGap="25%"
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -148,20 +176,34 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
                     width={48}
                   />
                   <Tooltip content={<MoneyTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-                    iconType="circle"
-                    iconSize={8}
-                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} iconType="circle" iconSize={8} />
                   <ReferenceLine y={0} stroke="#d4d4d8" />
-                  <Bar dataKey="importe_ventas" name="Ventas" fill={COLORS.ventas} radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="total_invertido" name="Invertido" fill={COLORS.invertido} radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="total_gastos" name="Gastos" fill={COLORS.gastos} radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="balance" name="Balance" radius={[4, 4, 0, 0]} maxBarSize={28}>
+
+                  <Bar dataKey="importe_ventas" name="Ventas" fill={C.ventas} radius={[4, 4, 0, 0]} maxBarSize={26}>
+                    <LabelList
+                      dataKey="num_ventas"
+                      position="top"
+                      style={{ fontSize: 10, fontWeight: 700, fill: C.ventas }}
+                      formatter={(v: number) => v > 0 ? v : ''}
+                    />
+                  </Bar>
+
+                  <Bar dataKey="total_invertido" name="Invertido" fill={C.invertido} radius={[4, 4, 0, 0]} maxBarSize={26}>
+                    <LabelList
+                      dataKey="num_compras"
+                      position="top"
+                      style={{ fontSize: 10, fontWeight: 700, fill: C.invertido }}
+                      formatter={(v: number) => v > 0 ? v : ''}
+                    />
+                  </Bar>
+
+                  <Bar dataKey="total_gastos" name="Gastos" fill={C.gastos} radius={[4, 4, 0, 0]} maxBarSize={26} />
+
+                  <Bar dataKey="balance" name="Balance" fill={C.balancePos} radius={[4, 4, 0, 0]} maxBarSize={26}>
                     {data?.map((entry) => (
                       <Cell
                         key={entry.month}
-                        fill={entry.balance >= 0 ? COLORS.balancePos : COLORS.balanceNeg}
+                        fill={entry.balance >= 0 ? C.balancePos : C.balanceNeg}
                       />
                     ))}
                   </Bar>
@@ -169,13 +211,18 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
               </ResponsiveContainer>
             </div>
 
-            {/* — Cantidades — */}
+            {/* Cantidades */}
             <div>
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
                 Cantidades
               </p>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2} barCategoryGap="25%">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart
+                  data={data}
+                  margin={{ top: 20, right: 8, left: 0, bottom: 0 }}
+                  barGap={2}
+                  barCategoryGap="25%"
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -186,15 +233,28 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
                     width={32}
                   />
                   <Tooltip content={<CountTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-                    iconType="circle"
-                    iconSize={8}
-                  />
-                  <Bar dataKey="num_compras" name="Compras" fill={COLORS.numCompras} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="num_ventas" name="Ventas" fill={COLORS.numVentas} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="items_distintos" name="Ítems distintos" fill={COLORS.itemsDistintos} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="items_totales" name="Ítems totales" fill={COLORS.itemsTotales} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} iconType="circle" iconSize={8} />
+
+                  <Bar dataKey="num_compras" name="Compras" fill={C.numCompras} radius={[4, 4, 0, 0]} maxBarSize={24}>
+                    <LabelList
+                      dataKey="total_invertido"
+                      position="top"
+                      style={{ fontSize: 9, fontWeight: 600, fill: C.numCompras }}
+                      formatter={$k}
+                    />
+                  </Bar>
+
+                  <Bar dataKey="num_ventas" name="Ventas" fill={C.numVentas} radius={[4, 4, 0, 0]} maxBarSize={24}>
+                    <LabelList
+                      dataKey="importe_ventas"
+                      position="top"
+                      style={{ fontSize: 9, fontWeight: 600, fill: C.numVentas }}
+                      formatter={$k}
+                    />
+                  </Bar>
+
+                  <Bar dataKey="items_distintos" name="Ítems distintos" fill={C.itemsDistintos} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="items_totales" name="Ítems totales" fill={C.itemsTotales} radius={[4, 4, 0, 0]} maxBarSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
