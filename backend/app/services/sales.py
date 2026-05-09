@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from app.models.sale import Sale, SaleItem, SaleInstallment
@@ -303,11 +303,13 @@ class SalesService:
         return sale
 
     def list_sales(self, limit: int = 50, search: str | None = None) -> list[Sale]:
-        query = self.db.query(Sale)
+        query = self.db.query(Sale).options(
+            selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.installment_list),
+        )
 
         if search:
             search_term = f"%{search}%"
-            # Search by customer_name or product name in items
             query = query.outerjoin(SaleItem).outerjoin(Product).filter(
                 or_(
                     Sale.customer_name.ilike(search_term),
@@ -453,7 +455,15 @@ class SalesService:
         return sale
 
     def get_sale(self, sale_id: int) -> Sale:
-        sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
+        sale = (
+            self.db.query(Sale)
+            .options(
+                selectinload(Sale.items).selectinload(SaleItem.product),
+                selectinload(Sale.installment_list),
+            )
+            .filter(Sale.id == sale_id)
+            .first()
+        )
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
         return sale

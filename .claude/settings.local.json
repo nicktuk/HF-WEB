@@ -92,7 +92,8 @@
       "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\models\\\\import_scorer\")",
       "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\schemas\\\\import_scorer\")",
       "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\services\\\\import_scorer\")",
-      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\import_scorer\")"
+      "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\import_scorer\")",
+      "Bash(Select-Object -ExpandProperty Name)"
     ]
   }
 }
