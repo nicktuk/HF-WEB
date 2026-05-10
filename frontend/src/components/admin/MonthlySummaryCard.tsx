@@ -55,7 +55,7 @@ const $fmt = (n: number) =>
 // Label factories — rendered as SVG <text> inside each bar
 function moneyLabel(chartData: MonthData[], countKey: keyof MonthData | null, color: string) {
   return function Label({ x, y, width, value, index }: any) {
-    if (!value) return null;
+    if (!value) return <g />;
     const count = countKey != null ? (chartData[index]?.[countKey] as number) : null;
     const text = count ? `${fmtM(value)} (${count})` : fmtM(value);
     return (
@@ -75,7 +75,7 @@ function moneyLabel(chartData: MonthData[], countKey: keyof MonthData | null, co
 
 function balanceLabelFn(chartData: MonthData[]) {
   return function Label({ x, y, width, value, index }: any) {
-    if (!value) return null;
+    if (!value) return <g />;
     const entry = chartData[index];
     const color = (entry?.balance ?? 0) >= 0 ? C.balancePos : C.balanceNeg;
     return (
@@ -95,7 +95,7 @@ function balanceLabelFn(chartData: MonthData[]) {
 
 function countLabel(color: string) {
   return function Label({ x, y, width, value }: any) {
-    if (!value) return null;
+    if (!value) return <g />;
     return (
       <text
         x={(x ?? 0) + (width ?? 0) / 2}
