@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -62,6 +62,19 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     if (sortedImages.length < 2) return;
     const next = (currentIndex + 1) % sortedImages.length;
     setSelectedImage(sortedImages[next]);
+  };
+
+  const swipeStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - swipeStartX.current;
+    if (Math.abs(delta) > 40) delta < 0 ? goToNext() : goToPrev();
+    swipeStartX.current = null;
   };
 
   // Update selected image when product loads
@@ -134,7 +147,11 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
         <div className="grid md:grid-cols-2 gap-8">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div className="aspect-square relative rounded-lg overflow-hidden bg-white border group">
+            <div
+              className="aspect-square relative rounded-lg overflow-hidden bg-white border group"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               {selectedImage ? (
                 <Image
                   src={resolveImageUrl(selectedImage.url) ?? selectedImage.url}
@@ -172,14 +189,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 <>
                   <button
                     onClick={goToPrev}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-white"
                     aria-label="Imagen anterior"
                   >
                     <ChevronLeft className="h-5 w-5 text-gray-700" />
                   </button>
                   <button
                     onClick={goToNext}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm border border-gray-200 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-white"
                     aria-label="Imagen siguiente"
                   >
                     <ChevronRight className="h-5 w-5 text-gray-700" />
