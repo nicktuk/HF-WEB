@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Cell,
-  LabelList,
 } from 'recharts';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';
@@ -37,67 +36,113 @@ const C = {
   gastos:         '#10b981',
   balancePos:     '#8b5cf6',
   balanceNeg:     '#f97316',
-  numCompras:     '#f43f5e',
-  numVentas:      '#3b82f6',
   itemsDistintos: '#10b981',
   itemsTotales:   '#f59e0b',
 };
 
-const $k = (n: number) =>
-  n === 0 ? '' : `$${Math.abs(n / 1000).toFixed(0)}k`;
-
-const $fmt = (n: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-  }).format(n);
-
-function MoneyTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const row = payload[0]?.payload as MonthData | undefined;
-  return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[170px]">
-      <p className="font-semibold text-zinc-700 mb-2">{label}</p>
-      {payload.map((e: any) => {
-        const count =
-          e.dataKey === 'importe_ventas' ? row?.num_ventas
-          : e.dataKey === 'total_invertido' ? row?.num_compras
-          : null;
-        return (
-          <div key={e.dataKey} className="flex justify-between gap-4">
-            <span style={{ color: e.color }} className="font-medium">
-              {e.name}{count != null ? ` (×${count})` : ''}
-            </span>
-            <span className="text-zinc-800">{$fmt(e.value)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+function fmtM(n: number): string {
+  if (n === 0) return '';
+  const abs = Math.abs(n);
+  const s = n < 0 ? '-' : '';
+  if (abs >= 1_000_000) return `${s}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000)     return `${s}$${Math.round(abs / 1_000)}k`;
+  return `${s}$${Math.round(abs)}`;
 }
 
-function CountTooltip({ active, payload, label }: any) {
+const $fmt = (n: number) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+
+// Label factories — rendered as SVG <text> inside each bar
+function moneyLabel(chartData: MonthData[], countKey: keyof MonthData | null, color: string) {
+  return function Label({ x, y, width, value, index }: any) {
+    if (!value) return null;
+    const count = countKey != null ? (chartData[index]?.[countKey] as number) : null;
+    const text = count ? `${fmtM(value)} (${count})` : fmtM(value);
+    return (
+      <text
+        x={(x ?? 0) + (width ?? 0) / 2}
+        y={(y ?? 0) - 6}
+        textAnchor="middle"
+        fill={color}
+        fontSize={10}
+        fontWeight={700}
+      >
+        {text}
+      </text>
+    );
+  };
+}
+
+function balanceLabelFn(chartData: MonthData[]) {
+  return function Label({ x, y, width, value, index }: any) {
+    if (!value) return null;
+    const entry = chartData[index];
+    const color = (entry?.balance ?? 0) >= 0 ? C.balancePos : C.balanceNeg;
+    return (
+      <text
+        x={(x ?? 0) + (width ?? 0) / 2}
+        y={(y ?? 0) - 6}
+        textAnchor="middle"
+        fill={color}
+        fontSize={10}
+        fontWeight={700}
+      >
+        {fmtM(value)}
+      </text>
+    );
+  };
+}
+
+function countLabel(color: string) {
+  return function Label({ x, y, width, value }: any) {
+    if (!value) return null;
+    return (
+      <text
+        x={(x ?? 0) + (width ?? 0) / 2}
+        y={(y ?? 0) - 6}
+        textAnchor="middle"
+        fill={color}
+        fontSize={10}
+        fontWeight={700}
+      >
+        {value}
+      </text>
+    );
+  };
+}
+
+function CombinedTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
-  const row = payload[0]?.payload as MonthData | undefined;
+  const row = payload[0]?.payload as MonthData;
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs space-y-1 min-w-[170px]">
-      <p className="font-semibold text-zinc-700 mb-2">{label}</p>
-      {payload.map((e: any) => {
-        const amount =
-          e.dataKey === 'num_ventas' ? row?.importe_ventas
-          : e.dataKey === 'num_compras' ? row?.total_invertido
-          : null;
-        return (
-          <div key={e.dataKey} className="flex justify-between gap-4">
-            <span style={{ color: e.color }} className="font-medium">{e.name}</span>
-            <span className="text-zinc-800">
-              {e.value}
-              {amount != null && amount > 0 ? ` · ${$fmt(amount)}` : ''}
-            </span>
-          </div>
-        );
-      })}
+    <div className="bg-white border border-zinc-200 rounded-xl shadow-md p-3 text-xs min-w-[200px] space-y-1">
+      <p className="font-semibold text-zinc-700 mb-2">{row.label}</p>
+      <p className="text-zinc-400 uppercase tracking-wide text-[10px]">Montos</p>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: C.ventas }}>Ventas</span>
+        <span className="text-zinc-800 font-medium">{$fmt(row.importe_ventas)} ({row.num_ventas})</span>
+      </div>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: C.invertido }}>Invertido</span>
+        <span className="text-zinc-800 font-medium">{$fmt(row.total_invertido)} ({row.num_compras})</span>
+      </div>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: C.gastos }}>Gastos</span>
+        <span className="text-zinc-800 font-medium">{$fmt(row.total_gastos)}</span>
+      </div>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: row.balance >= 0 ? C.balancePos : C.balanceNeg }}>Balance</span>
+        <span className="text-zinc-800 font-medium">{$fmt(row.balance)}</span>
+      </div>
+      <p className="text-zinc-400 uppercase tracking-wide text-[10px] pt-1">Cantidades</p>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: C.itemsDistintos }}>Ítems distintos</span>
+        <span className="text-zinc-800 font-medium">{row.items_distintos}</span>
+      </div>
+      <div className="flex justify-between gap-6">
+        <span style={{ color: C.itemsTotales }}>Ítems totales</span>
+        <span className="text-zinc-800 font-medium">{row.items_totales}</span>
+      </div>
     </div>
   );
 }
@@ -147,118 +192,105 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-8">
+      <CardContent>
         {isLoading ? (
-          <div className="h-64 flex items-center justify-center text-zinc-400 text-sm">
-            Cargando...
-          </div>
+          <div className="h-64 flex items-center justify-center text-zinc-400 text-sm">Cargando...</div>
         ) : (
-          <>
-            {/* Montos */}
-            <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
-                Montos ($)
-              </p>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={data}
-                  margin={{ top: 20, right: 8, left: 0, bottom: 0 }}
-                  barGap={2}
-                  barCategoryGap="25%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    tickFormatter={(v) => `$${Math.abs(v / 1000).toFixed(0)}k`}
-                    tick={{ fontSize: 11, fill: '#71717a' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={48}
+          <ResponsiveContainer width="100%" height={550}>
+            <BarChart
+              data={data}
+              margin={{ top: 32, right: 48, left: 0, bottom: 0 }}
+              barGap={3}
+              barCategoryGap="20%"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#71717a' }} axisLine={false} tickLine={false} />
+
+              {/* Left axis — money */}
+              <YAxis
+                yAxisId="left"
+                tickFormatter={(v) => fmtM(v) || '0'}
+                tick={{ fontSize: 11, fill: '#71717a' }}
+                axisLine={false}
+                tickLine={false}
+                width={60}
+              />
+
+              {/* Right axis — counts */}
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: '#71717a' }}
+                axisLine={false}
+                tickLine={false}
+                width={36}
+              />
+
+              <Tooltip content={<CombinedTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 20 }} iconType="circle" iconSize={8} />
+              <ReferenceLine yAxisId="left" y={0} stroke="#d4d4d8" />
+
+              {/* Money bars */}
+              <Bar
+                yAxisId="left"
+                dataKey="importe_ventas"
+                name="Ventas $"
+                fill={C.ventas}
+                radius={[5, 5, 0, 0]}
+                label={data ? moneyLabel(data, 'num_ventas', C.ventas) : undefined}
+              />
+              <Bar
+                yAxisId="left"
+                dataKey="total_invertido"
+                name="Invertido $"
+                fill={C.invertido}
+                radius={[5, 5, 0, 0]}
+                label={data ? moneyLabel(data, 'num_compras', C.invertido) : undefined}
+              />
+              <Bar
+                yAxisId="left"
+                dataKey="total_gastos"
+                name="Gastos $"
+                fill={C.gastos}
+                radius={[5, 5, 0, 0]}
+                label={data ? moneyLabel(data, null, C.gastos) : undefined}
+              />
+              <Bar
+                yAxisId="left"
+                dataKey="balance"
+                name="Balance $"
+                fill={C.balancePos}
+                radius={[5, 5, 0, 0]}
+                label={data ? balanceLabelFn(data) : undefined}
+              >
+                {data?.map((entry) => (
+                  <Cell
+                    key={entry.month}
+                    fill={entry.balance >= 0 ? C.balancePos : C.balanceNeg}
                   />
-                  <Tooltip content={<MoneyTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} iconType="circle" iconSize={8} />
-                  <ReferenceLine y={0} stroke="#d4d4d8" />
+                ))}
+              </Bar>
 
-                  <Bar dataKey="importe_ventas" name="Ventas" fill={C.ventas} radius={[4, 4, 0, 0]} maxBarSize={26}>
-                    <LabelList
-                      dataKey="num_ventas"
-                      position="top"
-                      style={{ fontSize: 10, fontWeight: 700, fill: C.ventas }}
-                      formatter={(v: number) => v > 0 ? v : ''}
-                    />
-                  </Bar>
-
-                  <Bar dataKey="total_invertido" name="Invertido" fill={C.invertido} radius={[4, 4, 0, 0]} maxBarSize={26}>
-                    <LabelList
-                      dataKey="num_compras"
-                      position="top"
-                      style={{ fontSize: 10, fontWeight: 700, fill: C.invertido }}
-                      formatter={(v: number) => v > 0 ? v : ''}
-                    />
-                  </Bar>
-
-                  <Bar dataKey="total_gastos" name="Gastos" fill={C.gastos} radius={[4, 4, 0, 0]} maxBarSize={26} />
-
-                  <Bar dataKey="balance" name="Balance" fill={C.balancePos} radius={[4, 4, 0, 0]} maxBarSize={26}>
-                    {data?.map((entry) => (
-                      <Cell
-                        key={entry.month}
-                        fill={entry.balance >= 0 ? C.balancePos : C.balanceNeg}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Cantidades */}
-            <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
-                Cantidades
-              </p>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart
-                  data={data}
-                  margin={{ top: 20, right: 8, left: 0, bottom: 0 }}
-                  barGap={2}
-                  barCategoryGap="25%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#71717a' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={32}
-                  />
-                  <Tooltip content={<CountTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} iconType="circle" iconSize={8} />
-
-                  <Bar dataKey="num_compras" name="Compras" fill={C.numCompras} radius={[4, 4, 0, 0]} maxBarSize={24}>
-                    <LabelList
-                      dataKey="total_invertido"
-                      position="top"
-                      style={{ fontSize: 9, fontWeight: 600, fill: C.numCompras }}
-                      formatter={$k}
-                    />
-                  </Bar>
-
-                  <Bar dataKey="num_ventas" name="Ventas" fill={C.numVentas} radius={[4, 4, 0, 0]} maxBarSize={24}>
-                    <LabelList
-                      dataKey="importe_ventas"
-                      position="top"
-                      style={{ fontSize: 9, fontWeight: 600, fill: C.numVentas }}
-                      formatter={$k}
-                    />
-                  </Bar>
-
-                  <Bar dataKey="items_distintos" name="Ítems distintos" fill={C.itemsDistintos} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="items_totales" name="Ítems totales" fill={C.itemsTotales} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </>
+              {/* Count bars */}
+              <Bar
+                yAxisId="right"
+                dataKey="items_distintos"
+                name="Ítems distintos"
+                fill={C.itemsDistintos}
+                radius={[5, 5, 0, 0]}
+                label={data ? countLabel(C.itemsDistintos) : undefined}
+              />
+              <Bar
+                yAxisId="right"
+                dataKey="items_totales"
+                name="Ítems totales"
+                fill={C.itemsTotales}
+                radius={[5, 5, 0, 0]}
+                label={data ? countLabel(C.itemsTotales) : undefined}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </CardContent>
     </Card>
