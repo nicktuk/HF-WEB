@@ -381,6 +381,7 @@ export interface ProductCreateManualForm {
 export interface SaleItemCreate {
   product_id?: number;
   product_name?: string;
+  color?: string | null;
   quantity: number;
   unit_price: number;
   delivered?: boolean;
@@ -400,6 +401,7 @@ export interface SaleItem {
   id: number;
   product_id?: number;
   product_name?: string;
+  color?: string | null;
   quantity: number;
   delivered_quantity: number;
   delivered: boolean;

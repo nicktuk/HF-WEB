@@ -17,6 +17,7 @@ interface CartItem {
   id: string;
   product: ProductAdmin | null;
   manualName?: string;
+  color?: string | null;
   quantity: number;
   unit_price: number;
   delivered: boolean;
@@ -116,6 +117,7 @@ export default function VentasPage() {
     const items = sale.items.map((i) => ({
       product_id: i.product_id ?? undefined,
       product_name: i.product_id ? undefined : (i.product_name ?? undefined),
+      color: i.color ?? undefined,
       quantity: i.quantity,
       unit_price: Number(i.unit_price),
       delivered: field === 'delivered' && i.id === item.id ? newValue : i.delivered,
@@ -173,19 +175,23 @@ export default function VentasPage() {
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: ProductAdmin) => {
+  const addToCart = (product: ProductAdmin, color?: string | null) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.product?.id === product.id);
       const defaultPrice = getProductSaleUnitPrice(product);
       if (existing) {
         return prev.map((item) =>
           item.product?.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + 1, ...(color !== undefined ? { color } : {}) }
             : item
         );
       }
-      return [...prev, { id: `p-${product.id}`, product, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
+      return [...prev, { id: `p-${product.id}`, product, color: color ?? null, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
     });
+  };
+
+  const updateCartItemColor = (itemId: string, color: string | null) => {
+    setCartItems((prev) => prev.map((item) => item.id === itemId ? { ...item, color } : item));
   };
 
   const addManualToCart = () => {
@@ -289,6 +295,7 @@ export default function VentasPage() {
     const items: SaleItemCreate[] = cartItems.map((item) => ({
       product_id: item.product?.id,
       product_name: item.product ? undefined : item.manualName,
+      color: item.color ?? undefined,
       quantity: item.quantity,
       unit_price: item.unit_price,
       delivered: item.delivered,
@@ -590,8 +597,9 @@ export default function VentasPage() {
               <div className="divide-y">
                 {sortedProducts.map((product) => {
                   const inStock = Number(product.stock_qty || 0) > 0;
+                  const productColors = (product.color_stock || []).filter(c => c.quantity > 0);
                   return (
-                    <div key={product.id} className="p-3 flex items-center justify-between gap-3">
+                    <div key={product.id} className="p-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-medium text-gray-900 text-sm line-clamp-1">
                           {product.custom_name || product.original_name}
@@ -604,12 +612,34 @@ export default function VentasPage() {
                           <span className="text-xs text-gray-500">{formatPrice(getProductSaleUnitPrice(product))}</span>
                         </div>
                       </div>
-                      <Button size="sm" variant={inStock ? 'outline' : 'ghost'} onClick={() => addToCart(product)}
-                        className={!inStock ? 'text-gray-400 border border-dashed border-gray-300 hover:text-gray-600' : ''}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        {inStock ? 'Agregar' : 'Agregar igual'}
-                      </Button>
+                      {productColors.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          {productColors.map(({ color, quantity }) => (
+                            <button
+                              key={color}
+                              onClick={() => addToCart(product, color)}
+                              title={`${color} · ${quantity} disponibles`}
+                              className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
+                            >
+                              <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                              {quantity}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => addToCart(product, null)}
+                            className={`text-xs px-2 py-1 rounded border ${inStock ? 'border-gray-300 text-gray-500 hover:border-gray-500' : 'border-dashed border-gray-300 text-gray-400 hover:text-gray-600'}`}
+                          >
+                            Sin color
+                          </button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant={inStock ? 'outline' : 'ghost'} onClick={() => addToCart(product)}
+                          className={!inStock ? 'text-gray-400 border border-dashed border-gray-300 hover:text-gray-600' : ''}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          {inStock ? 'Agregar' : 'Agregar igual'}
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -713,12 +743,18 @@ export default function VentasPage() {
                       : (item.manualName || 'Producto manual');
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;
+                    const productColors = item.product?.color_stock || [];
                     return (
                       <div key={item.id} className="p-3 space-y-2">
                         {/* Row 1: name + delete */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 leading-snug">{name}</p>
+                            <div className="flex items-center gap-1.5">
+                              {item.color && (
+                                <span className="w-3.5 h-3.5 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
+                              )}
+                              <p className="text-sm font-semibold text-gray-900 leading-snug">{name}</p>
+                            </div>
                             <p className={`text-xs mt-0.5 ${hasStock ? 'text-gray-500' : 'text-amber-700'}`}>
                               {item.product
                                 ? `Stock: ${stockQty}${stockQty <= 0 ? ' — Sin unidades' : ''}`
@@ -777,6 +813,30 @@ export default function VentasPage() {
                             Cobrado
                           </label>
                         </div>
+                        {/* Color selector */}
+                        {productColors.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-gray-500">Color:</span>
+                            {productColors.map(({ color, quantity }) => (
+                              <button
+                                key={color}
+                                onClick={() => updateCartItemColor(item.id, item.color === color ? null : color)}
+                                title={`${color} · ${quantity} disponibles`}
+                                className={`w-5 h-5 rounded-full border-2 transition-all ${item.color === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-500'} ${quantity <= 0 ? 'opacity-40' : ''}`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                            {item.color && (
+                              <button
+                                onClick={() => updateCartItemColor(item.id, null)}
+                                className="text-xs text-gray-400 hover:text-red-500 ml-1"
+                                title="Quitar color"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1028,6 +1088,9 @@ export default function VentasPage() {
                         <td className="px-3 py-2 text-gray-900">
                           <div className="flex items-center gap-2">
                             {shortage > 0 && <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />}
+                            {item.color && (
+                              <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
+                            )}
                             {item.product_id ? (
                               <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
                                 {item.product_name || `Producto #${item.product_id}`}
@@ -1212,6 +1275,9 @@ export default function VentasPage() {
                                               <div className="flex items-center gap-2">
                                                 {shortage > 0 && (
                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                )}
+                                                {item.color && (
+                                                  <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
                                                 )}
                                                 {item.product_id ? (
                                                   <Link href={`/admin/productos/${item.product_id}`} className="text-blue-600 hover:text-blue-800 hover:underline">

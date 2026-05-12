@@ -314,8 +314,13 @@ export default function ProductEditPage() {
       },
     });
     // Save color stock for colors that are still assigned to images
-    const activeColors = new Set(imageColors.filter(Boolean) as string[]);
-    const colorStockItems = Array.from(activeColors).map(color => ({
+    const activeColors = Array.from(new Set(imageColors.filter(Boolean) as string[]));
+    const totalColorQty = activeColors.reduce((sum, c) => sum + (colorStockQty[c] ?? 0), 0);
+    if (totalColorQty > grossStock) {
+      alert(`El total de colores (${totalColorQty}) supera el stock disponible (${grossStock}). Ajustá las cantidades antes de guardar.`);
+      return;
+    }
+    const colorStockItems = activeColors.map(color => ({
       color,
       quantity: colorStockQty[color] ?? 0,
     }));
@@ -648,27 +653,43 @@ export default function ProductEditPage() {
               </p>
 
               {/* Stock por color */}
-              {imageColors.some(Boolean) && (
-                <div className="border-t pt-3 space-y-2">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por color</p>
-                  {Array.from(new Set(imageColors.filter(Boolean) as string[])).map(color => (
-                    <div key={color} className="flex items-center gap-3">
-                      <span
-                        className="w-5 h-5 rounded-full border border-gray-200 shrink-0"
-                        style={{ backgroundColor: color }}
-                      />
-                      <input
-                        type="number"
-                        min="0"
-                        value={colorStockQty[color] ?? 0}
-                        onChange={e => setColorStockQty(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                        className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
-                      />
-                      <span className="text-xs text-gray-500">unidades</span>
+              {imageColors.some(Boolean) && (() => {
+                const activeColors = Array.from(new Set(imageColors.filter(Boolean) as string[]));
+                const totalColorQty = activeColors.reduce((sum, c) => sum + (colorStockQty[c] ?? 0), 0);
+                const exceeds = totalColorQty > grossStock;
+                return (
+                  <div className="border-t pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por color</p>
+                    {activeColors.map(color => (
+                      <div key={color} className="flex items-center gap-3">
+                        <span
+                          className="w-5 h-5 rounded-full border border-gray-200 shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={colorStockQty[color] ?? 0}
+                          onChange={e => setColorStockQty(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
+                        />
+                        <span className="text-xs text-gray-500">unidades</span>
+                      </div>
+                    ))}
+                    <div className={`flex items-center justify-between text-xs pt-1 border-t border-gray-100 ${exceeds ? 'text-red-600' : 'text-gray-500'}`}>
+                      <span>Total asignado:</span>
+                      <span className={`font-semibold ${exceeds ? 'text-red-600' : totalColorQty === grossStock ? 'text-emerald-600' : 'text-gray-700'}`}>
+                        {totalColorQty} / {grossStock} en stock
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {exceeds && (
+                      <p className="text-xs text-red-600 font-medium">
+                        Excede el stock en {totalColorQty - grossStock} unidades. Ajustá las cantidades antes de guardar.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 

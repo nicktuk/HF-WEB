@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from app.models.sale import Sale, SaleItem, SaleInstallment
-from app.models.product import Product
+from app.models.product import Product, ProductColorStock
 from app.models.stock import StockPurchase
 from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
@@ -70,6 +70,32 @@ class SalesService:
             return
         product.is_on_demand = stock <= 0
 
+    def _deduct_color_stock(self, product_id: int | None, color: str | None, quantity: int) -> None:
+        if not color or quantity <= 0 or product_id is None:
+            return
+        stock = (
+            self.db.query(ProductColorStock)
+            .filter(ProductColorStock.product_id == product_id, ProductColorStock.color == color)
+            .first()
+        )
+        available = int(stock.quantity) if stock else 0
+        if available < quantity:
+            raise ValidationError(f"Stock insuficiente del color {color}. Disponible: {available}")
+        stock.quantity = available - quantity
+
+    def _restore_color_stock(self, product_id: int | None, color: str | None, quantity: int) -> None:
+        if not color or quantity <= 0 or product_id is None:
+            return
+        stock = (
+            self.db.query(ProductColorStock)
+            .filter(ProductColorStock.product_id == product_id, ProductColorStock.color == color)
+            .first()
+        )
+        if stock is None:
+            stock = ProductColorStock(product_id=product_id, color=color, quantity=0)
+            self.db.add(stock)
+        stock.quantity = int(stock.quantity) + quantity
+
     def _restore_stock(self, product_id: int | None, quantity: int) -> None:
         """Restore stock to purchases by decreasing out_quantity (LIFO)."""
         if quantity <= 0:
@@ -131,6 +157,8 @@ class SalesService:
                 raise ValidationError("No se permite repetir el mismo producto en la venta")
             seen_item_refs.add(item_ref)
 
+            color = getattr(item, "color", None) or None
+
             qty = int(item.quantity)
             if qty <= 0:
                 raise ValidationError("La cantidad debe ser mayor a 0")
@@ -164,6 +192,7 @@ class SalesService:
                 "item_ref": item_ref,
                 "product_id": product.id if product else None,
                 "manual_product_name": manual_product_name,
+                "color": color,
                 "quantity": qty,
                 "delivered_quantity": delivered_qty,
                 "is_paid": paid_flag,
@@ -224,8 +253,10 @@ class SalesService:
             delta = target_qty - current_qty
             if delta > 0:
                 self._deduct_stock(item.product_id, delta)
+                self._deduct_color_stock(item.product_id, item.color, delta)
             elif delta < 0:
                 self._restore_stock(item.product_id, -delta)
+                self._restore_color_stock(item.product_id, item.color, -delta)
             item.delivered_quantity = target_qty
 
             if paid_targets_by_ref is not None:
@@ -280,6 +311,7 @@ class SalesService:
                 sale_id=sale.id,
                 product_id=item["product_id"],
                 manual_product_name=item["manual_product_name"],
+                color=item.get("color"),
                 quantity=item["quantity"],
                 delivered_quantity=0,
                 is_paid=False,
@@ -415,6 +447,7 @@ class SalesService:
                     sale_id=sale.id,
                     product_id=item["product_id"],
                     manual_product_name=item["manual_product_name"],
+                    color=item.get("color"),
                     quantity=item["quantity"],
                     delivered_quantity=0,
                     is_paid=False,

@@ -16,6 +16,7 @@ interface EditItem {
   line_id: string;
   product_id?: number;
   product_name: string;
+  color?: string | null;
   quantity: number;
   unit_price: number;
   delivered: boolean;
@@ -80,6 +81,7 @@ export default function SaleDetailPage() {
         line_id: `sale-item-${item.id}`,
         product_id: item.product_id,
         product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
+        color: item.color ?? null,
         quantity: item.quantity,
         unit_price: Number(item.unit_price || 0),
         delivered: !!item.delivered,
@@ -104,6 +106,7 @@ export default function SaleDetailPage() {
       line_id: `sale-item-${item.id}`,
       product_id: item.product_id,
       product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
+      color: item.color ?? null,
       quantity: item.quantity,
       unit_price: Number(item.unit_price || 0),
       delivered: !!item.delivered,
@@ -178,6 +181,7 @@ export default function SaleDetailPage() {
     const items = editItems.map((item) => ({
       product_id: item.product_id,
       product_name: item.product_id ? undefined : item.product_name,
+      color: item.color ?? undefined,
       quantity: Math.max(0, Number(item.quantity || 0)),
       unit_price: Math.max(0, Number(item.unit_price || 0)),
       delivered: !!item.delivered,
@@ -338,13 +342,18 @@ export default function SaleDetailPage() {
                     {visibleItems.map((item) => (
                       <tr key={item.line_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2">
-                          {item.product_id ? (
-                            <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                              {item.product_name}
-                            </Link>
-                          ) : (
-                            <div className="font-medium text-gray-900">{item.product_name}</div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {item.color && (
+                              <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
+                            )}
+                            {item.product_id ? (
+                              <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                {item.product_name}
+                              </Link>
+                            ) : (
+                              <div className="font-medium text-gray-900">{item.product_name}</div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-right">
                           {isEditing ? (
