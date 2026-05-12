@@ -81,11 +81,11 @@ class ProductService:
         """
         products = (
             self.db.query(Product)
-            .join(Category, Product.category_id == Category.id)
+            .outerjoin(Category, Product.category_id == Category.id)
             .filter(
                 Product.slug == slug,
                 or_(Product.enabled == True, Product.publish_without_stock == True),
-                Category.is_active == True,
+                or_(Product.category_id == None, Category.is_active == True),
             )
             .all()
         )
