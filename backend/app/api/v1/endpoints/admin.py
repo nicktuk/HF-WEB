@@ -47,7 +47,7 @@ from app.schemas.whatsapp import (
     ManualPostRequest,
 )
 from app.services.whatsapp_generator import WhatsAppMessageGenerator
-from app.models.product import Product
+from app.models.product import Product, ProductColorStock
 from app.schemas.stock import (
     StockPurchaseResponse,
     StockImportResponse,
@@ -146,6 +146,15 @@ async def get_products_admin(
 
     stock_summary = service.get_stock_summary([p.id for p in products])
 
+    # Bulk-load color_stock for all products in this page (single query)
+    product_ids = [p.id for p in products]
+    color_stock_rows = service.db.query(ProductColorStock).filter(
+        ProductColorStock.product_id.in_(product_ids)
+    ).all() if product_ids else []
+    color_stock_map: dict = {}
+    for row in color_stock_rows:
+        color_stock_map.setdefault(row.product_id, []).append({"color": row.color, "quantity": row.quantity})
+
     # Transform to admin response with market stats
     admin_products = []
     for p in products:
@@ -182,6 +191,7 @@ async def get_products_admin(
                 "is_primary": img.is_primary,
                 "color": img.color,
             } for img in p.images],
+            color_stock=color_stock_map.get(p.id, []),
             created_at=p.created_at,
             updated_at=p.updated_at,
             source_website_id=p.source_website_id,
