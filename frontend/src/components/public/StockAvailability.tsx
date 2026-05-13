@@ -26,6 +26,7 @@ export interface StockAvailabilityProps {
    */
   lowStockThreshold?: number;
   className?: string;
+  showCTA?: boolean;
 }
 
 /**
@@ -279,6 +280,7 @@ export function StockAvailability({
   whatsappNumber,
   lowStockThreshold = 5,
   className,
+  showCTA = true,
 }: StockAvailabilityProps) {
   const level = resolveStockLevel(isCheckStock, isImmediateDelivery, stockQty, lowStockThreshold, isOnDemand);
   const { container, labelColor, subColor, label, sublabel, showPing } = stripConfig[level];
@@ -320,13 +322,15 @@ export function StockAvailability({
       </div>
 
       {/* ── WhatsApp CTA ─────────────────────────────────────────────── */}
-      <WhatsAppCTA
-        level={level}
-        href={whatsappUrl}
-        productName={productName}
-        productSlug={productSlug}
-        productPrice={productPrice}
-      />
+      {showCTA && (
+        <WhatsAppCTA
+          level={level}
+          href={whatsappUrl}
+          productName={productName}
+          productSlug={productSlug}
+          productPrice={productPrice}
+        />
+      )}
     </div>
   );
 }

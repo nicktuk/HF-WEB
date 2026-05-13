@@ -383,6 +383,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 productPrice={product.price}
                 whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
                 lowStockThreshold={lowStockThreshold}
+                showCTA={(effectiveStockQty ?? 0) <= 0}
               />
             </div>
           </div>
@@ -425,6 +426,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
           productPrice={product.price}
           whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
           lowStockThreshold={lowStockThreshold}
+          showCTA={(product.stock_qty ?? 0) <= 0}
         />
       </div>
     </div>
