@@ -66,8 +66,42 @@ class ProductService:
         products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
         total = self.repo.count_enabled(category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
 
+        product_ids = [p.id for p in products]
+
+        # Bulk stock calculation — single query for the whole page
+        stock_qty_map: dict = {}
+        if product_ids:
+            stock_rows = (
+                self.db.query(
+                    StockPurchase.product_id,
+                    func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0).label("qty"),
+                )
+                .filter(StockPurchase.product_id.in_(product_ids))
+                .group_by(StockPurchase.product_id)
+                .all()
+            )
+            stock_qty_map = {row.product_id: int(row.qty) for row in stock_rows}
+            for pid in product_ids:
+                stock_qty_map.setdefault(pid, 0)
+
+        # Bulk color stock — avoids N+1
+        color_stock_map: dict = {}
+        if product_ids:
+            color_rows = (
+                self.db.query(ProductColorStock)
+                .filter(ProductColorStock.product_id.in_(product_ids))
+                .all()
+            )
+            for row in color_rows:
+                color_stock_map.setdefault(row.product_id, []).append(
+                    ColorStockItem(color=row.color, quantity=row.quantity)
+                )
+
         # Transform to public response
-        public_products = [self._to_public_response(p) for p in products]
+        public_products = [
+            self._to_public_response(p, stock_qty=stock_qty_map.get(p.id), color_stock=color_stock_map.get(p.id))
+            for p in products
+        ]
 
         result = (public_products, total)
         cache.set_product(cache_key, result)
@@ -104,14 +138,20 @@ class ProductService:
         stock_qty = int(stock_row or 0)
         return self._to_public_response(product, stock_qty=stock_qty)
 
-    def _to_public_response(self, product: Product, stock_qty: Optional[int] = None) -> ProductPublicResponse:
+    def _to_public_response(
+        self,
+        product: Product,
+        stock_qty: Optional[int] = None,
+        color_stock: Optional[List[ColorStockItem]] = None,
+    ) -> ProductPublicResponse:
         """Convert product to public response format."""
         images = [
             {"id": img.id, "url": img.url, "alt_text": img.alt_text, "is_primary": img.is_primary, "color": img.color}
             for img in sorted(product.images, key=lambda x: (not x.is_primary, x.display_order))
         ]
-        color_stock_rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product.id).all()
-        color_stock = [ColorStockItem(color=r.color, quantity=r.quantity) for r in color_stock_rows]
+        if color_stock is None:
+            color_stock_rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product.id).all()
+            color_stock = [ColorStockItem(color=r.color, quantity=r.quantity) for r in color_stock_rows]
 
         return ProductPublicResponse(
             id=product.id,
