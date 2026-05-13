@@ -44,13 +44,27 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   // Threshold: producto primero, luego global, luego default
   const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
 
-  // Stock efectivo: si hay color seleccionado con stock definido, usa ese; si no, el global
-  const selectedColor = selectedImage?.color ?? null;
+  // Color selection — explicit state, decoupled from image gallery
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
+  // Non-primary colored images only
+  const coloredImages = (product?.images ?? []).filter(img => img.color && !img.is_primary);
+  const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
+  const colorNameMap = Object.fromEntries(
+    coloredImages.filter(img => img.alt_text).map(img => [img.color!, img.alt_text!])
+  );
   const colorStockMap = Object.fromEntries((product?.color_stock ?? []).map(s => [s.color, s.quantity]));
   const hasColorStock = (product?.color_stock ?? []).length > 0;
   const effectiveStockQty = hasColorStock && selectedColor && colorStockMap[selectedColor] !== undefined
     ? colorStockMap[selectedColor]
     : product?.stock_qty ?? undefined;
+
+  const handleSelectColor = (color: string) => {
+    setSelectedColor(color);
+    // Sync gallery to first image with that color
+    const match = coloredImages.find(img => img.color === color);
+    if (match) setSelectedImage(match);
+  };
 
   const sortedImages = product?.images ?? [];
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
@@ -221,66 +235,22 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               )}
             </div>
 
-            {/* Color swatches (when any image has a color) */}
-            {sortedImages.some(img => img.color) && (() => {
-              const stockMap = Object.fromEntries(
-                (product.color_stock ?? []).map(s => [s.color, s.quantity])
-              );
-              const hasStockData = (product.color_stock ?? []).length > 0;
-              return (
-                <div className="flex gap-3 flex-wrap items-center">
-                  {sortedImages.filter(img => img.color).map((image) => {
-                    const qty = stockMap[image.color!];
-                    const outOfStock = hasStockData && qty === 0;
-                    const isActive = selectedImage?.id === image.id;
-                    return (
-                      <div key={image.id} className="flex flex-col items-center gap-1">
-                        <button
-                          onClick={() => setSelectedImage(image)}
-                          title={outOfStock ? 'Sin stock' : image.color ?? undefined}
-                          className={`w-8 h-8 rounded-full border-2 transition-all relative hover:scale-110 cursor-pointer ${
-                            outOfStock ? 'opacity-40' : ''
-                          } ${
-                            isActive
-                              ? 'border-gray-800 scale-110 shadow-md'
-                              : 'border-white shadow-sm'
-                          }`}
-                          style={{
-                            backgroundColor: image.color ?? undefined,
-                            outline: isActive ? `2px solid ${image.color ?? 'transparent'}` : undefined,
-                            outlineOffset: '2px',
-                          }}
-                        >
-                          {outOfStock && (
-                            <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs">✕</span>
-                          )}
-                        </button>
-                        {hasStockData && qty !== undefined && qty > 0 && qty <= 3 && (
-                          <span className="text-[10px] text-amber-600 font-semibold leading-none">último{qty > 1 ? 's' : ''}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            {/* Thumbnails (only when no colors assigned) */}
-            {sortedImages.length > 1 && !sortedImages.some(img => img.color) && (
-              <div className="flex gap-2 overflow-x-auto">
+            {/* Thumbnails — all products */}
+            {sortedImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {sortedImages.map((image, index) => (
                   <button
                     key={image.id}
                     onClick={() => setSelectedImage(image)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                       selectedImage?.id === image.id ? 'border-primary-500' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <Image
                       src={resolveImageUrl(image.url) ?? image.url}
                       alt={image.alt_text || `${product.name} - ${index + 1}`}
-                      width={80}
-                      height={80}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -314,6 +284,55 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
               {product.name}
             </h1>
+
+            {/* Color selector — explicit, in info panel */}
+            {uniqueColors.length > 0 && (
+              <div className="mb-5">
+                <p className="text-sm font-semibold text-gray-700 mb-2.5">
+                  Color
+                  {selectedColor && colorNameMap[selectedColor] && (
+                    <span className="font-normal text-gray-500 ml-1.5">— {colorNameMap[selectedColor]}</span>
+                  )}
+                </p>
+                <div className="flex gap-3 flex-wrap">
+                  {uniqueColors.map(color => {
+                    const qty = colorStockMap[color];
+                    const outOfStock = hasColorStock && qty === 0;
+                    const isActive = selectedColor === color;
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => !outOfStock && handleSelectColor(color)}
+                        disabled={outOfStock}
+                        title={outOfStock ? 'Sin stock' : (colorNameMap[color] ?? color)}
+                        className={`w-9 h-9 rounded-full border-2 transition-all relative ${
+                          outOfStock
+                            ? 'opacity-30 cursor-not-allowed'
+                            : 'hover:scale-110 cursor-pointer'
+                        } ${
+                          isActive
+                            ? 'border-gray-800 scale-110 shadow-md ring-2 ring-offset-1'
+                            : 'border-white shadow-sm ring-1 ring-gray-200'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      >
+                        {outOfStock && (
+                          <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">✕</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hasColorStock && selectedColor && (colorStockMap[selectedColor] ?? 0) > 0 && (colorStockMap[selectedColor] ?? 0) <= 3 && (
+                  <p className="text-xs text-amber-600 font-semibold mt-2">
+                    ¡Últimas {colorStockMap[selectedColor]} unidad{colorStockMap[selectedColor] === 1 ? '' : 'es'}!
+                  </p>
+                )}
+                {uniqueColors.length > 0 && !selectedColor && (
+                  <p className="text-xs text-gray-400 mt-1.5">Seleccioná un color para agregar al carrito</p>
+                )}
+              </div>
+            )}
 
             {/* Price */}
             <div className="mb-6">
@@ -356,21 +375,21 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
             {/* Stock Availability + WhatsApp CTA — desktop */}
             <div className="hidden md:block space-y-3">
-              {(effectiveStockQty ?? 0) > 0 && (
+              {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
                 <button
-                  onClick={() => addItem(product, selectedColor)}
+                  onClick={() => addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null)}
                   className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-3 transition-colors"
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  {selectedColor ? (
-                    <span className="flex items-center gap-2">
-                      Agregar al carrito
+                  <span className="flex items-center gap-2">
+                    Agregar al carrito
+                    {selectedColor && (
                       <span
                         className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
                         style={{ backgroundColor: selectedColor }}
                       />
-                    </span>
-                  ) : 'Agregar al carrito'}
+                    )}
+                  </span>
                 </button>
               )}
               <StockAvailability
@@ -400,21 +419,21 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
       {/* Mobile CTA — fixed bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden space-y-2">
-        {(product.stock_qty ?? 0) > 0 && (
+        {(product.stock_qty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
           <button
-            onClick={() => addItem(product, selectedColor)}
+            onClick={() => addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null)}
             className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-2.5 transition-colors"
           >
             <ShoppingCart className="h-4 w-4" />
-            {selectedColor ? (
-              <span className="flex items-center gap-2">
-                Agregar al carrito
+            <span className="flex items-center gap-2">
+              Agregar al carrito
+              {selectedColor && (
                 <span
                   className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
                   style={{ backgroundColor: selectedColor }}
                 />
-              </span>
-            ) : 'Agregar al carrito'}
+              )}
+            </span>
           </button>
         )}
         <StockAvailability

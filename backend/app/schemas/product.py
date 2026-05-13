@@ -71,6 +71,7 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = Field(None, max_length=100)
     image_urls: Optional[List[str]] = Field(None, max_length=10)
     image_colors: Optional[List[Optional[str]]] = Field(None, max_length=10)
+    image_alt_texts: Optional[List[Optional[str]]] = Field(None, max_length=10)
     video_url: Optional[str] = None
 
     @field_validator("custom_name")

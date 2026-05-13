@@ -8,11 +8,12 @@ export interface CartItem {
   product: ProductPublic;
   quantity: number;
   color?: string | null;
+  colorName?: string | null;
 }
 
 interface CartContextValue {
   items: CartItem[];
-  addItem: (product: ProductPublic, color?: string | null) => void;
+  addItem: (product: ProductPublic, color?: string | null, colorName?: string | null) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -45,14 +46,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
-  const addItem = useCallback((product: ProductPublic, color?: string | null) => {
+  const addItem = useCallback((product: ProductPublic, color?: string | null, colorName?: string | null) => {
     const id = `${product.id}-${color ?? 'none'}`;
     setItems(prev => {
       const existing = prev.find(i => i.id === id);
       if (existing) {
         return prev.map(i => i.id === id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { id, product, quantity: 1, color }];
+      return [...prev, { id, product, quantity: 1, color, colorName }];
     });
     setIsOpen(true);
   }, []);

@@ -12,7 +12,8 @@ function buildCartMessage(items: CartItem[]): string {
   const lines = ['Hola! Quiero hacer el siguiente pedido:', ''];
 
   for (const item of items) {
-    const colorPart = item.color ? ` (color: ${item.color})` : '';
+    const colorLabel = item.colorName || item.color;
+    const colorPart = colorLabel ? ` (${colorLabel})` : '';
     const pricePart = item.product.price ? ` — ${formatPrice(item.product.price)} c/u` : '';
     lines.push(`• ${item.quantity}x ${item.product.name}${colorPart}${pricePart}`);
   }
@@ -121,7 +122,9 @@ export function CartDrawer() {
                             className="w-3 h-3 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0"
                             style={{ backgroundColor: item.color }}
                           />
-                          <span className="text-[11px] text-zinc-400">{item.color}</span>
+                          {item.colorName && (
+                            <span className="text-[11px] text-zinc-400">{item.colorName}</span>
+                          )}
                         </div>
                       )}
 

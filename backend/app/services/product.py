@@ -899,6 +899,7 @@ class ProductService:
         # Update images if provided
         if data.image_urls is not None:
             colors = data.image_colors or []
+            alt_texts = data.image_alt_texts or []
             # Delete existing images
             for img in product.images:
                 self.db.delete(img)
@@ -907,13 +908,15 @@ class ProductService:
             for i, img_url in enumerate(data.image_urls):
                 if img_url:
                     color = colors[i] if i < len(colors) else None
+                    alt_text = alt_texts[i] if i < len(alt_texts) else None
                     image = ProductImage(
                         product_id=product.id,
                         url=img_url,
                         original_url=img_url,
                         display_order=i,
                         is_primary=(i == 0),
-                        color=color if color else None,
+                        color=None if i == 0 else (color or None),
+                        alt_text=alt_text or None,
                     )
                     self.db.add(image)
 

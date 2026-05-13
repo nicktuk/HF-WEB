@@ -29,8 +29,12 @@ export function ProductCard({ product }: ProductCardProps) {
     installments: labels?.badge_text_installments ?? 'Cuotas',
   };
 
-  const coloredImages = product.images.filter(img => img.color);
+  // Non-primary colored images only (image 0 never has color)
+  const coloredImages = product.images.filter(img => img.color && !img.is_primary);
   const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
+  const colorNameMap = Object.fromEntries(
+    coloredImages.filter(img => img.alt_text).map(img => [img.color!, img.alt_text!])
+  );
   const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
   const hasColorStock = (product.color_stock ?? []).length > 0;
   const hasColors = uniqueColors.length > 0;
@@ -50,7 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
   function handlePickColor(e: React.MouseEvent, color: string) {
     e.stopPropagation();
     e.preventDefault();
-    addItem(product, color);
+    addItem(product, color, colorNameMap[color] ?? null);
     setPickingColor(false);
   }
 

@@ -347,6 +347,7 @@ export interface ProductUpdateForm {
   sku?: string;
   image_urls?: string[];
   image_colors?: (string | null)[];
+  image_alt_texts?: (string | null)[];
   video_url?: string | null;
 }
 
