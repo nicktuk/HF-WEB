@@ -206,7 +206,8 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Cart action — stopPropagation prevents Link navigation */}
+        {/* Cart action — only when stock available */}
+        {(product.stock_qty ?? 0) > 0 && (
         <div onClick={e => e.stopPropagation()}>
           {pickingColor ? (
             <div className="pt-2 border-t border-zinc-100">
@@ -250,6 +251,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </button>
           )}
         </div>
+        )}
       </div>
     </Link>
   );
