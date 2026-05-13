@@ -169,7 +169,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               )}
 
               {/* Delivery badge — corner ribbon */}
-              {(product.is_on_demand || product.is_immediate_delivery) && (
+              {(product.is_immediate_delivery || ((product.stock_qty || 0) <= 0 && product.is_on_demand)) && (
                 <div className="absolute top-0 left-0 z-10 pointer-events-none overflow-hidden w-32 h-32">
                   <div
                     className={`absolute -top-1 -left-10 w-36 py-1.5 text-center text-[10px] font-bold text-white uppercase tracking-widest shadow-md rotate-[-45deg] origin-center ${

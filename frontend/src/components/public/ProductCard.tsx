@@ -78,7 +78,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 {t.immediate}
               </span>
             )}
-            {((product.is_on_demand && !product.is_immediate_delivery) || (product.is_immediate_delivery && (product.stock_qty || 0) <= 0)) && (
+            {(product.stock_qty || 0) <= 0 && (product.is_on_demand || product.is_immediate_delivery) && (
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
                 {t.onDemand}
               </span>
