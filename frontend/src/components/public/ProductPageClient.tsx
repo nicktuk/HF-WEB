@@ -16,6 +16,8 @@ import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
+import { useCart } from '@/context/CartContext';
+import { ShoppingCart } from 'lucide-react';
 
 export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
   const params = useParams();
@@ -37,6 +39,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   });
 
   const { data: badgeLabels } = useBadgeLabels();
+  const { addItem } = useCart();
 
   // Threshold: producto primero, luego global, luego default
   const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
@@ -352,7 +355,22 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             )}
 
             {/* Stock Availability + WhatsApp CTA — desktop */}
-            <div className="hidden md:block">
+            <div className="hidden md:block space-y-3">
+              <button
+                onClick={() => addItem(product, selectedColor)}
+                className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-3 transition-colors"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {selectedColor ? (
+                  <span className="flex items-center gap-2">
+                    Agregar al carrito
+                    <span
+                      className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
+                      style={{ backgroundColor: selectedColor }}
+                    />
+                  </span>
+                ) : 'Agregar al carrito'}
+              </button>
               <StockAvailability
                 isCheckStock={product.is_check_stock}
                 isImmediateDelivery={product.is_immediate_delivery}
@@ -378,7 +396,22 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
       </main>
 
       {/* Mobile CTA — fixed bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden space-y-2">
+        <button
+          onClick={() => addItem(product, selectedColor)}
+          className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-2.5 transition-colors"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          {selectedColor ? (
+            <span className="flex items-center gap-2">
+              Agregar al carrito
+              <span
+                className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
+                style={{ backgroundColor: selectedColor }}
+              />
+            </span>
+          ) : 'Agregar al carrito'}
+        </button>
         <StockAvailability
           isCheckStock={product.is_check_stock}
           isImmediateDelivery={product.is_immediate_delivery}

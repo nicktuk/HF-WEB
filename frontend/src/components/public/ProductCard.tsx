@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ShoppingCart, X } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
 import { resolveImageUrl } from '@/lib/api';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
+import { useCart } from '@/context/CartContext';
 import type { ProductPublic } from '@/types';
 
 interface ProductCardProps {
@@ -15,6 +18,9 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
   const { data: labels } = useBadgeLabels();
+  const { addItem } = useCart();
+  const [pickingColor, setPickingColor] = useState(false);
+
   const t = {
     immediate: labels?.badge_text_immediate_delivery ?? 'Inmediata',
     featured: labels?.badge_text_featured ?? 'Nuevo',
@@ -23,10 +29,46 @@ export function ProductCard({ product }: ProductCardProps) {
     installments: labels?.badge_text_installments ?? 'Cuotas',
   };
 
+  const coloredImages = product.images.filter(img => img.color);
+  const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
+  const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
+  const hasColorStock = (product.color_stock ?? []).length > 0;
+  const hasColors = uniqueColors.length > 0;
+
+  function handleAddDirect(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    addItem(product);
+  }
+
+  function handleStartPick(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    setPickingColor(true);
+  }
+
+  function handlePickColor(e: React.MouseEvent, color: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    addItem(product, color);
+    setPickingColor(false);
+  }
+
+  function handleCancelPick(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    setPickingColor(false);
+  }
+
   return (
     <Link
       href={`/producto/${product.slug}`}
-      onClick={() => {
+      onClick={(e) => {
+        if (pickingColor) {
+          e.preventDefault();
+          setPickingColor(false);
+          return;
+        }
         trackPublicEvent('product_click', {
           product_id: product.id,
           product_slug: product.slug,
@@ -47,7 +89,6 @@ export function ProductCard({ product }: ProductCardProps) {
               className="object-contain group-hover:scale-[1.07] transition-transform duration-500 ease-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
-            {/* Gradient overlay that fades in on hover */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </>
         ) : (
@@ -59,7 +100,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {/* Status badges overlaid on image */}
+        {/* Status badges */}
         {(product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             {product.is_featured && (product.stock_qty || 0) > 0 && (
@@ -119,16 +160,12 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </h3>
 
-        {/* Color swatches */}
-        {product.images.some(img => img.color) && (() => {
-          const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
-          const hasStock = (product.color_stock ?? []).length > 0;
-          const coloredImages = product.images.filter(img => img.color);
-          const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
+        {/* Color swatches (decorative) */}
+        {hasColors && !pickingColor && (() => {
           return (
             <div className="flex gap-1.5 flex-wrap">
               {uniqueColors.map(color => {
-                const outOfStock = hasStock && stockMap[color] === 0;
+                const outOfStock = hasColorStock && stockMap[color] === 0;
                 return (
                   <span
                     key={color}
@@ -159,12 +196,59 @@ export function ProductCard({ product }: ProductCardProps) {
               </p>
             )}
           </div>
-          <span className="text-xs font-semibold text-primary-600 flex items-center gap-0.5 group-hover:gap-1.5 transition-all duration-200 mt-1">
-            Ver
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </span>
+          {!pickingColor && (
+            <span className="text-xs font-semibold text-primary-600 flex items-center gap-0.5 group-hover:gap-1.5 transition-all duration-200 mt-1">
+              Ver
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          )}
+        </div>
+
+        {/* Cart action — stopPropagation prevents Link navigation */}
+        <div onClick={e => e.stopPropagation()}>
+          {pickingColor ? (
+            <div className="pt-2 border-t border-zinc-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Elegí un color</span>
+                <button
+                  onClick={handleCancelPick}
+                  className="flex items-center justify-center w-5 h-5 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400"
+                  aria-label="Cancelar"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {uniqueColors.map(color => {
+                  const outOfStock = hasColorStock && stockMap[color] === 0;
+                  return (
+                    <button
+                      key={color}
+                      onClick={(e) => !outOfStock && handlePickColor(e, color)}
+                      disabled={outOfStock}
+                      title={outOfStock ? 'Sin stock' : color}
+                      className={`w-7 h-7 rounded-full border-2 border-white shadow-sm ring-1 ring-zinc-200 transition-all ${
+                        outOfStock
+                          ? 'opacity-25 cursor-not-allowed'
+                          : 'hover:scale-110 hover:ring-zinc-400 cursor-pointer'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={hasColors ? handleStartPick : handleAddDirect}
+              className="mt-1 w-full flex items-center justify-center gap-1.5 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-semibold py-2 transition-colors"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Agregar al carrito
+            </button>
+          )}
         </div>
       </div>
     </Link>

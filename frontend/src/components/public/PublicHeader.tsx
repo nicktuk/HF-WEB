@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Search, Star, Zap, Lightbulb, Package, Menu, X } from 'lucide-react';
+import { Search, Star, Zap, Lightbulb, Package, Menu, X, ShoppingCart } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
@@ -91,6 +92,7 @@ function PublicHeaderInner() {
   const onDemandLabel = badgeLabels?.badge_text_on_demand || 'Por pedido';
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+  const { totalItems, openCart } = useCart();
 
   return (
     <>
@@ -126,6 +128,19 @@ function PublicHeaderInner() {
 
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Cart button */}
+                <button
+                  onClick={openCart}
+                  className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
+                  aria-label="Ver carrito"
+                >
+                  <ShoppingCart className="h-4 w-4 text-white" />
+                  {totalItems > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-[10px] font-bold text-white leading-none">
+                      {totalItems > 9 ? '9+' : totalItems}
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={() => setHowWeWorkOpen(true)}
                   className="flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-all duration-200"
