@@ -363,7 +363,7 @@ class SalesService:
             if is_card and product.installment_price and product.installments_3:
                 unit_price = Decimal(str(product.installment_price)) * 3
             else:
-                unit_price = Decimal(str(product.price or 0))
+                unit_price = Decimal(str(product.final_price or 0))
 
             if unit_price <= 0:
                 raise ValidationError(
