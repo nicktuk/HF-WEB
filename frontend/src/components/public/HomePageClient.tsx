@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Zap, SlidersHorizontal } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
@@ -822,7 +823,7 @@ function CategoryCarouselSlider({ slides, onSelect }: { slides: CarouselSlide[];
         {/* Left: image flies in from left */}
         {imageUrl ? (
           <div key={animKey} className="relative w-[58%] shrink-0 overflow-hidden animate-slide-from-left">
-            <img src={imageUrl} alt="" aria-hidden loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-cover" />
+            <Image fill src={imageUrl} alt="" aria-hidden priority sizes="(max-width: 768px) 58vw, 500px" className="object-cover" />
             {/* Fade edge to the right for a smooth blend */}
             <div className="absolute inset-y-0 right-0 w-12 pointer-events-none" style={{ background: `linear-gradient(to right, transparent, ${bgColor})` }} />
           </div>
@@ -936,7 +937,7 @@ function CategoryCarouselScroll({ slides, onSelect }: { slides: CarouselSlide[];
                 aria-label={`Filtrar por categoría: ${title}`}
               >
                 {imageUrl && (
-                  <img src={imageUrl} alt="" aria-hidden loading={isFirst ? 'eager' : 'lazy'} fetchPriority={isFirst ? 'high' : 'auto'} className="absolute inset-0 w-full h-full object-cover" />
+                  <Image fill src={imageUrl} alt="" aria-hidden priority={isFirst} sizes="(max-width: 640px) 240px, 300px" className="object-cover" />
                 )}
                 {imageUrl ? (
                   <div className="absolute inset-0 bg-black/45" />
