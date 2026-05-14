@@ -11,10 +11,12 @@ from app.services.product import ProductService
 from app.schemas.product import ProductPublicResponse
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.schemas.analytics import PublicEventCreate
+from app.schemas.sales import PublicOrderCreate, PublicOrderResponse
 from app.models.analytics_event import AnalyticsEvent
 from app.config import settings
 from app.db.session import get_db
 from app.services.app_settings import get_setting
+from app.services.sales import SalesService
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -138,3 +140,16 @@ async def track_public_event(
         return MessageResponse(message="Event dropped", success=False)
 
     return MessageResponse(message="Event tracked", success=True)
+
+
+@router.post("/orders", response_model=PublicOrderResponse)
+@limiter.limit("10/minute")
+async def create_public_order(
+    request: Request,
+    data: PublicOrderCreate,
+    db: Session = Depends(get_db),
+):
+    """Create a public order from the catalog cart."""
+    service = SalesService(db)
+    sale = service.create_public_order(data)
+    return PublicOrderResponse(id=sale.id, message="Pedido recibido")

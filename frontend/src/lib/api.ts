@@ -30,6 +30,8 @@ import type {
   ExpenseCreateForm,
   ExpenseListResponse,
   Expense,
+  PublicOrderCreate,
+  PublicOrderResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -163,6 +165,14 @@ export const publicApi = {
    */
   async getSections(): Promise<Section[]> {
     return fetchAPI('/sections/public');
+  },
+
+  async getPublicPaymentMethods(): Promise<PaymentMethodConfig[]> {
+    return fetchAPI('/admin/settings/public/payment-methods');
+  },
+
+  async createOrder(data: PublicOrderCreate): Promise<PublicOrderResponse> {
+    return fetchAPI('/public/orders', { method: 'POST', body: JSON.stringify(data) });
   },
 
   /**

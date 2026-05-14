@@ -146,7 +146,7 @@ class SalesService:
                 product = self.db.query(Product).filter(Product.id == product_id).first()
                 if not product:
                     raise NotFoundError("Product", str(product_id))
-                item_ref = f"product:{product.id}"
+                item_ref = f"product:{product.id}:{(getattr(item, 'color', None) or '').lower()}"
             else:
                 if not product_name:
                     raise ValidationError("El item manual requiere nombre de producto")
@@ -298,6 +298,8 @@ class SalesService:
             delivered=data.delivered,
             paid=data.paid,
             payment_method=getattr(data, 'payment_method', None),
+            phone=getattr(data, 'phone', None),
+            email=getattr(data, 'email', None),
             total_amount=total_amount,
             delivered_amount=Decimal("0.00"),
             paid_amount=Decimal("0.00"),
@@ -329,6 +331,89 @@ class SalesService:
 
         if data.installments and data.installments > 0:
             self._create_installments(sale, data.installments, total_amount, getattr(data, "installment_amounts", None))
+
+        self.db.commit()
+        self.db.refresh(sale)
+        return sale
+
+    def create_public_order(self, data) -> Sale:
+        """Create a sale from a public catalog order (no unit price supplied by caller)."""
+        if not data.items:
+            raise ValidationError("El pedido debe tener al menos un producto")
+
+        seen_item_refs: set[str] = set()
+        item_dicts: list[dict] = []
+        total_amount = Decimal("0")
+
+        for item in data.items:
+            product = self.db.query(Product).filter(Product.id == item.product_id).first()
+            if not product:
+                raise NotFoundError("Product", str(item.product_id))
+
+            color = item.color or None
+            item_ref = f"product:{product.id}:{(color or '').lower()}"
+            if item_ref in seen_item_refs:
+                raise ValidationError(
+                    f"El producto '{product.custom_name or product.original_name or product.id}' "
+                    "está duplicado en el pedido"
+                )
+            seen_item_refs.add(item_ref)
+
+            is_card = getattr(data, 'is_card_payment', False)
+            if is_card and product.installment_price and product.installments_3:
+                unit_price = Decimal(str(product.installment_price)) * 3
+            else:
+                unit_price = Decimal(str(product.price or 0))
+
+            if unit_price <= 0:
+                raise ValidationError(
+                    f"El producto '{product.custom_name or product.original_name or product.id}' "
+                    "no tiene precio configurado"
+                )
+
+            qty = int(item.quantity)
+            total_price = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
+            total_amount += total_price
+
+            item_dicts.append({
+                "item_ref": item_ref,
+                "product_id": product.id,
+                "color": color,
+                "quantity": qty,
+                "unit_price": unit_price,
+                "total_price": total_price,
+            })
+
+        total_amount = total_amount.quantize(Decimal("0.01"))
+
+        sale = Sale(
+            customer_name=data.name,
+            notes=data.notes,
+            seller="Web",
+            payment_method=data.payment_method,
+            phone=data.phone,
+            email=data.email,
+            total_amount=total_amount,
+            delivered=False,
+            paid=False,
+            delivered_amount=Decimal("0.00"),
+            paid_amount=Decimal("0.00"),
+        )
+        self.db.add(sale)
+        self.db.flush()
+
+        for item in item_dicts:
+            self.db.add(SaleItem(
+                sale_id=sale.id,
+                product_id=item["product_id"],
+                manual_product_name=None,
+                color=item["color"],
+                quantity=item["quantity"],
+                delivered_quantity=0,
+                is_paid=False,
+                unit_price=item["unit_price"],
+                total_price=item["total_price"],
+            ))
 
         self.db.commit()
         self.db.refresh(sale)

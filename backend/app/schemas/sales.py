@@ -25,6 +25,8 @@ class SaleCreate(BaseModel):
     delivered: bool = False
     paid: bool = False
     payment_method: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
     items: List[SaleItemCreate]
 
 
@@ -39,6 +41,8 @@ class SaleUpdate(BaseModel):
     seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
     items: Optional[List[SaleItemCreate]] = None
     force: bool = False
+    phone: Optional[str] = None
+    email: Optional[str] = None
 
 
 class SaleInstallmentUpdate(BaseModel):
@@ -82,6 +86,8 @@ class SaleResponse(BaseModel):
     delivered: bool
     paid: bool
     payment_method: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
     total_amount: Decimal
     delivered_amount: Decimal
     paid_amount: Decimal
@@ -91,3 +97,25 @@ class SaleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PublicOrderItemCreate(BaseModel):
+    product_id: int
+    quantity: int = Field(..., gt=0)
+    color: Optional[str] = None
+    is_card_payment: bool = False
+
+
+class PublicOrderCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=200)
+    phone: str = Field(..., min_length=6, max_length=50)
+    email: Optional[str] = Field(None, max_length=200)
+    payment_method: Optional[str] = Field(None, max_length=100)
+    is_card_payment: bool = False
+    notes: Optional[str] = None
+    items: List[PublicOrderItemCreate] = Field(..., min_length=1)
+
+
+class PublicOrderResponse(BaseModel):
+    id: int
+    message: str = "Pedido recibido"

@@ -422,9 +422,11 @@ export interface SaleInstallment {
 export interface Sale {
   id: number;
   customer_name?: string;
+  phone?: string | null;
+  email?: string | null;
   notes?: string;
   installments?: number;
-  seller: 'Facu' | 'Heber';
+  seller: string;
   delivered: boolean;
   paid: boolean;
   payment_method?: string | null;
@@ -439,6 +441,7 @@ export interface Sale {
 export interface PaymentMethodConfig {
   name: string;
   is_business: boolean;
+  is_card: boolean;
 }
 
 export interface Expense {
@@ -450,6 +453,28 @@ export interface Expense {
   notes?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PublicOrderItem {
+  product_id: number;
+  quantity: number;
+  color?: string | null;
+  is_card_payment?: boolean;
+}
+
+export interface PublicOrderCreate {
+  name: string;
+  phone: string;
+  email?: string;
+  payment_method?: string;
+  is_card_payment?: boolean;
+  notes?: string;
+  items: PublicOrderItem[];
+}
+
+export interface PublicOrderResponse {
+  id: number;
+  message: string;
 }
 
 export interface ExpenseCreateForm {

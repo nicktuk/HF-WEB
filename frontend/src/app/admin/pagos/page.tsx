@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CreditCard, Plus, Trash2, GripVertical, Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
+import { CreditCard, Plus, Trash2, GripVertical, Loader2, CheckCircle, AlertCircle, Building2, Banknote } from 'lucide-react';
 import { useApiKey } from '@/hooks/useAuth';
 import { adminApi } from '@/lib/api';
 import type { PaymentMethodConfig } from '@/types';
@@ -45,7 +45,14 @@ export default function PagosConfigPage() {
     const trimmed = newMethod.trim();
     if (!trimmed || methods.some((m) => m.name === trimmed)) return;
     setNewMethod('');
-    save([...methods, { name: trimmed, is_business: false }]);
+    save([...methods, { name: trimmed, is_business: false, is_card: false }]);
+  }
+
+  function handleToggleCard(idx: number) {
+    const updated = methods.map((m, i) =>
+      i === idx ? { ...m, is_card: !m.is_card } : m
+    );
+    save(updated);
   }
 
   function handleRemove(idx: number) {
@@ -105,9 +112,15 @@ export default function PagosConfigPage() {
       )}
 
       {/* Leyenda */}
-      <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
-        <Building2 className="h-4 w-4 shrink-0" />
-        Los métodos marcados como <strong className="mx-1">del negocio</strong> se usan para calcular el saldo por cuenta (cobrado vs pagado).
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 rounded-lg bg-violet-50 px-4 py-3 text-sm text-violet-700">
+          <CreditCard className="h-4 w-4 shrink-0" />
+          Los métodos marcados como <strong className="mx-1">Tarjeta</strong> muestran precio en cuotas en el carrito público.
+        </div>
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          <Building2 className="h-4 w-4 shrink-0" />
+          Los marcados como <strong className="mx-1">Negocio</strong> se usan para calcular el saldo por cuenta.
+        </div>
       </div>
 
       {/* Lista */}
@@ -123,6 +136,22 @@ export default function PagosConfigPage() {
             <li key={m.name} className="flex items-center gap-3 px-6 py-3">
               <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
               <span className="flex-1 text-sm text-gray-800">{m.name}</span>
+
+              {/* Toggle tarjeta */}
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleToggleCard(i)}
+                title={m.is_card ? 'Pago con tarjeta' : 'Marcar como tarjeta'}
+                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  m.is_card
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                }`}
+              >
+                {m.is_card ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
+                {m.is_card ? 'Tarjeta' : 'Efectivo'}
+              </button>
 
               {/* Toggle del negocio */}
               <button

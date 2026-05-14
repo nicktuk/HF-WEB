@@ -75,7 +75,7 @@ export default function SaleDetailPage() {
     setEditCustomer(sale.customer_name || '');
     setEditNotes(sale.notes || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
-    setEditSeller(sale.seller);
+    setEditSeller((sale.seller === 'Heber' ? 'Heber' : 'Facu'));
     setEditItems(
       sale.items.map((item) => ({
         line_id: `sale-item-${item.id}`,
@@ -432,6 +432,18 @@ export default function SaleDetailPage() {
                 <span className="font-medium">{sale.customer_name || '-'}</span>
               )}
             </div>
+            {sale.phone && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Teléfono</span>
+                <a href={`tel:${sale.phone}`} className="font-medium text-blue-600 hover:underline">{sale.phone}</a>
+              </div>
+            )}
+            {sale.email && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Email</span>
+                <a href={`mailto:${sale.email}`} className="font-medium text-blue-600 hover:underline">{sale.email}</a>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Vendedor</span>
               {isEditing ? (
@@ -444,7 +456,12 @@ export default function SaleDetailPage() {
                   <option value="Heber">Heber</option>
                 </select>
               ) : (
-                <span className="font-medium">{sale.seller}</span>
+                <span className="font-medium flex items-center gap-2">
+                  {sale.seller}
+                  {sale.seller === 'Web' && (
+                    <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full uppercase">Pedido web</span>
+                  )}
+                </span>
               )}
             </div>
             <div className="flex items-center justify-between">

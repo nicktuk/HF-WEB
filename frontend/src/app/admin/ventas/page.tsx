@@ -176,17 +176,17 @@ export default function VentasPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const addToCart = (product: ProductAdmin, color?: string | null) => {
+    const colorKey = color ?? 'none';
+    const itemId = `p-${product.id}-${colorKey}`;
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.product?.id === product.id);
+      const existing = prev.find((item) => item.id === itemId);
       const defaultPrice = getProductSaleUnitPrice(product);
       if (existing) {
         return prev.map((item) =>
-          item.product?.id === product.id
-            ? { ...item, quantity: item.quantity + 1, ...(color !== undefined ? { color } : {}) }
-            : item
+          item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: `p-${product.id}`, product, color: color ?? null, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
+      return [...prev, { id: itemId, product, color: color ?? null, quantity: 1, unit_price: defaultPrice || 0, delivered: false, paid: false }];
     });
   };
 
@@ -598,6 +598,9 @@ export default function VentasPage() {
                 {sortedProducts.map((product) => {
                   const inStock = Number(product.stock_qty || 0) > 0;
                   const productColors = (product.color_stock || []).filter(c => c.quantity > 0);
+                  const productColorNameMap = Object.fromEntries(
+                    product.images.filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
+                  );
                   return (
                     <div key={product.id} className="p-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -614,17 +617,21 @@ export default function VentasPage() {
                       </div>
                       {productColors.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-end">
-                          {productColors.map(({ color, quantity }) => (
-                            <button
-                              key={color}
-                              onClick={() => addToCart(product, color)}
-                              title={`${color} · ${quantity} disponibles`}
-                              className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
-                            >
-                              <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
-                              {quantity}
-                            </button>
-                          ))}
+                          {productColors.map(({ color, quantity }) => {
+                            const colorName = productColorNameMap[color];
+                            return (
+                              <button
+                                key={color}
+                                onClick={() => addToCart(product, color)}
+                                title={`${colorName || color} · ${quantity} disponibles`}
+                                className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
+                              >
+                                <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                                {colorName ? <span>{colorName}</span> : null}
+                                <span className="text-gray-400">({quantity})</span>
+                              </button>
+                            );
+                          })}
                           <button
                             onClick={() => addToCart(product, null)}
                             className={`text-xs px-2 py-1 rounded border ${inStock ? 'border-gray-300 text-gray-500 hover:border-gray-500' : 'border-dashed border-gray-300 text-gray-400 hover:text-gray-600'}`}
@@ -744,6 +751,10 @@ export default function VentasPage() {
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;
                     const productColors = item.product?.color_stock || [];
+                    const cartItemColorNameMap = Object.fromEntries(
+                      (item.product?.images || []).filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
+                    );
+                    const cartItemColorName = item.color ? (cartItemColorNameMap[item.color] ?? null) : null;
                     return (
                       <div key={item.id} className="p-3 space-y-2">
                         {/* Row 1: name + delete */}
@@ -755,6 +766,11 @@ export default function VentasPage() {
                               )}
                               <p className="text-sm font-semibold text-gray-900 leading-snug">{name}</p>
                             </div>
+                            {item.color && (
+                              <p className="text-xs text-gray-400 mt-0.5 ml-5">
+                                {cartItemColorName || item.color}
+                              </p>
+                            )}
                             <p className={`text-xs mt-0.5 ${hasStock ? 'text-gray-500' : 'text-amber-700'}`}>
                               {item.product
                                 ? `Stock: ${stockQty}${stockQty <= 0 ? ' — Sin unidades' : ''}`
@@ -817,15 +833,21 @@ export default function VentasPage() {
                         {productColors.length > 0 && (
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs text-gray-500">Color:</span>
-                            {productColors.map(({ color, quantity }) => (
-                              <button
-                                key={color}
-                                onClick={() => updateCartItemColor(item.id, item.color === color ? null : color)}
-                                title={`${color} · ${quantity} disponibles`}
-                                className={`w-5 h-5 rounded-full border-2 transition-all ${item.color === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-500'} ${quantity <= 0 ? 'opacity-40' : ''}`}
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
+                            {productColors.map(({ color, quantity }) => {
+                              const cName = cartItemColorNameMap[color];
+                              return (
+                                <button
+                                  key={color}
+                                  onClick={() => updateCartItemColor(item.id, item.color === color ? null : color)}
+                                  title={`${cName || color} · ${quantity} disponibles`}
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${item.color === color ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-500'} ${quantity <= 0 ? 'opacity-40' : ''}`}
+                                >
+                                  <span className="w-3.5 h-3.5 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                                  {cName ? <span className="text-gray-700">{cName}</span> : null}
+                                  <span className="text-gray-400">({quantity})</span>
+                                </button>
+                              );
+                            })}
                             {item.color && (
                               <button
                                 onClick={() => updateCartItemColor(item.id, null)}
@@ -1105,8 +1127,18 @@ export default function VentasPage() {
                         </td>
                         <td className="px-3 py-2 text-gray-700 font-medium">#{sale.id}</td>
                         <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatSaleDate(sale.created_at)}</td>
-                        <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
-                        <td className="px-3 py-2 text-gray-700">{sale.seller || '-'}</td>
+                        <td className="px-3 py-2 text-gray-700">
+                          <div>{sale.customer_name || '-'}</div>
+                          {sale.phone && <div className="text-xs text-gray-400">{sale.phone}</div>}
+                        </td>
+                        <td className="px-3 py-2 text-gray-700">
+                          <span className="flex items-center gap-1">
+                            {sale.seller || '-'}
+                            {sale.seller === 'Web' && (
+                              <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">Web</span>
+                            )}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 text-right text-gray-700">{item.quantity}</td>
                         <td className="px-3 py-2 text-center">
                           {togglingItemKey === `${sale.id}-${item.id}-delivered` ? (

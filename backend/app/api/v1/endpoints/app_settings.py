@@ -328,17 +328,18 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 DEFAULT_PAYMENT_METHODS = [
-    {"name": "Efectivo", "is_business": False},
-    {"name": "Transferencia", "is_business": False},
-    {"name": "Tarjeta de débito", "is_business": False},
-    {"name": "Tarjeta de crédito", "is_business": False},
-    {"name": "MercadoPago", "is_business": False},
+    {"name": "Efectivo", "is_business": False, "is_card": False},
+    {"name": "Transferencia", "is_business": False, "is_card": False},
+    {"name": "Tarjeta de débito", "is_business": False, "is_card": True},
+    {"name": "Tarjeta de crédito", "is_business": False, "is_card": True},
+    {"name": "MercadoPago", "is_business": False, "is_card": False},
 ]
 
 
 class PaymentMethodConfig(BaseModel):
     name: str
     is_business: bool = False
+    is_card: bool = False
 
 
 def _load_payment_methods(stored: Optional[str]) -> List[PaymentMethodConfig]:
@@ -368,8 +369,8 @@ def update_payment_methods(methods: List[PaymentMethodConfig], db: Session = Dep
     return cleaned
 
 
-@router.get("/public/payment-methods", response_model=List[str])
-def get_public_payment_methods(db: Session = Depends(get_db)) -> List[str]:
-    """Endpoint público: devuelve solo los nombres (para selects en ventas/compras)."""
+@router.get("/public/payment-methods", response_model=List[PaymentMethodConfig])
+def get_public_payment_methods(db: Session = Depends(get_db)) -> List[PaymentMethodConfig]:
+    """Endpoint público: devuelve los métodos de pago completos (nombre, is_business, is_card)."""
     stored = get_setting(db, "PAYMENT_METHODS")
-    return [m.name for m in _load_payment_methods(stored)]
+    return _load_payment_methods(stored)
