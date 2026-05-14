@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import {
   X, ShoppingCart, Trash2, Plus, Minus,
-  CreditCard, Banknote, ChevronLeft, CheckCircle2, Loader2,
+  CreditCard, Banknote, ChevronLeft, CheckCircle2, Loader2, Check,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCart, type CartItem } from '@/context/CartContext';
@@ -253,7 +253,10 @@ export function CartDrawer() {
                             onClick={() => setSelectedMethod(active ? null : method)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${active ? 'bg-primary-600 border-primary-600 text-white shadow-sm' : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'}`}
                           >
-                            {method.is_card ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
+                            {active
+                              ? <Check className="h-3.5 w-3.5" />
+                              : method.is_card ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />
+                            }
                             {method.name}
                           </button>
                         );
