@@ -115,8 +115,11 @@ export function CartDrawer() {
       });
       setOrderId(result.id);
       setStep('success');
-      trackPublicEvent('whatsapp_click', {
-        metadata: { origin: 'cart_checkout_api', items_count: items.length, total: displayTotal, payment_method: selectedMethod?.name },
+      trackPublicEvent('purchase', {
+        value: displayTotal,
+        num_items: items.reduce((s, i) => s + i.quantity, 0),
+        content_ids: items.map(i => i.product.id),
+        metadata: { payment_method: selectedMethod?.name },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar el pedido. Intentá de nuevo.');
@@ -260,7 +263,14 @@ export function CartDrawer() {
                 )}
 
                 <button
-                  onClick={() => canGoToCheckout && setStep('checkout')}
+                  onClick={() => {
+                    if (!canGoToCheckout) return;
+                    setStep('checkout');
+                    trackPublicEvent('initiate_checkout', {
+                      value: displayTotal,
+                      num_items: items.reduce((s, i) => s + i.quantity, 0),
+                    });
+                  }}
                   disabled={!canGoToCheckout}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
                 >

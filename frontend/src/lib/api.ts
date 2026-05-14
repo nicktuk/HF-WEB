@@ -179,7 +179,7 @@ export const publicApi = {
    * Track anonymous public frontend event
    */
   async trackEvent(data: {
-    event_name: 'page_view' | 'search' | 'category_click' | 'subcategory_click' | 'product_click' | 'whatsapp_click';
+    event_name: 'page_view' | 'search' | 'category_click' | 'subcategory_click' | 'product_click' | 'whatsapp_click' | 'initiate_checkout' | 'purchase';
     session_id?: string;
     path?: string;
     referrer?: string;

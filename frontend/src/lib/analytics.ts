@@ -8,7 +8,9 @@ export type PublicEventName =
   | 'category_click'
   | 'subcategory_click'
   | 'product_click'
-  | 'whatsapp_click';
+  | 'whatsapp_click'
+  | 'initiate_checkout'
+  | 'purchase';
 
 type PublicEventPayload = {
   category?: string;
@@ -16,6 +18,9 @@ type PublicEventPayload = {
   product_id?: number;
   product_slug?: string;
   search_query?: string;
+  value?: number;
+  num_items?: number;
+  content_ids?: number[];
   metadata?: Record<string, unknown>;
 };
 
@@ -65,6 +70,25 @@ function fireExternalEvents(eventName: PublicEventName, payload: PublicEventPayl
   if (eventName === 'whatsapp_click') {
     fbq?.('track', 'Contact');
     gtag?.('event', 'generate_lead', { method: 'whatsapp' });
+  }
+
+  if (eventName === 'initiate_checkout') {
+    fbq?.('track', 'InitiateCheckout', {
+      value: payload.value,
+      currency: 'ARS',
+      num_items: payload.num_items,
+    });
+    gtag?.('event', 'begin_checkout', { value: payload.value, currency: 'ARS' });
+  }
+
+  if (eventName === 'purchase') {
+    fbq?.('track', 'Purchase', {
+      value: payload.value,
+      currency: 'ARS',
+      content_ids: payload.content_ids?.map(String),
+      content_type: 'product',
+    });
+    gtag?.('event', 'purchase', { value: payload.value, currency: 'ARS' });
   }
 }
 
