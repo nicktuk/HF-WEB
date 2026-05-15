@@ -244,7 +244,7 @@ class SalesService:
         paid_targets_by_ref: dict[str, bool] | None = None,
     ) -> None:
         for item in sale.items:
-            item_ref = f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"
+            item_ref = f"product:{item.product_id}:{(item.color or '').lower()}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"
             current_qty = int(item.delivered_quantity or 0)
             qty = int(item.quantity or 0)
             current_delivered = qty > 0 and current_qty >= qty
@@ -550,7 +550,7 @@ class SalesService:
         elif delivered is not None or paid is not None:
             delivery_targets = (
                 {
-                    (f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(delivered)
+                    (f"product:{item.product_id}:{(item.color or '').lower()}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(delivered)
                     for item in sale.items
                 }
                 if delivered is not None
@@ -558,7 +558,7 @@ class SalesService:
             )
             paid_targets = (
                 {
-                    (f"product:{item.product_id}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(paid)
+                    (f"product:{item.product_id}:{(item.color or '').lower()}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"): bool(paid)
                     for item in sale.items
                 }
                 if paid is not None
