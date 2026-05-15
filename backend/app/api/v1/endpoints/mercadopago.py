@@ -109,14 +109,14 @@ def _calculate_total(db: Session, items: List[MPPreferenceCartItem]) -> tuple[fl
         if item.is_card_payment and product.installments_3 and product.installment_price:
             unit_price = Decimal(str(product.installment_price)) * 3
         else:
-            if product.price is None:
+            if product.final_price is None:
                 raise HTTPException(status_code=422, detail=f"Producto {item.product_id} sin precio")
-            unit_price = Decimal(str(product.price))
+            unit_price = Decimal(str(product.final_price))
 
         total += unit_price * item.quantity
         items_payload.append({
             "id": str(item.product_id),
-            "title": product.custom_name or product.original_name or product.name,
+            "title": product.display_name,
             "quantity": item.quantity,
             "unit_price": float(unit_price),
             "currency_id": "ARS",

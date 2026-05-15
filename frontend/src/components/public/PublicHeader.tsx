@@ -326,7 +326,7 @@ function PublicHeaderInner() {
               }`}
             >
               <Zap className={`h-3 w-3 ${showImmediate ? 'fill-current' : ''}`} />
-              Inmediata
+              En Stock
             </button>
 
             {/* Por pedido */}
