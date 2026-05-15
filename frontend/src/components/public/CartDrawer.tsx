@@ -306,7 +306,7 @@ export function CartDrawer() {
                           : 'bg-white border-zinc-200 text-zinc-700 hover:border-[#009ee3]/40 hover:bg-[#009ee3]/5'
                       }`}
                     >
-                      <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={72} height={46} className="rounded" />
+                      <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={100} height={64} className="rounded" />
                       <span className="leading-tight text-center">Mercado Pago</span>
                     </button>
                     <button
@@ -358,7 +358,7 @@ export function CartDrawer() {
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isCard
-                    ? <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={52} height={34} className="rounded" />
+                    ? <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={72} height={46} className="rounded" />
                     : <Banknote className="h-4 w-4 text-primary-600" />
                   }
                   <div>
