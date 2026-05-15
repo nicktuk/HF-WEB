@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
   X, ShoppingCart, Trash2, Plus, Minus,
-  CreditCard, Banknote, ChevronLeft, CheckCircle2, Loader2,
+  Banknote, ChevronLeft, CheckCircle2, Loader2,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
@@ -306,7 +306,7 @@ export function CartDrawer() {
                           : 'bg-white border-zinc-200 text-zinc-700 hover:border-[#009ee3]/40 hover:bg-[#009ee3]/5'
                       }`}
                     >
-                      <CreditCard className="h-5 w-5" />
+                      <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={40} height={26} className="rounded" />
                       <span className="leading-tight text-center">Mercado Pago</span>
                     </button>
                     <button
