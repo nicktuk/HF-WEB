@@ -358,7 +358,7 @@ export function CartDrawer() {
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isCard
-                    ? <CreditCard className="h-4 w-4 text-[#009ee3]" />
+                    ? <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={28} height={18} className="rounded" />
                     : <Banknote className="h-4 w-4 text-primary-600" />
                   }
                   <div>
