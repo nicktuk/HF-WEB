@@ -5,21 +5,20 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
   X, ShoppingCart, Trash2, Plus, Minus,
-  CreditCard, Banknote, ChevronLeft, CheckCircle2, Loader2, Check,
+  CreditCard, Banknote, ChevronLeft, CheckCircle2, Loader2,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { useCart, type CartItem } from '@/context/CartContext';
+import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
-import type { PaymentMethodConfig } from '@/types';
 
 const MercadoPagoPaymentBrick = dynamic(
   () => import('./MercadoPagoPaymentBrick'),
-  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary-500" /></div> }
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#009ee3]" /></div> }
 );
 
 type Step = 'cart' | 'checkout' | 'mp-payment' | 'success';
+type PaymentFlow = 'card' | 'cash';
 
 interface CheckoutForm {
   name: string;
@@ -31,19 +30,13 @@ interface CheckoutForm {
 export function CartDrawer() {
   const { items, removeItem, updateQuantity, clearCart, isOpen, closeCart } = useCart();
   const [step, setStep] = useState<Step>('cart');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodConfig | null>(null);
+  const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
   const [form, setForm] = useState<CheckoutForm>({ name: '', phone: '', email: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mpPreference, setMpPreference] = useState<{ preference_id: string; public_key: string; amount: number } | null>(null);
   const [mpBrickReady, setMpBrickReady] = useState(false);
-
-  const { data: paymentMethods = [] } = useQuery({
-    queryKey: ['public-payment-methods'],
-    queryFn: () => publicApi.getPublicPaymentMethods(),
-    staleTime: 10 * 60 * 1000,
-  });
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
@@ -57,7 +50,6 @@ export function CartDrawer() {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  // Reset step when drawer closes
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
@@ -81,14 +73,13 @@ export function CartDrawer() {
     closeCart();
   }
 
-  const isCard = selectedMethod?.is_card ?? false;
+  const isCard = paymentFlow === 'card';
 
   const displayTotal = useMemo(() =>
     items.reduce((sum, i) => {
-      const price =
-        isCard && i.product.installments_3 && i.product.installment_price
-          ? i.product.installment_price * 3
-          : (i.product.price ?? 0);
+      const price = isCard && i.product.installments_3 && i.product.installment_price
+        ? i.product.installment_price * 3
+        : (i.product.price ?? 0);
       return sum + price * i.quantity;
     }, 0),
     [items, isCard]
@@ -118,7 +109,7 @@ export function CartDrawer() {
           product_id: i.product.id,
           quantity: i.quantity,
           color: i.color ?? undefined,
-          is_card_payment: isCard,
+          is_card_payment: true,
         })),
       });
       setMpPreference(pref);
@@ -131,7 +122,7 @@ export function CartDrawer() {
   }
 
   async function handleMPProcessPayment(formData: unknown) {
-    const result = await publicApi.processMPPayment({
+    return publicApi.processMPPayment({
       form_data: formData,
       name: form.name.trim(),
       phone: form.phone.trim(),
@@ -141,10 +132,9 @@ export function CartDrawer() {
         product_id: i.product.id,
         quantity: i.quantity,
         color: i.color ?? undefined,
-        is_card_payment: isCard,
+        is_card_payment: true,
       })),
     });
-    return result;
   }
 
   async function handleSubmitOrder() {
@@ -156,14 +146,14 @@ export function CartDrawer() {
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || undefined,
-        payment_method: selectedMethod?.name || undefined,
-        is_card_payment: isCard,
+        payment_method: 'Efectivo / Transferencia',
+        is_card_payment: false,
         notes: form.notes.trim() || undefined,
         items: items.map(i => ({
           product_id: i.product.id,
           quantity: i.quantity,
           color: i.color ?? undefined,
-          is_card_payment: isCard,
+          is_card_payment: false,
         })),
       });
       setOrderId(result.id);
@@ -172,7 +162,7 @@ export function CartDrawer() {
         value: displayTotal,
         num_items: items.reduce((s, i) => s + i.quantity, 0),
         content_ids: items.map(i => i.product.id),
-        metadata: { payment_method: selectedMethod?.name },
+        metadata: { payment_method: 'Efectivo / Transferencia' },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar el pedido. Intentá de nuevo.');
@@ -181,7 +171,7 @@ export function CartDrawer() {
     }
   }
 
-  const canGoToCheckout = items.length > 0;
+  const canGoToCheckout = items.length > 0 && paymentFlow !== null;
   const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && !submitting;
 
   return (
@@ -215,7 +205,7 @@ export function CartDrawer() {
             <h2 className="font-bold text-lg text-zinc-900">
               {step === 'cart' ? 'Tu pedido'
                 : step === 'checkout' ? 'Tus datos'
-                : step === 'mp-payment' ? 'Pagar con Mercado Pago'
+                : step === 'mp-payment' ? 'Pagar con tarjeta'
                 : '¡Pedido confirmado!'}
             </h2>
             {step === 'cart' && items.length > 0 && (
@@ -293,6 +283,7 @@ export function CartDrawer() {
 
             {items.length > 0 && (
               <div className="border-t px-4 py-4 space-y-3 bg-zinc-50 shrink-0">
+                {/* Total */}
                 <div className="flex items-start justify-between">
                   <span className="text-sm text-zinc-500 mt-1">Total</span>
                   <div className="text-right">
@@ -303,30 +294,34 @@ export function CartDrawer() {
                   </div>
                 </div>
 
-                {/* Payment methods */}
-                {paymentMethods.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Forma de pago</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {paymentMethods.map(method => {
-                        const active = selectedMethod?.name === method.name;
-                        return (
-                          <button
-                            key={method.name}
-                            onClick={() => setSelectedMethod(active ? null : method)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${active ? 'bg-primary-600 border-primary-600 text-white shadow-sm' : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'}`}
-                          >
-                            {active
-                              ? <Check className="h-3.5 w-3.5" />
-                              : method.is_card ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />
-                            }
-                            {method.name}
-                          </button>
-                        );
-                      })}
-                    </div>
+                {/* Forma de cobro — solo 2 opciones */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo vas a pagar?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setPaymentFlow(paymentFlow === 'card' ? null : 'card')}
+                      className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        paymentFlow === 'card'
+                          ? 'bg-[#009ee3] border-[#009ee3] text-white shadow-sm'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-[#009ee3]/40 hover:bg-[#009ee3]/5'
+                      }`}
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      <span className="leading-tight text-center">Tarjeta de crédito</span>
+                    </button>
+                    <button
+                      onClick={() => setPaymentFlow(paymentFlow === 'cash' ? null : 'cash')}
+                      className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        paymentFlow === 'cash'
+                          ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
+                      }`}
+                    >
+                      <Banknote className="h-5 w-5" />
+                      <span className="leading-tight text-center">Efectivo / Transferencia</span>
+                    </button>
                   </div>
-                )}
+                </div>
 
                 <button
                   onClick={() => {
@@ -338,10 +333,14 @@ export function CartDrawer() {
                     });
                   }}
                   disabled={!canGoToCheckout}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-40"
                 >
                   Realizar pedido
                 </button>
+
+                {!paymentFlow && items.length > 0 && (
+                  <p className="text-center text-[11px] text-zinc-400">Elegí cómo querés pagar para continuar</p>
+                )}
 
                 <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1">
                   Vaciar carrito
@@ -355,16 +354,19 @@ export function CartDrawer() {
         {step === 'checkout' && (
           <>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {/* Summary */}
+              {/* Resumen */}
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-zinc-500">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
-                  {selectedMethod && (
-                    <p className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
-                      {selectedMethod.is_card ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
-                      {selectedMethod.name}
+                <div className="flex items-center gap-2">
+                  {isCard
+                    ? <CreditCard className="h-4 w-4 text-[#009ee3]" />
+                    : <Banknote className="h-4 w-4 text-primary-600" />
+                  }
+                  <div>
+                    <p className="text-xs font-semibold text-zinc-700">
+                      {isCard ? 'Tarjeta de crédito' : 'Efectivo / Transferencia'}
                     </p>
-                  )}
+                    <p className="text-xs text-zinc-400">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(displayTotal)}</p>
@@ -374,7 +376,7 @@ export function CartDrawer() {
                 </div>
               </div>
 
-              {/* Form */}
+              {/* Formulario */}
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -440,7 +442,7 @@ export function CartDrawer() {
             </div>
 
             <div className="border-t px-4 py-4 bg-zinc-50 shrink-0 space-y-2">
-              {selectedMethod?.is_mercadopago ? (
+              {isCard ? (
                 <button
                   onClick={handleGoToMPPayment}
                   disabled={!canSubmit}
@@ -466,9 +468,9 @@ export function CartDrawer() {
                 </button>
               )}
               <p className="text-center text-[11px] text-zinc-400">
-                {selectedMethod?.is_mercadopago
-                  ? 'Serás llevado al formulario de pago de Mercado Pago.'
-                  : 'Nos contactaremos con vos para coordinar la entrega y el pago.'}
+                {isCard
+                  ? 'Vas a pagar con tarjeta a través de Mercado Pago.'
+                  : 'Te contactaremos para coordinar la entrega y el pago.'}
               </p>
             </div>
           </>
@@ -477,7 +479,6 @@ export function CartDrawer() {
         {/* ── STEP: mp-payment ── */}
         {step === 'mp-payment' && mpPreference && (
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {/* Summary */}
             <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
               <p className="text-xs text-zinc-500">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
               <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(mpPreference.amount)}</p>
@@ -501,14 +502,14 @@ export function CartDrawer() {
               amount={mpPreference.amount}
               payerEmail={form.email || undefined}
               onProcessPayment={handleMPProcessPayment}
-              onSuccess={(saleId, message) => {
+              onSuccess={(saleId) => {
                 setOrderId(saleId ?? null);
                 setStep('success');
                 trackPublicEvent('purchase', {
                   value: mpPreference.amount,
                   num_items: items.reduce((s, i) => s + i.quantity, 0),
                   content_ids: items.map(i => i.product.id),
-                  metadata: { payment_method: 'MercadoPago' },
+                  metadata: { payment_method: 'Tarjeta (MercadoPago)' },
                 });
               }}
               onError={(msg) => setError(msg)}
@@ -531,7 +532,7 @@ export function CartDrawer() {
                 </p>
               )}
               <p className="text-sm text-zinc-500 leading-relaxed">
-                {selectedMethod?.is_mercadopago
+                {isCard
                   ? <>¡Tu pago fue procesado! Te contactaremos al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega.</>
                   : <>Te vamos a contactar al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega y el pago.</>
                 }
