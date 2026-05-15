@@ -307,7 +307,7 @@ export function CartDrawer() {
                       }`}
                     >
                       <CreditCard className="h-5 w-5" />
-                      <span className="leading-tight text-center">Tarjeta de crédito</span>
+                      <span className="leading-tight text-center">Mercado Pago</span>
                     </button>
                     <button
                       onClick={() => setPaymentFlow(paymentFlow === 'cash' ? null : 'cash')}
@@ -363,7 +363,7 @@ export function CartDrawer() {
                   }
                   <div>
                     <p className="text-xs font-semibold text-zinc-700">
-                      {isCard ? 'Tarjeta de crédito' : 'Efectivo / Transferencia'}
+                      {isCard ? 'Mercado Pago' : 'Efectivo / Transferencia'}
                     </p>
                     <p className="text-xs text-zinc-400">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
                   </div>
