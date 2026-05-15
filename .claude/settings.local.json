@@ -94,7 +94,13 @@
       "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\services\\\\import_scorer\")",
       "Bash(mkdir -p \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\import_scorer\")",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(Get-ChildItem \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\src\\\\app\\\\admin\\\\productos\\\\[id]\")"
+      "Bash(Get-ChildItem \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\src\\\\app\\\\admin\\\\productos\\\\[id]\")",
+      "PowerShell(ls \"D:\\\\Desarrollo\\\\HF WEB\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\\")",
+      "mcp__mercadopago__search_documentation",
+      "PowerShell(ls \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\node_modules\\\\@mercadopago\\\\sdk-react\\\\\")",
+      "PowerShell(ls \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\node_modules\\\\@mercadopago\\\\sdk-react\\\\cjs\\\\\")",
+      "mcp__mercadopago__application_list",
+      "mcp__mercadopago__save_webhook"
     ]
   }
 }

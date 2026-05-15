@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     IS_EMAIL_FROM: str = ""
     IS_EMAIL_TO: str = ""
 
+    # Mercado Pago
+    MP_ACCESS_TOKEN: str = ""
+    MP_PUBLIC_KEY: str = ""
+
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001
     BESTBUY_API_KEY: str = ""          # developers.bestbuy.com (gratuito)

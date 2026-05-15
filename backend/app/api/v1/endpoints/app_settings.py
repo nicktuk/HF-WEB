@@ -328,11 +328,11 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 DEFAULT_PAYMENT_METHODS = [
-    {"name": "Efectivo", "is_business": False, "is_card": False},
-    {"name": "Transferencia", "is_business": False, "is_card": False},
-    {"name": "Tarjeta de débito", "is_business": False, "is_card": True},
-    {"name": "Tarjeta de crédito", "is_business": False, "is_card": True},
-    {"name": "MercadoPago", "is_business": False, "is_card": False},
+    {"name": "Efectivo", "is_business": False, "is_card": False, "is_mercadopago": False},
+    {"name": "Transferencia", "is_business": False, "is_card": False, "is_mercadopago": False},
+    {"name": "Tarjeta de débito", "is_business": False, "is_card": True, "is_mercadopago": False},
+    {"name": "Tarjeta de crédito", "is_business": False, "is_card": True, "is_mercadopago": False},
+    {"name": "MercadoPago", "is_business": False, "is_card": False, "is_mercadopago": True},
 ]
 
 
@@ -340,6 +340,7 @@ class PaymentMethodConfig(BaseModel):
     name: str
     is_business: bool = False
     is_card: bool = False
+    is_mercadopago: bool = False
 
 
 def _load_payment_methods(stored: Optional[str]) -> List[PaymentMethodConfig]:
@@ -374,3 +375,45 @@ def get_public_payment_methods(db: Session = Depends(get_db)) -> List[PaymentMet
     """Endpoint público: devuelve los métodos de pago completos (nombre, is_business, is_card)."""
     stored = get_setting(db, "PAYMENT_METHODS")
     return _load_payment_methods(stored)
+
+
+# ---------------------------------------------------------------------------
+# GET /mp   (admin)
+# PUT /mp   (admin)
+# GET /public/mp-public-key (público)
+# ---------------------------------------------------------------------------
+
+class MPSettingsResponse(BaseModel):
+    public_key: str
+    access_token: str
+
+
+class MPSettingsUpdate(BaseModel):
+    public_key: Optional[str] = None
+    access_token: Optional[str] = None
+
+
+@router.get("/mp", response_model=MPSettingsResponse, dependencies=[Depends(verify_admin)])
+def get_mp_settings(db: Session = Depends(get_db)) -> MPSettingsResponse:
+    access_token = get_setting(db, "MP_ACCESS_TOKEN") or settings.MP_ACCESS_TOKEN
+    public_key = get_setting(db, "MP_PUBLIC_KEY") or settings.MP_PUBLIC_KEY
+    return MPSettingsResponse(
+        access_token=_mask_key(access_token),
+        public_key=_mask_key(public_key),
+    )
+
+
+@router.put("/mp", response_model=MPSettingsResponse, dependencies=[Depends(verify_admin)])
+def update_mp_settings(data: MPSettingsUpdate, db: Session = Depends(get_db)) -> MPSettingsResponse:
+    if data.access_token is not None and not _is_masked(data.access_token):
+        set_setting(db, "MP_ACCESS_TOKEN", data.access_token or None)
+    if data.public_key is not None and not _is_masked(data.public_key):
+        set_setting(db, "MP_PUBLIC_KEY", data.public_key or None)
+    return get_mp_settings(db=db)
+
+
+@router.get("/public/mp-public-key")
+def get_mp_public_key(db: Session = Depends(get_db)) -> dict:
+    """Devuelve la public key de Mercado Pago para inicializar el Brick."""
+    public_key = get_setting(db, "MP_PUBLIC_KEY") or settings.MP_PUBLIC_KEY
+    return {"public_key": public_key or ""}

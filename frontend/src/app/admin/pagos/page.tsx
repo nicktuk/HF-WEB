@@ -45,7 +45,7 @@ export default function PagosConfigPage() {
     const trimmed = newMethod.trim();
     if (!trimmed || methods.some((m) => m.name === trimmed)) return;
     setNewMethod('');
-    save([...methods, { name: trimmed, is_business: false, is_card: false }]);
+    save([...methods, { name: trimmed, is_business: false, is_card: false, is_mercadopago: false }]);
   }
 
   function handleToggleCard(idx: number) {

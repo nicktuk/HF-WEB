@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
   X, ShoppingCart, Trash2, Plus, Minus,
@@ -13,7 +14,12 @@ import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 import type { PaymentMethodConfig } from '@/types';
 
-type Step = 'cart' | 'checkout' | 'success';
+const MercadoPagoPaymentBrick = dynamic(
+  () => import('./MercadoPagoPaymentBrick'),
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary-500" /></div> }
+);
+
+type Step = 'cart' | 'checkout' | 'mp-payment' | 'success';
 
 interface CheckoutForm {
   name: string;
@@ -30,6 +36,8 @@ export function CartDrawer() {
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mpPreference, setMpPreference] = useState<{ preference_id: string; public_key: string; amount: number } | null>(null);
+  const [mpBrickReady, setMpBrickReady] = useState(false);
 
   const { data: paymentMethods = [] } = useQuery({
     queryKey: ['public-payment-methods'],
@@ -55,6 +63,8 @@ export function CartDrawer() {
       setTimeout(() => {
         setStep('cart');
         setError(null);
+        setMpPreference(null);
+        setMpBrickReady(false);
       }, 300);
     }
   }, [isOpen]);
@@ -65,6 +75,8 @@ export function CartDrawer() {
       setStep('cart');
       setForm({ name: '', phone: '', email: '', notes: '' });
       setOrderId(null);
+      setMpPreference(null);
+      setMpBrickReady(false);
     }
     closeCart();
   }
@@ -93,6 +105,47 @@ export function CartDrawer() {
       return sum + p * i.quantity;
     }, 0);
   }, [items, isCard]);
+
+  async function handleGoToMPPayment() {
+    if (!form.name.trim() || !form.phone.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const pref = await publicApi.createMPPreference({
+        name: form.name.trim(),
+        email: form.email.trim() || undefined,
+        items: items.map(i => ({
+          product_id: i.product.id,
+          quantity: i.quantity,
+          color: i.color ?? undefined,
+          is_card_payment: isCard,
+        })),
+      });
+      setMpPreference(pref);
+      setStep('mp-payment');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar el pago. Intentá de nuevo.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleMPProcessPayment(formData: unknown) {
+    const result = await publicApi.processMPPayment({
+      form_data: formData,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim() || undefined,
+      notes: form.notes.trim() || undefined,
+      items: items.map(i => ({
+        product_id: i.product.id,
+        quantity: i.quantity,
+        color: i.color ?? undefined,
+        is_card_payment: isCard,
+      })),
+    });
+    return result;
+  }
 
   async function handleSubmitOrder() {
     if (!form.name.trim() || !form.phone.trim()) return;
@@ -146,14 +199,24 @@ export function CartDrawer() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-4 border-b shrink-0">
           <div className="flex items-center gap-2">
-            {step === 'checkout' && (
-              <button onClick={() => setStep('cart')} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-zinc-100 transition-colors mr-1" aria-label="Volver">
+            {(step === 'checkout' || step === 'mp-payment') && (
+              <button
+                onClick={() => {
+                  if (step === 'mp-payment') { setStep('checkout'); setMpPreference(null); setMpBrickReady(false); }
+                  else setStep('cart');
+                }}
+                className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-zinc-100 transition-colors mr-1"
+                aria-label="Volver"
+              >
                 <ChevronLeft className="h-5 w-5 text-zinc-600" />
               </button>
             )}
             <ShoppingCart className="h-5 w-5 text-primary-600" />
             <h2 className="font-bold text-lg text-zinc-900">
-              {step === 'cart' ? 'Tu pedido' : step === 'checkout' ? 'Tus datos' : '¡Pedido confirmado!'}
+              {step === 'cart' ? 'Tu pedido'
+                : step === 'checkout' ? 'Tus datos'
+                : step === 'mp-payment' ? 'Pagar con Mercado Pago'
+                : '¡Pedido confirmado!'}
             </h2>
             {step === 'cart' && items.length > 0 && (
               <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
@@ -377,22 +440,81 @@ export function CartDrawer() {
             </div>
 
             <div className="border-t px-4 py-4 bg-zinc-50 shrink-0 space-y-2">
-              <button
-                onClick={handleSubmitOrder}
-                disabled={!canSubmit}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
-              >
-                {submitting ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
-                ) : (
-                  'Confirmar pedido'
-                )}
-              </button>
+              {selectedMethod?.is_mercadopago ? (
+                <button
+                  onClick={handleGoToMPPayment}
+                  disabled={!canSubmit}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#009ee3] hover:bg-[#007fc2] active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Preparando pago...</>
+                  ) : (
+                    'Continuar al pago'
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmitOrder}
+                  disabled={!canSubmit}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    'Confirmar pedido'
+                  )}
+                </button>
+              )}
               <p className="text-center text-[11px] text-zinc-400">
-                Nos contactaremos con vos para coordinar la entrega y el pago.
+                {selectedMethod?.is_mercadopago
+                  ? 'Serás llevado al formulario de pago de Mercado Pago.'
+                  : 'Nos contactaremos con vos para coordinar la entrega y el pago.'}
               </p>
             </div>
           </>
+        )}
+
+        {/* ── STEP: mp-payment ── */}
+        {step === 'mp-payment' && mpPreference && (
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {/* Summary */}
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
+              <p className="text-xs text-zinc-500">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
+              <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(mpPreference.amount)}</p>
+            </div>
+
+            {!mpBrickReady && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-[#009ee3]" />
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <MercadoPagoPaymentBrick
+              publicKey={mpPreference.public_key}
+              preferenceId={mpPreference.preference_id}
+              amount={mpPreference.amount}
+              payerEmail={form.email || undefined}
+              onProcessPayment={handleMPProcessPayment}
+              onSuccess={(saleId, message) => {
+                setOrderId(saleId ?? null);
+                setStep('success');
+                trackPublicEvent('purchase', {
+                  value: mpPreference.amount,
+                  num_items: items.reduce((s, i) => s + i.quantity, 0),
+                  content_ids: items.map(i => i.product.id),
+                  metadata: { payment_method: 'MercadoPago' },
+                });
+              }}
+              onError={(msg) => setError(msg)}
+              onReady={() => setMpBrickReady(true)}
+            />
+          </div>
         )}
 
         {/* ── STEP: success ── */}
@@ -409,7 +531,10 @@ export function CartDrawer() {
                 </p>
               )}
               <p className="text-sm text-zinc-500 leading-relaxed">
-                Te vamos a contactar al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega y el pago.
+                {selectedMethod?.is_mercadopago
+                  ? <>¡Tu pago fue procesado! Te contactaremos al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega.</>
+                  : <>Te vamos a contactar al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega y el pago.</>
+                }
               </p>
             </div>
             <button

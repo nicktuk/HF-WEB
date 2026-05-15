@@ -442,6 +442,7 @@ export interface PaymentMethodConfig {
   name: string;
   is_business: boolean;
   is_card: boolean;
+  is_mercadopago: boolean;
 }
 
 export interface Expense {

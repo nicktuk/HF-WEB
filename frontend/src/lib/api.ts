@@ -175,6 +175,25 @@ export const publicApi = {
     return fetchAPI('/public/orders', { method: 'POST', body: JSON.stringify(data) });
   },
 
+  async createMPPreference(data: {
+    name: string;
+    email?: string;
+    items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
+  }): Promise<{ preference_id: string; public_key: string; amount: number }> {
+    return fetchAPI('/public/mp/preference', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async processMPPayment(data: {
+    form_data: unknown;
+    name: string;
+    phone: string;
+    email?: string;
+    notes?: string;
+    items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
+  }): Promise<{ status: string; sale_id?: number; message: string }> {
+    return fetchAPI('/public/mp/process-payment', { method: 'POST', body: JSON.stringify(data) });
+  },
+
   /**
    * Track anonymous public frontend event
    */

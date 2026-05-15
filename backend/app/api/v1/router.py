@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -24,6 +24,13 @@ api_router.include_router(
     public.router,
     prefix="/public",
     tags=["public"]
+)
+
+# Mercado Pago Checkout Bricks
+api_router.include_router(
+    mercadopago.router,
+    prefix="/public",
+    tags=["mercadopago"]
 )
 
 # Admin endpoints (auth required)
