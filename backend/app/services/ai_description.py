@@ -120,7 +120,9 @@ class AIDescriptionService:
         image_url: Optional[str] = None
         if product.images:
             primary = next((i for i in product.images if i.is_primary), product.images[0])
-            image_url = primary.url
+            url = primary.url
+            # Relative URLs (e.g. /uploads/...) must be absolute for external AI APIs
+            image_url = f"{settings.PROD_BACKEND_URL}{url}" if url and url.startswith("/") else url
 
         # Búsqueda de imágenes (solo si el producto no tiene imágenes propias)
         brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
