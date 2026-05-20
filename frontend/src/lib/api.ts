@@ -62,7 +62,7 @@ async function fetchAPI<T>(
   const url = `${API_URL}${endpoint}`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
