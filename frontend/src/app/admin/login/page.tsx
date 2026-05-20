@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, type AdminRole } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -21,23 +21,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Verify API key by making a test request
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/source-websites`,
-        {
-          headers: {
-            'X-Admin-API-Key': apiKey,
-          },
-        }
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/me`,
+        { headers: { 'X-Admin-API-Key': apiKey } }
       );
 
       if (response.ok) {
-        login(apiKey);
+        const data = await response.json();
+        login(apiKey, data.role as AdminRole);
         router.push('/admin');
       } else {
         setError('API key inválida');
       }
-    } catch (err) {
+    } catch {
       setError('Error al conectar con el servidor');
     } finally {
       setIsLoading(false);

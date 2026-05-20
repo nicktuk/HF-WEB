@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
-import { useApiKey } from '@/hooks/useAuth';
+import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
 import { uploadImages, uploadVideo, aiApi, resolveImageUrl } from '@/lib/api';
 import type { Category, Subcategory } from '@/types';
 import {
@@ -34,6 +34,7 @@ export default function ProductEditPage() {
 
   const router = useRouter();
   const apiKey = useApiKey() || '';
+  const isSuperadmin = useIsSuperadmin();
 
   const { data: product, isLoading } = useAdminProduct(apiKey, productId);
   const { data: stockPurchases, isLoading: isStockLoading } = useStockPurchases(apiKey, productId);
@@ -911,18 +912,20 @@ export default function ProductEditPage() {
         {/* Right Column - Pricing & Settings */}
         <div className="space-y-6">
           {/* Price Intelligence */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-semibold">Configuracion de precio</h2>
-            </CardHeader>
-            <CardContent>
-              <PriceIntelligence
-                product={product}
-                apiKey={apiKey}
-                onMarkupChange={setMarkup}
-              />
-            </CardContent>
-          </Card>
+          {isSuperadmin && (
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold">Configuracion de precio</h2>
+              </CardHeader>
+              <CardContent>
+                <PriceIntelligence
+                  product={product}
+                  apiKey={apiKey}
+                  onMarkupChange={setMarkup}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Settings Form */}
           <Card>
@@ -1217,25 +1220,27 @@ export default function ProductEditPage() {
                 )}
               </div>
 
-              {/* Original Price */}
-              <Input
-                label="Precio de origen"
-                type="number"
-                value={originalPrice}
-                onChange={(e) => setOriginalPrice(e.target.value)}
-                placeholder="Precio del proveedor"
-                helperText="Precio de costo/proveedor"
-              />
-
-              {/* Custom Price */}
-              <Input
-                label="Precio fijo (opcional)"
-                type="number"
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder="Dejar vacio para usar markup"
-                helperText="Si se define, ignora el markup"
-              />
+              {/* Origin price + custom price — superadmin only */}
+              {isSuperadmin && (
+                <>
+                  <Input
+                    label="Precio de origen"
+                    type="number"
+                    value={originalPrice}
+                    onChange={(e) => setOriginalPrice(e.target.value)}
+                    placeholder="Precio del proveedor"
+                    helperText="Precio de costo/proveedor"
+                  />
+                  <Input
+                    label="Precio fijo (opcional)"
+                    type="number"
+                    value={customPrice}
+                    onChange={(e) => setCustomPrice(e.target.value)}
+                    placeholder="Dejar vacio para usar markup"
+                    helperText="Si se define, ignora el markup"
+                  />
+                </>
+              )}
 
               {/* Save Button */}
               <Button

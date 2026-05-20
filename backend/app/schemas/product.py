@@ -146,7 +146,7 @@ class ProductResponse(BaseModel):
     def final_price(self) -> Optional[Decimal]:
         if self.custom_price is not None:
             return self.custom_price
-        if self.original_price is not None:
+        if self.original_price is not None and self.markup_percentage is not None:
             return self.original_price * (1 + self.markup_percentage / 100)
         return None
 
@@ -203,6 +203,10 @@ class ProductPublicResponse(BaseModel):
 
 class ProductAdminResponse(ProductResponse):
     """Extended response for admin panel."""
+    # Override parent to allow None when role restricts cost-price visibility
+    markup_percentage: Optional[Decimal] = None
+    wholesale_markup_percentage: Optional[Decimal] = None
+
     source_website_id: int
     source_website_name: Optional[str] = None
     source_url: Optional[str] = None

@@ -11,7 +11,7 @@ import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { BulkWholesaleMarkupModal } from '@/components/admin/BulkWholesaleMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
-import { useApiKey } from '@/hooks/useAuth';
+import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
 import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import { formatDate, formatPrice } from '@/lib/utils';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
+  const isSuperadmin = useIsSuperadmin();
   const queryClient = useQueryClient();
 
   // Use persistent filters from store
@@ -252,7 +253,7 @@ export default function ProductsPage() {
     }
   };
 
-  const { data: pendingPriceChanges } = usePendingPriceChanges(apiKey);
+  const { data: pendingPriceChanges } = usePendingPriceChanges(isSuperadmin ? apiKey : '');
   const approvePendingPrices = useApprovePendingPriceChanges(apiKey);
   const rejectPendingPrices = useRejectPendingPriceChanges(apiKey);
 
@@ -287,12 +288,13 @@ export default function ProductsPage() {
   });
 
   useEffect(() => {
+    if (!isSuperadmin) return;
     if (pendingPriceModalOpened) return;
     if (pendingPriceChanges?.items?.length) {
       setShowPendingPriceModal(true);
       setPendingPriceModalOpened(true);
     }
-  }, [pendingPriceChanges, pendingPriceModalOpened]);
+  }, [pendingPriceChanges, pendingPriceModalOpened, isSuperadmin]);
 
   useEffect(() => {
     if (!data?.items) return;
@@ -854,7 +856,7 @@ export default function ProductsPage() {
         categories={categories || []}
       />
 
-      <Modal
+      {isSuperadmin && <Modal
         isOpen={showPendingPriceModal}
         onClose={() => setShowPendingPriceModal(false)}
         title="Cambios de precio detectados"
@@ -947,7 +949,7 @@ export default function ProductsPage() {
             <Button onClick={() => setShowPendingPriceModal(false)}>Cerrar</Button>
           )}
         </ModalFooter>
-      </Modal>
+      </Modal>}
 
       {/* Pagination */}
       {data && data.pages > 1 && (

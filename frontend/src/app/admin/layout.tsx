@@ -31,7 +31,7 @@ import {
   Tag,
   Plane,
 } from 'lucide-react';
-import { useAuth, useIsAuthenticated } from '@/hooks/useAuth';
+import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 // Top-level items
@@ -227,10 +227,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
+  const isSuperadmin = useIsSuperadmin();
   const logout = useAuth((state) => state.logout);
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { open, toggle } = useSubmenuState(pathname);
+
+  // product_editor only sees the products list
+  const editorProductosSubmenu = [
+    { name: 'Productos', href: '/admin/productos', icon: Package },
+  ];
 
   // Close mobile menu on route change.
   useEffect(() => {
@@ -271,25 +277,26 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-            {/* Dashboard */}
-            <div>
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
+            {isSuperadmin && (
+              <div>
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isActive ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
 
             <div>
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
@@ -298,78 +305,82 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarSubmenu
                 label="Productos"
                 icon={Package}
-                items={productosSubmenu}
+                items={isSuperadmin ? productosSubmenu : editorProductosSubmenu}
                 isOpen={open.productos}
                 onToggle={() => toggle('productos')}
                 pathname={pathname}
               />
             </div>
 
-            <div>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                Comercial
-              </p>
-              <SidebarSubmenu
-                label="Ventas"
-                icon={DollarSign}
-                items={ventasSubmenu}
-                isOpen={open.ventas}
-                onToggle={() => toggle('ventas')}
-                pathname={pathname}
-              />
-              <Link
-                href="/admin/gastos"
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  pathname.startsWith('/admin/gastos') ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                )}
-              >
-                <TrendingDown className="h-5 w-5" />
-                Gastos
-              </Link>
-            </div>
+            {isSuperadmin && (
+              <>
+                <div>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Comercial
+                  </p>
+                  <SidebarSubmenu
+                    label="Ventas"
+                    icon={DollarSign}
+                    items={ventasSubmenu}
+                    isOpen={open.ventas}
+                    onToggle={() => toggle('ventas')}
+                    pathname={pathname}
+                  />
+                  <Link
+                    href="/admin/gastos"
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      pathname.startsWith('/admin/gastos') ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    )}
+                  >
+                    <TrendingDown className="h-5 w-5" />
+                    Gastos
+                  </Link>
+                </div>
 
-            <div>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                Analítica
-              </p>
-              <SidebarSubmenu
-                label="Analítica"
-                icon={LineChart}
-                items={analiticaSubmenu}
-                isOpen={open.analitica}
-                onToggle={() => toggle('analitica')}
-                pathname={pathname}
-              />
-            </div>
+                <div>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Analítica
+                  </p>
+                  <SidebarSubmenu
+                    label="Analítica"
+                    icon={LineChart}
+                    items={analiticaSubmenu}
+                    isOpen={open.analitica}
+                    onToggle={() => toggle('analitica')}
+                    pathname={pathname}
+                  />
+                </div>
 
-            <div>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                Configuración
-              </p>
-              <SidebarSubmenu
-                label="Configuracion"
-                icon={Settings}
-                items={configSubmenu}
-                isOpen={open.config}
-                onToggle={() => toggle('config')}
-                pathname={pathname}
-              />
-            </div>
+                <div>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Configuración
+                  </p>
+                  <SidebarSubmenu
+                    label="Configuracion"
+                    icon={Settings}
+                    items={configSubmenu}
+                    isOpen={open.config}
+                    onToggle={() => toggle('config')}
+                    pathname={pathname}
+                  />
+                </div>
 
-            <div>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                Importación
-              </p>
-              <SidebarSubmenu
-                label="Import Scorer"
-                icon={Plane}
-                items={importScorerSubmenu}
-                isOpen={open.importScorer}
-                onToggle={() => toggle('importScorer')}
-                pathname={pathname}
-              />
-            </div>
+                <div>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Importación
+                  </p>
+                  <SidebarSubmenu
+                    label="Import Scorer"
+                    icon={Plane}
+                    items={importScorerSubmenu}
+                    isOpen={open.importScorer}
+                    onToggle={() => toggle('importScorer')}
+                    pathname={pathname}
+                  />
+                </div>
+              </>
+            )}
           </nav>
 
           <div className="border-t border-white/10 px-4 py-4">
@@ -403,76 +414,82 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
         {mobileMenuOpen && (
           <nav className="space-y-2 px-2 pb-2">
-            {/* Dashboard chip */}
-            <div className="flex gap-1 overflow-x-auto">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
-                      isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
+            {isSuperadmin && (
+              <div className="flex gap-1 overflow-x-auto">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        'whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
+                        isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
 
             <MobileSubmenu
               label="Productos"
               icon={Package}
-              items={productosSubmenu}
+              items={isSuperadmin ? productosSubmenu : editorProductosSubmenu}
               isOpen={open.productos}
               onToggle={() => toggle('productos')}
               pathname={pathname}
             />
-            <MobileSubmenu
-              label="Ventas"
-              icon={DollarSign}
-              items={ventasSubmenu}
-              isOpen={open.ventas}
-              onToggle={() => toggle('ventas')}
-              pathname={pathname}
-            />
-            <Link
-              href="/admin/gastos"
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                pathname.startsWith('/admin/gastos') ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
-              )}
-            >
-              <TrendingDown className="h-4 w-4" />
-              Gastos
-            </Link>
-            <MobileSubmenu
-              label="Analítica"
-              icon={LineChart}
-              items={analiticaSubmenu}
-              isOpen={open.analitica}
-              onToggle={() => toggle('analitica')}
-              pathname={pathname}
-            />
-            <MobileSubmenu
-              label="Configuracion"
-              icon={Settings}
-              items={configSubmenu}
-              isOpen={open.config}
-              onToggle={() => toggle('config')}
-              pathname={pathname}
-            />
-            <MobileSubmenu
-              label="Import Scorer"
-              icon={Plane}
-              items={importScorerSubmenu}
-              isOpen={open.importScorer}
-              onToggle={() => toggle('importScorer')}
-              pathname={pathname}
-            />
+
+            {isSuperadmin && (
+              <>
+                <MobileSubmenu
+                  label="Ventas"
+                  icon={DollarSign}
+                  items={ventasSubmenu}
+                  isOpen={open.ventas}
+                  onToggle={() => toggle('ventas')}
+                  pathname={pathname}
+                />
+                <Link
+                  href="/admin/gastos"
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    pathname.startsWith('/admin/gastos') ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  <TrendingDown className="h-4 w-4" />
+                  Gastos
+                </Link>
+                <MobileSubmenu
+                  label="Analítica"
+                  icon={LineChart}
+                  items={analiticaSubmenu}
+                  isOpen={open.analitica}
+                  onToggle={() => toggle('analitica')}
+                  pathname={pathname}
+                />
+                <MobileSubmenu
+                  label="Configuracion"
+                  icon={Settings}
+                  items={configSubmenu}
+                  isOpen={open.config}
+                  onToggle={() => toggle('config')}
+                  pathname={pathname}
+                />
+                <MobileSubmenu
+                  label="Import Scorer"
+                  icon={Plane}
+                  items={importScorerSubmenu}
+                  isOpen={open.importScorer}
+                  onToggle={() => toggle('importScorer')}
+                  pathname={pathname}
+                />
+              </>
+            )}
           </nav>
         )}
       </header>

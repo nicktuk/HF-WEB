@@ -83,7 +83,7 @@ from app.schemas.market_price import (
     PriceComparisonResponse,
 )
 from app.schemas.common import PaginatedResponse, MessageResponse
-from app.core.security import verify_admin
+from app.core.security import verify_admin, get_admin_user, AdminUserInfo
 from app.config import settings
 from app.api.deps import get_sales_service, get_orders_service
 from app.services.orders import OrdersService
@@ -94,13 +94,22 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 # ============================================
+# Auth / Me
+# ============================================
+
+@router.get("/me")
+async def get_me(current_user: AdminUserInfo = Depends(get_admin_user)):
+    """Return basic info about the authenticated admin user."""
+    return {"name": current_user.name, "role": current_user.role}
+
+
+# ============================================
 # Product Management
 # ============================================
 
 @router.get(
     "/products",
     response_model=PaginatedResponse[ProductAdminResponse],
-    dependencies=[Depends(verify_admin)]
 )
 @limiter.limit(settings.RATE_LIMIT_ADMIN)
 async def get_products_admin(
@@ -120,6 +129,7 @@ async def get_products_admin(
     price_range: Optional[str] = Query(default=None, max_length=20),
     sort_by: Optional[str] = Query(default=None, max_length=20),
     service: ProductService = Depends(get_product_service),
+    current_user: AdminUserInfo = Depends(get_admin_user),
 ):
     """
     Get all products for admin management.
@@ -155,6 +165,8 @@ async def get_products_admin(
     for row in color_stock_rows:
         color_stock_map.setdefault(row.product_id, []).append({"color": row.color, "quantity": row.quantity})
 
+    hide_prices = current_user.is_product_editor
+
     # Transform to admin response with market stats
     admin_products = []
     for p in products:
@@ -164,9 +176,9 @@ async def get_products_admin(
             slug=p.slug,
             original_name=p.original_name,
             custom_name=p.custom_name,
-            original_price=p.original_price,
-            markup_percentage=p.markup_percentage,
-            wholesale_markup_percentage=p.wholesale_markup_percentage,
+            original_price=None if hide_prices else p.original_price,
+            markup_percentage=None if hide_prices else p.markup_percentage,
+            wholesale_markup_percentage=None if hide_prices else p.wholesale_markup_percentage,
             custom_price=p.custom_price,
             description=p.description,
             short_description=p.short_description,
@@ -201,10 +213,11 @@ async def get_products_admin(
             scrape_error_count=p.scrape_error_count,
             scrape_last_error=p.scrape_last_error,
             display_order=p.display_order,
-            market_avg_price=stats.avg_price if stats else None,
-            market_min_price=stats.min_price if stats else None,
-            market_max_price=stats.max_price if stats else None,
-            market_sample_count=stats.sample_count if stats else 0,
+            pending_original_price=None if hide_prices else p.pending_original_price,
+            market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
+            market_min_price=None if hide_prices else (stats.min_price if stats else None),
+            market_max_price=None if hide_prices else (stats.max_price if stats else None),
+            market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
             stock_qty=stock_summary.get(p.id, 0),
         ))
 
@@ -707,25 +720,26 @@ async def reject_pending_price_changes(
 @router.get(
     "/products/{product_id}",
     response_model=ProductAdminResponse,
-    dependencies=[Depends(verify_admin)]
 )
 async def get_product_admin(
     product_id: int,
     service: ProductService = Depends(get_product_service),
+    current_user: AdminUserInfo = Depends(get_admin_user),
 ):
     """Get a single product with full admin details."""
     p = service.get_by_id(product_id)
     stats = p.market_price_stats
     stock_summary = service.get_stock_summary([p.id])
+    hide_prices = current_user.is_product_editor
 
     return ProductAdminResponse(
         id=p.id,
         slug=p.slug,
         original_name=p.original_name,
         custom_name=p.custom_name,
-        original_price=p.original_price,
-        markup_percentage=p.markup_percentage,
-        wholesale_markup_percentage=p.wholesale_markup_percentage,
+        original_price=None if hide_prices else p.original_price,
+        markup_percentage=None if hide_prices else p.markup_percentage,
+        wholesale_markup_percentage=None if hide_prices else p.wholesale_markup_percentage,
         custom_price=p.custom_price,
         description=p.description,
         short_description=p.short_description,
@@ -764,12 +778,12 @@ async def get_product_admin(
         scrape_error_count=p.scrape_error_count,
         scrape_last_error=p.scrape_last_error,
         display_order=p.display_order,
-        pending_original_price=p.pending_original_price,
-        pending_price_detected_at=p.pending_price_detected_at,
-        market_avg_price=stats.avg_price if stats else None,
-        market_min_price=stats.min_price if stats else None,
-        market_max_price=stats.max_price if stats else None,
-        market_sample_count=stats.sample_count if stats else 0,
+        pending_original_price=None if hide_prices else p.pending_original_price,
+        pending_price_detected_at=None if hide_prices else p.pending_price_detected_at,
+        market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
+        market_min_price=None if hide_prices else (stats.min_price if stats else None),
+        market_max_price=None if hide_prices else (stats.max_price if stats else None),
+        market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
         stock_qty=stock_summary.get(p.id, 0),
     )
 
@@ -911,7 +925,7 @@ async def create_product_manual(
 
 @router.post(
     "/upload/images",
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 @limiter.limit("60/minute")
 async def upload_images(
@@ -1088,28 +1102,39 @@ async def sync_uploads_from_prod(
 @router.patch(
     "/products/{product_id}",
     response_model=ProductAdminResponse,
-    dependencies=[Depends(verify_admin)]
 )
 async def update_product(
     product_id: int,
     data: ProductUpdate,
     service: ProductService = Depends(get_product_service),
+    current_user: AdminUserInfo = Depends(get_admin_user),
 ):
     """
     Update product settings.
 
     Can update: enabled, markup_percentage, custom_name, custom_price, category, display_order
     """
+    if current_user.is_product_editor:
+        # Strip price-sensitive fields — product_editor cannot touch cost or pricing
+        data = data.model_copy(update={
+            "markup_percentage": None,
+            "original_price": None,
+            "wholesale_markup_percentage": None,
+            "installments_3": None,
+            "custom_installment_price": None,
+        })
     product = service.update(product_id, data)
 
     stats = product.market_price_stats
+    hide_prices = current_user.is_product_editor
     return ProductAdminResponse(
         id=product.id,
         slug=product.slug,
         original_name=product.original_name,
         custom_name=product.custom_name,
-        original_price=product.original_price,
-        markup_percentage=product.markup_percentage,
+        original_price=None if hide_prices else product.original_price,
+        markup_percentage=None if hide_prices else product.markup_percentage,
+        wholesale_markup_percentage=None if hide_prices else product.wholesale_markup_percentage,
         custom_price=product.custom_price,
         description=product.description,
         short_description=product.short_description,
@@ -1145,16 +1170,17 @@ async def update_product(
         scrape_error_count=product.scrape_error_count,
         scrape_last_error=product.scrape_last_error,
         display_order=product.display_order,
-        market_avg_price=stats.avg_price if stats else None,
-        market_min_price=stats.min_price if stats else None,
-        market_max_price=stats.max_price if stats else None,
-        market_sample_count=stats.sample_count if stats else 0,
+        pending_original_price=None if hide_prices else product.pending_original_price,
+        market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
+        market_min_price=None if hide_prices else (stats.min_price if stats else None),
+        market_max_price=None if hide_prices else (stats.max_price if stats else None),
+        market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
     )
 
 
 @router.get(
     "/products/{product_id}/color-stock",
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_color_stock(
     product_id: int,
@@ -1165,7 +1191,7 @@ async def get_color_stock(
 
 @router.put(
     "/products/{product_id}/color-stock",
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def set_color_stock(
     product_id: int,
