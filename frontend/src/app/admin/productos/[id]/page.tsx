@@ -75,6 +75,11 @@ export default function ProductEditPage() {
   // Image search state
   const [isSearchingImages, setIsSearchingImages] = useState(false);
   const [imageSearchStatus, setImageSearchStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [isProcessingWhiteBg, setIsProcessingWhiteBg] = useState(false);
+  const [whiteBgStatus, setWhiteBgStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [bgPrompt, setBgPrompt] = useState('');
+  const [isProcessingBgPrompt, setIsProcessingBgPrompt] = useState(false);
+  const [bgPromptStatus, setBgPromptStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Image state
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -302,6 +307,39 @@ export default function ProductEditPage() {
       setImageSearchStatus({ ok: false, msg });
     } finally {
       setIsSearchingImages(false);
+    }
+  };
+
+  const handleWhiteBg = async () => {
+    setIsProcessingWhiteBg(true);
+    setWhiteBgStatus(null);
+    try {
+      const res = await aiApi.processImage(apiKey, productId, 'white_bg');
+      setImageUrls((prev) => [...prev, res.url]);
+      setImageColors((prev) => [...prev, null]);
+      setImageAltTexts((prev) => [...prev, null]);
+      setWhiteBgStatus({ ok: true, msg: 'Imagen generada. Guardá para aplicar.' });
+    } catch (e: unknown) {
+      setWhiteBgStatus({ ok: false, msg: e instanceof Error ? e.message : 'Error al procesar' });
+    } finally {
+      setIsProcessingWhiteBg(false);
+    }
+  };
+
+  const handleBgPrompt = async () => {
+    if (!bgPrompt.trim()) return;
+    setIsProcessingBgPrompt(true);
+    setBgPromptStatus(null);
+    try {
+      const res = await aiApi.processImage(apiKey, productId, 'prompt_bg', bgPrompt);
+      setImageUrls((prev) => [...prev, res.url]);
+      setImageColors((prev) => [...prev, null]);
+      setImageAltTexts((prev) => [...prev, null]);
+      setBgPromptStatus({ ok: true, msg: 'Imagen generada. Guardá para aplicar.' });
+    } catch (e: unknown) {
+      setBgPromptStatus({ ok: false, msg: e instanceof Error ? e.message : 'Error al procesar' });
+    } finally {
+      setIsProcessingBgPrompt(false);
     }
   };
 
@@ -660,25 +698,34 @@ export default function ProductEditPage() {
                 </Button>
               </div>
 
-              {/* AI image search */}
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSearchImages}
-                  disabled={isSearchingImages}
-                  className="text-violet-600 border-violet-200 hover:bg-violet-50"
-                >
-                  {isSearchingImages
-                    ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    : <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
-                  }
-                  {isSearchingImages ? 'Buscando...' : 'Buscar imágenes con IA'}
-                </Button>
-                {imageSearchStatus && (
-                  <span className={`text-xs ${imageSearchStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {imageSearchStatus.msg}
+              {/* AI image processing */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={bgPrompt}
+                    onChange={e => setBgPrompt(e.target.value)}
+                    placeholder="Describí el fondo que querés..."
+                    className="flex-1 text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBgPrompt}
+                    disabled={isProcessingBgPrompt || !bgPrompt.trim()}
+                    className="text-violet-600 border-violet-200 hover:bg-violet-50 shrink-0"
+                  >
+                    {isProcessingBgPrompt
+                      ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      : <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                    }
+                    {isProcessingBgPrompt ? 'Procesando...' : 'Cambiar fondo con IA'}
+                  </Button>
+                </div>
+                {bgPromptStatus && (
+                  <span className={`text-xs ${bgPromptStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {bgPromptStatus.msg}
                   </span>
                 )}
               </div>

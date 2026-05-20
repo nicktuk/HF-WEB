@@ -1394,6 +1394,21 @@ export const aiApi = {
   ): Promise<{ product_id: number; found: number; urls: string[] }> {
     return fetchAPI(`/admin/ai/search-images/${productId}`, { method: 'POST' }, apiKey);
   },
+
+  async processImage(
+    apiKey: string,
+    productId: number,
+    mode: 'white_bg' | 'prompt_bg',
+    prompt?: string,
+  ): Promise<{ url: string }> {
+    const form = new FormData();
+    form.append('mode', mode);
+    if (prompt) form.append('prompt', prompt);
+    return fetchAPI(`/admin/products/${productId}/process-image`, {
+      method: 'POST',
+      body: form,
+    }, apiKey);
+  },
 };
 
 // ============================================

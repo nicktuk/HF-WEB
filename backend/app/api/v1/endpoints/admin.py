@@ -1,5 +1,6 @@
 """Admin API endpoints - Authentication required."""
 from typing import Optional, List
+import httpx
 from fastapi import APIRouter, Depends, Query, Request, HTTPException, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
@@ -1199,6 +1200,104 @@ async def set_color_stock(
     service: ProductService = Depends(get_product_service),
 ):
     return service.set_color_stock(product_id, items)
+
+
+@router.post(
+    "/products/{product_id}/process-image",
+    dependencies=[Depends(get_admin_user)]
+)
+@limiter.limit("10/minute")
+async def process_product_image(
+    request: Request,
+    product_id: int,
+    mode: str = Form(...),        # "white_bg" | "prompt_bg"
+    prompt: str = Form(""),
+    service: ProductService = Depends(get_product_service),
+):
+    """
+    Process the product's primary image using OpenAI gpt-image-1:
+    - mode=white_bg  → replace background with solid white
+    - mode=prompt_bg → apply the user-supplied prompt
+    Returns {url} pointing to the saved file in /uploads/.
+    """
+    from app.services.app_settings import get_ai_config
+
+    if mode not in ("white_bg", "prompt_bg"):
+        raise HTTPException(status_code=400, detail="mode must be 'white_bg' or 'prompt_bg'")
+    if mode == "prompt_bg" and not prompt.strip():
+        raise HTTPException(status_code=400, detail="prompt is required for mode=prompt_bg")
+
+    # Resolve the primary image
+    product = service.get_by_id(product_id)
+    if not product.images:
+        raise HTTPException(status_code=400, detail="El producto no tiene imágenes.")
+    primary = next((img for img in product.images if img.is_primary), product.images[0])
+    image_url = primary.url
+
+    # Fetch image bytes (local file or remote URL)
+    if image_url.startswith("/uploads/"):
+        filename_only = image_url.split("/uploads/", 1)[1]
+        local_path = Path(settings.UPLOAD_DIR) / filename_only
+        if not local_path.exists():
+            raise HTTPException(status_code=404, detail="Archivo de imagen no encontrado en el servidor.")
+        image_bytes = local_path.read_bytes()
+        content_type = "image/png" if filename_only.lower().endswith(".png") else "image/jpeg"
+        original_filename = filename_only
+    else:
+        async with httpx.AsyncClient(timeout=15) as http:
+            resp = await http.get(image_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="No se pudo descargar la imagen del producto.")
+        image_bytes = resp.content
+        content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        original_filename = image_url.split("/")[-1].split("?")[0] or "image.jpg"
+
+    # Build the prompt
+    if mode == "white_bg":
+        final_prompt = (
+            "Place this product on a pure solid white background. "
+            "Remove the existing background completely, keeping only the product. "
+            "No shadows, no gradients, just solid white."
+        )
+    else:
+        final_prompt = prompt.strip()
+
+    # Call OpenAI
+    ai_config = get_ai_config(service.db)
+    openai_key = ai_config.get("OPENAI_API_KEY") or settings.OPENAI_API_KEY
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada.")
+
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Paquete 'openai' no instalado.")
+
+    client = AsyncOpenAI(api_key=openai_key)
+    try:
+        response = await client.images.edit(
+            model="gpt-image-1",
+            image=(original_filename, image_bytes, content_type),
+            prompt=final_prompt,
+            n=1,
+            size="1024x1024",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    item = response.data[0]
+    if getattr(item, "b64_json", None):
+        result_bytes = __import__("base64").b64decode(item.b64_json)
+    else:
+        raise HTTPException(status_code=502, detail="La API no devolvió imagen en base64.")
+
+    # Save to /uploads/
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    out_filename = f"{uuid.uuid4().hex}.png"
+    (upload_dir / out_filename).write_bytes(result_bytes)
+
+    return {"url": f"/uploads/{out_filename}"}
 
 
 @router.post(
