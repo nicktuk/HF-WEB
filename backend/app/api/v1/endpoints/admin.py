@@ -1262,11 +1262,15 @@ async def process_product_image(
     else:
         final_prompt = prompt.strip()
 
-    # Call OpenAI
-    ai_config = get_ai_config(service.db)
-    openai_key = ai_config.get("OPENAI_API_KEY") or settings.OPENAI_API_KEY
+    # Call OpenAI — use IMAGE_OPENAI_API_KEY if set, else fall back to OPENAI_API_KEY
+    from app.services.app_settings import get_setting as _get_setting
+    openai_key = (
+        _get_setting(service.db, "IMAGE_OPENAI_API_KEY")
+        or _get_setting(service.db, "OPENAI_API_KEY")
+        or settings.OPENAI_API_KEY
+    )
     if not openai_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada.")
+        raise HTTPException(status_code=500, detail="No hay API key de OpenAI configurada para imágenes.")
 
     try:
         from openai import AsyncOpenAI

@@ -59,6 +59,7 @@ export default function ConfiguracionPage() {
   const [provider, setProvider] = useState('claude');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
+  const [imageOpenaiKey, setImageOpenaiKey] = useState('');
   const [braveKey, setBraveKey] = useState('');
   const [batchConcurrency, setBatchConcurrency] = useState(5);
   const [promptExtra, setPromptExtra] = useState('');
@@ -79,6 +80,7 @@ export default function ConfiguracionPage() {
         setProvider(aiData.provider);
         setAnthropicKey(aiData.anthropic_key);
         setOpenaiKey(aiData.openai_key);
+        setImageOpenaiKey(aiData.image_openai_key);
         setBraveKey(aiData.brave_key);
         setBatchConcurrency(aiData.batch_concurrency);
         setPromptExtra(aiData.prompt_extra);
@@ -104,6 +106,7 @@ export default function ConfiguracionPage() {
         provider,
         anthropic_key: anthropicKey,
         openai_key: openaiKey,
+        image_openai_key: imageOpenaiKey,
         brave_key: braveKey,
         batch_concurrency: batchConcurrency,
         prompt_extra: promptExtra,
@@ -112,6 +115,7 @@ export default function ConfiguracionPage() {
       setProvider(updated.provider);
       setAnthropicKey(updated.anthropic_key);
       setOpenaiKey(updated.openai_key);
+      setImageOpenaiKey(updated.image_openai_key);
       setBraveKey(updated.brave_key);
       setBatchConcurrency(updated.batch_concurrency);
       setPromptExtra(updated.prompt_extra);
@@ -230,10 +234,24 @@ export default function ConfiguracionPage() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               OpenAI API Key
+              <span className="ml-2 text-xs font-normal text-gray-400">(descripciones con IA)</span>
             </label>
             <PasswordInput
               value={openaiKey}
               onChange={setOpenaiKey}
+              placeholder="sk-..."
+            />
+          </div>
+
+          {/* OpenAI imágenes */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              OpenAI API Key — Imágenes
+              <span className="ml-2 text-xs font-normal text-gray-400">(fondo con IA · si no se configura usa la clave de arriba)</span>
+            </label>
+            <PasswordInput
+              value={imageOpenaiKey}
+              onChange={setImageOpenaiKey}
               placeholder="sk-..."
             />
           </div>

@@ -47,6 +47,7 @@ class AISettingsResponse(BaseModel):
     provider: str
     anthropic_key: str
     openai_key: str
+    image_openai_key: str
     brave_key: str
     batch_concurrency: int
     prompt_extra: str
@@ -56,6 +57,7 @@ class AISettingsUpdate(BaseModel):
     provider: Optional[str] = None
     anthropic_key: Optional[str] = None
     openai_key: Optional[str] = None
+    image_openai_key: Optional[str] = None
     brave_key: Optional[str] = None
     batch_concurrency: Optional[int] = None
     prompt_extra: Optional[str] = None
@@ -70,6 +72,7 @@ def get_ai_settings(db: Session = Depends(get_db)) -> AISettingsResponse:
     provider = get_setting(db, "AI_PROVIDER") or settings.AI_PROVIDER
     anthropic_key = get_setting(db, "ANTHROPIC_API_KEY") or settings.ANTHROPIC_API_KEY
     openai_key = get_setting(db, "OPENAI_API_KEY") or settings.OPENAI_API_KEY
+    image_openai_key = get_setting(db, "IMAGE_OPENAI_API_KEY") or ""
     brave_key = get_setting(db, "BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
     batch_concurrency_str = get_setting(db, "AI_BATCH_CONCURRENCY")
     batch_concurrency = (
@@ -84,6 +87,7 @@ def get_ai_settings(db: Session = Depends(get_db)) -> AISettingsResponse:
         provider=provider,
         anthropic_key=_mask_key(anthropic_key),
         openai_key=_mask_key(openai_key),
+        image_openai_key=_mask_key(image_openai_key),
         brave_key=_mask_key(brave_key),
         batch_concurrency=batch_concurrency,
         prompt_extra=prompt_extra,
@@ -108,6 +112,9 @@ def update_ai_settings(
 
     if data.openai_key is not None and not _is_masked(data.openai_key):
         set_setting(db, "OPENAI_API_KEY", data.openai_key or None)
+
+    if data.image_openai_key is not None and not _is_masked(data.image_openai_key):
+        set_setting(db, "IMAGE_OPENAI_API_KEY", data.image_openai_key or None)
 
     if data.brave_key is not None and not _is_masked(data.brave_key):
         set_setting(db, "BRAVE_SEARCH_API_KEY", data.brave_key or None)

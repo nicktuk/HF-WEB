@@ -1419,6 +1419,7 @@ export interface AISettingsResponse {
   provider: string;
   anthropic_key: string;
   openai_key: string;
+  image_openai_key: string;
   brave_key: string;
   batch_concurrency: number;
   prompt_extra: string;
@@ -1428,6 +1429,7 @@ export interface AISettingsUpdate {
   provider?: string;
   anthropic_key?: string;
   openai_key?: string;
+  image_openai_key?: string;
   brave_key?: string;
   batch_concurrency?: number;
   prompt_extra?: string;
