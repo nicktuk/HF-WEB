@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
 import { formatPrice, formatRelativeTime } from '@/lib/utils';
 import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
+import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { uploadImages, uploadVideo, aiApi, resolveImageUrl } from '@/lib/api';
 import type { Category, Subcategory } from '@/types';
 import {
@@ -75,11 +76,15 @@ export default function ProductEditPage() {
   // Image search state
   const [isSearchingImages, setIsSearchingImages] = useState(false);
   const [imageSearchStatus, setImageSearchStatus] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [isProcessingWhiteBg, setIsProcessingWhiteBg] = useState(false);
-  const [whiteBgStatus, setWhiteBgStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const [bgPrompt, setBgPrompt] = useState('');
-  const [isProcessingBgPrompt, setIsProcessingBgPrompt] = useState(false);
-  const [bgPromptStatus, setBgPromptStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const { jobs: imgJobs, runBgPrompt, consumeResult, clearJob } = useImageProcessing();
+  const currentJob = imgJobs[productId];
+  const isProcessingBgPrompt = currentJob?.status === 'processing';
+  const bgPromptStatus = currentJob?.status === 'done'
+    ? { ok: true, msg: 'Imagen generada. Guardá para aplicar.' }
+    : currentJob?.status === 'error'
+      ? { ok: false, msg: currentJob.error ?? 'Error al procesar' }
+      : null;
 
   // Image state
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -147,6 +152,18 @@ export default function ProductEditPage() {
       setVideoUrl(product.video_url || '');
     }
   }, [product]);
+
+  // Apply image processing result when it arrives (even if navigated away and back)
+  useEffect(() => {
+    if (currentJob?.status === 'done') {
+      const url = consumeResult(productId);
+      if (url) {
+        setImageUrls(prev => [...prev, url]);
+        setImageColors(prev => [...prev, null]);
+        setImageAltTexts(prev => [...prev, null]);
+      }
+    }
+  }, [currentJob?.status]);
 
   // Initialize color stock quantities when API data arrives
   useEffect(() => {
@@ -310,37 +327,9 @@ export default function ProductEditPage() {
     }
   };
 
-  const handleWhiteBg = async () => {
-    setIsProcessingWhiteBg(true);
-    setWhiteBgStatus(null);
-    try {
-      const res = await aiApi.processImage(apiKey, productId, 'white_bg');
-      setImageUrls((prev) => [...prev, res.url]);
-      setImageColors((prev) => [...prev, null]);
-      setImageAltTexts((prev) => [...prev, null]);
-      setWhiteBgStatus({ ok: true, msg: 'Imagen generada. Guardá para aplicar.' });
-    } catch (e: unknown) {
-      setWhiteBgStatus({ ok: false, msg: e instanceof Error ? e.message : 'Error al procesar' });
-    } finally {
-      setIsProcessingWhiteBg(false);
-    }
-  };
-
-  const handleBgPrompt = async () => {
+  const handleBgPrompt = () => {
     if (!bgPrompt.trim()) return;
-    setIsProcessingBgPrompt(true);
-    setBgPromptStatus(null);
-    try {
-      const res = await aiApi.processImage(apiKey, productId, 'prompt_bg', bgPrompt);
-      setImageUrls((prev) => [...prev, res.url]);
-      setImageColors((prev) => [...prev, null]);
-      setImageAltTexts((prev) => [...prev, null]);
-      setBgPromptStatus({ ok: true, msg: 'Imagen generada. Guardá para aplicar.' });
-    } catch (e: unknown) {
-      setBgPromptStatus({ ok: false, msg: e instanceof Error ? e.message : 'Error al procesar' });
-    } finally {
-      setIsProcessingBgPrompt(false);
-    }
+    runBgPrompt(productId, bgPrompt, apiKey);
   };
 
   const handleSave = async () => {
