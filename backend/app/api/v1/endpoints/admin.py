@@ -1128,6 +1128,7 @@ async def update_product(
 
     stats = product.market_price_stats
     hide_prices = current_user.is_product_editor
+    stock_summary = service.get_stock_summary([product_id])
     return ProductAdminResponse(
         id=product.id,
         slug=product.slug,
@@ -1176,6 +1177,7 @@ async def update_product(
         market_min_price=None if hide_prices else (stats.min_price if stats else None),
         market_max_price=None if hide_prices else (stats.max_price if stats else None),
         market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
+        stock_qty=stock_summary.get(product_id, 0),
     )
 
 
