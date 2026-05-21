@@ -233,9 +233,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { open, toggle } = useSubmenuState(pathname);
 
-  // product_editor only sees the products list
+  // product_editor only sees products + stock
   const editorProductosSubmenu = [
     { name: 'Productos', href: '/admin/productos', icon: Package },
+    { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
+    { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   ];
 
   // Close mobile menu on route change.
@@ -249,6 +251,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       router.push('/admin/login');
     }
   }, [isAuthenticated, pathname, router]);
+
+  // product_editor lands on /admin/productos, not the dashboard.
+  useEffect(() => {
+    if (isAuthenticated && !isSuperadmin && pathname === '/admin') {
+      router.replace('/admin/productos');
+    }
+  }, [isAuthenticated, isSuperadmin, pathname, router]);
 
   if (!isAuthenticated && pathname !== '/admin/login') return null;
   if (pathname === '/admin/login') return <>{children}</>;

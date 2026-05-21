@@ -19,9 +19,10 @@ interface ProductTableProps {
   selectedIds?: number[];
   onSelectionChange?: (ids: number[]) => void;
   categories?: Category[];
+  showMarkup?: boolean;
 }
 
-export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange, categories = [] }: ProductTableProps) {
+export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange, categories = [], showMarkup = true }: ProductTableProps) {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
@@ -114,7 +115,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subcategoría</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Origen</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>
+              {showMarkup && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Final</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -166,9 +167,11 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Precio Origen
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Markup
-            </th>
+            {showMarkup && (
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Markup
+              </th>
+            )}
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Precio Final
             </th>
@@ -309,9 +312,11 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                 </td>
 
                 {/* Markup */}
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {Number(product.markup_percentage)}%
-                </td>
+                {showMarkup && (
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {Number(product.markup_percentage)}%
+                  </td>
+                )}
 
                 {/* Final Price */}
                 <td className="px-4 py-3">

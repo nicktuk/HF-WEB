@@ -282,7 +282,7 @@ async def import_stock_csv(
 @router.get(
     "/stock/purchases",
     response_model=List[StockPurchaseResponse],
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_stock_purchases(
     product_id: Optional[int] = Query(default=None),
@@ -296,7 +296,7 @@ async def get_stock_purchases(
 @router.post(
     "/stock/summary",
     response_model=StockSummaryResponse,
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_stock_summary(
     data: StockSummaryRequest,
@@ -373,7 +373,7 @@ async def create_manual_purchase(
 
 @router.get(
     "/purchases",
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_purchases(
     page: int = Query(default=1, ge=1),
@@ -438,7 +438,7 @@ async def get_purchases(
 
 @router.get(
     "/purchases/suppliers",
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_suppliers(
     service: ProductService = Depends(get_product_service),
@@ -450,7 +450,7 @@ async def get_suppliers(
 @router.get(
     "/purchases/{purchase_id}",
     response_model=PurchaseDetailResponse,
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_purchase_detail(
     purchase_id: int,

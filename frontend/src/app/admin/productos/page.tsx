@@ -854,6 +854,7 @@ export default function ProductsPage() {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         categories={categories || []}
+        showMarkup={isSuperadmin}
       />
 
       {isSuperadmin && <Modal
