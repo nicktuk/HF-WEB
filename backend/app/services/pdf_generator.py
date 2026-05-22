@@ -536,6 +536,7 @@ class PDFGeneratorService:
         self,
         products: List[Product],
         title: str = "Lista de Precios",
+        hide_prices: bool = False,
     ) -> bytes:
         """
         Generate a simple price list PDF (no images, compact format).
@@ -590,22 +591,22 @@ class PDFGeneratorService:
         )
 
         # Create table data with Paragraphs for proper word wrapping
-        table_data = [[
-            Paragraph('Producto', header_style),
-            Paragraph('Precio', header_style)
-        ]]
+        headers = [Paragraph('Producto', header_style)]
+        if not hide_prices:
+            headers.append(Paragraph('Precio', header_style))
+        table_data = [headers]
 
         for product in products:
             name = product.custom_name or product.original_name
-            price = self._format_price(product.final_price) if product.final_price else "-"
-
-            table_data.append([
-                Paragraph(name, cell_style),
-                Paragraph(price, price_style)
-            ])
+            row = [Paragraph(name, cell_style)]
+            if not hide_prices:
+                price = self._format_price(product.final_price) if product.final_price else "-"
+                row.append(Paragraph(price, price_style))
+            table_data.append(row)
 
         # Create table with modern styling
-        table = Table(table_data, colWidths=[14*cm, 3*cm])
+        col_widths = [17*cm] if hide_prices else [14*cm, 3*cm]
+        table = Table(table_data, colWidths=col_widths)
         table.setStyle(TableStyle([
             # Header - branded color
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_PRIMARY)),

@@ -282,7 +282,7 @@ async def import_stock_csv(
 @router.get(
     "/stock/purchases",
     response_model=List[StockPurchaseResponse],
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(verify_admin)]
 )
 async def get_stock_purchases(
     product_id: Optional[int] = Query(default=None),
@@ -296,7 +296,7 @@ async def get_stock_purchases(
 @router.post(
     "/stock/summary",
     response_model=StockSummaryResponse,
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(verify_admin)]
 )
 async def get_stock_summary(
     data: StockSummaryRequest,
@@ -373,7 +373,7 @@ async def create_manual_purchase(
 
 @router.get(
     "/purchases",
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(verify_admin)]
 )
 async def get_purchases(
     page: int = Query(default=1, ge=1),
@@ -438,7 +438,7 @@ async def get_purchases(
 
 @router.get(
     "/purchases/suppliers",
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(verify_admin)]
 )
 async def get_suppliers(
     service: ProductService = Depends(get_product_service),
@@ -450,7 +450,7 @@ async def get_suppliers(
 @router.get(
     "/purchases/{purchase_id}",
     response_model=PurchaseDetailResponse,
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(verify_admin)]
 )
 async def get_purchase_detail(
     purchase_id: int,
@@ -1769,25 +1769,27 @@ async def cancel_scrape_job(request: Request, job_id: str):
 # PDF Export
 # ============================================
 
-@router.get(
-    "/products/export/pdf",
-    dependencies=[Depends(verify_admin)]
-)
+@router.get("/products/export/pdf")
 async def export_products_pdf(
     request: Request,
     format: str = Query(default="catalog", description="Format: 'catalog' (with images) or 'list' (simple)"),
     service: ProductService = Depends(get_product_service),
+    current_user: AdminUserInfo = Depends(get_admin_user),
 ):
     """
     Export enabled products to PDF.
 
     Formats:
-    - catalog: Full catalog with images, descriptions, prices (larger file)
-    - list: Simple price list table (smaller file, faster)
+    - catalog: Full catalog with images, descriptions, prices (superadmin only)
+    - list: Simple product list (product_editor gets it without prices)
     """
-    # Get all enabled products
-    products = service.get_enabled_products()
+    hide_prices = current_user.is_product_editor
 
+    # catalog and wholesale formats require superadmin (they expose cost/pricing)
+    if format != "list" and hide_prices:
+        raise HTTPException(status_code=403, detail="Solo el formato 'list' está disponible para este rol.")
+
+    products = service.get_enabled_products()
     if not products:
         raise HTTPException(status_code=404, detail="No enabled products to export")
 
@@ -1796,23 +1798,22 @@ async def export_products_pdf(
     if format == "list":
         pdf_bytes = await pdf_service.generate_simple_catalog_pdf(
             products,
-            title="Lista de Precios"
+            title="Lista de Productos",
+            hide_prices=hide_prices,
         )
-        filename = "lista_precios.pdf"
+        filename = "lista_productos.pdf"
     else:
         pdf_bytes = await pdf_service.generate_catalog_pdf(
             products,
             title="Catalogo de Productos",
-            include_images=True
+            include_images=True,
         )
         filename = "catalogo.pdf"
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f"attachment; filename={filename}"
-        }
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
@@ -2709,3 +2710,163 @@ async def reset_badge_setting(badge_key: str, db: Session = Depends(get_db)):
     db.query(AppSetting).filter(AppSetting.key == badge_key).delete()
     db.commit()
     return MessageResponse(message="Etiqueta restablecida al valor por defecto")
+
+
+# ============================================
+# CRM — Clientes
+# ============================================
+
+@router.get("/customers", dependencies=[Depends(verify_admin)])
+async def list_customers(
+    search: Optional[str] = Query(default=None),
+    tag: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    from sqlalchemy import func
+    from app.models.sale import Sale
+    from app.models.customer import Customer
+
+    # Aggregate sales by customer_name
+    agg_q = (
+        db.query(
+            Sale.customer_name,
+            func.count(Sale.id).label("sale_count"),
+            func.sum(Sale.total_amount).label("total_spent"),
+            func.max(Sale.created_at).label("last_sale_at"),
+            func.max(Sale.phone).label("sale_phone"),
+            func.max(Sale.email).label("sale_email"),
+        )
+        .filter(Sale.customer_name.isnot(None), Sale.customer_name != "")
+        .group_by(Sale.customer_name)
+    )
+
+    if search:
+        agg_q = agg_q.filter(Sale.customer_name.ilike(f"%{search}%"))
+
+    rows = agg_q.all()
+
+    names = [r.customer_name for r in rows]
+    customers_map: dict[str, Customer] = {
+        c.name: c
+        for c in db.query(Customer).filter(Customer.name.in_(names)).all()
+    }
+
+    items = []
+    for r in rows:
+        cust = customers_map.get(r.customer_name)
+        tags = cust.tags or [] if cust else []
+
+        if tag and tag not in tags:
+            continue
+
+        items.append({
+            "id": cust.id if cust else None,
+            "name": r.customer_name,
+            "phone": (cust.phone if cust and cust.phone else r.sale_phone),
+            "email": (cust.email if cust and cust.email else r.sale_email),
+            "tags": tags,
+            "notes": cust.notes if cust else None,
+            "sale_count": r.sale_count,
+            "total_spent": float(r.total_spent or 0),
+            "last_sale_at": r.last_sale_at,
+        })
+
+    # Sort by last_sale_at desc
+    items.sort(key=lambda x: x["last_sale_at"] or "", reverse=True)
+
+    total = len(items)
+    offset = (page - 1) * limit
+    return {
+        "items": items[offset: offset + limit],
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if limit else 0,
+    }
+
+
+@router.get("/customers/by-name/{name}", dependencies=[Depends(verify_admin)])
+async def get_or_create_customer(name: str, db: Session = Depends(get_db)):
+    from app.models.customer import Customer
+    from app.models.sale import Sale, SaleItem
+
+    customer = db.query(Customer).filter(Customer.name == name).first()
+    if not customer:
+        customer = Customer(name=name, tags=[])
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
+
+    sales = (
+        db.query(Sale)
+        .filter(Sale.customer_name == name)
+        .order_by(Sale.created_at.desc())
+        .all()
+    )
+
+    sales_data = []
+    for s in sales:
+        items = []
+        for i in s.items:
+            items.append({
+                "id": i.id,
+                "product_id": i.product_id,
+                "product_name": i.product_name,
+                "color": i.color,
+                "quantity": i.quantity,
+                "unit_price": float(i.unit_price),
+                "total_price": float(i.total_price),
+            })
+        sales_data.append({
+            "id": s.id,
+            "created_at": s.created_at,
+            "total_amount": float(s.total_amount),
+            "paid": s.paid,
+            "delivered": s.delivered,
+            "payment_method": s.payment_method,
+            "notes": s.notes,
+            "items": items,
+        })
+
+    return {
+        "id": customer.id,
+        "name": customer.name,
+        "phone": customer.phone,
+        "email": customer.email,
+        "tags": customer.tags or [],
+        "notes": customer.notes,
+        "created_at": customer.created_at,
+        "sales": sales_data,
+        "sale_count": len(sales_data),
+        "total_spent": sum(s["total_amount"] for s in sales_data),
+    }
+
+
+@router.patch("/customers/{customer_id}", dependencies=[Depends(verify_admin)])
+async def update_customer(
+    customer_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+):
+    from app.models.customer import Customer
+
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    allowed = {"phone", "email", "tags", "notes"}
+    for field, value in data.items():
+        if field in allowed:
+            setattr(customer, field, value)
+
+    db.commit()
+    db.refresh(customer)
+    return {
+        "id": customer.id,
+        "name": customer.name,
+        "phone": customer.phone,
+        "email": customer.email,
+        "tags": customer.tags or [],
+        "notes": customer.notes,
+    }

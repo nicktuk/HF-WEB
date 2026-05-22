@@ -1708,3 +1708,100 @@ export const importScorerApi = {
     return fetchAPI(`${IS}/radar/actualizar/${rubroId}`, { method: 'POST' }, apiKey);
   },
 };
+
+// ============================================
+// CRM — Clientes
+// ============================================
+
+export interface CustomerListItem {
+  id: number | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  tags: string[];
+  notes: string | null;
+  sale_count: number;
+  total_spent: number;
+  last_sale_at: string | null;
+}
+
+export interface CustomerSaleItem {
+  id: number;
+  product_id: number | null;
+  product_name: string | null;
+  color: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+export interface CustomerSale {
+  id: number;
+  created_at: string;
+  total_amount: number;
+  paid: boolean;
+  delivered: boolean;
+  payment_method: string | null;
+  notes: string | null;
+  items: CustomerSaleItem[];
+}
+
+export interface CustomerDetail {
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  tags: string[];
+  notes: string | null;
+  created_at: string;
+  sales: CustomerSale[];
+  sale_count: number;
+  total_spent: number;
+}
+
+export interface CustomerListResponse {
+  items: CustomerListItem[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export const customerApi = {
+  async list(
+    apiKey: string,
+    params: { search?: string; tag?: string; page?: number; limit?: number },
+  ): Promise<CustomerListResponse> {
+    const q = new URLSearchParams();
+    if (params.search) q.set('search', params.search);
+    if (params.tag) q.set('tag', params.tag);
+    if (params.page) q.set('page', String(params.page));
+    if (params.limit) q.set('limit', String(params.limit));
+    return fetchAPI(`/admin/customers?${q}`, {}, apiKey);
+  },
+
+  async getByName(apiKey: string, name: string): Promise<CustomerDetail> {
+    return fetchAPI(`/admin/customers/by-name/${encodeURIComponent(name)}`, {}, apiKey);
+  },
+
+  async update(
+    apiKey: string,
+    id: number,
+    data: { phone?: string; email?: string; tags?: string[]; notes?: string },
+  ): Promise<CustomerDetail> {
+    return fetchAPI(`/admin/customers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, apiKey);
+  },
+
+  async getTags(apiKey: string): Promise<string[]> {
+    return fetchAPI('/admin/settings/customer-tags', {}, apiKey);
+  },
+
+  async updateTags(apiKey: string, tags: string[]): Promise<string[]> {
+    return fetchAPI('/admin/settings/customer-tags', {
+      method: 'PUT',
+      body: JSON.stringify(tags),
+    }, apiKey);
+  },
+};

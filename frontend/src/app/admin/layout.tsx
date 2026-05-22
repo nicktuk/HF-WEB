@@ -30,6 +30,7 @@ import {
   TrendingDown,
   Tag,
   Plane,
+  Users,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,7 @@ const productosSubmenu = [
 const ventasSubmenu = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
+  { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];
 
@@ -233,11 +235,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { open, toggle } = useSubmenuState(pathname);
 
-  // product_editor only sees products + stock
+  // product_editor only sees the products list
   const editorProductosSubmenu = [
     { name: 'Productos', href: '/admin/productos', icon: Package },
-    { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
-    { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   ];
 
   // Close mobile menu on route change.

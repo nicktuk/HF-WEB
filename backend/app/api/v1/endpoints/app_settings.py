@@ -419,6 +419,27 @@ def update_mp_settings(data: MPSettingsUpdate, db: Session = Depends(get_db)) ->
     return get_mp_settings(db=db)
 
 
+DEFAULT_CUSTOMER_TAGS = ["mayorista", "vip", "frecuente", "deudor"]
+
+
+@router.get("/customer-tags", dependencies=[Depends(verify_admin)])
+def get_customer_tags(db: Session = Depends(get_db)) -> List[str]:
+    raw = get_setting(db, "CUSTOMER_TAGS")
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    return DEFAULT_CUSTOMER_TAGS
+
+
+@router.put("/customer-tags", dependencies=[Depends(verify_admin)])
+def update_customer_tags(tags: List[str], db: Session = Depends(get_db)) -> List[str]:
+    cleaned = [t.strip() for t in tags if t.strip()]
+    set_setting(db, "CUSTOMER_TAGS", json.dumps(cleaned))
+    return cleaned
+
+
 @router.get("/public/mp-public-key")
 def get_mp_public_key(db: Session = Depends(get_db)) -> dict:
     """Devuelve la public key de Mercado Pago para inicializar el Brick."""
