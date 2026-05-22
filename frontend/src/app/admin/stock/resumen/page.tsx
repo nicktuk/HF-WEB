@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApiKey } from '@/hooks/useAuth';
+import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
 import { useStockPurchases, useStockSummary } from '@/hooks/useProducts';
 import { downloadExcel } from '@/lib/excel';
 import { formatPrice } from '@/lib/utils';
 
 export default function StockResumenPage() {
   const apiKey = useApiKey() || '';
+  const isSuperadmin = useIsSuperadmin();
   const [search, setSearch] = useState('');
 
   const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
@@ -95,36 +96,30 @@ export default function StockResumenPage() {
     const excelRows = filteredRows.map((row) => {
       const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
       const reservedQty = Number(summary?.reserved_qty || 0);
-      const originalPrice = Number(summary?.original_price || 0);
-      const reservedSoldValue = Number(summary?.reserved_sale_value || 0);
       const diff = row.purchased - row.out - reservedQty;
-      const reservedCostValue = reservedQty * originalPrice;
-      return [
-        row.name,
-        row.purchased,
-        row.out,
-        reservedQty,
-        diff,
-        originalPrice,
-        reservedCostValue,
-        reservedSoldValue,
-      ];
+      const base = [row.name, row.purchased, row.out, reservedQty, diff];
+      if (isSuperadmin) {
+        const originalPrice = Number(summary?.original_price || 0);
+        const reservedSoldValue = Number(summary?.reserved_sale_value || 0);
+        base.push(originalPrice, reservedQty * originalPrice, reservedSoldValue);
+      }
+      return base;
     });
-    downloadExcel(
-      'stock_resumen',
-      'Stock',
-      [
-        { header: 'Producto', type: 'string', width: 42 },
-        { header: 'Cantidad comprada', type: 'integer', width: 18 },
-        { header: 'Cantidad salida', type: 'integer', width: 16 },
-        { header: 'Reservado', type: 'integer', width: 12 },
-        { header: 'Stock', type: 'integer', width: 10 },
+
+    const columns = [
+      { header: 'Producto', type: 'string', width: 42 },
+      { header: 'Cantidad comprada', type: 'integer', width: 18 },
+      { header: 'Cantidad salida', type: 'integer', width: 16 },
+      { header: 'Reservado', type: 'integer', width: 12 },
+      { header: 'Stock', type: 'integer', width: 10 },
+      ...(isSuperadmin ? [
         { header: 'Precio costo', type: 'number', width: 14 },
         { header: 'Reservado costo', type: 'number', width: 16 },
         { header: 'Reservado vendido', type: 'number', width: 18 },
-      ],
-      excelRows,
-    );
+      ] : []),
+    ];
+
+    downloadExcel('stock_resumen', 'Stock', columns, excelRows);
   };
 
   return (

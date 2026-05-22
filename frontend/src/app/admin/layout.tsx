@@ -235,9 +235,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { open, toggle } = useSubmenuState(pathname);
 
-  // product_editor only sees the products list
+  // product_editor sees products + stock summary (no purchases)
   const editorProductosSubmenu = [
     { name: 'Productos', href: '/admin/productos', icon: Package },
+    { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   ];
 
   // Close mobile menu on route change.

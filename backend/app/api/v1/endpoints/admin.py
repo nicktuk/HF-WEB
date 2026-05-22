@@ -296,7 +296,7 @@ async def get_stock_purchases(
 @router.post(
     "/stock/summary",
     response_model=StockSummaryResponse,
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_stock_summary(
     data: StockSummaryRequest,
