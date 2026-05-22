@@ -106,16 +106,16 @@ export default function StockResumenPage() {
       return base;
     });
 
-    const columns = [
+    const columns: import('@/lib/excel').ExcelColumn[] = [
       { header: 'Producto', type: 'string', width: 42 },
       { header: 'Cantidad comprada', type: 'integer', width: 18 },
       { header: 'Cantidad salida', type: 'integer', width: 16 },
       { header: 'Reservado', type: 'integer', width: 12 },
       { header: 'Stock', type: 'integer', width: 10 },
       ...(isSuperadmin ? [
-        { header: 'Precio costo', type: 'number', width: 14 },
-        { header: 'Reservado costo', type: 'number', width: 16 },
-        { header: 'Reservado vendido', type: 'number', width: 18 },
+        { header: 'Precio costo', type: 'number' as const, width: 14 },
+        { header: 'Reservado costo', type: 'number' as const, width: 16 },
+        { header: 'Reservado vendido', type: 'number' as const, width: 18 },
       ] : []),
     ];
 
@@ -130,22 +130,24 @@ export default function StockResumenPage() {
       </div>
 
       <div className="bg-white rounded-lg border">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.stockValue)}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (costo)</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.reservedCostValue)}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (vendido)</p>
-              <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.reservedSoldValue)}</p>
+        {isSuperadmin && (
+          <div className="px-4 py-3 border-b bg-gray-50">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border bg-white p-3">
+                <p className="text-xs text-gray-500 uppercase">$ STOCK</p>
+                <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.stockValue)}</p>
+              </div>
+              <div className="rounded-lg border bg-white p-3">
+                <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (costo)</p>
+                <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.reservedCostValue)}</p>
+              </div>
+              <div className="rounded-lg border bg-white p-3">
+                <p className="text-xs text-gray-500 uppercase">$ STOCK reservado (vendido)</p>
+                <p className="text-xl font-semibold text-gray-900">{formatPrice(cards.reservedSoldValue)}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="px-4 py-3 border-b bg-gray-50 flex flex-wrap items-center justify-between gap-3">
           <div className="w-full max-w-sm">

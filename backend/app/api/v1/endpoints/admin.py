@@ -282,7 +282,7 @@ async def import_stock_csv(
 @router.get(
     "/stock/purchases",
     response_model=List[StockPurchaseResponse],
-    dependencies=[Depends(verify_admin)]
+    dependencies=[Depends(get_admin_user)]
 )
 async def get_stock_purchases(
     product_id: Optional[int] = Query(default=None),
