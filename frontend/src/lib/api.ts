@@ -2,6 +2,7 @@ import type {
   ProductPublic,
   ProductAdmin,
   ColorStockItem,
+  Deposit,
   SourceWebsite,
   MarketPriceStats,
   PriceComparison,
@@ -713,16 +714,23 @@ export const adminApi = {
   },
 
   /**
-   * Update stock purchase (associate to product)
+   * Update stock purchase (associate to product and/or deposit)
    */
-  async updateStockPurchase(apiKey: string, purchaseId: number, productId: number | null): Promise<StockPurchase> {
+  async updateStockPurchase(
+    apiKey: string,
+    purchaseId: number,
+    productId: number | null,
+    depositId?: number | null,
+  ): Promise<StockPurchase> {
+    const body: Record<string, unknown> = { product_id: productId };
+    if (depositId !== undefined) body.deposit_id = depositId;
     const response = await fetch(`${API_URL}/admin/stock/purchases/${purchaseId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'X-Admin-API-Key': apiKey,
       },
-      body: JSON.stringify({ product_id: productId }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -733,6 +741,23 @@ export const adminApi = {
     }
 
     return response.json();
+  },
+
+  // Deposits
+  async getDeposits(apiKey: string): Promise<Deposit[]> {
+    return fetchAPI('/admin/deposits', {}, apiKey);
+  },
+
+  async createDeposit(apiKey: string, name: string): Promise<Deposit> {
+    return fetchAPI('/admin/deposits', { method: 'POST', body: JSON.stringify({ name }) }, apiKey);
+  },
+
+  async updateDeposit(apiKey: string, id: number, data: { name?: string; is_active?: boolean }): Promise<Deposit> {
+    return fetchAPI(`/admin/deposits/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async deleteDeposit(apiKey: string, id: number): Promise<void> {
+    return fetchAPI(`/admin/deposits/${id}`, { method: 'DELETE' }, apiKey);
   },
 
   /**

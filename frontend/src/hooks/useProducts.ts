@@ -155,12 +155,52 @@ export function useUnmatchedStockPurchases(apiKey: string) {
 export function useUpdateStockPurchase(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ purchaseId, productId }: { purchaseId: number; productId: number | null }) =>
-      adminApi.updateStockPurchase(apiKey, purchaseId, productId),
+    mutationFn: ({ purchaseId, productId, depositId }: { purchaseId: number; productId: number | null; depositId?: number | null }) =>
+      adminApi.updateStockPurchase(apiKey, purchaseId, productId, depositId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-purchases'] });
       queryClient.invalidateQueries({ queryKey: ['stock-purchases-unmatched'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+export function useDeposits(apiKey: string) {
+  return useQuery({
+    queryKey: ['deposits'],
+    queryFn: () => adminApi.getDeposits(apiKey),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useCreateDeposit(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => adminApi.createDeposit(apiKey, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deposits'] });
+    },
+  });
+}
+
+export function useUpdateDeposit(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; is_active?: boolean } }) =>
+      adminApi.updateDeposit(apiKey, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deposits'] });
+    },
+  });
+}
+
+export function useDeleteDeposit(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteDeposit(apiKey, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deposits'] });
     },
   });
 }

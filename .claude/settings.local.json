@@ -100,7 +100,8 @@
       "PowerShell(ls \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\node_modules\\\\@mercadopago\\\\sdk-react\\\\\")",
       "PowerShell(ls \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\node_modules\\\\@mercadopago\\\\sdk-react\\\\cjs\\\\\")",
       "mcp__mercadopago__application_list",
-      "mcp__mercadopago__save_webhook"
+      "mcp__mercadopago__save_webhook",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\Desarrollo\\\\HF WEB\" -Directory | Select-Object -First 20 | ForEach-Object { $_.Name })"
     ]
   }
 }

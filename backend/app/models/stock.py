@@ -1,10 +1,22 @@
 """
 Stock models - compras y pagos.
 """
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index, Text, DateTime
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Index, Text, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
+
+
+class Deposit(Base):
+    """Depósito físico donde se almacena stock."""
+    __tablename__ = "deposits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+    stock_purchases = relationship("StockPurchase", back_populates="deposit")
 
 
 class Purchase(Base):
@@ -40,6 +52,7 @@ class StockPurchase(Base):
     id = Column(Integer, primary_key=True, index=True)
     purchase_id = Column(Integer, ForeignKey("purchases.id", ondelete="CASCADE"), nullable=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True)
+    deposit_id = Column(Integer, ForeignKey("deposits.id", ondelete="SET NULL"), nullable=True, index=True)
 
     description = Column(String(500), nullable=True)
     code = Column(String(100), nullable=True, index=True)
@@ -52,6 +65,7 @@ class StockPurchase(Base):
     # Relaciones
     purchase = relationship("Purchase", back_populates="items")
     product = relationship("Product")
+    deposit = relationship("Deposit", back_populates="stock_purchases")
 
     __table_args__ = (
         Index("ix_stock_purchases_product_date", "product_id", "purchase_date"),
@@ -62,6 +76,12 @@ class StockPurchase(Base):
         if self.product:
             return self.product.custom_name or self.product.original_name
         return self.description
+
+    @property
+    def deposit_name(self) -> str | None:
+        if self.deposit:
+            return self.deposit.name
+        return None
 
 
 class PurchasePayment(Base):

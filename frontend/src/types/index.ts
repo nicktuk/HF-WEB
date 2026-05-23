@@ -86,6 +86,13 @@ export interface PendingPriceChange {
 
 // Stock Types
 
+export interface Deposit {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface StockPurchase {
   id: number;
   purchase_id?: number | null;
@@ -98,6 +105,8 @@ export interface StockPurchase {
   quantity: number;
   total_amount: number;
   out_quantity: number;
+  deposit_id?: number | null;
+  deposit_name?: string | null;
   created_at: string;
   updated_at: string;
 }

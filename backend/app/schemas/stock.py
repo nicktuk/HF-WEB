@@ -6,6 +6,29 @@ from pydantic import BaseModel
 
 
 # ============================================
+# Deposit Schemas
+# ============================================
+
+class DepositCreate(BaseModel):
+    name: str
+
+
+class DepositUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class DepositResponse(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================
 # Purchase Payment Schemas
 # ============================================
 
@@ -42,6 +65,8 @@ class StockPurchaseResponse(BaseModel):
     quantity: int
     total_amount: Decimal
     out_quantity: int
+    deposit_id: int | None = None
+    deposit_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -161,6 +186,7 @@ class StockPreviewResponse(BaseModel):
 
 class StockPurchaseUpdate(BaseModel):
     product_id: Optional[int] = None
+    deposit_id: Optional[int] = None
 
 
 class StockSummaryRequest(BaseModel):

@@ -9,7 +9,7 @@ from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
 from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
 from app.models.subcategory import Subcategory
-from app.models.stock import StockPurchase
+from app.models.stock import Deposit, StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
@@ -44,6 +44,7 @@ __all__ = [
     "Category",
     "CategoryMapping",
     "Subcategory",
+    "Deposit",
     "StockPurchase",
     "Sale",
     "SaleItem",

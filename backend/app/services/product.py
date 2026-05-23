@@ -13,7 +13,7 @@ from app.db.repositories import ProductRepository, SourceWebsiteRepository
 from app.models.product import Product, ProductImage
 from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
-from app.models.stock import StockPurchase
+from app.models.stock import Deposit, StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
@@ -365,7 +365,10 @@ class ProductService:
 
     def get_stock_purchases(self, product_id: Optional[int] = None, unmatched: Optional[bool] = None) -> List[StockPurchase]:
         """Get stock purchases, optionally filtered by product or unmatched."""
-        query = self.db.query(StockPurchase).options(joinedload(StockPurchase.product))
+        query = self.db.query(StockPurchase).options(
+            joinedload(StockPurchase.product),
+            joinedload(StockPurchase.deposit),
+        )
         if product_id is not None:
             query = query.filter(StockPurchase.product_id == product_id)
         if unmatched is True:
@@ -374,9 +377,46 @@ class ProductService:
             query = query.filter(StockPurchase.product_id.isnot(None))
         return query.order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc()).all()
 
-    def update_stock_purchase(self, purchase_id: int, product_id: Optional[int]) -> StockPurchase:
-        """Associate a stock purchase to a product."""
-        purchase = self.db.query(StockPurchase).filter(StockPurchase.id == purchase_id).first()
+    def get_deposits(self) -> List[Deposit]:
+        return self.db.query(Deposit).order_by(Deposit.name).all()
+
+    def get_default_deposit_id(self) -> Optional[int]:
+        deposit = self.db.query(Deposit).filter(Deposit.is_active == True).order_by(Deposit.id).first()
+        return deposit.id if deposit else None
+
+    def create_deposit(self, name: str) -> Deposit:
+        if self.db.query(Deposit).filter(Deposit.name == name).first():
+            raise DuplicateError("Deposit", name)
+        deposit = Deposit(name=name)
+        self.db.add(deposit)
+        self.db.commit()
+        self.db.refresh(deposit)
+        return deposit
+
+    def update_deposit(self, deposit_id: int, name: Optional[str], is_active: Optional[bool]) -> Deposit:
+        deposit = self.db.query(Deposit).filter(Deposit.id == deposit_id).first()
+        if not deposit:
+            raise NotFoundError("Deposit", str(deposit_id))
+        if name is not None:
+            deposit.name = name
+        if is_active is not None:
+            deposit.is_active = is_active
+        self.db.commit()
+        self.db.refresh(deposit)
+        return deposit
+
+    def delete_deposit(self, deposit_id: int) -> None:
+        deposit = self.db.query(Deposit).filter(Deposit.id == deposit_id).first()
+        if not deposit:
+            raise NotFoundError("Deposit", str(deposit_id))
+        self.db.delete(deposit)
+        self.db.commit()
+
+    def update_stock_purchase(self, purchase_id: int, product_id: Optional[int], deposit_id: Optional[int] = None) -> StockPurchase:
+        """Associate a stock purchase to a product and/or deposit."""
+        purchase = self.db.query(StockPurchase).options(
+            joinedload(StockPurchase.deposit)
+        ).filter(StockPurchase.id == purchase_id).first()
         if not purchase:
             raise NotFoundError("StockPurchase", str(purchase_id))
 
@@ -388,6 +428,13 @@ class ProductService:
             product = None
 
         purchase.product_id = product_id
+
+        if deposit_id is not None:
+            deposit = self.db.query(Deposit).filter(Deposit.id == deposit_id).first()
+            if not deposit:
+                raise NotFoundError("Deposit", str(deposit_id))
+            purchase.deposit_id = deposit_id
+
         self.db.commit()
         self.db.refresh(purchase)
 
@@ -489,6 +536,7 @@ class ProductService:
                 quantity=row["quantity"],
                 total_amount=row["total_amount"],
                 out_quantity=0,
+                deposit_id=self.get_default_deposit_id(),
             )
             self.db.add(item)
             if row["product_id"]:
@@ -2411,6 +2459,7 @@ class ProductService:
                 unit_price=unit_price,
                 quantity=quantity,
                 total_amount=total,
+                deposit_id=item_data.get("deposit_id") or self.get_default_deposit_id(),
             )
             self.db.add(sp)
 

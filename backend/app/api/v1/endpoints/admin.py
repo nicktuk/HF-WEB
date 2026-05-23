@@ -63,6 +63,9 @@ from app.schemas.stock import (
     AddPaymentRequest,
     StockImportRequest,
     ManualPurchaseCreate,
+    DepositCreate,
+    DepositUpdate,
+    DepositResponse,
 )
 from app.schemas.sales import (
     SaleCreate,
@@ -327,10 +330,64 @@ async def update_stock_purchase(
     data: StockPurchaseUpdate,
     service: ProductService = Depends(get_product_service),
 ):
-    """Update stock purchase (associate/disassociate to product)."""
-    # Allow manual association without duplicate validation
-    # Duplicate check is only enforced during CSV import
-    return service.update_stock_purchase(purchase_id, data.product_id)
+    """Update stock purchase (associate/disassociate to product, change deposit)."""
+    return service.update_stock_purchase(purchase_id, data.product_id, data.deposit_id)
+
+
+# ============================================
+# Deposits
+# ============================================
+
+@router.get(
+    "/deposits",
+    response_model=List[DepositResponse],
+    dependencies=[Depends(get_admin_user)]
+)
+async def get_deposits(service: ProductService = Depends(get_product_service)):
+    return service.get_deposits()
+
+
+@router.post(
+    "/deposits",
+    response_model=DepositResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def create_deposit(data: DepositCreate, service: ProductService = Depends(get_product_service)):
+    from app.core.exceptions import DuplicateError
+    try:
+        return service.create_deposit(data.name)
+    except DuplicateError:
+        raise HTTPException(status_code=409, detail="Ya existe un depósito con ese nombre.")
+
+
+@router.patch(
+    "/deposits/{deposit_id}",
+    response_model=DepositResponse,
+    dependencies=[Depends(verify_admin)]
+)
+async def update_deposit(
+    deposit_id: int,
+    data: DepositUpdate,
+    service: ProductService = Depends(get_product_service),
+):
+    from app.core.exceptions import NotFoundError
+    try:
+        return service.update_deposit(deposit_id, data.name, data.is_active)
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Depósito no encontrado.")
+
+
+@router.delete(
+    "/deposits/{deposit_id}",
+    dependencies=[Depends(verify_admin)]
+)
+async def delete_deposit(deposit_id: int, service: ProductService = Depends(get_product_service)):
+    from app.core.exceptions import NotFoundError
+    try:
+        service.delete_deposit(deposit_id)
+        return {"ok": True}
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Depósito no encontrado.")
 
 
 @router.post(
