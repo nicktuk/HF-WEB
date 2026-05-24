@@ -6,7 +6,7 @@ import { FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
-import { useStockPurchases, useStockSummary, useDepositStockBulk } from '@/hooks/useProducts';
+import { useStockPurchases, useStockSummary, useDepositStockBulk, useDeposits } from '@/hooks/useProducts';
 import { downloadExcel } from '@/lib/excel';
 import { formatPrice } from '@/lib/utils';
 
@@ -14,8 +14,10 @@ export default function StockResumenPage() {
   const apiKey = useApiKey() || '';
   const isSuperadmin = useIsSuperadmin();
   const [search, setSearch] = useState('');
+  const [depositFilter, setDepositFilter] = useState<number | null>(null);
 
   const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
+  const { data: deposits } = useDeposits(apiKey);
 
   const stockProductIds = useMemo(
     () =>
@@ -63,7 +65,16 @@ export default function StockResumenPage() {
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const base = q ? rows.filter((row) => row.name.toLowerCase().includes(q)) : rows;
+    let base = q ? rows.filter((row) => row.name.toLowerCase().includes(q)) : rows;
+
+    if (depositFilter !== null) {
+      base = base.filter((row) => {
+        if (row.key <= 0) return false;
+        const entries = depositStockBulk?.[row.key] || [];
+        return entries.some((d) => d.deposit_id === depositFilter && d.quantity > 0);
+      });
+    }
+
     return [...base].sort((a, b) => {
       const reservedA = Number((a.key > 0 ? summaryMap.get(a.key)?.reserved_qty : 0) || 0);
       const reservedB = Number((b.key > 0 ? summaryMap.get(b.key)?.reserved_qty : 0) || 0);
@@ -156,13 +167,24 @@ export default function StockResumenPage() {
         )}
 
         <div className="px-4 py-3 border-b bg-gray-50 flex flex-wrap items-center justify-between gap-3">
-          <div className="w-full max-w-sm">
+          <div className="flex flex-wrap gap-2 flex-1 min-w-0">
             <Input
               type="search"
               placeholder="Buscar producto..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
             />
+            <select
+              value={depositFilter ?? ''}
+              onChange={(e) => setDepositFilter(e.target.value === '' ? null : Number(e.target.value))}
+              className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Todos los depósitos</option>
+              {(deposits || []).filter(d => d.is_active).map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">{filteredRows.length} productos</span>

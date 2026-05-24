@@ -45,7 +45,6 @@ const productosSubmenu = [
   { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
   { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
-  { name: 'Lotes', href: '/admin/stock/lotes', icon: Tags },
   { name: 'Depósitos', href: '/admin/depositos', icon: FolderTree },
   { name: 'Comparador', href: '/admin/comparador', icon: Scale },
   { name: 'Descripciones IA', href: '/admin/ai-descripciones', icon: Sparkles },
