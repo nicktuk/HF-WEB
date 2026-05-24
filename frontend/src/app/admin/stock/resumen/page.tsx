@@ -106,14 +106,12 @@ export default function StockResumenPage() {
       if (row.key <= 0) continue;
       totalProducts++;
       const reservedQty = Number(summaryMap.get(row.key)?.reserved_qty || 0);
-      const stock = row.purchased - row.out;
-      // If filtering by deposit, show stock for that deposit specifically
       if (depositFilter !== null) {
         const entries = depositStockMap.get(row.key) || [];
         const dep = entries.find((d) => d.deposit_id === depositFilter);
         totalStock += dep ? Number(dep.quantity) : 0;
       } else {
-        totalStock += stock;
+        totalStock += row.purchased - row.out - reservedQty;
       }
       totalReserved += reservedQty;
     }
