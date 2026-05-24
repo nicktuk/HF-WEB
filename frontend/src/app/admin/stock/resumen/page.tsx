@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
 import { useStockPurchases, useStockSummary, useDepositStockBulk, useDeposits } from '@/hooks/useProducts';
+import type { DepositStockItem } from '@/types';
 import { downloadExcel } from '@/lib/excel';
 import { formatPrice } from '@/lib/utils';
 
@@ -63,6 +64,16 @@ export default function StockResumenPage() {
     return map;
   }, [stockSummary]);
 
+  // Normalize depositStockBulk keys to numbers (JSON parses object keys as strings)
+  const depositStockMap = useMemo(() => {
+    const map = new Map<number, DepositStockItem[]>();
+    if (!depositStockBulk) return map;
+    for (const [k, v] of Object.entries(depositStockBulk)) {
+      map.set(Number(k), v as DepositStockItem[]);
+    }
+    return map;
+  }, [depositStockBulk]);
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     let base = q ? rows.filter((row) => row.name.toLowerCase().includes(q)) : rows;
@@ -70,7 +81,7 @@ export default function StockResumenPage() {
     if (depositFilter !== null) {
       base = base.filter((row) => {
         if (row.key <= 0) return false;
-        const entries = depositStockBulk?.[row.key] || [];
+        const entries = depositStockMap.get(row.key) || [];
         return entries.some((d) => d.deposit_id === depositFilter && d.quantity > 0);
       });
     }
@@ -83,7 +94,31 @@ export default function StockResumenPage() {
       if (diffA !== diffB) return diffB - diffA;
       return a.name.localeCompare(b.name, 'es');
     });
-  }, [rows, search, summaryMap]);
+  }, [rows, search, summaryMap, depositFilter, depositStockMap]);
+
+  // Summary cards — computed over filteredRows so they react to search + deposit filter
+  const filterStats = useMemo(() => {
+    let totalProducts = 0;
+    let totalStock = 0;
+    let totalReserved = 0;
+
+    for (const row of filteredRows) {
+      if (row.key <= 0) continue;
+      totalProducts++;
+      const reservedQty = Number(summaryMap.get(row.key)?.reserved_qty || 0);
+      const stock = row.purchased - row.out;
+      // If filtering by deposit, show stock for that deposit specifically
+      if (depositFilter !== null) {
+        const entries = depositStockMap.get(row.key) || [];
+        const dep = entries.find((d) => d.deposit_id === depositFilter);
+        totalStock += dep ? Number(dep.quantity) : 0;
+      } else {
+        totalStock += stock;
+      }
+      totalReserved += reservedQty;
+    }
+    return { totalProducts, totalStock, totalReserved };
+  }, [filteredRows, summaryMap, depositFilter, depositStockMap]);
 
   const cards = useMemo(() => {
     return rows.reduce(
@@ -111,7 +146,7 @@ export default function StockResumenPage() {
       const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
       const reservedQty = Number(summary?.reserved_qty || 0);
       const diff = row.purchased - row.out - reservedQty;
-      const deposits = row.key > 0 ? (depositStockBulk?.[row.key] || []) : [];
+      const deposits = row.key > 0 ? (depositStockMap.get(row.key) || []) : [];
       const depositBreakdown = deposits.map((d) => `${d.deposit_name}: ${d.quantity}`).join(' | ');
       const base = [row.name, row.purchased, row.out, reservedQty, diff, depositBreakdown];
       if (isSuperadmin) {
@@ -186,12 +221,36 @@ export default function StockResumenPage() {
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{filteredRows.length} productos</span>
-            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={!filteredRows.length}>
-              <FileDown className="h-4 w-4 mr-1" />
-              Exportar Excel
-            </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={!filteredRows.length}>
+            <FileDown className="h-4 w-4 mr-1" />
+            Exportar Excel
+          </Button>
+        </div>
+
+        {/* Tarjetas de resumen según filtro */}
+        <div className="px-4 py-3 border-b bg-white">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Productos</p>
+              <p className="text-2xl font-bold text-gray-900">{filterStats.totalProducts}</p>
+              {depositFilter !== null && (
+                <p className="text-xs text-blue-600 mt-0.5">
+                  con stock en {deposits?.find(d => d.id === depositFilter)?.name}
+                </p>
+              )}
+            </div>
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                {depositFilter !== null ? `Stock en ${deposits?.find(d => d.id === depositFilter)?.name ?? 'depósito'}` : 'Stock total'}
+              </p>
+              <p className="text-2xl font-bold text-gray-900">{filterStats.totalStock}</p>
+              <p className="text-xs text-gray-400 mt-0.5">unidades</p>
+            </div>
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Reservado</p>
+              <p className="text-2xl font-bold text-amber-700">{filterStats.totalReserved}</p>
+              <p className="text-xs text-gray-400 mt-0.5">unidades</p>
+            </div>
           </div>
         </div>
 
@@ -217,7 +276,7 @@ export default function StockResumenPage() {
                   const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
                   const reservedQty = Number(summary?.reserved_qty || 0);
                   const diff = row.purchased - row.out - reservedQty;
-                  const depositEntries = row.key > 0 ? (depositStockBulk?.[row.key] || []) : [];
+                  const depositEntries = row.key > 0 ? (depositStockMap.get(row.key) || []) : [];
 
                   return (
                     <Fragment key={row.key}>
