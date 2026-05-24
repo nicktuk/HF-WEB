@@ -27,6 +27,9 @@ import {
   useAdminSubcategories,
   useColorStock,
   useSetColorStock,
+  useDeposits,
+  useDepositStock,
+  useSetDepositStock,
 } from '@/hooks/useProducts';
 
 export default function ProductEditPage() {
@@ -46,6 +49,9 @@ export default function ProductEditPage() {
   const rescrapeMutation = useRescrapeProduct(apiKey);
   const { data: colorStockData } = useColorStock(apiKey, productId);
   const setColorStockMutation = useSetColorStock(apiKey);
+  const { data: deposits } = useDeposits(apiKey);
+  const { data: depositStockData } = useDepositStock(apiKey, productId);
+  const setDepositStockMutation = useSetDepositStock(apiKey);
 
   // Form state
   const [enabled, setEnabled] = useState(false);
@@ -101,6 +107,9 @@ export default function ProductEditPage() {
 
   // Color stock state: map of hex color → quantity
   const [colorStockQty, setColorStockQty] = useState<Record<string, number>>({});
+
+  // Deposit stock state: map of deposit_id → quantity
+  const [depositStockQty, setDepositStockQty] = useState<Record<number, number>>({});
 
   // Video state
   const [videoUrl, setVideoUrl] = useState<string>('');
@@ -173,6 +182,15 @@ export default function ProductEditPage() {
       setColorStockQty(map);
     }
   }, [colorStockData]);
+
+  // Initialize deposit stock quantities when API data arrives
+  useEffect(() => {
+    if (depositStockData) {
+      const map: Record<number, number> = {};
+      depositStockData.forEach(item => { map[item.deposit_id] = item.quantity; });
+      setDepositStockQty(map);
+    }
+  }, [depositStockData]);
 
   useEffect(() => {
     try {
@@ -374,6 +392,12 @@ export default function ProductEditPage() {
       quantity: colorStockQty[color] ?? 0,
     }));
     await setColorStockMutation.mutateAsync({ productId, items: colorStockItems });
+
+    // Save deposit stock
+    const depositStockItems = Object.entries(depositStockQty)
+      .map(([id, qty]) => ({ deposit_id: Number(id), deposit_name: '', quantity: qty }))
+      .filter(i => i.quantity > 0);
+    await setDepositStockMutation.mutateAsync({ productId, items: depositStockItems });
   };
 
   const handleDelete = async () => {
@@ -764,6 +788,32 @@ export default function ProductEditPage() {
                   </div>
                 );
               })()}
+
+              {/* Stock por depósito */}
+              {deposits && deposits.filter(d => d.is_active).length > 0 && (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por depósito</p>
+                  {deposits.filter(d => d.is_active).map(deposit => (
+                    <div key={deposit.id} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-700 w-24 truncate">{deposit.name}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={depositStockQty[deposit.id] ?? 0}
+                        onChange={e => setDepositStockQty(prev => ({ ...prev, [deposit.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
+                      />
+                      <span className="text-xs text-gray-500">unidades</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100 text-gray-500">
+                    <span>Total en depósitos:</span>
+                    <span className="font-semibold text-gray-700">
+                      {deposits.filter(d => d.is_active).reduce((sum, d) => sum + (depositStockQty[d.id] ?? 0), 0)} unidades
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

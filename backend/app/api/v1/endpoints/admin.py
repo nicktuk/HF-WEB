@@ -66,6 +66,8 @@ from app.schemas.stock import (
     DepositCreate,
     DepositUpdate,
     DepositResponse,
+    DepositStockItem,
+    SetDepositStockRequest,
 )
 from app.schemas.sales import (
     SaleCreate,
@@ -318,6 +320,18 @@ async def get_stock_summary(
         for pid, values in summary.items()
     ]
     return {"items": items}
+
+
+@router.post(
+    "/stock/deposit-summary",
+    dependencies=[Depends(get_admin_user)]
+)
+async def get_deposit_stock_summary(
+    data: StockSummaryRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    """Get deposit stock breakdown for a list of product IDs."""
+    return service.get_deposit_stock_bulk(data.product_ids)
 
 
 @router.patch(
@@ -1259,6 +1273,30 @@ async def set_color_stock(
     service: ProductService = Depends(get_product_service),
 ):
     return service.set_color_stock(product_id, items)
+
+
+@router.get(
+    "/products/{product_id}/deposit-stock",
+    dependencies=[Depends(get_admin_user)]
+)
+async def get_deposit_stock(
+    product_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    return service.get_deposit_stock(product_id)
+
+
+@router.put(
+    "/products/{product_id}/deposit-stock",
+    dependencies=[Depends(get_admin_user)]
+)
+async def set_deposit_stock(
+    product_id: int,
+    data: SetDepositStockRequest,
+    service: ProductService = Depends(get_product_service),
+):
+    items = [{"deposit_id": i.deposit_id, "quantity": i.quantity} for i in data.items]
+    return service.set_deposit_stock(product_id, items)
 
 
 @router.post(

@@ -3,6 +3,7 @@ import type {
   ProductAdmin,
   ColorStockItem,
   Deposit,
+  DepositStockItem,
   SourceWebsite,
   MarketPriceStats,
   PriceComparison,
@@ -758,6 +759,24 @@ export const adminApi = {
 
   async deleteDeposit(apiKey: string, id: number): Promise<void> {
     return fetchAPI(`/admin/deposits/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  async getDepositStock(apiKey: string, productId: number): Promise<DepositStockItem[]> {
+    return fetchAPI(`/admin/products/${productId}/deposit-stock`, {}, apiKey);
+  },
+
+  async setDepositStock(apiKey: string, productId: number, items: DepositStockItem[]): Promise<DepositStockItem[]> {
+    return fetchAPI(`/admin/products/${productId}/deposit-stock`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    }, apiKey);
+  },
+
+  async getDepositStockBulk(apiKey: string, productIds: number[]): Promise<Record<number, DepositStockItem[]>> {
+    return fetchAPI('/admin/stock/deposit-summary', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds }),
+    }, apiKey);
   },
 
   /**

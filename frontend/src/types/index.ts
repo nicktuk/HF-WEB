@@ -93,6 +93,12 @@ export interface Deposit {
   created_at: string;
 }
 
+export interface DepositStockItem {
+  deposit_id: number;
+  deposit_name: string;
+  quantity: number;
+}
+
 export interface StockPurchase {
   id: number;
   purchase_id?: number | null;

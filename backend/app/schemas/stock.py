@@ -209,6 +209,23 @@ class AddPaymentRequest(BaseModel):
     payments: List[PurchasePaymentCreate]
 
 
+# ============================================
+# Deposit Stock per Product
+# ============================================
+
+class DepositStockItem(BaseModel):
+    deposit_id: int
+    deposit_name: str = ''
+    quantity: int
+
+    class Config:
+        from_attributes = True
+
+
+class SetDepositStockRequest(BaseModel):
+    items: List[DepositStockItem]
+
+
 class PurchasesByPayerResponse(BaseModel):
     payer: str
     total_amount: Decimal

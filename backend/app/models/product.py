@@ -160,3 +160,20 @@ class ProductColorStock(Base):
     __table_args__ = (
         Index("ix_product_color_stock_product_color", "product_id", "color", unique=True),
     )
+
+
+class ProductDepositStock(Base):
+    """Stock manual por depósito para un producto."""
+    __tablename__ = "product_deposit_stock"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    deposit_id = Column(Integer, ForeignKey("deposits.id", ondelete="CASCADE"), nullable=False, index=True)
+    quantity = Column(Integer, default=0, nullable=False)
+
+    product = relationship("Product")
+    deposit = relationship("Deposit")
+
+    __table_args__ = (
+        Index("ix_product_deposit_stock_product_deposit", "product_id", "deposit_id", unique=True),
+    )

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem, DepositStockItem } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -202,6 +202,36 @@ export function useDeleteDeposit(apiKey: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
     },
+  });
+}
+
+export function useDepositStock(apiKey: string, productId: number) {
+  return useQuery({
+    queryKey: ['deposit-stock', productId],
+    queryFn: () => adminApi.getDepositStock(apiKey, productId),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && !!productId,
+  });
+}
+
+export function useSetDepositStock(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, items }: { productId: number; items: DepositStockItem[] }) =>
+      adminApi.setDepositStock(apiKey, productId, items),
+    onSuccess: (_, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: ['deposit-stock', productId] });
+      queryClient.invalidateQueries({ queryKey: ['deposit-stock-bulk'] });
+    },
+  });
+}
+
+export function useDepositStockBulk(apiKey: string, productIds: number[]) {
+  return useQuery({
+    queryKey: ['deposit-stock-bulk', productIds],
+    queryFn: () => adminApi.getDepositStockBulk(apiKey, productIds),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && productIds.length > 0,
   });
 }
 

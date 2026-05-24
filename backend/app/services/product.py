@@ -17,7 +17,7 @@ from app.models.stock import Deposit, StockPurchase
 from app.models.sale import Sale, SaleItem
 from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
-from app.models.product import ProductColorStock
+from app.models.product import ProductColorStock, ProductDepositStock
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem
 from app.scrapers.registry import ScraperRegistry
 from app.scrapers.base import ScrapedProduct
@@ -192,6 +192,43 @@ class ProductService:
             self.db.add(row)
         self.db.commit()
         return items
+
+    def get_deposit_stock(self, product_id: int) -> List[dict]:
+        rows = (
+            self.db.query(ProductDepositStock)
+            .options(joinedload(ProductDepositStock.deposit))
+            .filter(ProductDepositStock.product_id == product_id)
+            .all()
+        )
+        return [{"deposit_id": r.deposit_id, "deposit_name": r.deposit.name if r.deposit else "", "quantity": r.quantity} for r in rows]
+
+    def set_deposit_stock(self, product_id: int, items: List[dict]) -> List[dict]:
+        self.db.query(ProductDepositStock).filter(ProductDepositStock.product_id == product_id).delete()
+        for item in items:
+            if item["quantity"] > 0:
+                row = ProductDepositStock(product_id=product_id, deposit_id=item["deposit_id"], quantity=item["quantity"])
+                self.db.add(row)
+        self.db.commit()
+        return self.get_deposit_stock(product_id)
+
+    def get_deposit_stock_bulk(self, product_ids: List[int]) -> dict:
+        """Returns {product_id: [{deposit_id, deposit_name, quantity}]} for multiple products."""
+        if not product_ids:
+            return {}
+        rows = (
+            self.db.query(ProductDepositStock)
+            .options(joinedload(ProductDepositStock.deposit))
+            .filter(ProductDepositStock.product_id.in_(product_ids))
+            .all()
+        )
+        result: dict = {}
+        for r in rows:
+            result.setdefault(r.product_id, []).append({
+                "deposit_id": r.deposit_id,
+                "deposit_name": r.deposit.name if r.deposit else "",
+                "quantity": r.quantity,
+            })
+        return result
 
     @staticmethod
     def _normalize_source_category(value: Optional[str]) -> str:

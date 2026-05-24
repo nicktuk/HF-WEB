@@ -4,7 +4,7 @@ from app.models.admin_user import AdminUser
 from app.models.customer import Customer
 from app.models.app_setting import AppSetting
 from app.models.source_website import SourceWebsite
-from app.models.product import Product, ProductImage
+from app.models.product import Product, ProductImage, ProductDepositStock
 from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
 from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
