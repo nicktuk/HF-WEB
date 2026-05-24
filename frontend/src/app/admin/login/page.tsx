@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function LoginPage() {
   const [apiKey, setApiKey] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,7 +29,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json();
-        login(apiKey, data.role as AdminRole);
+        login(apiKey, data.role as AdminRole, remember);
         router.push('/admin');
       } else {
         setError('API key inválida');
@@ -62,6 +63,19 @@ export default function LoginPage() {
               error={error}
               required
             />
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-600">
+                Recordarme en este equipo
+                <span className="text-xs text-gray-400 ml-1">(hasta 12 hs)</span>
+              </span>
+            </label>
 
             <Button
               type="submit"
