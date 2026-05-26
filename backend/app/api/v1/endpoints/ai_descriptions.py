@@ -16,7 +16,7 @@ from sqlalchemy import func, Integer, cast
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_product_service
-from app.core.security import verify_admin
+from app.core.security import verify_admin, get_admin_user
 from app.db.session import get_db
 from app.models.category import Category
 from app.models.product import Product
@@ -70,7 +70,7 @@ class SingleResponse(BaseModel):
 # POST /generate  →  lanza batch
 # ---------------------------------------------------------------------------
 
-@router.post("/generate", response_model=JobResponse, dependencies=[Depends(verify_admin)])
+@router.post("/generate", response_model=JobResponse, dependencies=[Depends(get_admin_user)])
 async def generate_descriptions(
     req: GenerateRequest,
     background_tasks: BackgroundTasks,
@@ -136,7 +136,7 @@ async def generate_descriptions(
 # GET /job/{job_id}  →  polling de estado
 # ---------------------------------------------------------------------------
 
-@router.get("/job/{job_id}", response_model=JobStatusResponse, dependencies=[Depends(verify_admin)])
+@router.get("/job/{job_id}", response_model=JobStatusResponse, dependencies=[Depends(get_admin_user)])
 async def get_job_status(job_id: str):
     job = _jobs.get(job_id)
     if not job:
@@ -159,7 +159,7 @@ async def get_job_status(job_id: str):
 # POST /job/{job_id}/cancel
 # ---------------------------------------------------------------------------
 
-@router.post("/job/{job_id}/cancel", dependencies=[Depends(verify_admin)])
+@router.post("/job/{job_id}/cancel", dependencies=[Depends(get_admin_user)])
 async def cancel_job(job_id: str):
     job = _jobs.get(job_id)
     if not job:
@@ -175,7 +175,7 @@ async def cancel_job(job_id: str):
 
 @router.post(
     "/search-images/{product_id}",
-    dependencies=[Depends(verify_admin)],
+    dependencies=[Depends(get_admin_user)],
 )
 async def search_images_single(
     product_id: int,
@@ -203,7 +203,7 @@ async def search_images_single(
 @router.post(
     "/generate/{product_id}",
     response_model=SingleResponse,
-    dependencies=[Depends(verify_admin)],
+    dependencies=[Depends(get_admin_user)],
 )
 async def generate_single(
     product_id: int,
@@ -237,7 +237,7 @@ async def generate_single(
 # GET /stats  →  cobertura de descripciones
 # ---------------------------------------------------------------------------
 
-@router.get("/stats", dependencies=[Depends(verify_admin)])
+@router.get("/stats", dependencies=[Depends(get_admin_user)])
 async def get_stats(db: Session = Depends(get_db)):
     total_enabled = db.query(Product).filter(Product.enabled == True).count()
     with_desc = (
