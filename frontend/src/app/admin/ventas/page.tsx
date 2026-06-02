@@ -615,8 +615,8 @@ export default function VentasPage() {
                   for (const cs of product.color_stock || []) {
                     colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
                   }
-                  const imageColorSet = new Set(product.images.filter(img => img.color).map(img => img.color!));
-                  const allColorKeys = Array.from(new Set([...colorAggMap.keys(), ...imageColorSet]));
+                  const imageColorArr = product.images.filter(img => img.color).map(img => img.color!);
+                  const allColorKeys = Array.from(new Set([...Array.from(colorAggMap.keys()), ...imageColorArr]));
                   const productColorNameMap = Object.fromEntries(
                     product.images.filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                   );
@@ -772,8 +772,8 @@ export default function VentasPage() {
                     for (const cs of item.product?.color_stock || []) {
                       cartColorAggMap.set(cs.color, (cartColorAggMap.get(cs.color) || 0) + cs.quantity);
                     }
-                    const cartImageColorSet = new Set((item.product?.images || []).filter(img => img.color).map(img => img.color!));
-                    const allCartColorKeys = Array.from(new Set([...cartColorAggMap.keys(), ...cartImageColorSet]));
+                    const cartImageColorArr = (item.product?.images || []).filter(img => img.color).map(img => img.color!);
+                    const allCartColorKeys = Array.from(new Set([...Array.from(cartColorAggMap.keys()), ...cartImageColorArr]));
                     const productColors = allCartColorKeys.map(color => ({
                       color,
                       quantity: cartColorAggMap.get(color) ?? null,
