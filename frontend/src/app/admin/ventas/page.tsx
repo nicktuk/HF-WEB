@@ -610,17 +610,20 @@ export default function VentasPage() {
               <div className="divide-y">
                 {sortedProducts.map((product) => {
                   const inStock = Number(product.stock_qty || 0) > 0;
-                  // Aggregate color stock across deposits (sum per color)
+                  // Build selectable colors: aggregate color_stock across deposits, fallback to image colors
                   const colorAggMap = new Map<string, number>();
                   for (const cs of product.color_stock || []) {
                     colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
                   }
-                  const productColors = Array.from(colorAggMap.entries())
-                    .filter(([, qty]) => qty > 0)
-                    .map(([color, quantity]) => ({ color, quantity }));
+                  const imageColorSet = new Set(product.images.filter(img => img.color).map(img => img.color!));
+                  const allColorKeys = Array.from(new Set([...colorAggMap.keys(), ...imageColorSet]));
                   const productColorNameMap = Object.fromEntries(
                     product.images.filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                   );
+                  const productColors = allColorKeys.map(color => ({
+                    color,
+                    quantity: colorAggMap.get(color) ?? null,
+                  }));
                   return (
                     <div key={product.id} className="p-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -643,21 +646,15 @@ export default function VentasPage() {
                               <button
                                 key={color}
                                 onClick={() => addToCart(product, color)}
-                                title={`${colorName || color} · ${quantity} disponibles`}
+                                title={quantity !== null ? `${colorName || color} · ${quantity} disponibles` : (colorName || color)}
                                 className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
                               >
                                 <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
                                 {colorName ? <span>{colorName}</span> : null}
-                                <span className="text-gray-400">({quantity})</span>
+                                {quantity !== null && <span className="text-gray-400">({quantity})</span>}
                               </button>
                             );
                           })}
-                          <button
-                            onClick={() => addToCart(product, null)}
-                            className={`text-xs px-2 py-1 rounded border ${inStock ? 'border-gray-300 text-gray-500 hover:border-gray-500' : 'border-dashed border-gray-300 text-gray-400 hover:text-gray-600'}`}
-                          >
-                            Sin color
-                          </button>
                         </div>
                       ) : (
                         <Button size="sm" variant={inStock ? 'outline' : 'ghost'} onClick={() => addToCart(product)}
@@ -770,13 +767,17 @@ export default function VentasPage() {
                       : (item.manualName || 'Producto manual');
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;
-                    // Aggregate color stock across deposits
+                    // Build selectable colors: aggregate color_stock, fallback to image colors
                     const cartColorAggMap = new Map<string, number>();
                     for (const cs of item.product?.color_stock || []) {
                       cartColorAggMap.set(cs.color, (cartColorAggMap.get(cs.color) || 0) + cs.quantity);
                     }
-                    const productColors = Array.from(cartColorAggMap.entries())
-                      .map(([color, quantity]) => ({ color, quantity }));
+                    const cartImageColorSet = new Set((item.product?.images || []).filter(img => img.color).map(img => img.color!));
+                    const allCartColorKeys = Array.from(new Set([...cartColorAggMap.keys(), ...cartImageColorSet]));
+                    const productColors = allCartColorKeys.map(color => ({
+                      color,
+                      quantity: cartColorAggMap.get(color) ?? null,
+                    }));
                     const cartItemColorNameMap = Object.fromEntries(
                       (item.product?.images || []).filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                     );
@@ -873,12 +874,12 @@ export default function VentasPage() {
                                 <button
                                   key={color}
                                   onClick={() => updateCartItemColor(item.id, item.color === color ? null : color)}
-                                  title={`${cName || color} · ${quantity} disponibles`}
-                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${item.color === color ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-500'} ${quantity <= 0 ? 'opacity-40' : ''}`}
+                                  title={quantity !== null ? `${cName || color} · ${quantity} disponibles` : (cName || color)}
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${item.color === color ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-500'} ${quantity !== null && quantity <= 0 ? 'opacity-40' : ''}`}
                                 >
                                   <span className="w-3.5 h-3.5 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
                                   {cName ? <span className="text-gray-700">{cName}</span> : null}
-                                  <span className="text-gray-400">({quantity})</span>
+                                  {quantity !== null && <span className="text-gray-400">({quantity})</span>}
                                 </button>
                               );
                             })}
