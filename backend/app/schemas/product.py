@@ -9,6 +9,8 @@ import re
 class ColorStockItem(BaseModel):
     color: str
     quantity: int
+    deposit_id: Optional[int] = None
+    deposit_name: Optional[str] = None
 
     class Config:
         from_attributes = True

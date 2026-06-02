@@ -147,18 +147,20 @@ class ProductImage(Base):
 
 
 class ProductColorStock(Base):
-    """Stock por variante de color de un producto."""
+    """Stock por variante de color de un producto, asociado a un depósito."""
     __tablename__ = "product_color_stock"
 
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
     color = Column(String(20), nullable=False, comment="Color hex (ej: #FF0000)")
     quantity = Column(Integer, default=0, nullable=False)
+    deposit_id = Column(Integer, ForeignKey("deposits.id", ondelete="SET NULL"), nullable=True, index=True)
 
     product = relationship("Product")
+    deposit = relationship("Deposit")
 
     __table_args__ = (
-        Index("ix_product_color_stock_product_color", "product_id", "color", unique=True),
+        Index("ix_product_color_stock_product_color_deposit", "product_id", "color", "deposit_id", unique=True),
     )
 
 

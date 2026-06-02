@@ -3,6 +3,8 @@
 export interface ColorStockItem {
   color: string;
   quantity: number;
+  deposit_id?: number | null;
+  deposit_name?: string | null;
 }
 
 export interface ProductImage {
@@ -90,6 +92,7 @@ export interface Deposit {
   id: number;
   name: string;
   is_active: boolean;
+  seller?: string | null;
   created_at: string;
 }
 

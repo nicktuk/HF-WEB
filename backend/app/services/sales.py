@@ -70,29 +70,44 @@ class SalesService:
             return
         product.is_on_demand = stock <= 0
 
-    def _deduct_color_stock(self, product_id: int | None, color: str | None, quantity: int) -> None:
-        if not color or quantity <= 0 or product_id is None:
-            return
-        stock = (
-            self.db.query(ProductColorStock)
-            .filter(ProductColorStock.product_id == product_id, ProductColorStock.color == color)
+    def _get_seller_deposit_id(self, seller: str | None) -> int | None:
+        if not seller:
+            return None
+        from app.models.stock import Deposit
+        deposit = (
+            self.db.query(Deposit)
+            .filter(Deposit.seller == seller, Deposit.is_active == True)
             .first()
         )
+        return deposit.id if deposit else None
+
+    def _deduct_color_stock(self, product_id: int | None, color: str | None, quantity: int, deposit_id: int | None = None) -> None:
+        if not color or quantity <= 0 or product_id is None:
+            return
+        query = self.db.query(ProductColorStock).filter(
+            ProductColorStock.product_id == product_id,
+            ProductColorStock.color == color,
+        )
+        if deposit_id is not None:
+            query = query.filter(ProductColorStock.deposit_id == deposit_id)
+        stock = query.first()
         available = int(stock.quantity) if stock else 0
         if available < quantity:
-            raise ValidationError(f"Stock insuficiente del color {color}. Disponible: {available}")
+            raise ValidationError(f"Stock insuficiente del color {color} en el depósito. Disponible: {available}")
         stock.quantity = available - quantity
 
-    def _restore_color_stock(self, product_id: int | None, color: str | None, quantity: int) -> None:
+    def _restore_color_stock(self, product_id: int | None, color: str | None, quantity: int, deposit_id: int | None = None) -> None:
         if not color or quantity <= 0 or product_id is None:
             return
-        stock = (
-            self.db.query(ProductColorStock)
-            .filter(ProductColorStock.product_id == product_id, ProductColorStock.color == color)
-            .first()
+        query = self.db.query(ProductColorStock).filter(
+            ProductColorStock.product_id == product_id,
+            ProductColorStock.color == color,
         )
+        if deposit_id is not None:
+            query = query.filter(ProductColorStock.deposit_id == deposit_id)
+        stock = query.first()
         if stock is None:
-            stock = ProductColorStock(product_id=product_id, color=color, quantity=0)
+            stock = ProductColorStock(product_id=product_id, color=color, quantity=0, deposit_id=deposit_id)
             self.db.add(stock)
         stock.quantity = int(stock.quantity) + quantity
 
@@ -243,6 +258,7 @@ class SalesService:
         delivery_targets_by_ref: dict[str, bool] | None = None,
         paid_targets_by_ref: dict[str, bool] | None = None,
     ) -> None:
+        seller_deposit_id = self._get_seller_deposit_id(sale.seller)
         for item in sale.items:
             item_ref = f"product:{item.product_id}:{(item.color or '').lower()}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"
             current_qty = int(item.delivered_quantity or 0)
@@ -253,10 +269,10 @@ class SalesService:
             delta = target_qty - current_qty
             if delta > 0:
                 self._deduct_stock(item.product_id, delta)
-                self._deduct_color_stock(item.product_id, item.color, delta)
+                self._deduct_color_stock(item.product_id, item.color, delta, deposit_id=seller_deposit_id)
             elif delta < 0:
                 self._restore_stock(item.product_id, -delta)
-                self._restore_color_stock(item.product_id, item.color, -delta)
+                self._restore_color_stock(item.product_id, item.color, -delta, deposit_id=seller_deposit_id)
             item.delivered_quantity = target_qty
 
             if paid_targets_by_ref is not None:
@@ -510,6 +526,7 @@ class SalesService:
             )
 
             # Return already delivered stock before rebuilding items.
+            seller_deposit_id = self._get_seller_deposit_id(sale.seller)
             current_items = list(sale.items)
             for current_item in current_items:
                 delivered_qty = int(current_item.delivered_quantity or 0)
@@ -517,10 +534,12 @@ class SalesService:
                     if force:
                         try:
                             self._restore_stock(current_item.product_id, delivered_qty)
+                            self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=seller_deposit_id)
                         except ValidationError:
                             pass
                     else:
                         self._restore_stock(current_item.product_id, delivered_qty)
+                        self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=seller_deposit_id)
 
             # Remove existing ORM-linked items explicitly so sale.items is in sync.
             for current_item in current_items:
@@ -591,6 +610,7 @@ class SalesService:
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
 
+        seller_deposit_id = self._get_seller_deposit_id(sale.seller)
         items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
         for item in items:
             delivered_qty = int(item.delivered_quantity or 0)
@@ -598,10 +618,12 @@ class SalesService:
                 if force:
                     try:
                         self._restore_stock(item.product_id, delivered_qty)
+                        self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=seller_deposit_id)
                     except ValidationError:
                         pass
                 else:
                     self._restore_stock(item.product_id, delivered_qty)
+                    self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=seller_deposit_id)
 
         self.db.delete(sale)
         self.db.commit()

@@ -177,7 +177,7 @@ export function useDeposits(apiKey: string) {
 export function useCreateDeposit(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => adminApi.createDeposit(apiKey, name),
+    mutationFn: (data: { name: string; seller?: string | null }) => adminApi.createDeposit(apiKey, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
     },
@@ -187,7 +187,7 @@ export function useCreateDeposit(apiKey: string) {
 export function useUpdateDeposit(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name?: string; is_active?: boolean } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; is_active?: boolean; seller?: string | null } }) =>
       adminApi.updateDeposit(apiKey, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });

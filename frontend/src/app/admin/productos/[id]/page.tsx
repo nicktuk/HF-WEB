@@ -175,10 +175,14 @@ export default function ProductEditPage() {
   }, [currentJob?.status]);
 
   // Initialize color stock quantities when API data arrives
+  // Key: `${color}|${deposit_id}` for deposit-aware entries, or just color for legacy
   useEffect(() => {
     if (colorStockData) {
       const map: Record<string, number> = {};
-      colorStockData.forEach(item => { map[item.color] = item.quantity; });
+      colorStockData.forEach(item => {
+        const key = item.deposit_id != null ? `${item.color}|${item.deposit_id}` : item.color;
+        map[key] = item.quantity;
+      });
       setColorStockQty(map);
     }
   }, [colorStockData]);
@@ -382,27 +386,45 @@ export default function ProductEditPage() {
     });
     // Save color stock for colors that are still assigned to images
     const activeColors = Array.from(new Set(imageColors.filter(Boolean) as string[]));
-    const totalColorQty = activeColors.reduce((sum, c) => sum + (colorStockQty[c] ?? 0), 0);
-    if (totalColorQty > grossStock) {
-      alert(`El total de colores (${totalColorQty}) supera el stock disponible (${grossStock}). Ajustá las cantidades antes de guardar.`);
-      return;
-    }
-    const colorStockItems = activeColors.map(color => ({
-      color,
-      quantity: colorStockQty[color] ?? 0,
-    }));
-    await setColorStockMutation.mutateAsync({ productId, items: colorStockItems });
+    const activeDepositsForColor = (deposits || []).filter(d => d.is_active);
+    const hasColorImages = activeColors.length > 0;
 
-    // Save deposit stock
-    const depositStockItems = Object.entries(depositStockQty)
-      .map(([id, qty]) => ({ deposit_id: Number(id), deposit_name: '', quantity: qty }))
-      .filter(i => i.quantity > 0);
-    const totalDepositQty = depositStockItems.reduce((sum, i) => sum + i.quantity, 0);
-    if (totalDepositQty > grossStock) {
-      alert(`El total por depósito (${totalDepositQty}) supera el stock disponible (${grossStock}). Ajustá las cantidades antes de guardar.`);
-      return;
+    if (hasColorImages) {
+      // Build per-color-per-deposit items
+      const colorStockItems: { color: string; deposit_id: number | null; quantity: number }[] = [];
+      let totalColorQty = 0;
+      for (const color of activeColors) {
+        if (activeDepositsForColor.length > 0) {
+          for (const dep of activeDepositsForColor) {
+            const qty = colorStockQty[`${color}|${dep.id}`] ?? 0;
+            colorStockItems.push({ color, deposit_id: dep.id, quantity: qty });
+            totalColorQty += qty;
+          }
+        } else {
+          const qty = colorStockQty[color] ?? 0;
+          colorStockItems.push({ color, deposit_id: null, quantity: qty });
+          totalColorQty += qty;
+        }
+      }
+      if (totalColorQty > grossStock) {
+        alert(`El total de colores (${totalColorQty}) supera el stock disponible (${grossStock}). Ajustá las cantidades antes de guardar.`);
+        return;
+      }
+      await setColorStockMutation.mutateAsync({ productId, items: colorStockItems });
+    } else {
+      // No color images — clear color stock and save deposit stock
+      await setColorStockMutation.mutateAsync({ productId, items: [] });
+
+      const depositStockItems = Object.entries(depositStockQty)
+        .map(([id, qty]) => ({ deposit_id: Number(id), deposit_name: '', quantity: qty }))
+        .filter(i => i.quantity > 0);
+      const totalDepositQty = depositStockItems.reduce((sum, i) => sum + i.quantity, 0);
+      if (totalDepositQty > grossStock) {
+        alert(`El total por depósito (${totalDepositQty}) supera el stock disponible (${grossStock}). Ajustá las cantidades antes de guardar.`);
+        return;
+      }
+      await setDepositStockMutation.mutateAsync({ productId, items: depositStockItems });
     }
-    await setDepositStockMutation.mutateAsync({ productId, items: depositStockItems });
   };
 
   const handleDelete = async () => {
@@ -755,30 +777,88 @@ export default function ProductEditPage() {
                 La primera imagen es la principal. Podes subir archivos o agregar URLs.
               </p>
 
-              {/* Stock por color */}
+              {/* Stock por color × depósito (cuando hay imágenes con color asignado) */}
               {imageColors.some(Boolean) && (() => {
                 const activeColors = Array.from(new Set(imageColors.filter(Boolean) as string[]));
-                const totalColorQty = activeColors.reduce((sum, c) => sum + (colorStockQty[c] ?? 0), 0);
+                const colorImageNameMap = Object.fromEntries(
+                  imageUrls.map((url, i) => [imageColors[i], imageAltTexts[i]]).filter(([c]) => c)
+                );
+                const activeDeposits = (deposits || []).filter(d => d.is_active);
+                const hasDeposits = activeDeposits.length > 0;
+                let totalColorQty = 0;
+                activeColors.forEach(c => {
+                  if (hasDeposits) {
+                    activeDeposits.forEach(d => { totalColorQty += colorStockQty[`${c}|${d.id}`] ?? 0; });
+                  } else {
+                    totalColorQty += colorStockQty[c] ?? 0;
+                  }
+                });
                 const exceeds = totalColorQty > grossStock;
                 return (
                   <div className="border-t pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por color</p>
-                    {activeColors.map(color => (
-                      <div key={color} className="flex items-center gap-3">
-                        <span
-                          className="w-5 h-5 rounded-full border border-gray-200 shrink-0"
-                          style={{ backgroundColor: color }}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          value={colorStockQty[color] ?? 0}
-                          onChange={e => setColorStockQty(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                          className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
-                        />
-                        <span className="text-xs text-gray-500">unidades</span>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por color{hasDeposits ? ' y depósito' : ''}</p>
+                    {hasDeposits ? (
+                      <div className="overflow-x-auto">
+                        <table className="text-xs w-full border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="text-left pr-3 pb-1 text-gray-500 font-medium">Color</th>
+                              {activeDeposits.map(d => (
+                                <th key={d.id} className="text-center px-2 pb-1 text-gray-500 font-medium whitespace-nowrap">
+                                  {d.name}
+                                  {d.seller && <span className="ml-1 text-blue-500">({d.seller})</span>}
+                                </th>
+                              ))}
+                              <th className="text-center px-2 pb-1 text-gray-500 font-medium">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeColors.map(color => {
+                              const colorName = colorImageNameMap[color];
+                              const rowTotal = activeDeposits.reduce((s, d) => s + (colorStockQty[`${color}|${d.id}`] ?? 0), 0);
+                              return (
+                                <tr key={color} className="border-t border-gray-100">
+                                  <td className="pr-3 py-1.5 flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                                    <span className="text-gray-700 truncate max-w-[80px]">{colorName || color}</span>
+                                  </td>
+                                  {activeDeposits.map(d => (
+                                    <td key={d.id} className="px-2 py-1.5 text-center">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={colorStockQty[`${color}|${d.id}`] ?? 0}
+                                        onChange={e => setColorStockQty(prev => ({ ...prev, [`${color}|${d.id}`]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                        className="w-16 text-sm border border-gray-200 rounded px-1 py-0.5 text-center"
+                                      />
+                                    </td>
+                                  ))}
+                                  <td className="px-2 py-1.5 text-center font-medium text-gray-700">{rowTotal}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
-                    ))}
+                    ) : (
+                      activeColors.map(color => {
+                        const colorName = colorImageNameMap[color];
+                        return (
+                          <div key={color} className="flex items-center gap-3">
+                            <span className="w-5 h-5 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                            {colorName && <span className="text-xs text-gray-600 w-20 truncate">{colorName}</span>}
+                            <input
+                              type="number"
+                              min="0"
+                              value={colorStockQty[color] ?? 0}
+                              onChange={e => setColorStockQty(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                              className="w-20 text-sm border border-gray-200 rounded px-2 py-1 text-center"
+                            />
+                            <span className="text-xs text-gray-500">unidades</span>
+                          </div>
+                        );
+                      })
+                    )}
                     <div className={`flex items-center justify-between text-xs pt-1 border-t border-gray-100 ${exceeds ? 'text-red-600' : 'text-gray-500'}`}>
                       <span>Total asignado:</span>
                       <span className={`font-semibold ${exceeds ? 'text-red-600' : totalColorQty === grossStock ? 'text-emerald-600' : 'text-gray-700'}`}>
@@ -794,8 +874,8 @@ export default function ProductEditPage() {
                 );
               })()}
 
-              {/* Stock por depósito */}
-              {deposits && deposits.filter(d => d.is_active).length > 0 && (() => {
+              {/* Stock por depósito (solo para productos SIN variantes de color) */}
+              {!imageColors.some(Boolean) && deposits && deposits.filter(d => d.is_active).length > 0 && (() => {
                 const activeDeposits = deposits.filter(d => d.is_active);
                 const totalDepositQty = activeDeposits.reduce((sum, d) => sum + (depositStockQty[d.id] ?? 0), 0);
                 const exceedsDeposit = totalDepositQty > grossStock;
@@ -804,7 +884,10 @@ export default function ProductEditPage() {
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock por depósito</p>
                     {activeDeposits.map(deposit => (
                       <div key={deposit.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 w-24 truncate">{deposit.name}</span>
+                        <span className="text-sm text-gray-700 w-28 truncate">
+                          {deposit.name}
+                          {deposit.seller && <span className="ml-1 text-xs text-blue-500">({deposit.seller})</span>}
+                        </span>
                         <input
                           type="number"
                           min="0"

@@ -14,6 +14,7 @@ class Deposit(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     is_active = Column(Boolean, nullable=False, default=True)
+    seller = Column(String(50), nullable=True, comment="Vendedor asociado (ej: Facu, Heber)")
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     stock_purchases = relationship("StockPurchase", back_populates="deposit")

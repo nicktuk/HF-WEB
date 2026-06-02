@@ -11,17 +11,20 @@ from pydantic import BaseModel
 
 class DepositCreate(BaseModel):
     name: str
+    seller: Optional[str] = None
 
 
 class DepositUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    seller: Optional[str] = None
 
 
 class DepositResponse(BaseModel):
     id: int
     name: str
     is_active: bool
+    seller: Optional[str] = None
     created_at: datetime
 
     class Config:

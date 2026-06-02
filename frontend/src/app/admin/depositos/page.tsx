@@ -8,6 +8,8 @@ import { useApiKey } from '@/hooks/useAuth';
 import { useDeposits, useCreateDeposit, useUpdateDeposit, useDeleteDeposit } from '@/hooks/useProducts';
 import type { Deposit } from '@/types';
 
+const SELLERS = ['Facu', 'Heber'];
+
 export default function DepositosPage() {
   const apiKey = useApiKey() || '';
   const { data: deposits, isLoading } = useDeposits(apiKey);
@@ -16,15 +18,18 @@ export default function DepositosPage() {
   const deleteDeposit = useDeleteDeposit(apiKey);
 
   const [newName, setNewName] = useState('');
+  const [newSeller, setNewSeller] = useState<string>('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [editingSeller, setEditingSeller] = useState<string>('');
 
   const handleCreate = async () => {
     const name = newName.trim().toUpperCase();
     if (!name) return;
     try {
-      await createDeposit.mutateAsync(name);
+      await createDeposit.mutateAsync({ name, seller: newSeller || null });
       setNewName('');
+      setNewSeller('');
     } catch {
       alert('Error al crear depósito');
     }
@@ -33,13 +38,14 @@ export default function DepositosPage() {
   const startEdit = (deposit: Deposit) => {
     setEditingId(deposit.id);
     setEditingName(deposit.name);
+    setEditingSeller(deposit.seller || '');
   };
 
   const handleUpdate = async (id: number) => {
     const name = editingName.trim().toUpperCase();
     if (!name) return;
     try {
-      await updateDeposit.mutateAsync({ id, data: { name } });
+      await updateDeposit.mutateAsync({ id, data: { name, seller: editingSeller || null } });
       setEditingId(null);
     } catch {
       alert('Error al actualizar depósito');
@@ -67,20 +73,28 @@ export default function DepositosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Depósitos</h1>
-        <p className="text-gray-600">Administrá los depósitos donde se almacena el stock.</p>
+        <p className="text-gray-600">Administrá los depósitos donde se almacena el stock. Cada depósito puede estar asociado a un vendedor.</p>
       </div>
 
       {/* Create */}
       <div className="bg-white rounded-lg border p-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Nuevo depósito</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Input
-            placeholder="Nombre del depósito (ej: FACU, HEBER)"
+            placeholder="Nombre (ej: DEPÓSITO FACU)"
             value={newName}
             onChange={(e) => setNewName(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             className="max-w-xs"
           />
+          <select
+            value={newSeller}
+            onChange={(e) => setNewSeller(e.target.value)}
+            className="h-9 rounded-md border border-gray-300 px-3 text-sm text-gray-700 bg-white"
+          >
+            <option value="">Sin vendedor</option>
+            {SELLERS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
           <Button onClick={handleCreate} disabled={!newName.trim() || createDeposit.isPending} size="sm">
             <Plus className="h-4 w-4 mr-1" />
             Agregar
@@ -99,6 +113,7 @@ export default function DepositosPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
               </tr>
@@ -120,6 +135,22 @@ export default function DepositosPage() {
                       />
                     ) : (
                       deposit.name
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {editingId === deposit.id ? (
+                      <select
+                        value={editingSeller}
+                        onChange={(e) => setEditingSeller(e.target.value)}
+                        className="h-7 rounded border border-gray-300 px-2 text-sm bg-white"
+                      >
+                        <option value="">Sin vendedor</option>
+                        {SELLERS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    ) : (
+                      deposit.seller
+                        ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">{deposit.seller}</span>
+                        : <span className="text-gray-400 text-xs">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">

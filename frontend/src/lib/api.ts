@@ -749,11 +749,11 @@ export const adminApi = {
     return fetchAPI('/admin/deposits', {}, apiKey);
   },
 
-  async createDeposit(apiKey: string, name: string): Promise<Deposit> {
-    return fetchAPI('/admin/deposits', { method: 'POST', body: JSON.stringify({ name }) }, apiKey);
+  async createDeposit(apiKey: string, data: { name: string; seller?: string | null }): Promise<Deposit> {
+    return fetchAPI('/admin/deposits', { method: 'POST', body: JSON.stringify(data) }, apiKey);
   },
 
-  async updateDeposit(apiKey: string, id: number, data: { name?: string; is_active?: boolean }): Promise<Deposit> {
+  async updateDeposit(apiKey: string, id: number, data: { name?: string; is_active?: boolean; seller?: string | null }): Promise<Deposit> {
     return fetchAPI(`/admin/deposits/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, apiKey);
   },
 

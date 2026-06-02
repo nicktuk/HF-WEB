@@ -163,13 +163,21 @@ async def get_products_admin(
     stock_summary = service.get_stock_summary([p.id for p in products])
 
     # Bulk-load color_stock for all products in this page (single query)
+    from sqlalchemy.orm import joinedload as so_joinedload
     product_ids = [p.id for p in products]
-    color_stock_rows = service.db.query(ProductColorStock).filter(
+    color_stock_rows = service.db.query(ProductColorStock).options(
+        so_joinedload(ProductColorStock.deposit)
+    ).filter(
         ProductColorStock.product_id.in_(product_ids)
     ).all() if product_ids else []
     color_stock_map: dict = {}
     for row in color_stock_rows:
-        color_stock_map.setdefault(row.product_id, []).append({"color": row.color, "quantity": row.quantity})
+        color_stock_map.setdefault(row.product_id, []).append({
+            "color": row.color,
+            "quantity": row.quantity,
+            "deposit_id": row.deposit_id,
+            "deposit_name": row.deposit.name if row.deposit else None,
+        })
 
     hide_prices = current_user.is_product_editor
 
@@ -369,7 +377,7 @@ async def get_deposits(service: ProductService = Depends(get_product_service)):
 async def create_deposit(data: DepositCreate, service: ProductService = Depends(get_product_service)):
     from app.core.exceptions import DuplicateError
     try:
-        return service.create_deposit(data.name)
+        return service.create_deposit(data.name, data.seller)
     except DuplicateError:
         raise HTTPException(status_code=409, detail="Ya existe un depósito con ese nombre.")
 
@@ -386,7 +394,7 @@ async def update_deposit(
 ):
     from app.core.exceptions import NotFoundError
     try:
-        return service.update_deposit(deposit_id, data.name, data.is_active)
+        return service.update_deposit(deposit_id, data.name, data.is_active, data.seller)
     except NotFoundError:
         raise HTTPException(status_code=404, detail="Depósito no encontrado.")
 

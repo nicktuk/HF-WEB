@@ -84,7 +84,7 @@ class ProductService:
             for pid in product_ids:
                 stock_qty_map.setdefault(pid, 0)
 
-        # Bulk color stock — avoids N+1
+        # Bulk color stock — avoids N+1; aggregate by color across deposits for public view
         color_stock_map: dict = {}
         if product_ids:
             color_rows = (
@@ -92,10 +92,12 @@ class ProductService:
                 .filter(ProductColorStock.product_id.in_(product_ids))
                 .all()
             )
+            color_agg: dict = {}
             for row in color_rows:
-                color_stock_map.setdefault(row.product_id, []).append(
-                    ColorStockItem(color=row.color, quantity=row.quantity)
-                )
+                color_agg.setdefault(row.product_id, {})
+                color_agg[row.product_id][row.color] = color_agg[row.product_id].get(row.color, 0) + row.quantity
+            for pid, cmap in color_agg.items():
+                color_stock_map[pid] = [ColorStockItem(color=c, quantity=q) for c, q in cmap.items()]
 
         # Transform to public response
         public_products = [
@@ -151,7 +153,10 @@ class ProductService:
         ]
         if color_stock is None:
             color_stock_rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product.id).all()
-            color_stock = [ColorStockItem(color=r.color, quantity=r.quantity) for r in color_stock_rows]
+            agg: dict = {}
+            for r in color_stock_rows:
+                agg[r.color] = agg.get(r.color, 0) + r.quantity
+            color_stock = [ColorStockItem(color=c, quantity=q) for c, q in agg.items()]
 
         return ProductPublicResponse(
             id=product.id,
@@ -182,16 +187,31 @@ class ProductService:
         )
 
     def get_color_stock(self, product_id: int) -> List[ColorStockItem]:
-        rows = self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product_id).all()
-        return [ColorStockItem(color=r.color, quantity=r.quantity) for r in rows]
+        rows = (
+            self.db.query(ProductColorStock)
+            .options(joinedload(ProductColorStock.deposit))
+            .filter(ProductColorStock.product_id == product_id)
+            .all()
+        )
+        return [ColorStockItem(
+            color=r.color,
+            quantity=r.quantity,
+            deposit_id=r.deposit_id,
+            deposit_name=r.deposit.name if r.deposit else None,
+        ) for r in rows]
 
     def set_color_stock(self, product_id: int, items: List[ColorStockItem]) -> List[ColorStockItem]:
         self.db.query(ProductColorStock).filter(ProductColorStock.product_id == product_id).delete()
         for item in items:
-            row = ProductColorStock(product_id=product_id, color=item.color, quantity=item.quantity)
+            row = ProductColorStock(
+                product_id=product_id,
+                color=item.color,
+                quantity=item.quantity,
+                deposit_id=item.deposit_id,
+            )
             self.db.add(row)
         self.db.commit()
-        return items
+        return self.get_color_stock(product_id)
 
     def get_deposit_stock(self, product_id: int) -> List[dict]:
         rows = (
@@ -421,16 +441,16 @@ class ProductService:
         deposit = self.db.query(Deposit).filter(Deposit.is_active == True).order_by(Deposit.id).first()
         return deposit.id if deposit else None
 
-    def create_deposit(self, name: str) -> Deposit:
+    def create_deposit(self, name: str, seller: Optional[str] = None) -> Deposit:
         if self.db.query(Deposit).filter(Deposit.name == name).first():
             raise DuplicateError("Deposit", name)
-        deposit = Deposit(name=name)
+        deposit = Deposit(name=name, seller=seller)
         self.db.add(deposit)
         self.db.commit()
         self.db.refresh(deposit)
         return deposit
 
-    def update_deposit(self, deposit_id: int, name: Optional[str], is_active: Optional[bool]) -> Deposit:
+    def update_deposit(self, deposit_id: int, name: Optional[str], is_active: Optional[bool], seller: Optional[str] = None) -> Deposit:
         deposit = self.db.query(Deposit).filter(Deposit.id == deposit_id).first()
         if not deposit:
             raise NotFoundError("Deposit", str(deposit_id))
@@ -438,6 +458,8 @@ class ProductService:
             deposit.name = name
         if is_active is not None:
             deposit.is_active = is_active
+        if seller is not None:
+            deposit.seller = seller
         self.db.commit()
         self.db.refresh(deposit)
         return deposit

@@ -292,6 +292,18 @@ export default function VentasPage() {
   };
 
   const handleCreateSale = async () => {
+    // Validate: products with color_stock must have a color selected
+    const missingColor = cartItems.filter(item => {
+      if (!item.product) return false;
+      const hasColorVariants = (item.product.color_stock || []).length > 0;
+      return hasColorVariants && !item.color;
+    });
+    if (missingColor.length > 0) {
+      const names = missingColor.map(i => i.product?.custom_name || i.product?.original_name || 'producto').join(', ');
+      alert(`Seleccionar color obligatorio para: ${names}`);
+      return;
+    }
+
     const items: SaleItemCreate[] = cartItems.map((item) => ({
       product_id: item.product?.id,
       product_name: item.product ? undefined : item.manualName,
@@ -597,7 +609,14 @@ export default function VentasPage() {
               <div className="divide-y">
                 {sortedProducts.map((product) => {
                   const inStock = Number(product.stock_qty || 0) > 0;
-                  const productColors = (product.color_stock || []).filter(c => c.quantity > 0);
+                  // Aggregate color stock across deposits (sum per color)
+                  const colorAggMap = new Map<string, number>();
+                  for (const cs of product.color_stock || []) {
+                    colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
+                  }
+                  const productColors = Array.from(colorAggMap.entries())
+                    .filter(([, qty]) => qty > 0)
+                    .map(([color, quantity]) => ({ color, quantity }));
                   const productColorNameMap = Object.fromEntries(
                     product.images.filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                   );
@@ -750,7 +769,13 @@ export default function VentasPage() {
                       : (item.manualName || 'Producto manual');
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;
-                    const productColors = item.product?.color_stock || [];
+                    // Aggregate color stock across deposits
+                    const cartColorAggMap = new Map<string, number>();
+                    for (const cs of item.product?.color_stock || []) {
+                      cartColorAggMap.set(cs.color, (cartColorAggMap.get(cs.color) || 0) + cs.quantity);
+                    }
+                    const productColors = Array.from(cartColorAggMap.entries())
+                      .map(([color, quantity]) => ({ color, quantity }));
                     const cartItemColorNameMap = Object.fromEntries(
                       (item.product?.images || []).filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                     );
@@ -764,12 +789,20 @@ export default function VentasPage() {
                               {item.color && (
                                 <span className="w-3.5 h-3.5 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
                               )}
+                              {!item.color && productColors.length > 0 && (
+                                <span className="w-3.5 h-3.5 flex items-center justify-center text-amber-500 shrink-0" title="Color obligatorio">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                </span>
+                              )}
                               <p className="text-sm font-semibold text-gray-900 leading-snug">{name}</p>
                             </div>
                             {item.color && (
                               <p className="text-xs text-gray-400 mt-0.5 ml-5">
                                 {cartItemColorName || item.color}
                               </p>
+                            )}
+                            {!item.color && productColors.length > 0 && (
+                              <p className="text-xs text-amber-600 mt-0.5 ml-5 font-medium">Color requerido</p>
                             )}
                             <p className={`text-xs mt-0.5 ${hasStock ? 'text-gray-500' : 'text-amber-700'}`}>
                               {item.product
