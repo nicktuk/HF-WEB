@@ -292,11 +292,12 @@ export default function VentasPage() {
   };
 
   const handleCreateSale = async () => {
-    // Validate: products with color_stock must have a color selected
+    // Validate: products with color variants must have a color selected
     const missingColor = cartItems.filter(item => {
       if (!item.product) return false;
-      const hasColorVariants = (item.product.color_stock || []).length > 0;
-      return hasColorVariants && !item.color;
+      const hasColorStock = (item.product.color_stock || []).length > 0;
+      const hasColorImages = (item.product.images || []).some(img => img.color);
+      return (hasColorStock || hasColorImages) && !item.color;
     });
     if (missingColor.length > 0) {
       const names = missingColor.map(i => i.product?.custom_name || i.product?.original_name || 'producto').join(', ');
