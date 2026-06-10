@@ -270,9 +270,14 @@ class SalesService:
             if delta > 0:
                 self._deduct_stock(item.product_id, delta)
                 self._deduct_color_stock(item.product_id, item.color, delta, deposit_id=seller_deposit_id)
+                # Record which deposit was used so restoration is exact
+                if seller_deposit_id is not None:
+                    item.deposit_id = seller_deposit_id
             elif delta < 0:
                 self._restore_stock(item.product_id, -delta)
-                self._restore_color_stock(item.product_id, item.color, -delta, deposit_id=seller_deposit_id)
+                # Use the deposit recorded at deduction time, fallback to seller's current deposit
+                restore_deposit_id = item.deposit_id if item.deposit_id is not None else seller_deposit_id
+                self._restore_color_stock(item.product_id, item.color, -delta, deposit_id=restore_deposit_id)
             item.delivered_quantity = target_qty
 
             if paid_targets_by_ref is not None:
@@ -526,20 +531,20 @@ class SalesService:
             )
 
             # Return already delivered stock before rebuilding items.
-            seller_deposit_id = self._get_seller_deposit_id(sale.seller)
             current_items = list(sale.items)
             for current_item in current_items:
                 delivered_qty = int(current_item.delivered_quantity or 0)
                 if delivered_qty > 0:
+                    restore_deposit_id = current_item.deposit_id
                     if force:
                         try:
                             self._restore_stock(current_item.product_id, delivered_qty)
-                            self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=seller_deposit_id)
+                            self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=restore_deposit_id)
                         except ValidationError:
                             pass
                     else:
                         self._restore_stock(current_item.product_id, delivered_qty)
-                        self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=seller_deposit_id)
+                        self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=restore_deposit_id)
 
             # Remove existing ORM-linked items explicitly so sale.items is in sync.
             for current_item in current_items:
@@ -610,20 +615,21 @@ class SalesService:
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
 
-        seller_deposit_id = self._get_seller_deposit_id(sale.seller)
         items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
         for item in items:
             delivered_qty = int(item.delivered_quantity or 0)
             if delivered_qty > 0:
+                # Use the deposit recorded at delivery time for exact restoration
+                restore_deposit_id = item.deposit_id
                 if force:
                     try:
                         self._restore_stock(item.product_id, delivered_qty)
-                        self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=seller_deposit_id)
+                        self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
                     except ValidationError:
                         pass
                 else:
                     self._restore_stock(item.product_id, delivered_qty)
-                    self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=seller_deposit_id)
+                    self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
 
         self.db.delete(sale)
         self.db.commit()

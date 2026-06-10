@@ -53,6 +53,7 @@ class SaleItem(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True, index=True)
     manual_product_name = Column(String(500), nullable=True)
     color = Column(String(20), nullable=True)
+    deposit_id = Column(Integer, ForeignKey("deposits.id", ondelete="SET NULL"), nullable=True)
     quantity = Column(Integer, nullable=False)
     delivered_quantity = Column(Integer, nullable=False, default=0)
     is_paid = Column(Boolean, nullable=False, default=False)
