@@ -232,22 +232,51 @@ class ProductService:
         return self.get_deposit_stock(product_id)
 
     def get_deposit_stock_bulk(self, product_ids: List[int]) -> dict:
-        """Returns {product_id: [{deposit_id, deposit_name, quantity}]} for multiple products."""
+        """Returns {product_id: [{deposit_id, deposit_name, quantity}]} for multiple products.
+        Merges both product_deposit_stock (non-color products) and product_color_stock aggregated by deposit."""
         if not product_ids:
             return {}
+        result: dict = {}
+
+        # Non-color products: from product_deposit_stock
         rows = (
             self.db.query(ProductDepositStock)
             .options(joinedload(ProductDepositStock.deposit))
             .filter(ProductDepositStock.product_id.in_(product_ids))
             .all()
         )
-        result: dict = {}
         for r in rows:
             result.setdefault(r.product_id, []).append({
                 "deposit_id": r.deposit_id,
                 "deposit_name": r.deposit.name if r.deposit else "",
                 "quantity": r.quantity,
             })
+
+        # Color products: aggregate product_color_stock by deposit
+        color_rows = (
+            self.db.query(ProductColorStock)
+            .options(joinedload(ProductColorStock.deposit))
+            .filter(
+                ProductColorStock.product_id.in_(product_ids),
+                ProductColorStock.deposit_id.isnot(None),
+            )
+            .all()
+        )
+        color_agg: dict = {}
+        for r in color_rows:
+            pid = r.product_id
+            dep_id = r.deposit_id
+            color_agg.setdefault(pid, {})
+            if dep_id not in color_agg[pid]:
+                color_agg[pid][dep_id] = {
+                    "deposit_id": dep_id,
+                    "deposit_name": r.deposit.name if r.deposit else "",
+                    "quantity": 0,
+                }
+            color_agg[pid][dep_id]["quantity"] += r.quantity
+        for pid, deposits_map in color_agg.items():
+            result.setdefault(pid, []).extend(deposits_map.values())
+
         return result
 
     @staticmethod
