@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { useMayoristaCart } from '@/hooks/useMayoristaCart'
+import { useMayoristaCart, CartItem } from '@/hooks/useMayoristaCart'
 import { resolveImageUrl } from '@/lib/api'
 
 interface Producto {
@@ -75,7 +75,7 @@ function ProductCard({
   onAdd,
 }: {
   producto: Producto
-  onAdd: ReturnType<typeof useMayoristaCart>['add']
+  onAdd: (item: Omit<CartItem, 'cantidad'>, cantidad: number) => void
 }) {
   const [cantidad, setCantidad] = useState(1)
   const [added, setAdded] = useState(false)
