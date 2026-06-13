@@ -101,6 +101,11 @@ class Settings(BaseSettings):
     MP_ACCESS_TOKEN: str = ""
     MP_PUBLIC_KEY: str = ""
 
+    # Canal Mayorista — webhooks n8n
+    N8N_WEBHOOK_SOLICITUD_MAYORISTA: str = ""
+    N8N_WEBHOOK_ACTIVACION_MAYORISTA: str = ""
+    N8N_WEBHOOK_PEDIDO_MAYORISTA: str = ""
+
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001
     BESTBUY_API_KEY: str = ""          # developers.bestbuy.com (gratuito)

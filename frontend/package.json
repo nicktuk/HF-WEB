@@ -24,6 +24,7 @@
     "tailwind-merge": "^2.2.0",
     "xlsx": "^0.18.5",
     "zod": "^3.22.4",
+    "jose": "^5.9.6",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
