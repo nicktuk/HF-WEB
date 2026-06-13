@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, mayoristas_public
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, mayoristas_public, mayoristas_protected
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -31,6 +31,13 @@ api_router.include_router(
     mayoristas_public.router,
     prefix="/public",
     tags=["mayoristas-public"]
+)
+
+# Mayorista protected endpoints (catalogo, pedidos — requieren JWT)
+api_router.include_router(
+    mayoristas_protected.router,
+    prefix="/mayoristas",
+    tags=["mayoristas"]
 )
 
 # Mercado Pago Checkout Bricks

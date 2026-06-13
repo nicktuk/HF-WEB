@@ -101,6 +101,10 @@ class Settings(BaseSettings):
     MP_ACCESS_TOKEN: str = ""
     MP_PUBLIC_KEY: str = ""
 
+    # Canal Mayorista
+    MAYORISTA_JWT_SECRET: str = "change_me_mayorista_secret"
+    NEXT_PUBLIC_BASE_URL: str = "https://hefaproductos.com.ar"
+
     # Canal Mayorista — webhooks n8n
     N8N_WEBHOOK_SOLICITUD_MAYORISTA: str = ""
     N8N_WEBHOOK_ACTIVACION_MAYORISTA: str = ""
