@@ -69,20 +69,20 @@ export default function ConfigMayoristaPage() {
       <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Descuento (%)
+            Margen sobre precio de compra (%)
           </label>
           <input
             type="number"
             step="0.01"
             min="0"
-            max="100"
+            max="10000"
             value={descuento}
             onChange={e => setDescuento(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             required
           />
           <p className="text-xs text-gray-400 mt-1">
-            Porcentaje de descuento sobre el precio minorista final. Ej: 25 = 25% de descuento.
+            Se aplica sobre el último precio de compra. Ej: 30 → precio compra × 1,30. El resultado se redondea según el valor de abajo.
           </p>
         </div>
 

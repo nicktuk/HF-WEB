@@ -50,13 +50,13 @@ def _get_config(db: Session) -> ConfiguracionMayorista:
 
 
 def _precio_mayorista(
-    retail: Decimal,
+    costo: Decimal,
     override: Optional[Decimal],
     cfg: ConfiguracionMayorista,
 ) -> Decimal:
     if override is not None:
         return override
-    precio = float(retail) * (1 - float(cfg.descuento_porcentaje) / 100)
+    precio = float(costo) * (1 + float(cfg.descuento_porcentaje) / 100)
     if cfg.redondeo > 0:
         precio = math.ceil(precio / cfg.redondeo) * cfg.redondeo
     return Decimal(str(int(precio)))
@@ -111,13 +111,12 @@ async def get_catalogo(
 
     items = []
     for p in products:
-        retail = p.final_price
-        if retail is None:
+        if p.original_price is None:
             continue
         stock = _stock_total(db, p.id)
         if stock == 0 and not p.is_on_demand:
             continue
-        precio_m = _precio_mayorista(Decimal(str(retail)), p.precio_mayorista_override, cfg)
+        precio_m = _precio_mayorista(p.original_price, p.precio_mayorista_override, cfg)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -182,11 +181,10 @@ async def crear_pedido(
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
-        retail = p.final_price
-        if retail is None:
-            raise HTTPException(422, f"Sin precio para '{p.display_name}'.")
+        if p.original_price is None:
+            raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
 
-        precio_u = _precio_mayorista(Decimal(str(retail)), p.precio_mayorista_override, cfg)
+        precio_u = _precio_mayorista(p.original_price, p.precio_mayorista_override, cfg)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})
