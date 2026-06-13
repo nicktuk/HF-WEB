@@ -15,6 +15,15 @@ from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
 from app.models.section import Section, SectionProduct
 from app.models.expense import Expense
+from app.models.mayorista import (
+    Vendedor,
+    Mayorista,
+    ConfiguracionMayorista,
+    PedidoMayorista,
+    PedidoMayoristaItem,
+    EstadoMayorista,
+    EstadoPedidoMayorista,
+)
 from app.models.import_scorer import (
     ImportRubroTemplate,
     ImportRubro,
@@ -55,6 +64,13 @@ __all__ = [
     "Section",
     "SectionProduct",
     "Expense",
+    "Vendedor",
+    "Mayorista",
+    "ConfiguracionMayorista",
+    "PedidoMayorista",
+    "PedidoMayoristaItem",
+    "EstadoMayorista",
+    "EstadoPedidoMayorista",
     "ImportRubroTemplate",
     "ImportRubro",
     "ImportRetailer",

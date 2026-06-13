@@ -1,0 +1,136 @@
+# HEFA Mayoristas — Kit del Vendedor v1
+
+Material de trabajo para visitas a comercios. Objetivo de cada visita: salir con la solicitud de alta cargada, o como mínimo con el contacto de WhatsApp del dueño y una fecha de seguimiento.
+
+---
+
+## 1. A quién visitar (perfil del cliente)
+
+**Prioridad alta:**
+- Bazares y casas de regalos de barrio
+- Almacenes y autoservicios grandes que venden bazar/hogar
+- Ferreterías que suman hogar y electro chico
+- Revendedoras por catálogo/WhatsApp (venden a vecinas, compañeras de trabajo)
+- Kioscos-polirrubro grandes
+
+**Prioridad media:**
+- Mueblerías y casas de decoración (complementan con bazar y electro)
+- Locales de ropa/varios que quieren sumar rubro
+
+**Señal de buen prospecto:** local con vidriera activa, movimiento de gente, dueño presente en el mostrador. Si el dueño no está, dejar tarjeta con QR y pedir el WhatsApp.
+
+---
+
+## 2. Apertura (los primeros 30 segundos)
+
+> "Hola, ¿qué tal? ¿Hablo con el dueño/encargado? Soy [nombre], de HEFA Productos. Somos distribuidores de la zona — bazar, hogar, electro, termos, herramientas. Vengo a presentarte nuestra propuesta mayorista: precios para reventa con margen real y un catálogo online donde pedís cuando querés, sin esperar a que pase el viajante. ¿Tenés dos minutos que te muestro?"
+
+**Reglas de la apertura:**
+- Nunca arrancar pidiendo tiempo sin decir qué ofrecés. Primero el gancho ("precios para reventa con margen real"), después el permiso.
+- Si está atendiendo gente: "Te dejo seguir, ¿a qué hora te queda cómodo que pase? ¿O te mando el catálogo por WhatsApp?" — y pedir el número. Un WhatsApp capturado vale más que una charla apurada.
+- Hablar como vecino de la zona, no como corporación: "somos de acá, de zona sur".
+
+---
+
+## 3. La propuesta (el cuerpo del speech, 2-3 minutos)
+
+Orden de los argumentos — del más fuerte al de cierre:
+
+**1. Margen y precio**
+> "Trabajamos con precios mayoristas reales: en promedio un [X]% abajo del precio de venta al público. Mirá, te muestro con productos concretos —" *(abrir el catálogo mayorista en el celu, ir directo a 2-3 productos gancho)* "— este termo lo comprás a $[…], lo vendés a $[…], te queda $[…] por unidad."
+
+**2. Un solo proveedor, varios rubros**
+> "En vez de manejar cuatro proveedores distintos, con nosotros cubrís bazar, hogar, electro chico, termos y mates, climatización según temporada. Menos viajantes, menos mínimos que juntar, un solo pedido."
+
+**3. Pedido online 24/7, sin viajante**
+> "Te activamos una cuenta en nuestra web. Entrás cuando querés, ves precios actualizados y stock real, armás el pedido a la hora que cierres el local si querés. Nada de esperar a que pase el corredor o adivinar precios de una lista vieja en PDF."
+
+**4. Atención personalizada**
+> "Y no estás solo con una web: yo soy tu vendedor asignado. Cualquier cosa —consulta, apurar una entrega, un producto que no encontrás— me escribís directo por WhatsApp."
+
+**5. Sin inmovilizar capital, con reposición rápida**
+> "No te pedimos compras enormes. El mínimo es $[…], que se arma con poca mercadería. Lo que está en stock te llega en 24-48hs y la entrega es sin cargo — yo te lo traigo al local. La idea es que repongas lo que vendés, no que llenes un depósito."
+
+**6. Cierre con acción concreta**
+> "El alta es gratis y sin compromiso. Te cargo la solicitud ahora, son dos minutos, y en menos de 24hs te llega la activación con tu usuario. Ahí ya ves todos los precios y pedís cuando quieras. ¿Lo hacemos?"
+
+**Si duda:** "Dale, sin problema. Hagamos una cosa: te dejo el QR, miralo tranquilo, y te escribo el [día] para ver qué te pareció. ¿Me pasás tu WhatsApp?"
+
+---
+
+## 4. FAQs y manejo de objeciones
+
+**"¿Cuál es el mínimo de compra?"**
+> "El pedido mínimo es de $[MONTO]. Se arma fácil: con [ejemplo: dos termos y un set de ollas] ya estás. No hay mínimo de unidades por producto, podés llevar de a una unidad para probar qué rota en tu local."
+
+**"¿Qué margen me queda?"**
+> "Depende del producto, pero en promedio estás comprando un [X]% abajo del precio de público. En bazar y termos el margen es más alto; en electro grande es más finito pero el ticket es mayor. Te muestro la hoja con ejemplos reales." *(Siempre responder con productos concretos, nunca con porcentajes abstractos solos.)*
+
+**"Ya tengo proveedor."**
+> "Perfecto, no te pido que lo dejes. Sumanos como segundo proveedor: comparás precios pedido a pedido y comprás donde te convenga. Además cubrimos rubros que capaz tu proveedor no tiene. El alta es gratis — tener la cuenta no te obliga a nada y te sirve de referencia de precios."
+
+**"¿Cómo se paga?"**
+> "Efectivo o transferencia, lo que te quede más cómodo. Confirmás el pedido en la web y yo te contacto para coordinar pago y entrega."
+
+**"¿Hacen factura?"**
+> "Los precios del catálogo son finales, sin IVA — por eso son tan competitivos. Si necesitás factura, lo arreglamos sin problema: se suma al precio y listo. Me lo decís al hacer el pedido y lo coordinamos."
+
+**"¿Entregan? ¿Cuánto sale el envío?"**
+> "La entrega es sin costo — yo mismo te lo acerco al local, trabajamos la zona [Ezeiza, Canning, Monte Grande, Tristán Suárez, Guernica y alrededores]. Sin mínimos raros ni recargos."
+
+**"¿En cuánto tiempo llega el pedido?"**
+> "Lo que figura en stock te llega en 24 a 48 horas. Lo que es bajo pedido, a partir del lunes de la semana siguiente. Y si necesitás algo para una fecha puntual, me escribís antes de pedir y lo vemos juntos — todo es conversable."
+
+**"¿Y si un producto viene fallado?"**
+> "Lo cambiamos, sin vueltas. Me mandás foto por WhatsApp y lo resolvemos en la próxima entrega. Los electrodomésticos además tienen garantía oficial de fábrica."
+
+**"¿Los precios cambian seguido?"** *(la objeción inflación)*
+> "Los precios de la web están siempre actualizados — esa es justamente la ventaja contra las listas en PDF que te quedan viejas a la semana. El precio que ves al confirmar el pedido es el que pagás, no hay sorpresas después."
+
+**"¿Puedo vender estos productos online / por redes?"**
+> "Sí, sin problema. Y te facilitamos las fotos y descripciones de los productos para que publiques sin tener que producir nada."
+
+**"¿Tienen exclusividad por zona?"**
+> "No trabajamos con exclusividad, pero el catálogo es muy amplio: dos locales de la misma cuadra pueden trabajar surtidos totalmente distintos. Y vos elegís qué pedir y cuándo, sin compromisos de volumen."
+
+**"¿Dan financiación / cuotas?"**
+> "Por ahora la modalidad mayorista es [contado/transferencia — DEFINIR]. Lo que sí, los mínimos son bajos justamente para que no tengas que poner mucha plata junta: comprás seguido y chico."
+
+**"¿Cómo sé que tienen stock?"**
+> "El catálogo te muestra stock real. Si algo figura disponible, está. Y si necesitás cantidad grande de algo puntual, me escribís y te lo confirmo antes de que pidas."
+
+**"No tengo tiempo ahora."**
+> "Todo bien. Te dejo el QR y te mando el catálogo por WhatsApp así lo ves tranquilo a la noche. ¿Cuál es tu número?" *(El objetivo mínimo de toda visita: capturar el WhatsApp.)*
+
+---
+
+## 5. Materiales para llevar a cada visita
+
+1. **El celular del vendedor con cuenta activa del catálogo mayorista** — es la pieza central de la visita. Tener marcados de antemano 3-4 productos gancho que llamen la atención (termos, sets de bazar, electro chico de temporada) y **saber de memoria la cuenta de margen de cada uno**: "lo comprás a tanto, lo vendés a tanto, te quedan $X por unidad". El comerciante piensa en plata por unidad, no en porcentajes — la cuenta hecha en voz alta frente al producto en pantalla es lo que vende.
+2. **Tarjeta o flyer con QR** a `hefaproductos.com.ar/mayoristas` y el WhatsApp del vendedor. Para dejar cuando el dueño no está o no hay tiempo.
+3. **1-2 productos físicos de muestra** (un termo es ideal: liviano, se luce, margen alto).
+4. **Formulario de alta a mano:** el vendedor carga la solicitud desde su celu en el momento, con los datos que el comerciante le dicta. Nunca dejar que "después lo completo yo" — ahí se cae el 80%.
+
+---
+
+## 6. Seguimiento post-visita
+
+**Mismo día (si no se concretó el alta):**
+> "Hola [nombre], soy [vendedor] de HEFA, pasé hoy por tu local. Te dejo el link del catálogo mayorista para que lo veas tranquilo: hefaproductos.com.ar/mayoristas — Cualquier duda me escribís por acá. ¡Gracias por el tiempo!"
+
+**A las 48-72hs:**
+> "Hola [nombre], ¿pudiste mirar el catálogo? Te comento que [producto gancho de temporada] está saliendo mucho en los comercios de la zona, por si querés arrancar con eso. El alta son 2 minutos y la hago yo por vos si me pasás los datos."
+
+**Si se activó pero no pidió en 7 días:**
+> "Hola [nombre], vi que ya tenés tu cuenta activa 💪 ¿Te doy una mano para armar el primer pedido? Decime qué rubros te interesan y te armo una sugerencia para llegar al mínimo con lo que mejor rota."
+
+---
+
+## 7. Decisiones que faltan cerrar
+
+1. **Monto mínimo de pedido** (el mismo que configures en el admin) — aparece en la FAQ del mínimo y en el punto 5 de la propuesta.
+2. **% de descuento promedio** a comunicar (el real de la config, redondeado para abajo al comunicar: si es 27%, decir "más del 25%") — aparece en el punto 1 de la propuesta y en la FAQ de margen.
+3. **Incentivo de primer pedido** (opcional pero recomendado): un % extra o regalo en la primera compra. Es el empujón que convierte la cuenta activada en cliente real. Con el envío ya gratis para todos, un descuento extra chico en el primer pedido es el candidato natural.
+4. **Los 3-4 productos gancho** que el vendedor lleva marcados en el celu, con la cuenta de margen verificada de la base actual.
+
+**Ya definidas (incorporadas en el documento):** pago en efectivo y transferencia · precios finales sin IVA, factura conversable con ajuste de precio · entrega sin cargo en zonas cercanas · stock en 24-48hs, bajo pedido desde el lunes siguiente, conversable antes de pedir · sin exclusividad de zona · sin hoja impresa, la demo es la web.
