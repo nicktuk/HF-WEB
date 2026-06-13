@@ -1,11 +1,10 @@
 """Public mayorista endpoints — sin autenticación requerida."""
 import logging
-import threading
 import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -16,9 +15,20 @@ from app.config import settings
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# Hash dummy para evitar timing attacks cuando el usuario no existe
-_DUMMY_HASH = _pwd.hash("__dummy_init__")
+# Hash dummy hardcodeado para timing-safe comparison cuando el usuario no existe.
+# Evita inicializar bcrypt en tiempo de import (incompatible con bcrypt>=4.0 + passlib).
+_DUMMY_HASH = b"$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"
+
+
+def _hash_password(password: str) -> str:
+    return _bcrypt.hashpw(password.encode()[:72], _bcrypt.gensalt()).decode()
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return _bcrypt.checkpw(plain.encode()[:72], hashed.encode())
+    except Exception:
+        return False
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -70,7 +80,7 @@ async def crear_solicitud(
     if not body.celular and not body.email:
         raise HTTPException(status_code=422, detail="Ingresá al menos un celular o email.")
 
-    password_hash = _pwd.hash(body.password)
+    password_hash = _hash_password(body.password)
     mayorista = Mayorista(
         nombre=body.nombre.strip(),
         apellido=body.apellido.strip(),
@@ -105,8 +115,8 @@ async def login_mayorista(
     ).first()
 
     # Siempre correr bcrypt para evitar timing attacks
-    stored_hash = mayorista.password_hash if mayorista else _DUMMY_HASH
-    password_ok = _pwd.verify(body.password, stored_hash)
+    stored = mayorista.password_hash.encode() if mayorista else _DUMMY_HASH
+    password_ok = _verify_password(body.password, stored.decode() if isinstance(stored, bytes) else stored)
 
     if not mayorista or not password_ok:
         raise HTTPException(status_code=401, detail="credenciales_invalidas")
