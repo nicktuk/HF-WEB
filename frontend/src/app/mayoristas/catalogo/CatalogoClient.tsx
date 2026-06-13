@@ -26,7 +26,7 @@ export function CatalogoClient({ productos, montoMinimo }: Props) {
   const [categoria, setCategoria] = useState('')
   const add = useMayoristaCart(s => s.add)
 
-  const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))] as string[]
+  const categorias = Array.from(new Set(productos.map(p => p.categoria).filter(Boolean))) as string[]
 
   const filtered = productos.filter(p => {
     const matchSearch = p.nombre.toLowerCase().includes(search.toLowerCase())
