@@ -31,6 +31,7 @@ import {
   Tag,
   Plane,
   Users,
+  Store,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -73,6 +74,13 @@ const configSubmenu = [
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
+const mayoristasSubmenu = [
+  { name: 'Cuentas', href: '/admin/mayoristas', icon: Users },
+  { name: 'Pedidos', href: '/admin/mayoristas/pedidos', icon: ClipboardList },
+  { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
+  { name: 'Configuración', href: '/admin/mayoristas/config', icon: Settings2 },
+];
+
 const importScorerSubmenu = [
   { name: 'Dashboard', href: '/admin/import-scorer', icon: Plane },
   { name: 'Radar', href: '/admin/import-scorer/radar', icon: LineChart },
@@ -87,7 +95,7 @@ const importScorerSubmenu = [
   { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
 ];
 
-type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer';
+type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer' | 'mayoristas';
 
 function useSubmenuState(pathname: string) {
   const [open, setOpen] = useState<Record<SubmenuKey, boolean>>({
@@ -96,6 +104,7 @@ function useSubmenuState(pathname: string) {
     analitica: false,
     config: false,
     importScorer: false,
+    mayoristas: false,
   });
 
   useEffect(() => {
@@ -106,6 +115,7 @@ function useSubmenuState(pathname: string) {
       analitica: analiticaSubmenu.some((i) => pathname.startsWith(i.href)),
       config: configSubmenu.some((i) => pathname.startsWith(i.href)),
       importScorer: pathname.startsWith('/admin/import-scorer'),
+      mayoristas: mayoristasSubmenu.some((i) => pathname.startsWith(i.href)),
     }));
   }, [pathname]);
 
@@ -379,6 +389,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
                 <div>
                   <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Mayoristas
+                  </p>
+                  <SidebarSubmenu
+                    label="Mayoristas"
+                    icon={Store}
+                    items={mayoristasSubmenu}
+                    isOpen={open.mayoristas}
+                    onToggle={() => toggle('mayoristas')}
+                    pathname={pathname}
+                  />
+                </div>
+
+                <div>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
                     Importación
                   </p>
                   <SidebarSubmenu
@@ -489,6 +513,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   items={configSubmenu}
                   isOpen={open.config}
                   onToggle={() => toggle('config')}
+                  pathname={pathname}
+                />
+                <MobileSubmenu
+                  label="Mayoristas"
+                  icon={Store}
+                  items={mayoristasSubmenu}
+                  isOpen={open.mayoristas}
+                  onToggle={() => toggle('mayoristas')}
                   pathname={pathname}
                 />
                 <MobileSubmenu

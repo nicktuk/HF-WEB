@@ -1,7 +1,7 @@
 """Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, mayoristas_public, mayoristas_protected
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, mayoristas_public, mayoristas_protected, mayoristas_admin
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -52,6 +52,13 @@ api_router.include_router(
     admin.router,
     prefix="/admin",
     tags=["admin"]
+)
+
+# Mayoristas admin (superadmin only)
+api_router.include_router(
+    mayoristas_admin.router,
+    prefix="/admin",
+    tags=["mayoristas-admin"]
 )
 
 # Source websites management
