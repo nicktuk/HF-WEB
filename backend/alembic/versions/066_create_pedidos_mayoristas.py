@@ -12,21 +12,27 @@ down_revision = '065'
 branch_labels = None
 depends_on = None
 
-estado_pedido_enum = sa.Enum(
+# create_type=False: el tipo se crea manualmente con SQL para evitar
+# que op.create_table() intente crearlo por segunda vez y falle.
+_estado_col = sa.Enum(
     'recibido', 'confirmado', 'preparando', 'entregado', 'cancelado',
     name='estado_pedido_mayorista_enum',
+    create_type=False,
 )
 
 
 def upgrade():
-    estado_pedido_enum.create(op.get_bind(), checkfirst=True)
+    op.execute(
+        "CREATE TYPE estado_pedido_mayorista_enum AS ENUM "
+        "('recibido', 'confirmado', 'preparando', 'entregado', 'cancelado')"
+    )
     op.create_table(
         'pedidos_mayoristas',
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('mayorista_id', sa.Integer(), sa.ForeignKey('mayoristas.id', ondelete='RESTRICT'), nullable=False),
         sa.Column('vendedor_nombre', sa.Text(), nullable=True),
         sa.Column('vendedor_celular_wa', sa.Text(), nullable=True),
-        sa.Column('estado', estado_pedido_enum, nullable=False, server_default='recibido'),
+        sa.Column('estado', _estado_col, nullable=False, server_default='recibido'),
         sa.Column('total', sa.Numeric(12, 2), nullable=False, server_default='0'),
         sa.Column('notas', sa.Text(), nullable=True),
         sa.Column('modificado_at', sa.DateTime(), nullable=True),
@@ -63,4 +69,4 @@ def downgrade():
     op.drop_index('ix_pedidos_mayoristas_estado', 'pedidos_mayoristas')
     op.drop_index('ix_pedidos_mayoristas_mayorista_id', 'pedidos_mayoristas')
     op.drop_table('pedidos_mayoristas')
-    estado_pedido_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS estado_pedido_mayorista_enum")
