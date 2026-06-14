@@ -53,10 +53,15 @@ def _precio_comercio(
     costo: Decimal,
     override: Optional[Decimal],
     cfg: ConfiguracionComercio,
+    precio_venta: Optional[int] = None,
 ) -> Decimal:
     if override is not None:
         return override
-    precio = float(costo) * (1 + float(cfg.descuento_porcentaje) / 100)
+    if cfg.tipo_markup == 'variable' and precio_venta is not None:
+        # promedio entre precio de compra y precio de venta (= mitad del markup actual)
+        precio = (float(costo) + float(precio_venta)) / 2
+    else:
+        precio = float(costo) * (1 + float(cfg.descuento_porcentaje) / 100)
     if cfg.redondeo > 0:
         precio = math.ceil(precio / cfg.redondeo) * cfg.redondeo
     return Decimal(str(int(precio)))
@@ -116,7 +121,7 @@ async def get_catalogo(
         stock = _stock_total(db, p.id)
         if stock == 0 and not p.is_on_demand:
             continue
-        precio_m = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg)
+        precio_m = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg, p.final_price)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -184,7 +189,7 @@ async def crear_pedido(
         if p.original_price is None:
             raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
 
-        precio_u = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg)
+        precio_u = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg, p.final_price)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})

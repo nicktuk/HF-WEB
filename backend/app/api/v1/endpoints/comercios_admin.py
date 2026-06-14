@@ -198,6 +198,7 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "descuento_porcentaje": float(cfg.descuento_porcentaje),
         "redondeo": int(cfg.redondeo),
         "monto_minimo_pedido": float(cfg.monto_minimo_pedido),
+        "tipo_markup": cfg.tipo_markup or 'fijo',
     }
 
 
@@ -221,10 +222,14 @@ async def update_comercio_config(
     cfg = db.query(ConfiguracionComercio).first()
     if not cfg:
         raise HTTPException(404, "Configuración no encontrada")
+    if "tipo_markup" in body:
+        if body["tipo_markup"] not in ("fijo", "variable"):
+            raise HTTPException(400, "tipo_markup debe ser 'fijo' o 'variable'")
+        cfg.tipo_markup = body["tipo_markup"]
     if "descuento_porcentaje" in body:
         val = float(body["descuento_porcentaje"])
-        if not 0 <= val <= 100:
-            raise HTTPException(400, "descuento_porcentaje debe estar entre 0 y 100")
+        if val < 0:
+            raise HTTPException(400, "descuento_porcentaje debe ser >= 0")
         cfg.descuento_porcentaje = val
     if "redondeo" in body:
         r = int(body["redondeo"])

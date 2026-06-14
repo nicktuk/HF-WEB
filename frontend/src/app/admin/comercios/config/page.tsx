@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useApiKey } from '@/hooks/useAuth'
@@ -14,6 +14,7 @@ function apiFetch(path: string, apiKey: string, options?: RequestInit) {
 
 export default function ConfigComercioPage() {
   const apiKey = useApiKey() ?? ''
+  const [tipoMarkup, setTipoMarkup] = useState<'fijo' | 'variable'>('fijo')
   const [descuento, setDescuento] = useState('')
   const [redondeo, setRedondeo] = useState('')
   const [montoMinimo, setMontoMinimo] = useState('')
@@ -27,6 +28,7 @@ export default function ConfigComercioPage() {
     apiFetch('/admin/comercios/config', apiKey).then(async res => {
       if (res.ok) {
         const d = await res.json()
+        setTipoMarkup(d.tipo_markup ?? 'fijo')
         setDescuento(String(d.descuento_porcentaje))
         setRedondeo(String(d.redondeo))
         setMontoMinimo(String(d.monto_minimo_pedido))
@@ -42,6 +44,7 @@ export default function ConfigComercioPage() {
     const res = await apiFetch('/admin/comercios/config', apiKey, {
       method: 'PATCH',
       body: JSON.stringify({
+        tipo_markup: tipoMarkup,
         descuento_porcentaje: parseFloat(descuento),
         redondeo: parseInt(redondeo),
         monto_minimo_pedido: parseFloat(montoMinimo),
@@ -62,34 +65,68 @@ export default function ConfigComercioPage() {
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuración comercio</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Parámetros globales del canal comercio</p>
+        <h1 className="text-2xl font-bold text-gray-900">Configuración comercios</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Parámetros globales del canal comercios</p>
       </div>
 
       <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+
+        {/* Tipo de markup */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Margen sobre precio de compra (%)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            max="10000"
-            value={descuento}
-            onChange={e => setDescuento(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-            required
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Se aplica sobre el último precio de compra. Ej: 30 → precio compra × 1,30. El resultado se redondea según el valor de abajo.
-          </p>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de markup</label>
+          <div className="flex gap-3">
+            {(['fijo', 'variable'] as const).map(tipo => (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => setTipoMarkup(tipo)}
+                className={`flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors ${
+                  tipoMarkup === tipo
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                <p className="font-medium capitalize">{tipo}</p>
+                <p className={`text-xs mt-0.5 ${tipoMarkup === tipo ? 'text-gray-300' : 'text-gray-400'}`}>
+                  {tipo === 'fijo'
+                    ? 'Margen fijo sobre precio de compra'
+                    : 'Mitad del markup actual de cada producto'}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* Margen fijo — solo visible en modo fijo */}
+        {tipoMarkup === 'fijo' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Margen sobre precio de compra (%)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={descuento}
+              onChange={e => setDescuento(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              required
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Ej: 30 → precio compra × 1,30. Se redondea según el valor de abajo.
+            </p>
+          </div>
+        )}
+
+        {tipoMarkup === 'variable' && (
+          <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-700">
+            El precio de cada comercio se calcula como el promedio entre su precio de compra y su precio de venta actual,
+            lo que equivale a dividir a la mitad el markup vigente del producto.
+          </div>
+        )}
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Redondeo ($)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Redondeo ($)</label>
           <input
             type="number"
             step="1"
@@ -100,14 +137,12 @@ export default function ConfigComercioPage() {
             required
           />
           <p className="text-xs text-gray-400 mt-1">
-            El precio se redondea al múltiplo superior más cercano. Ej: 100 redondea $1.234 a $1.300. Poner 0 para no redondear.
+            Redondea al múltiplo superior. Ej: 100 → $1.234 queda en $1.300. Poner 0 para no redondear.
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Monto mínimo de pedido ($)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Monto mínimo de pedido ($)</label>
           <input
             type="number"
             step="1"
@@ -118,7 +153,7 @@ export default function ConfigComercioPage() {
             required
           />
           <p className="text-xs text-gray-400 mt-1">
-            Monto mínimo para poder confirmar un pedido. Poner 0 para no tener mínimo.
+            Poner 0 para no tener mínimo.
           </p>
         </div>
 

@@ -3,6 +3,7 @@ Comercio models - Canal comercios: vendedores, comercios, configuracion y pedido
 Las tablas DB conservan sus nombres originales (mayoristas, pedidos_mayoristas, etc.)
 """
 import enum
+import sqlalchemy as sa
 from sqlalchemy import Column, Integer, Boolean, Numeric, ForeignKey, Text, DateTime, Enum
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -67,6 +68,9 @@ class ConfiguracionComercio(Base):
     descuento_porcentaje = Column(Numeric(5, 2), nullable=False, default=25)
     redondeo = Column(Integer, nullable=False, default=100)
     monto_minimo_pedido = Column(Numeric(12, 2), nullable=False, default=0)
+    # 'fijo': usar descuento_porcentaje sobre precio_compra
+    # 'variable': mitad del markup actual del producto (promedio entre compra y venta)
+    tipo_markup = Column(sa.String(10), nullable=False, default='fijo')
 
 
 class PedidoComercio(Base):
