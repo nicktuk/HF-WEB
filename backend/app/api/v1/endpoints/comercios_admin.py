@@ -199,6 +199,7 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "redondeo": int(cfg.redondeo),
         "monto_minimo_pedido": float(cfg.monto_minimo_pedido),
         "tipo_markup": cfg.tipo_markup or 'fijo',
+        "mostrar_todos_con_stock": bool(cfg.mostrar_todos_con_stock),
     }
 
 
@@ -222,6 +223,8 @@ async def update_comercio_config(
     cfg = db.query(ConfiguracionComercio).first()
     if not cfg:
         raise HTTPException(404, "Configuración no encontrada")
+    if "mostrar_todos_con_stock" in body:
+        cfg.mostrar_todos_con_stock = bool(body["mostrar_todos_con_stock"])
     if "tipo_markup" in body:
         if body["tipo_markup"] not in ("fijo", "variable"):
             raise HTTPException(400, "tipo_markup debe ser 'fijo' o 'variable'")

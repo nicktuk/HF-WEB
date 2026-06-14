@@ -71,6 +71,8 @@ class ConfiguracionComercio(Base):
     # 'fijo': usar descuento_porcentaje sobre precio_compra
     # 'variable': mitad del markup actual del producto (promedio entre compra y venta)
     tipo_markup = Column(sa.String(10), nullable=False, default='fijo')
+    # Si True: incluye en el catálogo todos los productos habilitados con stock > 0 y markup > 50%
+    mostrar_todos_con_stock = Column(Boolean, nullable=False, default=False)
 
 
 class PedidoComercio(Base):

@@ -107,19 +107,25 @@ async def get_catalogo(
 ):
     cfg = _get_config(db)
 
-    products = (
-        db.query(Product)
-        .filter(Product.es_mayorista == True, Product.enabled == True)
-        .order_by(Product.display_order, Product.id)
-        .all()
-    )
+    q = db.query(Product).filter(Product.enabled == True)
+    if cfg.mostrar_todos_con_stock:
+        from sqlalchemy import or_
+        q = q.filter(
+            or_(
+                Product.es_mayorista == True,
+                Product.markup_percentage > 50,
+            )
+        )
+    else:
+        q = q.filter(Product.es_mayorista == True)
+    products = q.order_by(Product.display_order, Product.id).all()
 
     items = []
     for p in products:
         if p.original_price is None:
             continue
         stock = _stock_total(db, p.id)
-        if stock == 0 and not p.is_on_demand:
+        if stock == 0 and not (p.es_mayorista and p.is_on_demand):
             continue
         precio_m = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg, p.final_price)
         items.append({

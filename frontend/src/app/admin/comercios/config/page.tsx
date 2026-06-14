@@ -15,6 +15,7 @@ function apiFetch(path: string, apiKey: string, options?: RequestInit) {
 export default function ConfigComercioPage() {
   const apiKey = useApiKey() ?? ''
   const [tipoMarkup, setTipoMarkup] = useState<'fijo' | 'variable'>('fijo')
+  const [mostrarTodos, setMostrarTodos] = useState(false)
   const [descuento, setDescuento] = useState('')
   const [redondeo, setRedondeo] = useState('')
   const [montoMinimo, setMontoMinimo] = useState('')
@@ -29,6 +30,7 @@ export default function ConfigComercioPage() {
       if (res.ok) {
         const d = await res.json()
         setTipoMarkup(d.tipo_markup ?? 'fijo')
+        setMostrarTodos(!!d.mostrar_todos_con_stock)
         setDescuento(String(d.descuento_porcentaje))
         setRedondeo(String(d.redondeo))
         setMontoMinimo(String(d.monto_minimo_pedido))
@@ -45,6 +47,7 @@ export default function ConfigComercioPage() {
       method: 'PATCH',
       body: JSON.stringify({
         tipo_markup: tipoMarkup,
+        mostrar_todos_con_stock: mostrarTodos,
         descuento_porcentaje: parseFloat(descuento),
         redondeo: parseInt(redondeo),
         monto_minimo_pedido: parseFloat(montoMinimo),
@@ -70,6 +73,23 @@ export default function ConfigComercioPage() {
       </div>
 
       <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+
+        {/* Catálogo extendido */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Mostrar todos los productos con stock</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Incluye en el catálogo todos los productos habilitados con stock &gt; 0 y markup &gt; 50%, además de los marcados como comercio.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMostrarTodos(v => !v)}
+            className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${mostrarTodos ? 'bg-gray-900' : 'bg-gray-200'}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${mostrarTodos ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
 
         {/* Tipo de markup */}
         <div>
