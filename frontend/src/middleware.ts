@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 
-const COOKIE = 'hefa_mayorista_session'
-const MAYORISTA_LOGIN = '/mayoristas'
+const COOKIE = 'hefa_comercio_session'
+const MAYORISTA_LOGIN = '/comercios'
 
 function getSecret() {
-  return new TextEncoder().encode(process.env.MAYORISTA_JWT_SECRET ?? '')
+  return new TextEncoder().encode(process.env.COMERCIO_JWT_SECRET ?? '')
 }
 
 export async function middleware(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
     const { payload } = await jwtVerify(token, getSecret())
 
     // El estado viene en el JWT. Si no es activo, limpiar cookie y redirigir.
-    // Para detectar suspensiones recientes la página llama a /api/mayoristas/auth/me
+    // Para detectar suspensiones recientes la página llama a /api/comercios/auth/me
     // que revalida contra DB y renueva el JWT con el estado actualizado.
     if (payload.estado !== 'activo') {
       const res = NextResponse.redirect(new URL(MAYORISTA_LOGIN, request.url))
@@ -37,9 +37,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/mayoristas/catalogo/:path*',
-    '/mayoristas/carrito/:path*',
-    '/mayoristas/pedidos/:path*',
-    '/mayoristas/pedido/:path*',
+    '/comercios/catalogo/:path*',
+    '/comercios/carrito/:path*',
+    '/comercios/pedidos/:path*',
+    '/comercios/pedido/:path*',
   ],
 }

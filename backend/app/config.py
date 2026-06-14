@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuración centralizada de la aplicación.
 Usa pydantic-settings para validación y carga de variables de entorno.
 """
@@ -101,14 +101,14 @@ class Settings(BaseSettings):
     MP_ACCESS_TOKEN: str = ""
     MP_PUBLIC_KEY: str = ""
 
-    # Canal Mayorista
-    MAYORISTA_JWT_SECRET: str = "change_me_mayorista_secret"
+    # Canal Comercio
+    COMERCIO_JWT_SECRET: str = "change_me_comercio_secret"
     NEXT_PUBLIC_BASE_URL: str = "https://hefaproductos.com.ar"
 
-    # Canal Mayorista — webhooks n8n
-    N8N_WEBHOOK_SOLICITUD_MAYORISTA: str = ""
-    N8N_WEBHOOK_ACTIVACION_MAYORISTA: str = ""
-    N8N_WEBHOOK_PEDIDO_MAYORISTA: str = ""
+    # Canal Comercio — webhooks n8n
+    N8N_WEBHOOK_SOLICITUD_COMERCIO: str = ""
+    N8N_WEBHOOK_ACTIVACION_COMERCIO: str = ""
+    N8N_WEBHOOK_PEDIDO_COMERCIO: str = ""
 
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001

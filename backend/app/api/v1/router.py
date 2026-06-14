@@ -1,7 +1,7 @@
-"""Main API v1 router."""
+﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, mayoristas_public, mayoristas_protected, mayoristas_admin
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -26,18 +26,18 @@ api_router.include_router(
     tags=["public"]
 )
 
-# Mayorista public endpoints (login, solicitud, estado)
+# Comercio public endpoints (login, solicitud, estado)
 api_router.include_router(
-    mayoristas_public.router,
+    comercios_public.router,
     prefix="/public",
-    tags=["mayoristas-public"]
+    tags=["comercios-public"]
 )
 
-# Mayorista protected endpoints (catalogo, pedidos — requieren JWT)
+# Comercio protected endpoints (catalogo, pedidos — requieren JWT)
 api_router.include_router(
-    mayoristas_protected.router,
-    prefix="/mayoristas",
-    tags=["mayoristas"]
+    comercios_protected.router,
+    prefix="/comercios",
+    tags=["comercios"]
 )
 
 # Mercado Pago Checkout Bricks
@@ -54,11 +54,11 @@ api_router.include_router(
     tags=["admin"]
 )
 
-# Mayoristas admin (superadmin only)
+# Comercios admin (superadmin only)
 api_router.include_router(
-    mayoristas_admin.router,
+    comercios_admin.router,
     prefix="/admin",
-    tags=["mayoristas-admin"]
+    tags=["comercios-admin"]
 )
 
 # Source websites management

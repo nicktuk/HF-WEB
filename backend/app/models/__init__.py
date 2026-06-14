@@ -1,4 +1,4 @@
-"""SQLAlchemy models."""
+﻿"""SQLAlchemy models."""
 from app.models.base import Base
 from app.models.admin_user import AdminUser
 from app.models.customer import Customer
@@ -15,14 +15,14 @@ from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
 from app.models.section import Section, SectionProduct
 from app.models.expense import Expense
-from app.models.mayorista import (
+from app.models.comercio import (
     Vendedor,
-    Mayorista,
-    ConfiguracionMayorista,
-    PedidoMayorista,
-    PedidoMayoristaItem,
-    EstadoMayorista,
-    EstadoPedidoMayorista,
+    Comercio,
+    ConfiguracionComercio,
+    PedidoComercio,
+    PedidoComercioItem,
+    EstadoComercio,
+    EstadoPedidoComercio,
 )
 from app.models.import_scorer import (
     ImportRubroTemplate,
@@ -65,12 +65,12 @@ __all__ = [
     "SectionProduct",
     "Expense",
     "Vendedor",
-    "Mayorista",
-    "ConfiguracionMayorista",
-    "PedidoMayorista",
-    "PedidoMayoristaItem",
-    "EstadoMayorista",
-    "EstadoPedidoMayorista",
+    "Comercio",
+    "ConfiguracionComercio",
+    "PedidoComercio",
+    "PedidoComercioItem",
+    "EstadoComercio",
+    "EstadoPedidoComercio",
     "ImportRubroTemplate",
     "ImportRubro",
     "ImportRetailer",

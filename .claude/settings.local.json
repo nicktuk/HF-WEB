@@ -103,7 +103,15 @@
       "mcp__mercadopago__save_webhook",
       "PowerShell(Get-ChildItem -Path \"D:\\\\Desarrollo\\\\HF WEB\" -Directory | Select-Object -First 20 | ForEach-Object { $_.Name })",
       "Bash(Get-ChildItem \"D:\\\\Desarrollo\\\\HF WEB\\\\frontend\\\\src\\\\app\\\\admin\\\\productos\" -Recurse)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(mv backend/app/api/v1/endpoints/mayoristas_public.py backend/app/api/v1/endpoints/comercios_public.py)",
+      "Bash(mv backend/app/api/v1/endpoints/mayoristas_protected.py backend/app/api/v1/endpoints/comercios_protected.py)",
+      "Bash(mv backend/app/api/v1/endpoints/mayoristas_admin.py backend/app/api/v1/endpoints/comercios_admin.py)",
+      "Bash(mv backend/app/models/mayorista.py backend/app/models/comercio.py)",
+      "Bash(mv frontend/src/hooks/useMayoristaCart.ts frontend/src/hooks/useComercioCart.ts)",
+      "Bash(mv frontend/src/app/mayoristas frontend/src/app/comercios)",
+      "Bash(mv \"frontend/src/app/api/mayoristas\" \"frontend/src/app/api/comercios\")",
+      "Bash(mv frontend/src/app/admin/mayoristas frontend/src/app/admin/comercios)"
     ]
   }
 }

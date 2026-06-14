@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -74,11 +74,11 @@ const configSubmenu = [
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];
 
-const mayoristasSubmenu = [
-  { name: 'Cuentas', href: '/admin/mayoristas', icon: Users },
-  { name: 'Pedidos', href: '/admin/mayoristas/pedidos', icon: ClipboardList },
+const comerciosSubmenu = [
+  { name: 'Cuentas', href: '/admin/comercios', icon: Users },
+  { name: 'Pedidos', href: '/admin/comercios/pedidos', icon: ClipboardList },
   { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
-  { name: 'Configuración', href: '/admin/mayoristas/config', icon: Settings2 },
+  { name: 'Configuración', href: '/admin/comercios/config', icon: Settings2 },
 ];
 
 const importScorerSubmenu = [
@@ -95,7 +95,7 @@ const importScorerSubmenu = [
   { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
 ];
 
-type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer' | 'mayoristas';
+type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer' | 'comercios';
 
 function useSubmenuState(pathname: string) {
   const [open, setOpen] = useState<Record<SubmenuKey, boolean>>({
@@ -104,7 +104,7 @@ function useSubmenuState(pathname: string) {
     analitica: false,
     config: false,
     importScorer: false,
-    mayoristas: false,
+    comercios: false,
   });
 
   useEffect(() => {
@@ -115,7 +115,7 @@ function useSubmenuState(pathname: string) {
       analitica: analiticaSubmenu.some((i) => pathname.startsWith(i.href)),
       config: configSubmenu.some((i) => pathname.startsWith(i.href)),
       importScorer: pathname.startsWith('/admin/import-scorer'),
-      mayoristas: mayoristasSubmenu.some((i) => pathname.startsWith(i.href)),
+      comercios: comerciosSubmenu.some((i) => pathname.startsWith(i.href)),
     }));
   }, [pathname]);
 
@@ -389,14 +389,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
                 <div>
                   <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Mayoristas
+                    Comercios
                   </p>
                   <SidebarSubmenu
-                    label="Mayoristas"
+                    label="Comercios"
                     icon={Store}
-                    items={mayoristasSubmenu}
-                    isOpen={open.mayoristas}
-                    onToggle={() => toggle('mayoristas')}
+                    items={comerciosSubmenu}
+                    isOpen={open.comercios}
+                    onToggle={() => toggle('comercios')}
                     pathname={pathname}
                   />
                 </div>
@@ -516,11 +516,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   pathname={pathname}
                 />
                 <MobileSubmenu
-                  label="Mayoristas"
+                  label="Comercios"
                   icon={Store}
-                  items={mayoristasSubmenu}
-                  isOpen={open.mayoristas}
-                  onToggle={() => toggle('mayoristas')}
+                  items={comerciosSubmenu}
+                  isOpen={open.comercios}
+                  onToggle={() => toggle('comercios')}
                   pathname={pathname}
                 />
                 <MobileSubmenu
