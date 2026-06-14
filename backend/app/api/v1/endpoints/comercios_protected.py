@@ -107,16 +107,31 @@ async def get_catalogo(
 ):
     cfg = _get_config(db)
 
-    products = (
-        db.query(Product)
-        .filter(
-            Product.enabled == True,
-            Product.es_mayorista == True if not cfg.mostrar_todos_con_stock
-            else Product.markup_percentage > 50,
+    if cfg.mostrar_todos_con_stock:
+        from sqlalchemy import case as sa_case, and_
+        # markup efectivo: usa custom_price si existe, sino calcula con markup_percentage
+        precio_efectivo = sa_case(
+            (Product.custom_price.isnot(None), Product.custom_price),
+            else_=Product.original_price * (1 + Product.markup_percentage / 100),
         )
-        .order_by(Product.display_order, Product.id)
-        .all()
-    )
+        markup_efectivo = (precio_efectivo - Product.original_price) / Product.original_price * 100
+        products = (
+            db.query(Product)
+            .filter(
+                Product.enabled == True,
+                Product.original_price.isnot(None),
+                markup_efectivo > 50,
+            )
+            .order_by(Product.display_order, Product.id)
+            .all()
+        )
+    else:
+        products = (
+            db.query(Product)
+            .filter(Product.enabled == True, Product.es_mayorista == True)
+            .order_by(Product.display_order, Product.id)
+            .all()
+        )
 
     items = []
     for p in products:
