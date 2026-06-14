@@ -104,7 +104,7 @@ async def get_catalogo(
 
     products = (
         db.query(Product)
-        .filter(Product.es_comercio == True, Product.enabled == True)
+        .filter(Product.es_mayorista == True, Product.enabled == True)
         .order_by(Product.display_order, Product.id)
         .all()
     )
@@ -116,7 +116,7 @@ async def get_catalogo(
         stock = _stock_total(db, p.id)
         if stock == 0 and not p.is_on_demand:
             continue
-        precio_m = _precio_comercio(p.original_price, p.precio_comercio_override, cfg)
+        precio_m = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -171,7 +171,7 @@ async def crear_pedido(
             continue
         p = db.query(Product).filter(
             Product.id == inp.producto_id,
-            Product.es_comercio == True,
+            Product.es_mayorista == True,
             Product.enabled == True,
         ).first()
         if not p:
@@ -184,7 +184,7 @@ async def crear_pedido(
         if p.original_price is None:
             raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
 
-        precio_u = _precio_comercio(p.original_price, p.precio_comercio_override, cfg)
+        precio_u = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})
