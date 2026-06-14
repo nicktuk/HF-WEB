@@ -18,6 +18,7 @@ from app.models.product import Product, ProductImage, ProductColorStock
 from app.models.comercio import (
     Comercio, ConfiguracionComercio, PedidoComercio, PedidoComercioItem
 )
+from app.models.stock import StockPurchase
 from app.config import settings
 
 router = APIRouter()
@@ -67,6 +68,13 @@ def _precio_comercio(
     return Decimal(str(int(precio)))
 
 
+def _ultimo_precio_compra(db: Session, product_id: int) -> Optional[Decimal]:
+    result = db.query(StockPurchase.unit_price).filter(
+        StockPurchase.product_id == product_id
+    ).order_by(StockPurchase.purchase_date.desc()).first()
+    return Decimal(str(result[0])) if result else None
+
+
 def _stock_total(db: Session, product_id: int) -> int:
     result = db.query(
         func.coalesce(func.sum(ProductColorStock.quantity), 0)
@@ -108,20 +116,9 @@ async def get_catalogo(
     cfg = _get_config(db)
 
     if cfg.mostrar_todos_con_stock:
-        from sqlalchemy import case as sa_case, and_
-        # markup efectivo: usa custom_price si existe, sino calcula con markup_percentage
-        precio_efectivo = sa_case(
-            (Product.custom_price.isnot(None), Product.custom_price),
-            else_=Product.original_price * (1 + Product.markup_percentage / 100),
-        )
-        markup_efectivo = (precio_efectivo - Product.original_price) / Product.original_price * 100
         products = (
             db.query(Product)
-            .filter(
-                Product.enabled == True,
-                Product.original_price.isnot(None),
-                markup_efectivo > 50,
-            )
+            .filter(Product.enabled == True)
             .order_by(Product.display_order, Product.id)
             .all()
         )
@@ -135,16 +132,30 @@ async def get_catalogo(
 
     items = []
     for p in products:
-        if p.original_price is None:
-            continue
-        stock = _stock_total(db, p.id)
+        costo = _ultimo_precio_compra(db, p.id)
+
         if cfg.mostrar_todos_con_stock:
+            if costo is None:
+                continue
+            stock = _stock_total(db, p.id)
             if stock == 0:
                 continue
+            precio_venta = p.final_price
+            if precio_venta is None:
+                continue
+            markup = (float(precio_venta) - float(costo)) / float(costo) * 100
+            if markup <= 50:
+                continue
         else:
+            if costo is None:
+                costo = p.original_price
+            if costo is None:
+                continue
+            stock = _stock_total(db, p.id)
             if stock == 0 and not p.is_on_demand:
                 continue
-        precio_m = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg, p.final_price)
+
+        precio_m = _precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -209,10 +220,11 @@ async def crear_pedido(
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
-        if p.original_price is None:
+        costo = _ultimo_precio_compra(db, p.id) or p.original_price
+        if costo is None:
             raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
 
-        precio_u = _precio_comercio(p.original_price, p.precio_mayorista_override, cfg, p.final_price)
+        precio_u = _precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})
