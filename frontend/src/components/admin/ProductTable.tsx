@@ -324,7 +324,7 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-emerald-700">
                       {product.original_price && Number(product.original_price) > 0
-                        ? `${((finalPrice - Number(product.original_price)) / Number(product.original_price) * 100).toFixed(1)}%`
+                        ? `${((finalPrice - Number(product.original_price)) / finalPrice * 100).toFixed(1)}%`
                         : '-'}
                     </td>
                   </>
