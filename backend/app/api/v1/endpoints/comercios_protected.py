@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import get_db
-from app.models.product import Product, ProductImage, ProductColorStock
+from app.models.product import Product, ProductImage
 from app.models.comercio import (
     Comercio, ConfiguracionComercio, PedidoComercio, PedidoComercioItem
 )
@@ -77,8 +77,8 @@ def _ultimo_precio_compra(db: Session, product_id: int) -> Optional[Decimal]:
 
 def _stock_total(db: Session, product_id: int) -> int:
     result = db.query(
-        func.coalesce(func.sum(ProductColorStock.quantity), 0)
-    ).filter(ProductColorStock.product_id == product_id).scalar()
+        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0)
+    ).filter(StockPurchase.product_id == product_id).scalar()
     return int(result or 0)
 
 
