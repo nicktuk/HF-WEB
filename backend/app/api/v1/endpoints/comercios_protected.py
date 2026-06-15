@@ -143,7 +143,7 @@ async def get_catalogo(
             precio_venta = p.final_price
             if precio_venta is None:
                 continue
-            markup = (float(precio_venta) - float(costo)) / float(costo) * 100
+            markup = (float(precio_venta) - float(costo)) / float(precio_venta) * 100
             if markup <= 50:
                 continue
         else:
