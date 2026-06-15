@@ -138,6 +138,11 @@ export function PriceIntelligence({
                 {formatPrice(originalPrice)} + {markup}% markup
               </p>
             )}
+            {originalPrice > 0 && (
+              <p className="text-sm font-medium text-emerald-600 mt-2">
+                Ganancia bruta: {((finalPrice - originalPrice) / originalPrice * 100).toFixed(1)}%
+              </p>
+            )}
           </div>
 
           {/* Market Position Bar */}

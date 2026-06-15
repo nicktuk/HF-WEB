@@ -168,9 +168,14 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
               Precio Origen
             </th>
             {showMarkup && (
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Markup
-              </th>
+              <>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Markup
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ganancia
+                </th>
+              </>
             )}
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Precio Final
@@ -311,11 +316,18 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                   {formatPrice(product.original_price)}
                 </td>
 
-                {/* Markup */}
+                {/* Markup + Ganancia */}
                 {showMarkup && (
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {Number(product.markup_percentage)}%
-                  </td>
+                  <>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {Number(product.markup_percentage)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                      {product.original_price && Number(product.original_price) > 0
+                        ? `${((finalPrice - Number(product.original_price)) / Number(product.original_price) * 100).toFixed(1)}%`
+                        : '-'}
+                    </td>
+                  </>
                 )}
 
                 {/* Final Price */}
