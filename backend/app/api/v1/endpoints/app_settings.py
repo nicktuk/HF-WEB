@@ -159,6 +159,7 @@ class CatalogSettingsResponse(BaseModel):
     popup_interval: int = 2
     popup_slides: List[PopupSlide] = []
     category_nav_style: str = 'pills'
+    hide_out_of_stock_colors: bool = False
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -175,6 +176,7 @@ class CatalogSettingsUpdate(BaseModel):
     popup_interval: Optional[int] = None
     popup_slides: Optional[List[PopupSlide]] = None
     category_nav_style: Optional[str] = None
+    hide_out_of_stock_colors: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +221,8 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
             old_url = get_setting(db, "POPUP_IMAGE_URL")
             popup_slides = [PopupSlide(image=old_url)] if old_url else []
     category_nav_style = get_setting(db, "CATEGORY_NAV_STYLE") or "pills"
+    hide_out_of_stock_colors_str = get_setting(db, "HIDE_OUT_OF_STOCK_COLORS")
+    hide_out_of_stock_colors = hide_out_of_stock_colors_str == "true" if hide_out_of_stock_colors_str is not None else False
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -233,6 +237,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         popup_interval=popup_interval,
         popup_slides=popup_slides,
         category_nav_style=category_nav_style,
+        hide_out_of_stock_colors=hide_out_of_stock_colors,
     )
 
 
@@ -273,6 +278,8 @@ def update_catalog_settings(
         set_setting(db, "POPUP_SLIDES", json.dumps([s.model_dump() for s in data.popup_slides]))
     if data.category_nav_style is not None:
         set_setting(db, "CATEGORY_NAV_STYLE", "menu" if data.category_nav_style == "menu" else "pills")
+    if data.hide_out_of_stock_colors is not None:
+        set_setting(db, "HIDE_OUT_OF_STOCK_COLORS", "true" if data.hide_out_of_stock_colors else "false")
     return get_catalog_settings(db=db)
 
 
@@ -312,6 +319,8 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         else:
             old_url = get_setting(db, "POPUP_IMAGE_URL")
             popup_slides = [{"image": old_url, "link": ""}] if old_url else []
+    hide_out_of_stock_colors_str = get_setting(db, "HIDE_OUT_OF_STOCK_COLORS")
+    hide_out_of_stock_colors = hide_out_of_stock_colors_str == "true" if hide_out_of_stock_colors_str is not None else False
     return {
         "featured_pill_label": featured_label,
         "stock_low_threshold": threshold,
@@ -326,6 +335,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "popup_interval": int(get_setting(db, "POPUP_INTERVAL") or 2),
         "popup_slides": popup_slides,
         "category_nav_style": get_setting(db, "CATEGORY_NAV_STYLE") or "pills",
+        "hide_out_of_stock_colors": hide_out_of_stock_colors,
     }
 
 

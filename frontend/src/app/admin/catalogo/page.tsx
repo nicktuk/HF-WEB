@@ -30,6 +30,10 @@ export default function CatalogoConfigPage() {
   const [showOutOfStock, setShowOutOfStock] = useState(true);
   const [savingShowOutOfStock, setSavingShowOutOfStock] = useState(false);
 
+  // Hide out of stock colors
+  const [hideOutOfStockColors, setHideOutOfStockColors] = useState(false);
+  const [savingHideOutOfStockColors, setSavingHideOutOfStockColors] = useState(false);
+
   // Mobile two columns
   const [mobileTwoColumns, setMobileTwoColumns] = useState(false);
   const [savingMobileTwoColumns, setSavingMobileTwoColumns] = useState(false);
@@ -70,6 +74,7 @@ export default function CatalogoConfigPage() {
         setGroupByCategory(data.group_by_category ?? true);
         setSectionSortOrder((data.section_sort_order === 'desc' ? 'desc' : 'asc'));
         setShowOutOfStock(data.show_out_of_stock ?? true);
+        setHideOutOfStockColors(data.hide_out_of_stock_colors ?? false);
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
         setCategoryNavStyle(data.category_nav_style === 'menu' ? 'menu' : 'pills');
@@ -127,6 +132,18 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSavingShowOutOfStock(false);
+    }
+  }
+
+  async function handleToggleHideOutOfStockColors(value: boolean) {
+    setSavingHideOutOfStockColors(true);
+    try {
+      const updated = await adminApi.updateCatalogSettings(apiKey, { hide_out_of_stock_colors: value });
+      setHideOutOfStockColors(updated.hide_out_of_stock_colors);
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSavingHideOutOfStockColors(false);
     }
   }
 
@@ -378,6 +395,37 @@ export default function CatalogoConfigPage() {
               <span
                 className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                   showOutOfStock ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Colores sin stock */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Colores sin stock</h2>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Ocultar colores sin stock</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                Cuando está activo, solo se muestran los colores cuyo stock disponible sea mayor a 0. Los colores sin stock no aparecen en la página del producto.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={savingHideOutOfStockColors}
+              onClick={() => handleToggleHideOutOfStockColors(!hideOutOfStockColors)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                hideOutOfStockColors ? 'bg-blue-600' : 'bg-gray-200'
+              } ${savingHideOutOfStockColors ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  hideOutOfStockColors ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>

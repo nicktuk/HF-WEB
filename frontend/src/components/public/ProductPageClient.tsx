@@ -48,13 +48,17 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   // Non-primary colored images only
-  const coloredImages = (product?.images ?? []).filter(img => img.color && !img.is_primary);
+  const allColoredImages = (product?.images ?? []).filter(img => img.color && !img.is_primary);
+  const colorStockMap = Object.fromEntries((product?.color_stock ?? []).map(s => [s.color, s.quantity]));
+  const hasColorStock = (product?.color_stock ?? []).length > 0;
+  const hideOutOfStockColors = (catalogSettings?.hide_out_of_stock_colors ?? false) && hasColorStock;
+  const coloredImages = hideOutOfStockColors
+    ? allColoredImages.filter(img => (colorStockMap[img.color!] ?? 0) > 0)
+    : allColoredImages;
   const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
   const colorNameMap = Object.fromEntries(
     coloredImages.filter(img => img.alt_text).map(img => [img.color!, img.alt_text!])
   );
-  const colorStockMap = Object.fromEntries((product?.color_stock ?? []).map(s => [s.color, s.quantity]));
-  const hasColorStock = (product?.color_stock ?? []).length > 0;
   const effectiveStockQty = hasColorStock && selectedColor && colorStockMap[selectedColor] !== undefined
     ? colorStockMap[selectedColor]
     : product?.stock_qty ?? undefined;
