@@ -96,6 +96,27 @@ class ProductService:
             for row in color_rows:
                 color_agg.setdefault(row.product_id, {})
                 color_agg[row.product_id][row.color] = color_agg[row.product_id].get(row.color, 0) + row.quantity
+
+            # Subtract pending reservations (ordered but not yet delivered)
+            reserved_rows = (
+                self.db.query(
+                    SaleItem.product_id,
+                    SaleItem.color,
+                    func.sum(SaleItem.quantity - SaleItem.delivered_quantity).label("reserved"),
+                )
+                .filter(
+                    SaleItem.product_id.in_(product_ids),
+                    SaleItem.color.isnot(None),
+                    SaleItem.quantity > SaleItem.delivered_quantity,
+                )
+                .group_by(SaleItem.product_id, SaleItem.color)
+                .all()
+            )
+            for row in reserved_rows:
+                pid_agg = color_agg.get(row.product_id, {})
+                if row.color in pid_agg:
+                    pid_agg[row.color] = max(0, pid_agg[row.color] - int(row.reserved))
+
             for pid, cmap in color_agg.items():
                 color_stock_map[pid] = [ColorStockItem(color=c, quantity=q) for c, q in cmap.items()]
 
@@ -156,6 +177,22 @@ class ProductService:
             agg: dict = {}
             for r in color_stock_rows:
                 agg[r.color] = agg.get(r.color, 0) + r.quantity
+            reserved_rows = (
+                self.db.query(
+                    SaleItem.color,
+                    func.sum(SaleItem.quantity - SaleItem.delivered_quantity).label("reserved"),
+                )
+                .filter(
+                    SaleItem.product_id == product.id,
+                    SaleItem.color.isnot(None),
+                    SaleItem.quantity > SaleItem.delivered_quantity,
+                )
+                .group_by(SaleItem.color)
+                .all()
+            )
+            for row in reserved_rows:
+                if row.color in agg:
+                    agg[row.color] = max(0, agg[row.color] - int(row.reserved))
             color_stock = [ColorStockItem(color=c, quantity=q) for c, q in agg.items()]
 
         return ProductPublicResponse(
