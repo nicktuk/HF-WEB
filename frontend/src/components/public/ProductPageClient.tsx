@@ -70,7 +70,9 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     if (match) setSelectedImage(match);
   };
 
-  const sortedImages = product?.images ?? [];
+  const sortedImages = hideOutOfStockColors
+    ? (product?.images ?? []).filter(img => !img.color || (colorStockMap[img.color] ?? 0) > 0)
+    : (product?.images ?? []);
   const currentIndex = selectedImage ? sortedImages.findIndex((img) => img.id === selectedImage.id) : 0;
 
   const goToPrev = () => {
