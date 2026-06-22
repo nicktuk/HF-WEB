@@ -7,7 +7,7 @@ import { ShoppingCart, X } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
 import { resolveImageUrl } from '@/lib/api';
-import { useBadgeLabels } from '@/hooks/useBadgeLabels';
+import { useBadgeLabels, useCatalogSettings } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
 import type { ProductPublic } from '@/types';
 
@@ -18,6 +18,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
   const { data: labels } = useBadgeLabels();
+  const { data: catalogSettings } = useCatalogSettings();
   const { addItem } = useCart();
   const [pickingColor, setPickingColor] = useState(false);
 
@@ -29,14 +30,19 @@ export function ProductCard({ product }: ProductCardProps) {
     installments: labels?.badge_text_installments ?? 'Cuotas',
   };
 
-  // Non-primary colored images only (image 0 never has color)
-  const coloredImages = product.images.filter(img => img.color && !img.is_primary);
+  const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
+  const hasColorStock = (product.color_stock ?? []).length > 0;
+  const hideOutOfStockColors = (catalogSettings?.hide_out_of_stock_colors ?? false) && hasColorStock;
+
+  // Non-primary colored images, filtered by stock when the setting is active
+  const allColoredImages = product.images.filter(img => img.color && !img.is_primary);
+  const coloredImages = hideOutOfStockColors
+    ? allColoredImages.filter(img => (stockMap[img.color!] ?? 0) > 0)
+    : allColoredImages;
   const uniqueColors = Array.from(new Set(coloredImages.map(img => img.color!)));
   const colorNameMap = Object.fromEntries(
     coloredImages.filter(img => img.alt_text).map(img => [img.color!, img.alt_text!])
   );
-  const stockMap = Object.fromEntries((product.color_stock ?? []).map(s => [s.color, s.quantity]));
-  const hasColorStock = (product.color_stock ?? []).length > 0;
   const hasColors = uniqueColors.length > 0;
 
   function handleAddDirect(e: React.MouseEvent) {

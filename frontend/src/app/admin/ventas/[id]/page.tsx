@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useDeleteSale, useSale, useUpdateSale, useUpdateSaleInstallment } from '@/hooks/useProducts';
+import { resolveImageUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleInstallment } from '@/types';
 
@@ -31,6 +33,12 @@ const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   const markup = Number(product.markup_percentage ?? 0);
   return Number((originalPrice * (1 + markup / 100)).toFixed(2));
 };
+
+function getProductThumbUrl(product: ProductAdmin): string | null {
+  const img = product.images.find((i) => i.is_primary) || product.images[0];
+  if (!img) return null;
+  return resolveImageUrl(img.url) ?? img.url;
+}
 
 function getProductColors(product: ProductAdmin): { color: string; quantity: number | null; name: string | null }[] {
   const colorAggMap = new Map<string, number>();
@@ -348,15 +356,25 @@ export default function SaleDetailPage() {
                   {sortedProducts.map((product) => {
                     const productColors = getProductColors(product);
                     const inStock = Number(product.stock_qty || 0) > 0;
+                    const thumbUrl = getProductThumbUrl(product);
                     return (
                       <div key={product.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                            {product.custom_name || product.original_name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Stock: {product.stock_qty || 0}
-                          </p>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                            {thumbUrl ? (
+                              <Image src={thumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 rounded" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                              {product.custom_name || product.original_name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Stock: {product.stock_qty || 0}
+                            </p>
+                          </div>
                         </div>
                         {productColors.length > 0 ? (
                           <div className="flex flex-wrap gap-1 justify-end shrink-0">
@@ -417,30 +435,38 @@ export default function SaleDetailPage() {
                           )
                         : {};
                       const missingColorWarning = isEditing && productColors.length > 0 && !item.color;
+                      const thumbUrl = product ? getProductThumbUrl(product) : null;
 
                       return (
                         <tr key={item.line_id} className="hover:bg-gray-50">
                           <td className="px-3 py-2">
                             <div className="flex items-start gap-2">
-                              {item.color && (
-                                <span
-                                  className="w-3 h-3 rounded-full border border-gray-300 shrink-0 mt-0.5"
-                                  style={{ backgroundColor: item.color }}
-                                />
+                              {thumbUrl && (
+                                <div className="w-9 h-9 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                                  <Image src={thumbUrl} alt="" width={36} height={36} className="object-contain w-full h-full" />
+                                </div>
                               )}
-                              {missingColorWarning && (
-                                <span className="text-amber-500 shrink-0 mt-0.5" title="Color requerido">
-                                  <AlertTriangle className="h-3.5 w-3.5" />
-                                </span>
-                              )}
-                              <div className="min-w-0">
-                                {item.product_id ? (
-                                  <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                                    {item.product_name}
-                                  </Link>
-                                ) : (
-                                  <div className="font-medium text-gray-900">{item.product_name}</div>
-                                )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  {item.color && (
+                                    <span
+                                      className="w-3 h-3 rounded-full border border-gray-300 shrink-0"
+                                      style={{ backgroundColor: item.color }}
+                                    />
+                                  )}
+                                  {missingColorWarning && (
+                                    <span className="text-amber-500 shrink-0" title="Color requerido">
+                                      <AlertTriangle className="h-3.5 w-3.5" />
+                                    </span>
+                                  )}
+                                  {item.product_id ? (
+                                    <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                      {item.product_name}
+                                    </Link>
+                                  ) : (
+                                    <div className="font-medium text-gray-900">{item.product_name}</div>
+                                  )}
+                                </div>
                                 {item.color && (
                                   <p className="text-xs text-gray-400 mt-0.5">{colorNameMap[item.color] || item.color}</p>
                                 )}

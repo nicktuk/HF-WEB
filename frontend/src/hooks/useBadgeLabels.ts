@@ -1,8 +1,16 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchBadgeLabels, settingsApi, type BadgeLabels } from '@/lib/api';
+import { fetchBadgeLabels, fetchPublicCatalogSettings, settingsApi, type BadgeLabels } from '@/lib/api';
 import { useApiKey } from '@/hooks/useAuth';
+
+export function useCatalogSettings() {
+  return useQuery({
+    queryKey: ['public-catalog-settings'],
+    queryFn: fetchPublicCatalogSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export function useBadgeLabels() {
   return useQuery<BadgeLabels>({

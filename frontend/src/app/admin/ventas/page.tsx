@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ExternalLink, Edit2, AlertTriangle, Check } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
 import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useUpdateSaleInstallment, useExpenses } from '@/hooks/useProducts';
-import { adminApi } from '@/lib/api';
+import { adminApi, resolveImageUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, SaleInstallment, PaymentMethodConfig } from '@/types';
 
@@ -624,18 +625,29 @@ export default function VentasPage() {
                     color,
                     quantity: colorAggMap.get(color) ?? null,
                   }));
+                  const primaryImg = product.images.find(i => i.is_primary) || product.images[0];
+                  const thumbUrl = primaryImg ? (resolveImageUrl(primaryImg.url) ?? primaryImg.url) : null;
                   return (
                     <div key={product.id} className="p-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium text-gray-900 text-sm line-clamp-1">
-                          {product.custom_name || product.original_name}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                          {thumbUrl ? (
+                            <Image src={thumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 rounded" />
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs font-medium ${inStock ? 'text-emerald-600' : 'text-gray-400'}`}>
-                            {inStock ? `Stock: ${product.stock_qty}` : 'Sin stock'}
-                          </span>
-                          <span className="text-xs text-gray-400">·</span>
-                          <span className="text-xs text-gray-500">{formatPrice(getProductSaleUnitPrice(product))}</span>
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 text-sm line-clamp-1">
+                            {product.custom_name || product.original_name}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-xs font-medium ${inStock ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              {inStock ? `Stock: ${product.stock_qty}` : 'Sin stock'}
+                            </span>
+                            <span className="text-xs text-gray-400">·</span>
+                            <span className="text-xs text-gray-500">{formatPrice(getProductSaleUnitPrice(product))}</span>
+                          </div>
                         </div>
                       </div>
                       {productColors.length > 0 ? (
@@ -782,10 +794,20 @@ export default function VentasPage() {
                       (item.product?.images || []).filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                     );
                     const cartItemColorName = item.color ? (cartItemColorNameMap[item.color] ?? null) : null;
+                    const cartPrimaryImg = item.product
+                      ? (item.product.images.find(i => i.is_primary) || item.product.images[0])
+                      : null;
+                    const cartThumbUrl = cartPrimaryImg ? (resolveImageUrl(cartPrimaryImg.url) ?? cartPrimaryImg.url) : null;
                     return (
                       <div key={item.id} className="p-3 space-y-2">
-                        {/* Row 1: name + delete */}
+                        {/* Row 1: thumb + name + delete */}
                         <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 min-w-0">
+                            {cartThumbUrl && (
+                              <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                                <Image src={cartThumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                              </div>
+                            )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               {item.color && (
@@ -811,6 +833,7 @@ export default function VentasPage() {
                                 ? `Stock: ${stockQty}${stockQty <= 0 ? ' — Sin unidades' : ''}`
                                 : 'Producto manual'}
                             </p>
+                          </div>
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
