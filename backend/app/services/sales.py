@@ -530,46 +530,69 @@ class SalesService:
                 force_paid=True if paid is True else None,
             )
 
-            # Return already delivered stock before rebuilding items.
             current_items = list(sale.items)
-            for current_item in current_items:
-                delivered_qty = int(current_item.delivered_quantity or 0)
+
+            def _item_ref_of(ci: SaleItem) -> str:
+                return (
+                    f"product:{ci.product_id}:{(ci.color or '').lower()}"
+                    if ci.product_id is not None
+                    else f"manual:{(ci.manual_product_name or '').strip().lower()}"
+                )
+
+            # Snapshot previous delivery state keyed by item_ref
+            current_state: dict[str, tuple[int, int | None]] = {
+                _item_ref_of(ci): (int(ci.delivered_quantity or 0), ci.deposit_id)
+                for ci in current_items
+            }
+            incoming_refs = {ni["item_ref"] for ni in normalized_items}
+
+            # Only restore stock for items being REMOVED from the sale.
+            # Items that remain are handled via delta in _apply_item_states below.
+            for ci in current_items:
+                ref = _item_ref_of(ci)
+                if ref in incoming_refs:
+                    continue
+                delivered_qty = int(ci.delivered_quantity or 0)
                 if delivered_qty > 0:
-                    restore_deposit_id = current_item.deposit_id
+                    restore_deposit_id = ci.deposit_id
                     if force:
                         try:
-                            self._restore_stock(current_item.product_id, delivered_qty)
-                            self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=restore_deposit_id)
+                            self._restore_stock(ci.product_id, delivered_qty)
+                            self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
                         except ValidationError:
                             pass
                     else:
-                        self._restore_stock(current_item.product_id, delivered_qty)
-                        self._restore_color_stock(current_item.product_id, current_item.color, delivered_qty, deposit_id=restore_deposit_id)
+                        self._restore_stock(ci.product_id, delivered_qty)
+                        self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
 
             # Remove existing ORM-linked items explicitly so sale.items is in sync.
-            for current_item in current_items:
-                self.db.delete(current_item)
+            for ci in current_items:
+                self.db.delete(ci)
             self.db.flush()
 
-            for item in normalized_items:
+            # Re-create items carrying forward previous delivered_quantity as baseline
+            # so _apply_item_states only deducts/restores the *delta*, not the full qty.
+            for ni in normalized_items:
+                prev_qty, prev_deposit_id = current_state.get(ni["item_ref"], (0, None))
                 self.db.add(SaleItem(
                     sale_id=sale.id,
-                    product_id=item["product_id"],
-                    manual_product_name=item["manual_product_name"],
-                    color=item.get("color"),
-                    quantity=item["quantity"],
-                    delivered_quantity=0,
+                    product_id=ni["product_id"],
+                    manual_product_name=ni["manual_product_name"],
+                    color=ni.get("color"),
+                    quantity=ni["quantity"],
+                    delivered_quantity=prev_qty,
+                    deposit_id=prev_deposit_id,
                     is_paid=False,
-                    unit_price=item["unit_price"],
-                    total_price=item["total_price"],
+                    unit_price=ni["unit_price"],
+                    total_price=ni["total_price"],
                 ))
             sale.total_amount = new_total
             self.db.flush()
             self.db.refresh(sale, attribute_names=["items"])
             self._apply_item_states(
                 sale,
-                {item["item_ref"]: item["delivered_quantity"] > 0 for item in normalized_items},
-                {item["item_ref"]: item["is_paid"] for item in normalized_items},
+                {ni["item_ref"]: ni["delivered_quantity"] > 0 for ni in normalized_items},
+                {ni["item_ref"]: ni["is_paid"] for ni in normalized_items},
             )
         elif delivered is not None or paid is not None:
             delivery_targets = (

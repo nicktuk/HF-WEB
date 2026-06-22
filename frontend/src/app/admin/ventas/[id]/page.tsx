@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,23 @@ const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   const markup = Number(product.markup_percentage ?? 0);
   return Number((originalPrice * (1 + markup / 100)).toFixed(2));
 };
+
+function getProductColors(product: ProductAdmin): { color: string; quantity: number | null; name: string | null }[] {
+  const colorAggMap = new Map<string, number>();
+  for (const cs of product.color_stock || []) {
+    colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
+  }
+  const imageColors = (product.images || []).filter((img) => img.color).map((img) => img.color!);
+  const allKeys = Array.from(new Set([...Array.from(colorAggMap.keys()), ...imageColors]));
+  const nameMap = Object.fromEntries(
+    (product.images || []).filter((img) => img.color && img.alt_text).map((img) => [img.color!, img.alt_text!]),
+  );
+  return allKeys.map((color) => ({
+    color,
+    quantity: colorAggMap.has(color) ? (colorAggMap.get(color) ?? 0) : null,
+    name: nameMap[color] ?? null,
+  }));
+}
 
 export default function SaleDetailPage() {
   const params = useParams();
@@ -70,6 +87,15 @@ export default function SaleDetailPage() {
     });
   }, [productsData]);
 
+  // Map for quick product lookup by id (used for color selectors in items table)
+  const productMap = useMemo(() => {
+    const map = new Map<number, ProductAdmin>();
+    for (const p of productsData?.items || []) {
+      map.set(p.id, p);
+    }
+    return map;
+  }, [productsData]);
+
   useEffect(() => {
     if (!sale) return;
     setEditCustomer(sale.customer_name || '');
@@ -79,7 +105,7 @@ export default function SaleDetailPage() {
     setEditItems(
       sale.items.map((item) => ({
         line_id: `sale-item-${item.id}`,
-        product_id: item.product_id,
+        product_id: item.product_id ?? undefined,
         product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
         color: item.color ?? null,
         quantity: item.quantity,
@@ -104,7 +130,7 @@ export default function SaleDetailPage() {
     }
     return (sale?.items || []).map((item) => ({
       line_id: `sale-item-${item.id}`,
-      product_id: item.product_id,
+      product_id: item.product_id ?? undefined,
       product_name: item.product_name || (item.product_id ? `Producto #${item.product_id}` : 'Producto manual'),
       color: item.color ?? null,
       quantity: item.quantity,
@@ -137,24 +163,25 @@ export default function SaleDetailPage() {
     }
   };
 
-  const addProductToEdit = (product: ProductAdmin) => {
+  const addProductToEdit = (product: ProductAdmin, color?: string | null) => {
+    const colorKey = color ?? 'none';
+    const lineId = `new-product-${product.id}-${colorKey}`;
     const defaultPrice = getProductSaleUnitPrice(product);
 
     setEditItems((prev) => {
-      const exists = prev.find((item) => item.product_id === product.id);
+      const exists = prev.find((item) => item.line_id === lineId);
       if (exists) {
         return prev.map((item) =>
-          item.product_id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.line_id === lineId ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [
         ...prev,
         {
-          line_id: `new-product-${product.id}`,
+          line_id: lineId,
           product_id: product.id,
-          product_name: product.custom_name || product.original_name,
+          product_name: product.custom_name || product.original_name || '',
+          color: color ?? null,
           quantity: 1,
           unit_price: Number(defaultPrice || 0),
           delivered: false,
@@ -178,6 +205,22 @@ export default function SaleDetailPage() {
 
   const handleSave = async () => {
     if (!sale) return;
+
+    // Validate color only for items not yet delivered (already-delivered items skip this)
+    const missingColor = editItems.filter((item) => {
+      if (!item.product_id) return false;
+      if (item.delivered) return false;
+      const product = productMap.get(item.product_id);
+      if (!product) return false;
+      const hasColors = getProductColors(product).length > 0;
+      return hasColors && !item.color;
+    });
+    if (missingColor.length > 0) {
+      const names = missingColor.map((i) => i.product_name).join(', ');
+      alert(`Seleccionar color obligatorio para: ${names}`);
+      return;
+    }
+
     const items = editItems.map((item) => ({
       product_id: item.product_id,
       product_name: item.product_id ? undefined : item.product_name,
@@ -302,22 +345,48 @@ export default function SaleDetailPage() {
                   />
                 </div>
                 <div className="max-h-56 overflow-y-auto space-y-2">
-                  {sortedProducts.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                          {product.custom_name || product.original_name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Stock: {product.stock_qty || 0}
-                        </p>
+                  {sortedProducts.map((product) => {
+                    const productColors = getProductColors(product);
+                    const inStock = Number(product.stock_qty || 0) > 0;
+                    return (
+                      <div key={product.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                            {product.custom_name || product.original_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Stock: {product.stock_qty || 0}
+                          </p>
+                        </div>
+                        {productColors.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 justify-end shrink-0">
+                            {productColors.map(({ color, quantity, name }) => (
+                              <button
+                                key={color}
+                                onClick={() => addProductToEdit(product, color)}
+                                title={quantity !== null ? `${name || color} · ${quantity} disponibles` : (name || color)}
+                                className="flex items-center gap-1 px-1.5 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
+                              >
+                                <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
+                                {name && <span>{name}</span>}
+                                {quantity !== null && <span className="text-gray-400">({quantity})</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={inStock ? 'outline' : 'ghost'}
+                            onClick={() => addProductToEdit(product)}
+                            className={!inStock ? 'text-gray-400 border border-dashed border-gray-300 hover:text-gray-600' : ''}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            {inStock ? 'Agregar' : 'Agregar igual'}
+                          </Button>
+                        )}
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => addProductToEdit(product)}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Agregar
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -339,79 +408,145 @@ export default function SaleDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {visibleItems.map((item) => (
-                      <tr key={item.line_id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            {item.color && (
-                              <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
-                            )}
-                            {item.product_id ? (
-                              <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                                {item.product_name}
-                              </Link>
-                            ) : (
-                              <div className="font-medium text-gray-900">{item.product_name}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min="1"
-                              className="w-20 px-2 py-1 border rounded text-right"
-                              value={item.quantity}
-                              onChange={(e) => updateEditItem(item.line_id, { quantity: Number(e.target.value) })}
-                            />
-                          ) : (
-                            item.quantity
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={item.delivered}
-                            onChange={(e) => updateEditItem(item.line_id, { delivered: e.target.checked })}
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                            disabled={!isEditing}
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={item.paid}
-                            onChange={(e) => updateEditItem(item.line_id, { paid: e.target.checked })}
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                            disabled={!isEditing}
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              className="w-28 px-2 py-1 border rounded text-right"
-                              value={item.unit_price}
-                              onChange={(e) => updateEditItem(item.line_id, { unit_price: Number(e.target.value) })}
-                            />
-                          ) : (
-                            formatPrice(item.unit_price)
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-right font-medium">
-                          {formatPrice(item.quantity * item.unit_price)}
-                        </td>
-                        {isEditing && (
-                          <td className="px-3 py-2 text-right">
-                            <Button variant="ghost" size="sm" onClick={() => removeEditItem(item.line_id)}>
-                              <X className="h-4 w-4" />
-                            </Button>
+                    {visibleItems.map((item) => {
+                      const product = item.product_id ? productMap.get(item.product_id) : undefined;
+                      const productColors = product ? getProductColors(product) : [];
+                      const colorNameMap = product
+                        ? Object.fromEntries(
+                            (product.images || []).filter((img) => img.color && img.alt_text).map((img) => [img.color!, img.alt_text!]),
+                          )
+                        : {};
+                      const missingColorWarning = isEditing && productColors.length > 0 && !item.color;
+
+                      return (
+                        <tr key={item.line_id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2">
+                            <div className="flex items-start gap-2">
+                              {item.color && (
+                                <span
+                                  className="w-3 h-3 rounded-full border border-gray-300 shrink-0 mt-0.5"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                              )}
+                              {missingColorWarning && (
+                                <span className="text-amber-500 shrink-0 mt-0.5" title="Color requerido">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                </span>
+                              )}
+                              <div className="min-w-0">
+                                {item.product_id ? (
+                                  <Link href={`/admin/productos/${item.product_id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                    {item.product_name}
+                                  </Link>
+                                ) : (
+                                  <div className="font-medium text-gray-900">{item.product_name}</div>
+                                )}
+                                {item.color && (
+                                  <p className="text-xs text-gray-400 mt-0.5">{colorNameMap[item.color] || item.color}</p>
+                                )}
+                                {missingColorWarning && (
+                                  <p className="text-xs text-amber-600 mt-0.5 font-medium">Color requerido</p>
+                                )}
+                                {/* Color selector in edit mode */}
+                                {isEditing && productColors.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {productColors.map(({ color, quantity, name }) => (
+                                      <button
+                                        key={color}
+                                        type="button"
+                                        onClick={() =>
+                                          updateEditItem(item.line_id, {
+                                            color: item.color === color ? null : color,
+                                          })
+                                        }
+                                        title={quantity !== null ? `${name || color} · ${quantity} disponibles` : (name || color)}
+                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${
+                                          item.color === color
+                                            ? 'border-gray-800 bg-gray-50'
+                                            : 'border-gray-300 hover:border-gray-500'
+                                        } ${quantity !== null && quantity <= 0 ? 'opacity-40' : ''}`}
+                                      >
+                                        <span
+                                          className="w-3 h-3 rounded-full border border-gray-200 shrink-0"
+                                          style={{ backgroundColor: color }}
+                                        />
+                                        {name && <span className="text-gray-700">{name}</span>}
+                                        {quantity !== null && <span className="text-gray-400">({quantity})</span>}
+                                      </button>
+                                    ))}
+                                    {item.color && (
+                                      <button
+                                        type="button"
+                                        onClick={() => updateEditItem(item.line_id, { color: null })}
+                                        className="text-xs text-gray-400 hover:text-red-500"
+                                        title="Quitar color"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </td>
-                        )}
-                      </tr>
-                    ))}
+                          <td className="px-3 py-2 text-right">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="1"
+                                className="w-20 px-2 py-1 border rounded text-right"
+                                value={item.quantity}
+                                onChange={(e) => updateEditItem(item.line_id, { quantity: Number(e.target.value) })}
+                              />
+                            ) : (
+                              item.quantity
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.delivered}
+                              onChange={(e) => updateEditItem(item.line_id, { delivered: e.target.checked })}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                              disabled={!isEditing}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.paid}
+                              onChange={(e) => updateEditItem(item.line_id, { paid: e.target.checked })}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                              disabled={!isEditing}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="w-28 px-2 py-1 border rounded text-right"
+                                value={item.unit_price}
+                                onChange={(e) => updateEditItem(item.line_id, { unit_price: Number(e.target.value) })}
+                              />
+                            ) : (
+                              formatPrice(item.unit_price)
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">
+                            {formatPrice(item.quantity * item.unit_price)}
+                          </td>
+                          {isEditing && (
+                            <td className="px-3 py-2 text-right">
+                              <Button variant="ghost" size="sm" onClick={() => removeEditItem(item.line_id)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
