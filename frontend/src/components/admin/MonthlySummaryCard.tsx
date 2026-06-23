@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, ReferenceLine, Cell,
-} from 'recharts';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';
+import type { ApexOptions } from 'apexcharts';
+
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface MonthData {
   month: number;
@@ -26,9 +26,9 @@ const C = {
   ventas:         '#3b82f6',
   invertido:      '#f43f5e',
   gastos:         '#10b981',
-  balancePos:     '#8b5cf6',
+  balance:        '#8b5cf6',
   balanceNeg:     '#f97316',
-  itemsDistintos: '#10b981',
+  itemsDistintos: '#06b6d4',
   itemsTotales:   '#f59e0b',
 };
 
@@ -77,11 +77,11 @@ function KPIPanel({ entry, heading }: { entry: MonthData; heading: string }) {
       <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">{heading}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
         <KPIItem label="Ventas"          value={fmtM(entry.importe_ventas)}  sub={`${entry.num_ventas} operaciones`} color={C.ventas} />
-        <KPIItem label="Invertido"       value={fmtM(entry.total_invertido)} sub={`${entry.num_compras} compras`}   color={C.invertido} />
-        <KPIItem label="Gastos"          value={fmtM(entry.total_gastos)}                                           color={C.gastos} />
-        <KPIItem label="Balance"         value={fmtM(entry.balance)}                                                color={entry.balance >= 0 ? C.balancePos : C.balanceNeg} />
-        <KPIItem label="Ítems distintos" value={String(entry.items_distintos)}                                      color={C.itemsDistintos} />
-        <KPIItem label="Ítems totales"   value={String(entry.items_totales)}                                        color={C.itemsTotales} />
+        <KPIItem label="Invertido"       value={fmtM(entry.total_invertido)} sub={`${entry.num_compras} compras`}    color={C.invertido} />
+        <KPIItem label="Gastos"          value={fmtM(entry.total_gastos)}                                             color={C.gastos} />
+        <KPIItem label="Balance"         value={fmtM(entry.balance)}                                                  color={entry.balance >= 0 ? C.balance : C.balanceNeg} />
+        <KPIItem label="Ítems distintos" value={String(entry.items_distintos)}                                        color={C.itemsDistintos} />
+        <KPIItem label="Ítems totales"   value={String(entry.items_totales)}                                          color={C.itemsTotales} />
       </div>
     </div>
   );
@@ -89,18 +89,10 @@ function KPIPanel({ entry, heading }: { entry: MonthData; heading: string }) {
 
 export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
   const currentYear = new Date().getFullYear();
-  const [year, setYear]           = useState(currentYear);
-  const [viewMode, setViewMode]   = useState<'monthly' | 'annual'>('monthly');
+  const [year, setYear]                 = useState(currentYear);
+  const [viewMode, setViewMode]         = useState<'monthly' | 'annual'>('monthly');
   const [activeMonths, setActiveMonths] = useState<Set<number>>(new Set(ALL_MONTHS));
   const [hoveredMonth, setHoveredMonth] = useState<MonthData | null>(null);
-  const [isMobile, setIsMobile]   = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   const { data, isLoading } = useQuery<MonthData[]>({
     queryKey: ['admin-stats-monthly-summary', year],
@@ -134,10 +126,10 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
     setHoveredMonth(null);
   };
 
-  const filteredData  = useMemo(() => data?.filter(m => activeMonths.has(m.month)) ?? [], [data, activeMonths]);
+  const filteredData   = useMemo(() => data?.filter(m => activeMonths.has(m.month)) ?? [], [data, activeMonths]);
   const selectionLabel = activeMonths.size === 12 ? `Total ${year}` : `${activeMonths.size} meses · ${year}`;
-  const totals        = useMemo(() => aggregate(filteredData, selectionLabel), [filteredData, selectionLabel]);
-  const chartData     = useMemo(
+  const totals         = useMemo(() => aggregate(filteredData, selectionLabel), [filteredData, selectionLabel]);
+  const chartData      = useMemo(
     () => viewMode === 'annual' ? [{ ...totals, label: String(year) }] : filteredData,
     [viewMode, filteredData, totals, year]
   );
@@ -146,10 +138,144 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
   const kpiHeading = hoveredMonth ? `${hoveredMonth.label} ${year}` : selectionLabel;
   const years      = [currentYear - 1, currentYear];
 
-  const btnBase    = 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors';
-  const btnActive  = `${btnBase} bg-zinc-800 text-white`;
-  const btnInactive= `${btnBase} bg-zinc-100 text-zinc-400 hover:bg-zinc-200`;
-  const toggleBase = 'px-3 py-1 rounded-lg text-sm font-medium transition-colors';
+  const series = useMemo(() => [
+    { name: 'Ventas $',        data: chartData.map(d => d.importe_ventas) },
+    { name: 'Invertido $',     data: chartData.map(d => d.total_invertido) },
+    { name: 'Gastos $',        data: chartData.map(d => d.total_gastos) },
+    { name: 'Balance $',       data: chartData.map(d => d.balance) },
+    { name: 'Ítems distintos', data: chartData.map(d => d.items_distintos) },
+    { name: 'Ítems totales',   data: chartData.map(d => d.items_totales) },
+  ], [chartData]);
+
+  const options: ApexOptions = useMemo(() => ({
+    chart: {
+      type: 'bar' as const,
+      toolbar: { show: false },
+      fontFamily: 'inherit',
+      background: 'transparent',
+      animations: { enabled: true, speed: 350, animateGradually: { enabled: false } },
+      events: {
+        dataPointMouseEnter: (_e: MouseEvent, _ctx: unknown, config: unknown) => {
+          const idx = (config as { dataPointIndex?: number })?.dataPointIndex;
+          if (idx != null) {
+            const entry = chartData[idx];
+            if (entry) setHoveredMonth(entry as MonthData);
+          }
+        },
+        mouseLeave: () => setHoveredMonth(null),
+      },
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 5,
+        borderRadiusApplication: 'end' as const,
+        columnWidth: chartData.length === 1 ? '20%' : '72%',
+        dataLabels: { position: 'top' },
+      },
+    },
+    colors: [C.ventas, C.invertido, C.gastos, C.balance, C.itemsDistintos, C.itemsTotales],
+    xaxis: {
+      categories: chartData.map(d => d.label),
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: {
+        style: { fontSize: '12px', fontWeight: '600', colors: Array(12).fill('#52525b') },
+      },
+    },
+    yaxis: [
+      {
+        seriesName: 'Ventas $',
+        labels: {
+          formatter: fmtM,
+          style: { colors: ['#71717a'], fontSize: '11px' },
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      { seriesName: 'Ventas $', show: false },
+      { seriesName: 'Ventas $', show: false },
+      { seriesName: 'Ventas $', show: false },
+      {
+        seriesName: 'Ítems distintos',
+        opposite: true,
+        labels: {
+          formatter: (v: number) => String(Math.round(v)),
+          style: { colors: ['#71717a'], fontSize: '11px' },
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      { seriesName: 'Ítems distintos', opposite: true, show: false },
+    ],
+    annotations: {
+      yaxis: [
+        { y: 0, borderColor: '#d4d4d8', borderWidth: 1, strokeDashArray: 0 },
+      ],
+    },
+    grid: {
+      borderColor: '#f4f4f5',
+      strokeDashArray: 4,
+      xaxis: { lines: { show: false } },
+      padding: { left: 4, right: 4 },
+    },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      theme: 'light',
+      style: { fontSize: '12px' },
+      y: {
+        formatter: (value: number, opts?: { seriesIndex?: number }) => {
+          const idx = opts?.seriesIndex ?? 0;
+          return idx < 4 ? fmtM(value) : String(Math.round(value));
+        },
+      },
+    },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center',
+      fontSize: '12px',
+      markers: { size: 6 },
+      itemMargin: { horizontal: 8, vertical: 6 },
+      onItemClick: { toggleDataSeries: true },
+      onItemHover: { highlightDataSeries: true },
+    },
+    dataLabels: { enabled: false },
+    states: {
+      hover: { filter: { type: 'darken', value: 0.88 } },
+      active: { filter: { type: 'darken', value: 0.75 } },
+    },
+    responsive: [
+      {
+        breakpoint: 640,
+        options: {
+          plotOptions: { bar: { borderRadius: 3, columnWidth: '80%' } },
+          legend: { fontSize: '11px', markers: { size: 5 } },
+          yaxis: [
+            {
+              seriesName: 'Ventas $',
+              labels: { formatter: fmtM, style: { colors: ['#71717a'], fontSize: '10px' } },
+              axisBorder: { show: false }, axisTicks: { show: false },
+            },
+            { seriesName: 'Ventas $', show: false },
+            { seriesName: 'Ventas $', show: false },
+            { seriesName: 'Ventas $', show: false },
+            {
+              seriesName: 'Ítems distintos',
+              opposite: true,
+              labels: { formatter: (v: number) => String(Math.round(v)), style: { colors: ['#71717a'], fontSize: '10px' } },
+              axisBorder: { show: false }, axisTicks: { show: false },
+            },
+            { seriesName: 'Ítems distintos', opposite: true, show: false },
+          ],
+        },
+      },
+    ],
+  }), [chartData]);
+
+  const btnBase     = 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors';
+  const btnActive   = `${btnBase} bg-zinc-800 text-white`;
+  const btnInactive = `${btnBase} bg-zinc-100 text-zinc-400 hover:bg-zinc-200`;
+  const toggleBase  = 'px-3 py-1 rounded-lg text-sm font-medium transition-colors';
 
   return (
     <Card>
@@ -160,7 +286,6 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
             <h2 className="text-lg font-semibold text-zinc-900">Resumen mensual</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Monthly / Annual toggle */}
             <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5">
               <button
                 onClick={() => setViewMode('monthly')}
@@ -175,7 +300,6 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
                 Anual
               </button>
             </div>
-            {/* Year selector */}
             <div className="flex gap-1">
               {years.map((y) => (
                 <button
@@ -196,10 +320,8 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
           <div className="h-64 flex items-center justify-center text-zinc-400 text-sm">Cargando...</div>
         ) : (
           <>
-            {/* KPI panel */}
             <KPIPanel entry={kpiEntry} heading={kpiHeading} />
 
-            {/* Month filter buttons */}
             {data && (
               <div className="flex flex-wrap gap-1.5 mb-5">
                 <button onClick={selectAll} className={activeMonths.size === 12 ? btnActive : btnInactive}>
@@ -217,76 +339,14 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
               </div>
             )}
 
-            {/* Chart */}
             <div className="h-[300px] sm:h-[520px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 8, right: isMobile ? 28 : 48, left: 0, bottom: 0 }}
-                  barGap={isMobile ? 1 : 3}
-                  barCategoryGap={isMobile ? '8%' : '22%'}
-                  onMouseMove={(state: any) => {
-                    if (state?.isTooltipActive && state.activePayload?.[0]) {
-                      setHoveredMonth(state.activePayload[0].payload);
-                    }
-                  }}
-                  onMouseLeave={() => setHoveredMonth(null)}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: isMobile ? 10 : 13, fill: '#52525b', fontWeight: 600 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-
-                  {/* Left axis — money */}
-                  <YAxis
-                    yAxisId="left"
-                    tickFormatter={fmtM}
-                    tick={{ fontSize: isMobile ? 10 : 12, fill: '#71717a' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={isMobile ? 44 : 60}
-                    tickCount={isMobile ? 4 : 6}
-                  />
-
-                  {/* Right axis — counts */}
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    allowDecimals={false}
-                    tick={{ fontSize: isMobile ? 10 : 12, fill: '#71717a' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={isMobile ? 24 : 36}
-                    tickCount={isMobile ? 4 : 6}
-                  />
-
-                  <Tooltip content={() => null} cursor={{ fill: 'rgba(0,0,0,0.04)', rx: 6 }} />
-
-                  <Legend
-                    wrapperStyle={{ fontSize: isMobile ? 11 : 13, paddingTop: 16 }}
-                    iconType="circle"
-                    iconSize={8}
-                  />
-                  <ReferenceLine yAxisId="left" y={0} stroke="#d4d4d8" />
-
-                  {/* Money bars */}
-                  <Bar yAxisId="left" dataKey="importe_ventas"  name="Ventas $"   fill={C.ventas}     radius={[4,4,0,0]} />
-                  <Bar yAxisId="left" dataKey="total_invertido" name="Invertido $" fill={C.invertido}  radius={[4,4,0,0]} />
-                  <Bar yAxisId="left" dataKey="total_gastos"    name="Gastos $"    fill={C.gastos}     radius={[4,4,0,0]} />
-                  <Bar yAxisId="left" dataKey="balance"         name="Balance $"   fill={C.balancePos} radius={[4,4,0,0]}>
-                    {chartData.map((entry) => (
-                      <Cell key={entry.month} fill={entry.balance >= 0 ? C.balancePos : C.balanceNeg} />
-                    ))}
-                  </Bar>
-
-                  {/* Count bars */}
-                  <Bar yAxisId="right" dataKey="items_distintos" name="Ítems distintos" fill={C.itemsDistintos} radius={[4,4,0,0]} />
-                  <Bar yAxisId="right" dataKey="items_totales"   name="Ítems totales"   fill={C.itemsTotales}   radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ReactApexChart
+                type="bar"
+                series={series}
+                options={options}
+                height="100%"
+                width="100%"
+              />
             </div>
           </>
         )}
