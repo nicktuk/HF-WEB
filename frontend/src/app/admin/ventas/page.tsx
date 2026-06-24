@@ -632,11 +632,11 @@ export default function VentasPage() {
                   return (
                     <div key={product.id} className="p-3 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-lg border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
                           {thumbUrl ? (
-                            <Image src={thumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                            <Image src={thumbUrl} alt="" width={80} height={80} className="object-contain w-full h-full" />
                           ) : (
-                            <div className="w-full h-full bg-gray-200 rounded" />
+                            <div className="w-full h-full bg-gray-200 rounded-lg" />
                           )}
                         </div>
                         <div className="min-w-0">
@@ -806,8 +806,8 @@ export default function VentasPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2 min-w-0">
                             {cartThumbUrl && (
-                              <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
-                                <Image src={cartThumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                              <div className="w-16 h-16 rounded-lg border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                                <Image src={cartThumbUrl} alt="" width={64} height={64} className="object-contain w-full h-full" />
                               </div>
                             )}
                           <div className="min-w-0">

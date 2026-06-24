@@ -360,11 +360,11 @@ export default function SaleDetailPage() {
                     return (
                       <div key={product.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-10 h-10 rounded border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                          <div className="w-20 h-20 rounded-lg border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
                             {thumbUrl ? (
-                              <Image src={thumbUrl} alt="" width={40} height={40} className="object-contain w-full h-full" />
+                              <Image src={thumbUrl} alt="" width={80} height={80} className="object-contain w-full h-full" />
                             ) : (
-                              <div className="w-full h-full bg-gray-200 rounded" />
+                              <div className="w-full h-full bg-gray-200 rounded-lg" />
                             )}
                           </div>
                           <div className="min-w-0">
