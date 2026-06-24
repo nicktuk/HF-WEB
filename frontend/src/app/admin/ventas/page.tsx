@@ -65,6 +65,7 @@ export default function VentasPage() {
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
   const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
+  const [previewProduct, setPreviewProduct] = useState<ProductAdmin | null>(null);
   const [manualProductName, setManualProductName] = useState('');
   const [manualProductPrice, setManualProductPrice] = useState('');
   const [manualProductQty, setManualProductQty] = useState('1');
@@ -604,7 +605,7 @@ export default function VentasPage() {
               {sortedProducts.length} productos
             </span>
           </div>
-          <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
+          <div className="overflow-y-auto" style={{ maxHeight: previewProduct ? '260px' : '420px', transition: 'max-height 0.2s ease' }}>
             {isLoading ? (
               <div className="p-4 text-sm text-gray-500">Cargando stock...</div>
             ) : sortedProducts.length === 0 ? (
@@ -632,13 +633,21 @@ export default function VentasPage() {
                   return (
                     <div key={product.id} className="p-3 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-20 h-20 rounded-lg border border-gray-100 bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewProduct(prev => prev?.id === product.id ? null : product)}
+                          className={`w-20 h-20 rounded-lg border bg-gray-50 shrink-0 overflow-hidden flex items-center justify-center transition-all ${
+                            previewProduct?.id === product.id
+                              ? 'border-primary-500 ring-2 ring-primary-300'
+                              : 'border-gray-100 hover:border-gray-300'
+                          }`}
+                        >
                           {thumbUrl ? (
                             <Image src={thumbUrl} alt="" width={80} height={80} className="object-contain w-full h-full" />
                           ) : (
                             <div className="w-full h-full bg-gray-200 rounded-lg" />
                           )}
-                        </div>
+                        </button>
                         <div className="min-w-0">
                           <div className="font-medium text-gray-900 text-sm line-clamp-1">
                             {product.custom_name || product.original_name}
@@ -684,6 +693,32 @@ export default function VentasPage() {
               </div>
             )}
           </div>
+
+          {/* Product preview */}
+          {previewProduct && (() => {
+            const prevImg = previewProduct.images.find(i => i.is_primary) || previewProduct.images[0];
+            const prevUrl = prevImg ? (resolveImageUrl(prevImg.url) ?? prevImg.url) : null;
+            return (
+              <div className="flex-1 border-t flex flex-col items-center justify-center bg-gray-50 p-4 min-h-[180px]">
+                <p className="text-xs font-semibold text-gray-500 text-center mb-3 line-clamp-2">
+                  {previewProduct.custom_name || previewProduct.original_name}
+                </p>
+                {prevUrl ? (
+                  <div className="relative w-full flex-1 min-h-0">
+                    <Image
+                      src={prevUrl}
+                      alt={previewProduct.custom_name || previewProduct.original_name}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-300 text-sm">Sin imagen</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Right: Sale form */}
