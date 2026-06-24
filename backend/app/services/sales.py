@@ -1,5 +1,5 @@
 """Service for Sales operations."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from decimal import Decimal
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session, selectinload
@@ -440,7 +440,13 @@ class SalesService:
         self.db.refresh(sale)
         return sale
 
-    def list_sales(self, limit: int = 50, search: str | None = None) -> list[Sale]:
+    def list_sales(
+        self,
+        limit: int = 50,
+        search: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[Sale]:
         query = self.db.query(Sale).options(
             selectinload(Sale.items).selectinload(SaleItem.product),
             selectinload(Sale.installment_list),
@@ -456,6 +462,11 @@ class SalesService:
                     SaleItem.manual_product_name.ilike(search_term),
                 )
             ).distinct()
+
+        if date_from:
+            query = query.filter(Sale.created_at >= datetime.combine(date_from, datetime.min.time()))
+        if date_to:
+            query = query.filter(Sale.created_at <= datetime.combine(date_to, datetime.max.time()))
 
         return query.order_by(Sale.created_at.desc()).limit(limit).all()
 

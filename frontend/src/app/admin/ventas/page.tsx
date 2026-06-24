@@ -53,6 +53,8 @@ export default function VentasPage() {
   const apiKey = useApiKey() || '';
   const [search, setSearch] = useState('');
   const [salesSearch, setSalesSearch] = useState<string>(() => getSavedFilters()?.salesSearch ?? '');
+  const [dateFrom, setDateFrom] = useState<string>(() => getSavedFilters()?.dateFrom ?? '');
+  const [dateTo, setDateTo] = useState<string>(() => getSavedFilters()?.dateTo ?? '');
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.deliveredFilter ?? 'all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.paidFilter ?? 'all');
   const [showPartials, setShowPartials] = useState<boolean>(() => getSavedFilters()?.showPartials ?? false);
@@ -77,9 +79,9 @@ export default function VentasPage() {
   // Persist filters to sessionStorage
   useEffect(() => {
     try {
-      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode }));
+      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo }));
     } catch { /* ignore */ }
-  }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode]);
+  }, [salesSearch, deliveredFilter, paidFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo]);
 
   useEffect(() => {
     const pendiente = searchParams.get('pendiente');
@@ -104,7 +106,7 @@ export default function VentasPage() {
   const createSale = useCreateSale(apiKey);
   const updateSaleInList = useUpdateSale(apiKey);
   const updateInstallment = useUpdateSaleInstallment(apiKey);
-  const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 100, salesSearch || undefined);
+  const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 200, salesSearch || undefined, dateFrom || undefined, dateTo || undefined);
   const { data: expensesData } = useExpenses(apiKey);
 
   const handleToggleItem = async (
@@ -1089,6 +1091,33 @@ export default function VentasPage() {
                 className="pl-9"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 shrink-0">Desde</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 shrink-0">Hasta</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-800 border border-gray-300 rounded"
+              >
+                <X className="h-3 w-3" />
+                Limpiar fechas
+              </button>
+            )}
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500">Entregado</label>
               <select

@@ -1,5 +1,6 @@
 """Admin API endpoints - Authentication required."""
 from typing import Optional, List
+from datetime import date as date_type
 import httpx
 from fastapi import APIRouter, Depends, Query, Request, HTTPException, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
@@ -2106,12 +2107,14 @@ async def create_sale(
 )
 async def list_sales(
     request: Request,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=100, ge=1, le=500),
     search: Optional[str] = Query(default=None, max_length=100),
+    date_from: Optional[date_type] = Query(default=None),
+    date_to: Optional[date_type] = Query(default=None),
     service = Depends(get_sales_service),
 ):
-    """List recent sales. Optionally filter by customer name or product name."""
-    return service.list_sales(limit=limit, search=search)
+    """List recent sales. Optionally filter by customer name, product name, or date range."""
+    return service.list_sales(limit=limit, search=search, date_from=date_from, date_to=date_to)
 
 
 @router.get(

@@ -122,7 +122,7 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
   };
 
   const selectAll = () => {
-    setActiveMonths(new Set(ALL_MONTHS));
+    setActiveMonths(prev => prev.size === ALL_MONTHS.size ? new Set() : new Set(ALL_MONTHS));
     setHoveredMonth(null);
   };
 
@@ -179,7 +179,7 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: {
-        style: { fontSize: '12px', fontWeight: '600', colors: Array(12).fill('#52525b') },
+        style: { fontSize: '12px', fontWeight: '600', colors: '#52525b' },
       },
     },
     yaxis: [
@@ -248,7 +248,7 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
       {
         breakpoint: 640,
         options: {
-          plotOptions: { bar: { borderRadius: 3, columnWidth: '80%' } },
+          plotOptions: { bar: { borderRadius: 3, columnWidth: '85%' } },
           legend: { fontSize: '11px', markers: { size: 5 } },
           yaxis: [
             {
@@ -259,19 +259,18 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
             { seriesName: 'Ventas $', show: false },
             { seriesName: 'Ventas $', show: false },
             { seriesName: 'Ventas $', show: false },
-            {
-              seriesName: 'Ítems distintos',
-              opposite: true,
-              labels: { formatter: (v: number) => String(Math.round(v)), style: { colors: ['#71717a'], fontSize: '10px' } },
-              axisBorder: { show: false }, axisTicks: { show: false },
-            },
+            { seriesName: 'Ítems distintos', opposite: true, show: false },
             { seriesName: 'Ítems distintos', opposite: true, show: false },
           ],
+          chart: {
+            toolbar: { show: false },
+          },
         },
       },
     ],
   }), [chartData]);
 
+  const allSelected = activeMonths.size === ALL_MONTHS.size;
   const btnBase     = 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors';
   const btnActive   = `${btnBase} bg-zinc-800 text-white`;
   const btnInactive = `${btnBase} bg-zinc-100 text-zinc-400 hover:bg-zinc-200`;
@@ -324,7 +323,7 @@ export function MonthlySummaryCard({ apiKey }: { apiKey: string }) {
 
             {data && (
               <div className="flex flex-wrap gap-1.5 mb-5">
-                <button onClick={selectAll} className={activeMonths.size === 12 ? btnActive : btnInactive}>
+                <button onClick={selectAll} className={allSelected ? btnActive : btnInactive} title={allSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}>
                   Todos
                 </button>
                 {data.map((m) => (

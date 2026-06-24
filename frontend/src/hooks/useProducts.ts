@@ -269,10 +269,10 @@ export function useCreateSale(apiKey: string) {
   });
 }
 
-export function useSales(apiKey: string, limit: number = 50, search?: string) {
+export function useSales(apiKey: string, limit: number = 100, search?: string, dateFrom?: string, dateTo?: string) {
   return useQuery({
-    queryKey: ['sales', limit, search],
-    queryFn: () => adminApi.listSales(apiKey, limit, search),
+    queryKey: ['sales', limit, search, dateFrom, dateTo],
+    queryFn: () => adminApi.listSales(apiKey, limit, search, dateFrom, dateTo),
     staleTime: 30 * 1000,
     enabled: !!apiKey,
   });

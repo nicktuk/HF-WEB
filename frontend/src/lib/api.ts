@@ -792,9 +792,11 @@ export const adminApi = {
   /**
    * List sales
    */
-  async listSales(apiKey: string, limit: number = 50, search?: string): Promise<Sale[]> {
+  async listSales(apiKey: string, limit: number = 100, search?: string, dateFrom?: string, dateTo?: string): Promise<Sale[]> {
     const params = new URLSearchParams({ limit: String(limit) });
     if (search) params.append('search', search);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
     return fetchAPI(`/admin/sales?${params.toString()}`, {}, apiKey);
   },
 
