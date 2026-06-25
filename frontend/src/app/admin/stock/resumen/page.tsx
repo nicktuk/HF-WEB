@@ -16,6 +16,7 @@ export default function StockResumenPage() {
   const isSuperadmin = useIsSuperadmin();
   const [search, setSearch] = useState('');
   const [depositFilter, setDepositFilter] = useState<number | null>(null);
+  const [showPurchasedOut, setShowPurchasedOut] = useState(false);
 
   const { data: stockPurchases } = useStockPurchases(apiKey, undefined, false);
   const { data: deposits } = useDeposits(apiKey);
@@ -140,34 +141,70 @@ export default function StockResumenPage() {
 
   const handleExportExcel = () => {
     if (!filteredRows.length) return;
-    const excelRows = filteredRows.map((row) => {
-      const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
-      const reservedQty = Number(summary?.reserved_qty || 0);
-      const diff = row.purchased - row.out - reservedQty;
-      const deposits = row.key > 0 ? (depositStockMap.get(row.key) || []) : [];
-      const depositBreakdown = deposits.map((d) => `${d.deposit_name}: ${d.quantity}`).join(' | ');
-      const base = [row.name, row.purchased, row.out, reservedQty, diff, depositBreakdown];
-      if (isSuperadmin) {
+
+    if (isSuperadmin) {
+      // Superadmin: formato original
+      const excelRows = filteredRows.map((row) => {
+        const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
+        const reservedQty = Number(summary?.reserved_qty || 0);
+        const diff = row.purchased - row.out - reservedQty;
+        const deps = row.key > 0 ? (depositStockMap.get(row.key) || []) : [];
+        const depositBreakdown = deps.map((d) => `${d.deposit_name}: ${d.quantity}`).join(' | ');
+        const base = [row.name, row.purchased, row.out, reservedQty, diff, depositBreakdown];
         const originalPrice = Number(summary?.original_price || 0);
         const reservedSoldValue = Number(summary?.reserved_sale_value || 0);
         base.push(originalPrice, reservedQty * originalPrice, reservedSoldValue);
-      }
-      return base;
-    });
+        return base;
+      });
+      const columns: import('@/lib/excel').ExcelColumn[] = [
+        { header: 'Producto', type: 'string', width: 42 },
+        { header: 'Cantidad comprada', type: 'integer', width: 18 },
+        { header: 'Cantidad salida', type: 'integer', width: 16 },
+        { header: 'Reservado', type: 'integer', width: 12 },
+        { header: 'Stock', type: 'integer', width: 10 },
+        { header: 'Por depósito', type: 'string', width: 30 },
+        { header: 'Precio costo', type: 'number', width: 14 },
+        { header: 'Reservado costo', type: 'number', width: 16 },
+        { header: 'Reservado vendido', type: 'number', width: 18 },
+      ];
+      downloadExcel('stock_resumen', 'Stock', columns, excelRows);
+      return;
+    }
+
+    // No-admin: estructura por depósito con columna Real vacía
+    const activeDeposits = (deposits || []).filter((d) => d.is_active);
 
     const columns: import('@/lib/excel').ExcelColumn[] = [
       { header: 'Producto', type: 'string', width: 42 },
-      { header: 'Cantidad comprada', type: 'integer', width: 18 },
-      { header: 'Cantidad salida', type: 'integer', width: 16 },
-      { header: 'Reservado', type: 'integer', width: 12 },
-      { header: 'Stock', type: 'integer', width: 10 },
-      { header: 'Por depósito', type: 'string', width: 30 },
-      ...(isSuperadmin ? [
-        { header: 'Precio costo', type: 'number' as const, width: 14 },
-        { header: 'Reservado costo', type: 'number' as const, width: 16 },
-        { header: 'Reservado vendido', type: 'number' as const, width: 18 },
+      { header: 'Stock total sistema', type: 'integer', width: 18 },
+      ...activeDeposits.flatMap((dep) => [
+        { header: dep.name, type: 'integer' as const, width: 14 },
+        { header: `Real ${dep.name}`, type: 'string' as const, width: 14 },
+      ]),
+      ...(showPurchasedOut ? [
+        { header: 'Cantidad comprada', type: 'integer' as const, width: 18 },
+        { header: 'Cantidad salida', type: 'integer' as const, width: 16 },
       ] : []),
     ];
+
+    const excelRows = filteredRows.map((row) => {
+      const summary = row.key > 0 ? summaryMap.get(row.key) : undefined;
+      const reservedQty = Number(summary?.reserved_qty || 0);
+      const totalStock = row.purchased - row.out - reservedQty;
+      const depEntries = row.key > 0 ? (depositStockMap.get(row.key) || []) : [];
+
+      const depCols = activeDeposits.flatMap((dep) => {
+        const entry = depEntries.find((d) => d.deposit_id === dep.id);
+        return [entry?.quantity ?? 0, ''];
+      });
+
+      return [
+        row.name,
+        totalStock,
+        ...depCols,
+        ...(showPurchasedOut ? [row.purchased, row.out] : []),
+      ];
+    });
 
     downloadExcel('stock_resumen', 'Stock', columns, excelRows);
   };
@@ -219,10 +256,23 @@ export default function StockResumenPage() {
               ))}
             </select>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={!filteredRows.length}>
-            <FileDown className="h-4 w-4 mr-1" />
-            Exportar Excel
-          </Button>
+          <div className="flex items-center gap-3">
+            {!isSuperadmin && (
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showPurchasedOut}
+                  onChange={(e) => setShowPurchasedOut(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                />
+                Cant. comprada y salida
+              </label>
+            )}
+            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={!filteredRows.length}>
+              <FileDown className="h-4 w-4 mr-1" />
+              Exportar Excel
+            </Button>
+          </div>
         </div>
 
         {/* Tarjetas de resumen según filtro */}
