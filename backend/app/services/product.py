@@ -270,24 +270,12 @@ class ProductService:
 
     def get_deposit_stock_bulk(self, product_ids: List[int]) -> dict:
         """Returns {product_id: [{deposit_id, deposit_name, quantity}]} for multiple products.
-        Merges both product_deposit_stock (non-color products) and product_color_stock aggregated by deposit."""
+        Color products use product_color_stock aggregated by deposit.
+        Non-color products use product_deposit_stock.
+        Sources are never mixed per product to avoid duplicate deposit entries."""
         if not product_ids:
             return {}
         result: dict = {}
-
-        # Non-color products: from product_deposit_stock
-        rows = (
-            self.db.query(ProductDepositStock)
-            .options(joinedload(ProductDepositStock.deposit))
-            .filter(ProductDepositStock.product_id.in_(product_ids))
-            .all()
-        )
-        for r in rows:
-            result.setdefault(r.product_id, []).append({
-                "deposit_id": r.deposit_id,
-                "deposit_name": r.deposit.name if r.deposit else "",
-                "quantity": r.quantity,
-            })
 
         # Color products: aggregate product_color_stock by deposit
         color_rows = (
@@ -299,10 +287,12 @@ class ProductService:
             )
             .all()
         )
+        color_product_ids: set = set()
         color_agg: dict = {}
         for r in color_rows:
             pid = r.product_id
             dep_id = r.deposit_id
+            color_product_ids.add(pid)
             color_agg.setdefault(pid, {})
             if dep_id not in color_agg[pid]:
                 color_agg[pid][dep_id] = {
@@ -312,7 +302,23 @@ class ProductService:
                 }
             color_agg[pid][dep_id]["quantity"] += r.quantity
         for pid, deposits_map in color_agg.items():
-            result.setdefault(pid, []).extend(deposits_map.values())
+            result[pid] = list(deposits_map.values())
+
+        # Non-color products only: from product_deposit_stock
+        non_color_ids = [pid for pid in product_ids if pid not in color_product_ids]
+        if non_color_ids:
+            rows = (
+                self.db.query(ProductDepositStock)
+                .options(joinedload(ProductDepositStock.deposit))
+                .filter(ProductDepositStock.product_id.in_(non_color_ids))
+                .all()
+            )
+            for r in rows:
+                result.setdefault(r.product_id, []).append({
+                    "deposit_id": r.deposit_id,
+                    "deposit_name": r.deposit.name if r.deposit else "",
+                    "quantity": r.quantity,
+                })
 
         return result
 
