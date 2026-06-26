@@ -127,7 +127,8 @@ function PublicHeaderInner() {
               </a>
 
               {/* Redes sociales - centro */}
-              <div className="flex flex-col items-center gap-0.5 flex-1">
+              <div className="flex items-center justify-center flex-1">
+              <div className="flex flex-col items-start gap-0.5">
                 <a
                   href="https://www.instagram.com/hefa.productos"
                   target="_blank"
@@ -150,6 +151,7 @@ function PublicHeaderInner() {
                   </svg>
                   Nuestro canal de whatsapp
                 </a>
+              </div>
               </div>
 
               {/* Actions */}
