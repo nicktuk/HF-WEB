@@ -91,7 +91,7 @@ export function FloatingWhatsAppButton() {
           metadata: { origin: 'floating_whatsapp_button' },
         });
       }}
-      className="fixed bottom-4 right-4 z-40 md:hidden bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors"
+      className="fixed bottom-4 right-4 z-40 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors"
       aria-label="Contactar por WhatsApp"
     >
       <MessageCircle className="h-6 w-6" />
