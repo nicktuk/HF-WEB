@@ -1012,7 +1012,7 @@ export default function ProductEditPage() {
                     onClick={handleGenerateName}
                     disabled={isGeneratingName}
                     className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title="Generar nombre con IA (Title Case, sin códigos)"
+                    title="Generar nombre con IA (Sentence case, sin códigos)"
                   >
                     <Sparkles className={`h-3.5 w-3.5 ${isGeneratingName ? 'animate-pulse' : ''}`} />
                     {isGeneratingName ? 'Generando...' : 'Generar con IA'}

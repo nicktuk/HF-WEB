@@ -11,6 +11,7 @@ Pipeline por producto:
 """
 import asyncio
 import base64
+import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -82,11 +83,14 @@ Sos un asistente que normaliza nombres de producto para un catálogo de \
 e-commerce en Argentina.
 
 Tomá el siguiente nombre de producto (puede venir con códigos de proveedor, \
-SKUs, abreviaturas o formato desordenado) y devolvé el nombre limpio, \
-comercial y en formato Title Case (cada palabra principal con mayúscula inicial).
+SKUs, abreviaturas o formato desordenado) y devolvé el nombre limpio y comercial \
+en formato Sentence case: solo la primera letra del nombre en mayúscula, el \
+resto en minúscula, excepto marcas, modelos y siglas que normalmente llevan \
+mayúscula (ej: "Zapatilla Nike Air Max talle 42").
 
 Reglas:
-• NO incluyas códigos, SKUs, referencias internas ni numeraciones de proveedor
+• NO incluyas códigos, SKUs, referencias internas ni numeraciones de proveedor \
+(ni al principio, ni en medio, ni al final del nombre){code_line}
 • NO inventes información que no esté en el nombre original
 • Mantené marca y modelo si están presentes
 • Respondé SOLO con el nombre limpio, una sola línea, sin comillas ni explicaciones
@@ -183,14 +187,24 @@ class AIDescriptionService:
     async def generate_name_for_product(self, product: Product, config: Optional[Dict] = None) -> str:
         cfg = config or {}
         brand_line = f"\nMarca: {product.brand}" if product.brand else ""
-        prompt = NAME_PROMPT_TEMPLATE.format(name=product.original_name, brand_line=brand_line)
+        code_line = f" (en este caso, el código a excluir es \"{product.sku}\")" if product.sku else ""
+        prompt = NAME_PROMPT_TEMPLATE.format(
+            name=product.original_name, brand_line=brand_line, code_line=code_line,
+        )
 
         provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
         if provider == "openai":
             raw = await self._call_openai(prompt, None, cfg)
         else:
             raw = await self._call_claude(prompt, None, cfg)
-        return raw.strip().strip('"').strip("'")
+
+        clean = raw.strip().strip('"').strip("'")
+        if product.sku:
+            clean = re.sub(re.escape(product.sku), '', clean, flags=re.IGNORECASE)
+        # Limpieza de residuos si el modelo dejó separadores sueltos al remover el código
+        clean = re.sub(r'\s*[-–—|]\s*$', '', clean.strip())
+        clean = re.sub(r'\s{2,}', ' ', clean).strip()
+        return clean
 
     # ------------------------------------------------------------------
     # Fetch URL origen
