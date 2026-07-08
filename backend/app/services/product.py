@@ -1758,6 +1758,7 @@ class ProductService:
                     Product.original_name.ilike(search_term),
                     Product.custom_name.ilike(search_term),
                     Product.sku.ilike(search_term),
+                    Product.codigo_interno.ilike(search_term),
                     Product.slug.ilike(search_term)
                 )
             )

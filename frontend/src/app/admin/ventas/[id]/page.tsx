@@ -368,7 +368,7 @@ export default function SaleDetailPage() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                            <p className="text-sm font-medium text-gray-900">
                               {product.custom_name || product.original_name}
                             </p>
                             <p className="text-xs text-gray-500">

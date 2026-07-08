@@ -459,6 +459,7 @@ class SalesService:
                     Sale.customer_name.ilike(search_term),
                     Product.custom_name.ilike(search_term),
                     Product.original_name.ilike(search_term),
+                    Product.codigo_interno.ilike(search_term),
                     SaleItem.manual_product_name.ilike(search_term),
                 )
             ).distinct()

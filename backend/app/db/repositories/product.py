@@ -71,7 +71,8 @@ class ProductRepository(BaseRepository[Product]):
                 or_(
                     Product.original_name.ilike(search_term),
                     Product.custom_name.ilike(search_term),
-                    Product.description.ilike(search_term)
+                    Product.description.ilike(search_term),
+                    Product.codigo_interno.ilike(search_term)
                 )
             )
 
@@ -163,7 +164,8 @@ class ProductRepository(BaseRepository[Product]):
             query = query.filter(
                 or_(
                     Product.original_name.ilike(search_term),
-                    Product.custom_name.ilike(search_term)
+                    Product.custom_name.ilike(search_term),
+                    Product.codigo_interno.ilike(search_term)
                 )
             )
 
@@ -289,7 +291,9 @@ class ProductRepository(BaseRepository[Product]):
                     or_(
                         Product.original_name.ilike(word_term),
                         Product.custom_name.ilike(word_term),
-                        Product.slug.ilike(word_term)
+                        Product.slug.ilike(word_term),
+                        Product.sku.ilike(word_term),
+                        Product.codigo_interno.ilike(word_term)
                     )
                 )
 
@@ -430,7 +434,9 @@ class ProductRepository(BaseRepository[Product]):
                     or_(
                         Product.original_name.ilike(word_term),
                         Product.custom_name.ilike(word_term),
-                        Product.slug.ilike(word_term)
+                        Product.slug.ilike(word_term),
+                        Product.sku.ilike(word_term),
+                        Product.codigo_interno.ilike(word_term)
                     )
                 )
 

@@ -649,7 +649,7 @@ export default function VentasPage() {
                           )}
                         </button>
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 text-sm line-clamp-1">
+                          <div className="font-medium text-gray-900 text-sm">
                             {product.custom_name || product.original_name}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -700,7 +700,7 @@ export default function VentasPage() {
             const prevUrl = prevImg ? (resolveImageUrl(prevImg.url) ?? prevImg.url) : null;
             return (
               <div className="flex-1 border-t flex flex-col items-center justify-center bg-gray-50 p-4 min-h-[180px]">
-                <p className="text-xs font-semibold text-gray-500 text-center mb-3 line-clamp-2">
+                <p className="text-xs font-semibold text-gray-500 text-center mb-3">
                   {previewProduct.custom_name || previewProduct.original_name}
                 </p>
                 {prevUrl ? (
