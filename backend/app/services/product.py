@@ -198,7 +198,7 @@ class ProductService:
         return ProductPublicResponse(
             id=product.id,
             slug=product.slug,
-            name=product.display_name,
+            name=product.catalog_display_name,
             price=product.final_price,
             currency=product.original_currency,
             short_description=product.short_description,
@@ -950,6 +950,7 @@ class ProductService:
             short_description=scraped.short_description,
             brand=scraped.brand,
             sku=scraped.sku,
+            codigo_interno=self._generate_codigo_interno(),
             min_purchase_qty=scraped.min_purchase_qty,
             kit_content=scraped.kit_content,
             enabled=data.enabled,
@@ -1074,6 +1075,8 @@ class ProductService:
             product.sku = data.sku if data.sku else None
         if 'video_url' in data.model_fields_set:
             product.video_url = data.video_url if data.video_url else None
+        if data.mostrar_codigo is not None:
+            product.mostrar_codigo = data.mostrar_codigo
 
         # Update images if provided
         if data.image_urls is not None:
@@ -1183,6 +1186,14 @@ class ProductService:
         self.repo.delete(product)
         cache.invalidate_all_products()
 
+    def _generate_codigo_interno(self) -> str:
+        """Genera un código interno único con formato HFXXXXX (5 dígitos aleatorios)."""
+        import random
+        while True:
+            code = "HF" + "".join(str(random.randint(0, 9)) for _ in range(5))
+            if not self.db.query(Product.id).filter(Product.codigo_interno == code).first():
+                return code
+
     def create_manual(self, data) -> Product:
         """
         Create a product manually without scraping.
@@ -1242,6 +1253,7 @@ class ProductService:
             short_description=data.short_description,
             brand=data.brand,
             sku=data.sku,
+            codigo_interno=self._generate_codigo_interno(),
             enabled=data.enabled,
             is_featured=data.is_featured,
             is_immediate_delivery=data.is_immediate_delivery,

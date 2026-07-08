@@ -199,6 +199,8 @@ async def get_products_admin(
             short_description=p.short_description,
             brand=p.brand,
             sku=p.sku,
+            codigo_interno=p.codigo_interno,
+            mostrar_codigo=p.mostrar_codigo,
             category=p.category_ref.name if p.category_ref else None,
             category_id=p.category_id,
             subcategory=p.subcategory,
@@ -826,6 +828,8 @@ async def get_product_admin(
         short_description=p.short_description,
         brand=p.brand,
         sku=p.sku,
+        codigo_interno=p.codigo_interno,
+        mostrar_codigo=p.mostrar_codigo,
         min_purchase_qty=p.min_purchase_qty,
         kit_content=p.kit_content,
         category=p.category_ref.name if p.category_ref else None,
@@ -902,6 +906,8 @@ async def create_product(
         short_description=product.short_description,
         brand=product.brand,
         sku=product.sku,
+        codigo_interno=product.codigo_interno,
+        mostrar_codigo=product.mostrar_codigo,
         category=product.category_ref.name if product.category_ref else None,
         category_id=product.category_id,
         enabled=product.enabled,
@@ -967,6 +973,8 @@ async def create_product_manual(
         short_description=product.short_description,
         brand=product.brand,
         sku=product.sku,
+        codigo_interno=product.codigo_interno,
+        mostrar_codigo=product.mostrar_codigo,
         category=product.category_ref.name if product.category_ref else None,
         category_id=product.category_id,
         enabled=product.enabled,
@@ -1222,6 +1230,8 @@ async def update_product(
         short_description=product.short_description,
         brand=product.brand,
         sku=product.sku,
+        codigo_interno=product.codigo_interno,
+        mostrar_codigo=product.mostrar_codigo,
         category=product.category_ref.name if product.category_ref else None,
         category_id=product.category_id,
         enabled=product.enabled,
@@ -2541,7 +2551,7 @@ async def generate_manual_post(
     Generate a WhatsApp-length description using AI for a product not in the catalog.
     Uses the same AI service and config as product description generation.
     """
-    from app.services.ai_description import get_ai_service
+    from app.services.ai_description import get_ai_service, PROMPT_TEMPLATE
     from app.services.app_settings import get_ai_config
 
     db = service.db
@@ -2575,12 +2585,13 @@ async def generate_manual_post(
         "emojis relevantes, sin URL, sin precio en el texto (va por separado)."
     )
 
+    prompt = PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)
     try:
         provider = ai_config.get("AI_PROVIDER", "openai")
         if provider == "openai":
-            text = await ai._call_openai(context, None, ai_config, extra_rules)
+            text = await ai._call_openai(prompt, None, ai_config)
         else:
-            text = await ai._call_claude(context, None, ai_config, extra_rules)
+            text = await ai._call_claude(prompt, None, ai_config)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

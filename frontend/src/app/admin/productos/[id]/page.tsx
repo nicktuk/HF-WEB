@@ -74,10 +74,15 @@ export default function ProductEditPage() {
   const [shortDescription, setShortDescription] = useState('');
   const [brand, setBrand] = useState('');
   const [sku, setSku] = useState('');
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
 
   // AI generation state
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // AI name generation state
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+  const [nameStatus, setNameStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Image search state
   const [isSearchingImages, setIsSearchingImages] = useState(false);
@@ -152,6 +157,7 @@ export default function ProductEditPage() {
       setShortDescription(product.short_description || '');
       setBrand(product.brand || '');
       setSku(product.sku || '');
+      setMostrarCodigo(product.mostrar_codigo || false);
       // Initialize images
       const sortedImgs = [...product.images].sort((a, b) => (a.is_primary ? -1 : 1));
       setImageUrls(sortedImgs.map(img => img.url));
@@ -326,6 +332,24 @@ export default function ProductEditPage() {
     }
   };
 
+  const handleGenerateName = async () => {
+    setIsGeneratingName(true);
+    setNameStatus(null);
+    try {
+      const res = await aiApi.generateName(apiKey, productId);
+      const composed = mostrarCodigo && product?.codigo_interno
+        ? `${res.name} - ${product.codigo_interno}`
+        : res.name;
+      setCustomName(composed);
+      setNameStatus({ ok: true, msg: 'Nombre generado. Guarda los cambios para aplicarlo.' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al generar nombre';
+      setNameStatus({ ok: false, msg });
+    } finally {
+      setIsGeneratingName(false);
+    }
+  };
+
   const handleSearchImages = async () => {
     setIsSearchingImages(true);
     setImageSearchStatus(null);
@@ -378,6 +402,7 @@ export default function ProductEditPage() {
         short_description: shortDescription || '',
         brand: brand || '',
         sku: sku || '',
+        mostrar_codigo: mostrarCodigo,
         image_urls: imageUrls,
         image_colors: imageColors,
         image_alt_texts: imageAltTexts,
@@ -977,13 +1002,34 @@ export default function ProductEditPage() {
               <h2 className="text-lg font-semibold">Datos del producto</h2>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input
-                label="Nombre personalizado"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder={product.original_name}
-                helperText="Dejar vacio para usar el nombre original"
-              />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nombre personalizado
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateName}
+                    disabled={isGeneratingName}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Generar nombre con IA (Title Case, sin códigos)"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isGeneratingName ? 'animate-pulse' : ''}`} />
+                    {isGeneratingName ? 'Generando...' : 'Generar con IA'}
+                  </button>
+                </div>
+                <Input
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder={product.original_name}
+                  helperText="Dejar vacio para usar el nombre original"
+                />
+                {nameStatus && (
+                  <p className={`mt-1 text-xs ${nameStatus.ok ? 'text-purple-600' : 'text-red-600'}`}>
+                    {nameStatus.msg}
+                  </p>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -998,6 +1044,24 @@ export default function ProductEditPage() {
                   onChange={(e) => setSku(e.target.value)}
                   placeholder="Ej: ABC123"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <Input
+                  label="Código interno"
+                  value={product.codigo_interno || ''}
+                  disabled
+                  helperText="Generado automáticamente"
+                />
+                <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={mostrarCodigo}
+                    onChange={(e) => setMostrarCodigo(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  Mostrar código en el catálogo público
+                </label>
               </div>
 
               <div>

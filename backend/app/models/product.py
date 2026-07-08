@@ -39,6 +39,8 @@ class Product(Base):
     short_description = Column(String(1000), nullable=True)
     brand = Column(String(100), nullable=True)
     sku = Column(String(100), nullable=True)
+    codigo_interno = Column(String(7), nullable=True, comment="Código interno único HFXXXXX")
+    mostrar_codigo = Column(Boolean, default=False, nullable=False, comment="Mostrar código interno en el catálogo público")
     min_purchase_qty = Column(Integer, nullable=True, comment="Cantidad minima de compra")
     kit_content = Column(Text, nullable=True, comment="Contenido del kit/combo")
 
@@ -88,6 +90,7 @@ class Product(Base):
     __table_args__ = (
         Index("ix_products_source_slug", "source_website_id", "slug", unique=True),
         Index("ix_products_enabled_order", "enabled", "display_order"),
+        Index("ix_products_codigo_interno", "codigo_interno", unique=True),
     )
 
     def __repr__(self):
@@ -121,6 +124,13 @@ class Product(Base):
     def display_name(self) -> str:
         """Nombre a mostrar (custom o original)."""
         return self.custom_name or self.original_name
+
+    @property
+    def catalog_display_name(self) -> str:
+        """Nombre para catálogo público: agrega el código interno si mostrar_codigo está activo."""
+        if self.mostrar_codigo and self.codigo_interno:
+            return f"{self.display_name} - {self.codigo_interno}"
+        return self.display_name
 
 
 class ProductImage(Base):

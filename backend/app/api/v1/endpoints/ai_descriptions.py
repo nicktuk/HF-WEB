@@ -66,6 +66,11 @@ class SingleResponse(BaseModel):
     short_description: str
 
 
+class NameResponse(BaseModel):
+    product_id: int
+    name: str
+
+
 # ---------------------------------------------------------------------------
 # POST /generate  →  lanza batch
 # ---------------------------------------------------------------------------
@@ -231,6 +236,33 @@ async def generate_single(
     db.commit()
 
     return SingleResponse(product_id=product_id, short_description=desc)
+
+
+# ---------------------------------------------------------------------------
+# POST /generate-name/{product_id}  →  nombre normalizado con IA (no persiste)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/generate-name/{product_id}",
+    response_model=NameResponse,
+    dependencies=[Depends(get_admin_user)],
+)
+async def generate_name(
+    product_id: int,
+    db: Session = Depends(get_db),
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    ai_config = get_ai_config(db)
+    ai = get_ai_service()
+    try:
+        name = await ai.generate_name_for_product(product, config=ai_config)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    return NameResponse(product_id=product_id, name=name)
 
 
 # ---------------------------------------------------------------------------

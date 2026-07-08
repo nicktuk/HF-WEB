@@ -75,6 +75,7 @@ class ProductUpdate(BaseModel):
     image_colors: Optional[List[Optional[str]]] = Field(None, max_length=10)
     image_alt_texts: Optional[List[Optional[str]]] = Field(None, max_length=10)
     video_url: Optional[str] = None
+    mostrar_codigo: Optional[bool] = None
 
     @field_validator("custom_name")
     @classmethod
@@ -117,6 +118,8 @@ class ProductResponse(BaseModel):
     short_description: Optional[str] = None
     brand: Optional[str] = None
     sku: Optional[str] = None
+    codigo_interno: Optional[str] = None
+    mostrar_codigo: bool = False
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
     category: Optional[str] = None

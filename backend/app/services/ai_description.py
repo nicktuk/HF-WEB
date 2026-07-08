@@ -77,6 +77,23 @@ Reglas:
 Respondé SOLO con la descripción formateada. Sin título, sin explicaciones extra."""
 
 
+NAME_PROMPT_TEMPLATE = """\
+Sos un asistente que normaliza nombres de producto para un catálogo de \
+e-commerce en Argentina.
+
+Tomá el siguiente nombre de producto (puede venir con códigos de proveedor, \
+SKUs, abreviaturas o formato desordenado) y devolvé el nombre limpio, \
+comercial y en formato Title Case (cada palabra principal con mayúscula inicial).
+
+Reglas:
+• NO incluyas códigos, SKUs, referencias internas ni numeraciones de proveedor
+• NO inventes información que no esté en el nombre original
+• Mantené marca y modelo si están presentes
+• Respondé SOLO con el nombre limpio, una sola línea, sin comillas ni explicaciones
+
+Nombre original: {name}{brand_line}"""
+
+
 class AIDescriptionService:
 
     def __init__(self) -> None:
@@ -153,10 +170,27 @@ class AIDescriptionService:
         extra = (cfg.get("AI_PROMPT_EXTRA") or "").strip()
         extra_rules = f"\nInstrucciones adicionales:\n{extra}\n" if extra else ""
 
+        prompt = PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)
         provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
         if provider == "openai":
-            return await self._call_openai(context, vision_url, cfg, extra_rules)
-        return await self._call_claude(context, vision_url, cfg, extra_rules)
+            return await self._call_openai(prompt, vision_url, cfg)
+        return await self._call_claude(prompt, vision_url, cfg)
+
+    # ------------------------------------------------------------------
+    # Generación de nombre normalizado
+    # ------------------------------------------------------------------
+
+    async def generate_name_for_product(self, product: Product, config: Optional[Dict] = None) -> str:
+        cfg = config or {}
+        brand_line = f"\nMarca: {product.brand}" if product.brand else ""
+        prompt = NAME_PROMPT_TEMPLATE.format(name=product.original_name, brand_line=brand_line)
+
+        provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
+        if provider == "openai":
+            raw = await self._call_openai(prompt, None, cfg)
+        else:
+            raw = await self._call_claude(prompt, None, cfg)
+        return raw.strip().strip('"').strip("'")
 
     # ------------------------------------------------------------------
     # Fetch URL origen
@@ -220,7 +254,7 @@ class AIDescriptionService:
     # Claude
     # ------------------------------------------------------------------
 
-    async def _call_claude(self, context: str, image_url: Optional[str], config: Optional[Dict] = None, extra_rules: str = "") -> str:
+    async def _call_claude(self, prompt: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
         try:
             import anthropic
         except ImportError:
@@ -243,7 +277,7 @@ class AIDescriptionService:
                     },
                 })
 
-        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)})
+        content.append({"type": "text", "text": prompt})
 
         response = await client.messages.create(
             model=settings.AI_MODEL_CLAUDE,
@@ -256,7 +290,7 @@ class AIDescriptionService:
     # OpenAI
     # ------------------------------------------------------------------
 
-    async def _call_openai(self, context: str, image_url: Optional[str], config: Optional[Dict] = None, extra_rules: str = "") -> str:
+    async def _call_openai(self, prompt: str, image_url: Optional[str], config: Optional[Dict] = None) -> str:
         try:
             from openai import AsyncOpenAI
         except ImportError:
@@ -273,7 +307,7 @@ class AIDescriptionService:
                 "image_url": {"url": image_url, "detail": "low"},
             })
 
-        content.append({"type": "text", "text": PROMPT_TEMPLATE.format(context=context, extra_rules=extra_rules)})
+        content.append({"type": "text", "text": prompt})
 
         response = await client.chat.completions.create(
             model=settings.AI_MODEL_OPENAI,

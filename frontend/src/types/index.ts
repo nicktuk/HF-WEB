@@ -55,6 +55,8 @@ export interface ProductAdmin extends ProductPublic {
   custom_installment_price?: number;
   description?: string;
   sku?: string;
+  codigo_interno?: string | null;
+  mostrar_codigo: boolean;
   min_purchase_qty?: number;
   kit_content?: string;
   enabled: boolean;
@@ -363,6 +365,7 @@ export interface ProductUpdateForm {
   short_description?: string;
   brand?: string;
   sku?: string;
+  mostrar_codigo?: boolean;
   image_urls?: string[];
   image_colors?: (string | null)[];
   image_alt_texts?: (string | null)[];

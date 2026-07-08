@@ -1441,6 +1441,13 @@ export const aiApi = {
     return fetchAPI(`/admin/ai/search-images/${productId}`, { method: 'POST' }, apiKey);
   },
 
+  async generateName(
+    apiKey: string,
+    productId: number,
+  ): Promise<{ product_id: number; name: string }> {
+    return fetchAPI(`/admin/ai/generate-name/${productId}`, { method: 'POST' }, apiKey);
+  },
+
   async processImage(
     apiKey: string,
     productId: number,
