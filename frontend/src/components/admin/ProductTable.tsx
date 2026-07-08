@@ -3,14 +3,11 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreVertical, Edit, RefreshCw, Trash2, Eye, EyeOff, Star, Zap, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { MoreVertical, Edit, RefreshCw, Trash2, Star, Zap, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { TableRowSkeleton } from '@/components/ui/skeleton';
-import { formatPrice, formatRelativeTime } from '@/lib/utils';
-import { useUpdateProduct, useDeleteProduct, useRescrapeProduct, useAdminSubcategories } from '@/hooks/useProducts';
+import { useUpdateProduct, useDeleteProduct, useRescrapeProduct } from '@/hooks/useProducts';
 import { resolveImageUrl } from '@/lib/api';
-import type { ProductAdmin, Category, Subcategory } from '@/types';
+import type { ProductAdmin } from '@/types';
 
 interface ProductTableProps {
   products: ProductAdmin[];
@@ -18,33 +15,19 @@ interface ProductTableProps {
   apiKey: string;
   selectedIds?: number[];
   onSelectionChange?: (ids: number[]) => void;
-  categories?: Category[];
-  showMarkup?: boolean;
 }
 
-export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange, categories = [], showMarkup = true }: ProductTableProps) {
+const GRID_CLASSES = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3';
+
+export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange }: ProductTableProps) {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
   const rescrapeMutation = useRescrapeProduct(apiKey);
 
   const [openMenu, setOpenMenu] = useState<number | null>(null);
 
-  const handleCategoryChange = async (product: ProductAdmin, newCategory: string) => {
-    if (newCategory === (product.category || '')) return;
-    // When category changes, clear subcategory
-    await updateMutation.mutateAsync({
-      id: product.id,
-      data: { category: newCategory || undefined, subcategory: undefined },
-    });
-  };
-
-  const handleSubcategoryChange = async (product: ProductAdmin, newSubcategory: string) => {
-    if (newSubcategory === (product.subcategory || '')) return;
-    await updateMutation.mutateAsync({
-      id: product.id,
-      data: { subcategory: newSubcategory || undefined },
-    });
-  };
+  const allSelected = products.length > 0 && products.every(p => selectedIds.includes(p.id));
+  const someSelected = products.some(p => selectedIds.includes(p.id)) && !allSelected;
 
   const handleSelectAll = (checked: boolean) => {
     if (onSelectionChange) {
@@ -61,9 +44,6 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
       }
     }
   };
-
-  const allSelected = products.length > 0 && products.every(p => selectedIds.includes(p.id));
-  const someSelected = products.some(p => selectedIds.includes(p.id)) && !allSelected;
 
   const handleToggleEnabled = async (product: ProductAdmin) => {
     await updateMutation.mutateAsync({
@@ -106,27 +86,14 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
 
   if (isLoading) {
     return (
-      <div className="overflow-x-auto bg-white rounded-lg border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {onSelectionChange && <th className="px-4 py-3 w-12"></th>}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subcategoría</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Origen</th>
-              {showMarkup && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Markup</th>}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Final</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRowSkeleton key={i} columns={onSelectionChange ? 9 : 8} />
-            ))}
-          </tbody>
-        </table>
+      <div className={GRID_CLASSES}>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="bg-white border rounded-lg p-3 animate-pulse space-y-2">
+            <div className="aspect-square w-full rounded-lg bg-gray-200" />
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -140,301 +107,148 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
   }
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg border">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
+    <div>
+      {onSelectionChange && (
+        <label className="flex items-center gap-2 mb-3 text-sm text-gray-600 w-fit cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => { if (el) el.indeterminate = someSelected; }}
+            onChange={(e) => handleSelectAll(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          Seleccionar todos ({products.length})
+        </label>
+      )}
+      <div className={GRID_CLASSES}>
+      {products.map((product) => {
+        const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
+        const stockQty = product.stock_qty || 0;
+        const hasStock = stockQty > 0;
+
+        return (
+          <div key={product.id} className="relative bg-white border rounded-lg p-3 flex flex-col gap-2">
             {onSelectionChange && (
-              <th className="px-4 py-3 w-12">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(el) => { if (el) el.indeterminate = someSelected; }}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(product.id)}
+                onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                className="absolute top-2 left-2 z-10 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white"
+              />
+            )}
+
+            <Link href={`/admin/productos/${product.id}`} className="block aspect-square w-full rounded-lg bg-gray-100 overflow-hidden">
+              {primaryImage ? (
+                <Image
+                  src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
+                  alt={product.display_name_with_code}
+                  width={200}
+                  height={200}
+                  className="h-full w-full object-cover"
                 />
-              </th>
-            )}
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Producto
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Categoría
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Subcategoría
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Precio Origen
-            </th>
-            {showMarkup && (
-              <>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Markup
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ganancia
-                </th>
-              </>
-            )}
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Precio Final
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Origen
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {products.map((product) => {
-            const primaryImage = product.images.find((img) => img.is_primary) || product.images[0];
-            const finalPrice = product.custom_price
-              ? Number(product.custom_price)
-              : (Number(product.original_price) || 0) * (1 + Number(product.markup_percentage) / 100);
-            const stockQty = product.stock_qty || 0;
-            const hasStock = stockQty > 0;
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-gray-400">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+            </Link>
 
-            return (
-              <tr key={product.id} className="hover:bg-gray-50">
-                {/* Checkbox */}
-                {onSelectionChange && (
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(product.id)}
-                      onChange={(e) => handleSelectOne(product.id, e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                  </td>
+            <Link
+              href={`/admin/productos/${product.id}`}
+              className={`text-sm font-medium leading-snug ${hasStock ? 'text-emerald-700 hover:text-emerald-800' : 'text-gray-900 hover:text-primary-600'}`}
+            >
+              {product.display_name_with_code}
+            </Link>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleToggleEnabled(product)}
+                title={product.enabled ? 'Desactivar' : 'Activar'}
+                className="hover:scale-110 transition-transform"
+              >
+                {product.enabled ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-gray-400" />
                 )}
-                {/* Product */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
-                      {primaryImage ? (
-                        <Image
-                          src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
-                          alt={product.name}
-                          width={64}
-                          height={64}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-gray-400">
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Link
-                          href={`/admin/productos/${product.id}`}
-                          className={`font-medium line-clamp-1 ${hasStock ? 'text-emerald-700 hover:text-emerald-800' : 'text-gray-900 hover:text-primary-600'}`}
-                        >
-                          {product.custom_name || product.original_name}
-                        </Link>
-                        {hasStock && (
-                          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Stock {stockQty}
-                          </Badge>
-                        )}
-                        {/* Status badges */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleToggleEnabled(product)}
-                            title={product.enabled ? 'Desactivar' : 'Activar'}
-                            className="hover:scale-110 transition-transform"
-                          >
-                            {product.enabled ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-gray-400" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleToggleFeatured(product)}
-                            title={product.is_featured ? 'Quitar de Nuevo' : 'Marcar como Nuevo'}
-                            className="hover:scale-110 transition-transform"
-                          >
-                            <Star className={`h-4 w-4 ${product.is_featured ? 'text-amber-500 fill-amber-500' : 'text-gray-400'}`} />
-                          </button>
-                          <button
-                            onClick={() => handleToggleImmediate(product)}
-                            title={product.is_immediate_delivery ? 'Quitar Entrega inmediata' : 'Marcar Entrega inmediata'}
-                            className="hover:scale-110 transition-transform"
-                          >
-                            <Zap className={`h-4 w-4 ${product.is_immediate_delivery ? 'text-emerald-600 fill-emerald-600' : 'text-gray-400'}`} />
-                          </button>
-                          <button
-                            onClick={() => handleToggleCheckStock(product)}
-                            title={product.is_check_stock ? 'Quitar Consultar stock' : 'Marcar Consultar stock'}
-                            className="hover:scale-110 transition-transform"
-                          >
-                            <HelpCircle className={`h-4 w-4 ${product.is_check_stock ? 'text-orange-500 fill-orange-500' : 'text-gray-400'}`} />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500">{product.slug}</p>
-                    </div>
+              </button>
+              <button
+                onClick={() => handleToggleFeatured(product)}
+                title={product.is_featured ? 'Quitar de Nuevo' : 'Marcar como Nuevo'}
+                className="hover:scale-110 transition-transform"
+              >
+                <Star className={`h-4 w-4 ${product.is_featured ? 'text-amber-500 fill-amber-500' : 'text-gray-400'}`} />
+              </button>
+              <button
+                onClick={() => handleToggleImmediate(product)}
+                title={product.is_immediate_delivery ? 'Quitar Entrega inmediata' : 'Marcar Entrega inmediata'}
+                className="hover:scale-110 transition-transform"
+              >
+                <Zap className={`h-4 w-4 ${product.is_immediate_delivery ? 'text-emerald-600 fill-emerald-600' : 'text-gray-400'}`} />
+              </button>
+              <button
+                onClick={() => handleToggleCheckStock(product)}
+                title={product.is_check_stock ? 'Quitar Consultar stock' : 'Marcar Consultar stock'}
+                className="hover:scale-110 transition-transform"
+              >
+                <HelpCircle className={`h-4 w-4 ${product.is_check_stock ? 'text-orange-500 fill-orange-500' : 'text-gray-400'}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center py-1">
+              <span
+                className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-semibold ${
+                  hasStock ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                }`}
+                title={`Stock: ${stockQty}`}
+              >
+                {stockQty}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 mt-auto">
+              <Link href={`/admin/productos/${product.id}`} className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOpenMenu(openMenu === product.id ? null : product.id)}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+
+                {openMenu === product.id && (
+                  <div className="absolute right-0 bottom-full mb-1 w-48 bg-white rounded-lg shadow-lg border z-20">
+                    <button
+                      onClick={() => handleRescrape(product.id)}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
+                      disabled={rescrapeMutation.isPending}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Re-scrapear
+                    </button>
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg border-t"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar
+                    </button>
                   </div>
-                </td>
-
-                {/* Category */}
-                <td className="px-4 py-3 text-sm">
-                  <select
-                    value={product.category || ''}
-                    onChange={(e) => handleCategoryChange(product, e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded hover:border-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 bg-transparent cursor-pointer"
-                    disabled={updateMutation.isPending}
-                  >
-                    <option value="">Sin categoría</option>
-                    {categories.map((cat) => (
-                      <option key={cat.name} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-
-                {/* Subcategory */}
-                <td className="px-4 py-3 text-sm">
-                  <SubcategorySelect
-                    product={product}
-                    categories={categories}
-                    onSubcategoryChange={handleSubcategoryChange}
-                    disabled={updateMutation.isPending}
-                  />
-                </td>
-
-                {/* Original Price */}
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {formatPrice(product.original_price)}
-                </td>
-
-                {/* Markup + Ganancia */}
-                {showMarkup && (
-                  <>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {Number(product.markup_percentage)}%
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-emerald-700">
-                      {product.original_price && Number(product.original_price) > 0
-                        ? `${((finalPrice - Number(product.original_price)) / finalPrice * 100).toFixed(1)}%`
-                        : '-'}
-                    </td>
-                  </>
                 )}
-
-                {/* Final Price */}
-                <td className="px-4 py-3">
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatPrice(finalPrice)}
-                  </span>
-                </td>
-
-                {/* Source Website */}
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {product.source_website_name || <span className="text-gray-400">-</span>}
-                </td>
-
-                {/* Actions */}
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {/* Botón Editar */}
-                    <Link href={`/admin/productos/${product.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Edit className="mr-1.5 h-4 w-4" />
-                        Editar
-                      </Button>
-                    </Link>
-
-                    {/* Dropdown Más */}
-                    <div className="relative">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setOpenMenu(openMenu === product.id ? null : product.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-
-                      {openMenu === product.id && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border z-10">
-                          <button
-                            onClick={() => handleRescrape(product.id)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
-                            disabled={rescrapeMutation.isPending}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                            Re-scrapear
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg border-t"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      </div>
     </div>
-  );
-}
-
-// Subcategory select component that fetches subcategories based on category
-function SubcategorySelect({
-  product,
-  categories,
-  onSubcategoryChange,
-  disabled
-}: {
-  product: ProductAdmin;
-  categories: Category[];
-  onSubcategoryChange: (product: ProductAdmin, subcategory: string) => void;
-  disabled: boolean;
-}) {
-  // Find category ID for the product's category
-  const categoryObj = categories.find(c => c.name === product.category);
-  const { data: subcategories } = useAdminSubcategories(categoryObj?.id);
-
-  if (!product.category) {
-    return (
-      <span className="text-gray-400 text-sm">-</span>
-    );
-  }
-
-  if (!subcategories || subcategories.length === 0) {
-    return (
-      <span className="text-gray-400 text-sm">-</span>
-    );
-  }
-
-  return (
-    <select
-      value={product.subcategory || ''}
-      onChange={(e) => onSubcategoryChange(product, e.target.value)}
-      className="w-full px-2 py-1 text-sm border border-gray-200 rounded hover:border-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 bg-transparent cursor-pointer"
-      disabled={disabled}
-    >
-      <option value="">Sin subcategoría</option>
-      {subcategories.map((sub: Subcategory) => (
-        <option key={sub.name} value={sub.name}>
-          {sub.name}
-        </option>
-      ))}
-    </select>
   );
 }

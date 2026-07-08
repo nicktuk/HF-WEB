@@ -148,6 +148,14 @@ class ProductResponse(BaseModel):
 
     @computed_field
     @property
+    def display_name_with_code(self) -> str:
+        base = self.custom_name or self.original_name
+        if self.mostrar_codigo and self.codigo_interno:
+            return f"{base} - {self.codigo_interno}"
+        return base
+
+    @computed_field
+    @property
     def final_price(self) -> Optional[Decimal]:
         if self.custom_price is not None:
             return self.custom_price

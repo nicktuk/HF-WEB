@@ -198,7 +198,7 @@ class ProductService:
         return ProductPublicResponse(
             id=product.id,
             slug=product.slug,
-            name=product.catalog_display_name,
+            name=product.display_name_with_code,
             price=product.final_price,
             currency=product.original_currency,
             short_description=product.short_description,

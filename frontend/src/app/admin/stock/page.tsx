@@ -178,8 +178,8 @@ export default function StockUnmatchedPage() {
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-900 line-clamp-1">
-                        {product.custom_name || product.original_name}
+                      <div className="font-medium text-gray-900">
+                        {product.display_name_with_code}
                       </div>
                       <div className="text-xs text-gray-500">
                         SKU: {product.sku || '-'} · {product.source_website_name || 'Manual'}

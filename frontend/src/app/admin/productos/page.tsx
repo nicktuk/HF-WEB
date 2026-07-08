@@ -853,8 +853,6 @@ export default function ProductsPage() {
         apiKey={apiKey}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        categories={categories || []}
-        showMarkup={isSuperadmin}
       />
 
       {isSuperadmin && <Modal

@@ -369,7 +369,7 @@ export default function SaleDetailPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-900">
-                              {product.custom_name || product.original_name}
+                              {product.display_name_with_code}
                             </p>
                             <p className="text-xs text-gray-500">
                               Stock: {product.stock_qty || 0}

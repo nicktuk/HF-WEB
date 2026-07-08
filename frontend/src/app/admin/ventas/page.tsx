@@ -650,7 +650,7 @@ export default function VentasPage() {
                         </button>
                         <div className="min-w-0">
                           <div className="font-medium text-gray-900 text-sm">
-                            {product.custom_name || product.original_name}
+                            {product.display_name_with_code}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className={`text-xs font-medium ${inStock ? 'text-emerald-600' : 'text-gray-400'}`}>
@@ -701,7 +701,7 @@ export default function VentasPage() {
             return (
               <div className="flex-1 border-t flex flex-col items-center justify-center bg-gray-50 p-4 min-h-[180px]">
                 <p className="text-xs font-semibold text-gray-500 text-center mb-3">
-                  {previewProduct.custom_name || previewProduct.original_name}
+                  {previewProduct.display_name_with_code}
                 </p>
                 {prevUrl ? (
                   <div className="relative w-full flex-1 min-h-0">
@@ -812,7 +812,7 @@ export default function VentasPage() {
                 <div className="divide-y">
                   {cartItems.map((item) => {
                     const name = item.product
-                      ? (item.product.custom_name || item.product.original_name)
+                      ? item.product.display_name_with_code
                       : (item.manualName || 'Producto manual');
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;

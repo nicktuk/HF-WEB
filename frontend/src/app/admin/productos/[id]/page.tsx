@@ -512,7 +512,7 @@ export default function ProductEditPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-gray-900">
-                  {product.custom_name || product.original_name}
+                  {product.display_name_with_code}
                 </h1>
                 {product.is_featured && (
                   <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">
@@ -1018,6 +1018,9 @@ export default function ProductEditPage() {
                     {isGeneratingName ? 'Generando...' : 'Generar con IA'}
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mb-1">
+                  Nombre original: <span className="text-gray-700">{product.original_name}</span>
+                </p>
                 <Input
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}

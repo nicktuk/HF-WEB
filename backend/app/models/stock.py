@@ -75,7 +75,7 @@ class StockPurchase(Base):
     @property
     def product_name(self) -> str | None:
         if self.product:
-            return self.product.custom_name or self.product.original_name
+            return self.product.display_name_with_code
         return self.description
 
     @property

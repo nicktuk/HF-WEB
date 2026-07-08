@@ -46,6 +46,7 @@ export interface ProductPublic {
 export interface ProductAdmin extends ProductPublic {
   original_name: string;
   custom_name?: string;
+  display_name_with_code: string;
   original_price?: number;
   pending_original_price?: number;
   pending_price_detected_at?: string;

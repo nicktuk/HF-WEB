@@ -126,8 +126,8 @@ class Product(Base):
         return self.custom_name or self.original_name
 
     @property
-    def catalog_display_name(self) -> str:
-        """Nombre para catálogo público: agrega el código interno si mostrar_codigo está activo."""
+    def display_name_with_code(self) -> str:
+        """Nombre a mostrar en todo el sistema (excepto compras): agrega el código interno si mostrar_codigo está activo."""
         if self.mostrar_codigo and self.codigo_interno:
             return f"{self.display_name} - {self.codigo_interno}"
         return self.display_name
