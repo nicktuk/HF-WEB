@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { StockAvailability } from '@/components/public/StockAvailability';
+import { ChevronLeft, ChevronRight, Truck, CalendarClock } from 'lucide-react';
+import { StockAvailability, resolveStockLevel } from '@/components/public/StockAvailability';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/utils';
 import { usePublicProduct } from '@/hooks/useProducts';
@@ -63,6 +63,9 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   const effectiveStockQty = hasColorStock && selectedColor && colorStockMap[selectedColor] !== undefined
     ? colorStockMap[selectedColor]
     : product?.stock_qty ?? undefined;
+  const stockLevel = product
+    ? resolveStockLevel(product.is_check_stock, product.is_immediate_delivery, effectiveStockQty, lowStockThreshold, product.is_on_demand)
+    : 'none';
 
   const handleSelectColor = (color: string) => {
     setSelectedColor(color);
@@ -169,38 +172,9 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
       {/* Content */}
       <main className="container mx-auto px-4 py-6 pb-24 md:pb-6">
 
-        {/* Título + precio — ancho completo */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-            {product.category && <span>{product.category}</span>}
-            {product.category && product.brand && <span>•</span>}
-            {product.brand && <span>{product.brand}</span>}
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            {product.name}
-          </h1>
-          <div className="flex items-baseline gap-2">
-            <p className="text-4xl font-bold text-primary-600">
-              {formatPrice(product.price)}
-            </p>
-            {product.installments_3 && (
-              <span className="text-sm font-medium text-gray-400">efectivo / transferencia</span>
-            )}
-          </div>
-          {product.installments_3 && product.installment_price && (
-            <p className="mt-1 text-2xl font-bold text-teal-700">
-              3 de {formatPrice(product.installment_price)}{' '}
-              <span className="text-base font-semibold text-teal-600">con tarjeta</span>
-            </p>
-          )}
-          <p className="mt-2 text-sm text-gray-500">
-            Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-200 lg:divide-y-0 lg:grid lg:grid-cols-[1.15fr_1fr_0.85fr] lg:divide-x">
           {/* Columna 1: Imagen + fotos */}
-          <div className="space-y-4">
+          <div className="space-y-4 p-4 lg:p-6">
           <div className="lg:flex lg:gap-3">
             <div
               className="lg:order-2 lg:flex-1 lg:min-w-0 aspect-square relative rounded-lg overflow-hidden bg-white border group"
@@ -310,8 +284,47 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             )}
           </div>
 
-          {/* Columna 2: Descripción */}
-          <div>
+          {/* Columna 2: Nombre, calificación, precio y descripción */}
+          <div className="p-4 lg:p-6">
+            {/* Category & Brand */}
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+              {product.category && <span>{product.category}</span>}
+              {product.category && product.brand && <span>•</span>}
+              {product.brand && <span>{product.brand}</span>}
+            </div>
+
+            {/* Name */}
+            <h1 className="text-xl font-bold text-gray-900 mb-2">
+              {product.name}
+            </h1>
+
+            <ProductRatingSummary
+              ratingAvg={product.rating_avg}
+              ratingCount={product.rating_count}
+              unitsSold={product.units_sold}
+            />
+
+            {/* Price */}
+            <div className="mb-6">
+              <div className="flex items-baseline gap-2">
+                <p className="text-xl font-bold text-primary-600">
+                  {formatPrice(product.price)}
+                </p>
+                {product.installments_3 && (
+                  <span className="text-sm font-medium text-gray-400">efectivo / transferencia</span>
+                )}
+              </div>
+              {product.installments_3 && product.installment_price && (
+                <p className="mt-1 text-base font-bold text-teal-700">
+                  3 de {formatPrice(product.installment_price)}{' '}
+                  <span className="text-sm font-semibold text-teal-600">con tarjeta</span>
+                </p>
+              )}
+              <p className="mt-2 text-sm text-gray-500">
+                Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
+              </p>
+            </div>
+
             {/* On-demand notice */}
             {product.is_on_demand && !product.is_immediate_delivery && catalogSettings?.on_demand_description && (
               <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3.5 flex items-start gap-3">
@@ -331,13 +344,21 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             )}
           </div>
 
-          {/* Columna 3: Calificación, vendidos, colores y botones */}
-          <div>
-            <ProductRatingSummary
-              ratingAvg={product.rating_avg}
-              ratingCount={product.rating_count}
-              unitsSold={product.units_sold}
-            />
+          {/* Columna 3: Entrega, colores y botones */}
+          <div className="p-4 lg:p-6">
+            {/* Estado de entrega */}
+            <div className="mb-4 space-y-2">
+              {(stockLevel === 'high' || stockLevel === 'low') && (
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                  <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Disponible para delivery
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Disponible para entrega acordada
+              </div>
+            </div>
 
             {/* Color selector — explicit, in buy box */}
             {uniqueColors.length > 0 && (
@@ -418,6 +439,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
                 lowStockThreshold={lowStockThreshold}
                 showCTA={(effectiveStockQty ?? 0) <= 0}
+                hideStrip
               />
             </div>
           </div>

@@ -27,6 +27,8 @@ export interface StockAvailabilityProps {
   lowStockThreshold?: number;
   className?: string;
   showCTA?: boolean;
+  /** Oculta el cartel de color con el estado de stock, mostrando solo el CTA de WhatsApp (si showCTA). */
+  hideStrip?: boolean;
 }
 
 /**
@@ -281,6 +283,7 @@ export function StockAvailability({
   lowStockThreshold = 5,
   className,
   showCTA = true,
+  hideStrip = false,
 }: StockAvailabilityProps) {
   const level = resolveStockLevel(isCheckStock, isImmediateDelivery, stockQty, lowStockThreshold, isOnDemand);
   const { container, labelColor, subColor, label, sublabel, showPing } = stripConfig[level];
@@ -292,34 +295,36 @@ export function StockAvailability({
     <div className={cn('flex flex-col gap-3', className)}>
 
       {/* ── Signal Strip ──────────────────────────────────────────────── */}
-      <div
-        className={cn('rounded-xl border px-4 py-3.5 flex items-center justify-between gap-3', container)}
-        role="status"
-        aria-live="polite"
-        aria-label={`Disponibilidad: ${label}. ${sublabel}`}
-      >
-        {/* Left: icon + text */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Icon — ping ring only for low-stock urgency */}
-          <span className="relative shrink-0">
-            {showPing && (
-              <span
-                className="absolute inset-0 rounded-full bg-amber-400/30 scale-150 animate-ping motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            )}
-            {stripIcon[level]}
-          </span>
+      {!hideStrip && (
+        <div
+          className={cn('rounded-xl border px-4 py-3.5 flex items-center justify-between gap-3', container)}
+          role="status"
+          aria-live="polite"
+          aria-label={`Disponibilidad: ${label}. ${sublabel}`}
+        >
+          {/* Left: icon + text */}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Icon — ping ring only for low-stock urgency */}
+            <span className="relative shrink-0">
+              {showPing && (
+                <span
+                  className="absolute inset-0 rounded-full bg-amber-400/30 scale-150 animate-ping motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              )}
+              {stripIcon[level]}
+            </span>
 
-          <div className="min-w-0">
-            <p className={cn('font-bold text-sm leading-tight', labelColor)}>{label}</p>
-            <p className={cn('text-[11px] leading-tight mt-0.5 truncate', subColor)}>{sublabel}</p>
+            <div className="min-w-0">
+              <p className={cn('font-bold text-sm leading-tight', labelColor)}>{label}</p>
+              <p className={cn('text-[11px] leading-tight mt-0.5 truncate', subColor)}>{sublabel}</p>
+            </div>
           </div>
-        </div>
 
-        {/* Right: visual stock bar */}
-        <StockBar level={level} />
-      </div>
+          {/* Right: visual stock bar */}
+          <StockBar level={level} />
+        </div>
+      )}
 
       {/* ── WhatsApp CTA ─────────────────────────────────────────────── */}
       {showCTA && (
