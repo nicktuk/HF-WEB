@@ -67,6 +67,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.7,
     },
+    {
+      url: `${SITE_URL}/devoluciones`,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
   ];
 
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((name) => ({
