@@ -82,13 +82,13 @@ def upgrade():
         SELECT
             gen.product_id,
             gen.rating,
-            {names_arr}[1 + floor(random() * {len(REVIEWER_NAMES)})::int],
+            ({names_arr})[1 + floor(random() * {len(REVIEWER_NAMES)})::int],
             CASE gen.rating
-                WHEN 5 THEN {c5_arr}[1 + floor(random() * {len(COMMENTS_5)})::int]
-                WHEN 4 THEN {c4_arr}[1 + floor(random() * {len(COMMENTS_4)})::int]
-                WHEN 3 THEN {c3_arr}[1 + floor(random() * {len(COMMENTS_3)})::int]
-                WHEN 2 THEN {c2_arr}[1 + floor(random() * {len(COMMENTS_2)})::int]
-                ELSE {c1_arr}[1 + floor(random() * {len(COMMENTS_1)})::int]
+                WHEN 5 THEN ({c5_arr})[1 + floor(random() * {len(COMMENTS_5)})::int]
+                WHEN 4 THEN ({c4_arr})[1 + floor(random() * {len(COMMENTS_4)})::int]
+                WHEN 3 THEN ({c3_arr})[1 + floor(random() * {len(COMMENTS_3)})::int]
+                WHEN 2 THEN ({c2_arr})[1 + floor(random() * {len(COMMENTS_2)})::int]
+                ELSE ({c1_arr})[1 + floor(random() * {len(COMMENTS_1)})::int]
             END,
             NOW() - (random() * INTERVAL '240 days'),
             NOW()
