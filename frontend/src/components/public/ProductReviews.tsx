@@ -33,7 +33,7 @@ export function ProductRatingSummary({
   if (count === 0 && sold === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-4 -mt-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-4">
       {count > 0 && (
         <div className="flex items-center gap-1.5">
           <StarRow value={ratingAvg ?? 0} size="sm" />

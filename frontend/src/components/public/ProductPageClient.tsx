@@ -288,15 +288,9 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             </div>
 
             {/* Name */}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
               {product.name}
             </h1>
-
-            <ProductRatingSummary
-              ratingAvg={product.rating_avg}
-              ratingCount={product.rating_count}
-              unitsSold={product.units_sold}
-            />
 
             {/* Color selector — explicit, in info panel */}
             {uniqueColors.length > 0 && (
@@ -386,8 +380,6 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               </div>
             )}
 
-            <ProductReviews reviews={product.reviews} />
-
             {/* Stock Availability + WhatsApp CTA — desktop */}
             <div className="hidden md:block space-y-3">
               {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
@@ -422,6 +414,17 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             </div>
           </div>
         </div>
+
+        {/* Calificaciones — debajo del botón de agregar al carrito */}
+        <div className="max-w-3xl">
+          <ProductRatingSummary
+            ratingAvg={product.rating_avg}
+            ratingCount={product.rating_count}
+            unitsSold={product.units_sold}
+          />
+          <ProductReviews reviews={product.reviews} />
+        </div>
+
       {/* Sections */}
       {sections && sections.length > 0 && (
         <div className="mt-10 container mx-auto px-4 space-y-4 pb-24 md:pb-10">
