@@ -168,11 +168,42 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6 pb-24 md:pb-6">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Image Gallery */}
+
+        {/* Título + precio — ancho completo */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            {product.category && <span>{product.category}</span>}
+            {product.category && product.brand && <span>•</span>}
+            {product.brand && <span>{product.brand}</span>}
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+            {product.name}
+          </h1>
+          <div className="flex items-baseline gap-2">
+            <p className="text-4xl font-bold text-primary-600">
+              {formatPrice(product.price)}
+            </p>
+            {product.installments_3 && (
+              <span className="text-sm font-medium text-gray-400">efectivo / transferencia</span>
+            )}
+          </div>
+          {product.installments_3 && product.installment_price && (
+            <p className="mt-1 text-2xl font-bold text-teal-700">
+              3 de {formatPrice(product.installment_price)}{' '}
+              <span className="text-base font-semibold text-teal-600">con tarjeta</span>
+            </p>
+          )}
+          <p className="mt-2 text-sm text-gray-500">
+            Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Columna 1: Imagen + fotos */}
           <div className="space-y-4">
+          <div className="lg:flex lg:gap-3">
             <div
-              className="aspect-square relative rounded-lg overflow-hidden bg-white border group"
+              className="lg:order-2 lg:flex-1 lg:min-w-0 aspect-square relative rounded-lg overflow-hidden bg-white border group"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
@@ -244,7 +275,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
             {/* Thumbnails — all products */}
             {sortedImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 lg:order-1 lg:flex-col lg:items-center lg:w-20 lg:shrink-0 lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[500px] lg:pb-0">
                 {sortedImages.map((image, index) => (
                   <button
                     key={image.id}
@@ -264,6 +295,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 ))}
               </div>
             )}
+          </div>
 
             {/* Video */}
             {product.video_url && (
@@ -278,21 +310,36 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             )}
           </div>
 
-          {/* Product Info */}
+          {/* Columna 2: Descripción */}
           <div>
-            {/* Category & Brand */}
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-              {product.category && <span>{product.category}</span>}
-              {product.category && product.brand && <span>•</span>}
-              {product.brand && <span>{product.brand}</span>}
-            </div>
+            {/* On-demand notice */}
+            {product.is_on_demand && !product.is_immediate_delivery && catalogSettings?.on_demand_description && (
+              <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3.5 flex items-start gap-3">
+                <span className="text-lg shrink-0 leading-tight">📦</span>
+                <p className="text-sm text-violet-800 leading-relaxed">{catalogSettings.on_demand_description}</p>
+              </div>
+            )}
 
-            {/* Name */}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-              {product.name}
-            </h1>
+            {/* Description */}
+            {product.short_description && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  Descripción
+                </h2>
+                <p className="text-gray-600 whitespace-pre-line">{product.short_description}</p>
+              </div>
+            )}
+          </div>
 
-            {/* Color selector — explicit, in info panel */}
+          {/* Columna 3: Calificación, vendidos, colores y botones */}
+          <div>
+            <ProductRatingSummary
+              ratingAvg={product.rating_avg}
+              ratingCount={product.rating_count}
+              unitsSold={product.units_sold}
+            />
+
+            {/* Color selector — explicit, in buy box */}
             {uniqueColors.length > 0 && (
               <div className="mb-5">
                 <p className="text-sm font-semibold text-gray-700 mb-2.5">
@@ -341,45 +388,6 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               </div>
             )}
 
-            {/* Price */}
-            <div className="mb-6">
-              <div className="flex items-baseline gap-2">
-                <p className="text-4xl font-bold text-primary-600">
-                  {formatPrice(product.price)}
-                </p>
-                {product.installments_3 && (
-                  <span className="text-sm font-medium text-gray-400">efectivo / transferencia</span>
-                )}
-              </div>
-              {product.installments_3 && product.installment_price && (
-                <p className="mt-1 text-2xl font-bold text-teal-700">
-                  3 de {formatPrice(product.installment_price)}{' '}
-                  <span className="text-base font-semibold text-teal-600">con tarjeta</span>
-                </p>
-              )}
-              <p className="mt-2 text-sm text-gray-500">
-                Los precios pueden variar mínimamente según stock y/o disponibilidad de los proveedores.
-              </p>
-            </div>
-
-            {/* On-demand notice */}
-            {product.is_on_demand && !product.is_immediate_delivery && catalogSettings?.on_demand_description && (
-              <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3.5 flex items-start gap-3">
-                <span className="text-lg shrink-0 leading-tight">📦</span>
-                <p className="text-sm text-violet-800 leading-relaxed">{catalogSettings.on_demand_description}</p>
-              </div>
-            )}
-
-            {/* Description */}
-            {product.short_description && (
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                  Descripción
-                </h2>
-                <p className="text-gray-600 whitespace-pre-line">{product.short_description}</p>
-              </div>
-            )}
-
             {/* Stock Availability + WhatsApp CTA — desktop */}
             <div className="hidden md:block space-y-3">
               {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
@@ -415,13 +423,8 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
           </div>
         </div>
 
-        {/* Calificaciones — debajo del botón de agregar al carrito */}
-        <div className="max-w-3xl">
-          <ProductRatingSummary
-            ratingAvg={product.rating_avg}
-            ratingCount={product.rating_count}
-            unitsSold={product.units_sold}
-          />
+        {/* Comentarios — ancho completo, debajo de las 3 columnas */}
+        <div className="max-w-3xl mt-10">
           <ProductReviews reviews={product.reviews} />
         </div>
 

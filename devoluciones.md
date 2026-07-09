@@ -2,7 +2,7 @@
 
 Implementá una página de cambios y devoluciones en el sitio existente (Next.js App Router, TypeScript). Antes de escribir código, explorá el proyecto para identificar: la paleta de colores y tipografía actual del sitio, el componente de footer existente, el layout global, y el número de WhatsApp que ya se usa en el sitio (buscalo en componentes existentes, variables de entorno o constantes — usá ese mismo número, no inventes uno).
 
-## Ruta y estructura x
+## Ruta y estructura xu
 
 - Crear la página en `app/devoluciones/page.tsx`.
 - Debe ser un Server Component. NO uses `'use client'` a nivel de página. Si algún elemento necesita interactividad, extraelo a un componente cliente separado, siguiendo el patrón ya usado en el proyecto (HomePageClient.tsx / ProductPageClient.tsx).
