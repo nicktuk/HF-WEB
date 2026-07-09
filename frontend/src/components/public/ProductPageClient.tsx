@@ -12,6 +12,7 @@ import { usePublicProduct } from '@/hooks/useProducts';
 import { trackPublicEvent } from '@/lib/analytics';
 import type { ProductImage, ProductPublic } from '@/types';
 import { SectionStrip } from '@/components/public/SectionStrip';
+import { ProductRatingSummary, ProductReviews } from '@/components/public/ProductReviews';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
@@ -287,9 +288,15 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             </div>
 
             {/* Name */}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
               {product.name}
             </h1>
+
+            <ProductRatingSummary
+              ratingAvg={product.rating_avg}
+              ratingCount={product.rating_count}
+              unitsSold={product.units_sold}
+            />
 
             {/* Color selector — explicit, in info panel */}
             {uniqueColors.length > 0 && (
@@ -378,6 +385,8 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 <p className="text-gray-600 whitespace-pre-line">{product.short_description}</p>
               </div>
             )}
+
+            <ProductReviews reviews={product.reviews} />
 
             {/* Stock Availability + WhatsApp CTA — desktop */}
             <div className="hidden md:block space-y-3">

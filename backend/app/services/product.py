@@ -15,10 +15,11 @@ from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
 from app.models.stock import Deposit, StockPurchase
 from app.models.sale import Sale, SaleItem
+from app.models.product_review import ProductReview
 from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
 from app.models.product import ProductColorStock, ProductDepositStock
-from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem
+from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem, ProductReviewPublic
 from app.scrapers.registry import ScraperRegistry
 from app.scrapers.base import ScrapedProduct
 from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
@@ -120,9 +121,45 @@ class ProductService:
             for pid, cmap in color_agg.items():
                 color_stock_map[pid] = [ColorStockItem(color=c, quantity=q) for c, q in cmap.items()]
 
+        # Bulk rating summary (avg + count) per product
+        rating_map: dict = {}
+        if product_ids:
+            rating_rows = (
+                self.db.query(
+                    ProductReview.product_id,
+                    func.avg(ProductReview.rating).label("avg_rating"),
+                    func.count(ProductReview.id).label("review_count"),
+                )
+                .filter(ProductReview.product_id.in_(product_ids))
+                .group_by(ProductReview.product_id)
+                .all()
+            )
+            rating_map = {row.product_id: (float(row.avg_rating), int(row.review_count)) for row in rating_rows}
+
+        # Bulk units sold (unidades vendidas = ventas reales x 20) per product
+        units_sold_map: dict = {}
+        if product_ids:
+            sold_rows = (
+                self.db.query(
+                    SaleItem.product_id,
+                    func.coalesce(func.sum(SaleItem.quantity), 0).label("qty"),
+                )
+                .filter(SaleItem.product_id.in_(product_ids))
+                .group_by(SaleItem.product_id)
+                .all()
+            )
+            units_sold_map = {row.product_id: int(row.qty) * 20 for row in sold_rows}
+
         # Transform to public response
         public_products = [
-            self._to_public_response(p, stock_qty=stock_qty_map.get(p.id), color_stock=color_stock_map.get(p.id))
+            self._to_public_response(
+                p,
+                stock_qty=stock_qty_map.get(p.id),
+                color_stock=color_stock_map.get(p.id),
+                rating_avg=rating_map.get(p.id, (None, 0))[0],
+                rating_count=rating_map.get(p.id, (None, 0))[1],
+                units_sold=units_sold_map.get(p.id, 0),
+            )
             for p in products
         ]
 
@@ -159,13 +196,51 @@ class ProductService:
             .scalar()
         )
         stock_qty = int(stock_row or 0)
-        return self._to_public_response(product, stock_qty=stock_qty)
+
+        rating_row = (
+            self.db.query(
+                func.avg(ProductReview.rating),
+                func.count(ProductReview.id),
+            )
+            .filter(ProductReview.product_id == product.id)
+            .first()
+        )
+        rating_avg = float(rating_row[0]) if rating_row and rating_row[0] is not None else None
+        rating_count = int(rating_row[1] or 0) if rating_row else 0
+
+        sold_qty = (
+            self.db.query(func.coalesce(func.sum(SaleItem.quantity), 0))
+            .filter(SaleItem.product_id == product.id)
+            .scalar()
+        )
+        units_sold = int(sold_qty or 0) * 20
+
+        reviews = (
+            self.db.query(ProductReview)
+            .filter(ProductReview.product_id == product.id)
+            .order_by(ProductReview.created_at.desc())
+            .limit(50)
+            .all()
+        )
+
+        return self._to_public_response(
+            product,
+            stock_qty=stock_qty,
+            rating_avg=rating_avg,
+            rating_count=rating_count,
+            units_sold=units_sold,
+            reviews=[ProductReviewPublic.model_validate(r) for r in reviews],
+        )
 
     def _to_public_response(
         self,
         product: Product,
         stock_qty: Optional[int] = None,
         color_stock: Optional[List[ColorStockItem]] = None,
+        rating_avg: Optional[float] = None,
+        rating_count: int = 0,
+        units_sold: int = 0,
+        reviews: Optional[List[ProductReviewPublic]] = None,
     ) -> ProductPublicResponse:
         """Convert product to public response format."""
         images = [
@@ -221,6 +296,10 @@ class ProductService:
             video_url=product.video_url,
             color_stock=color_stock,
             updated_at=product.updated_at,
+            rating_avg=rating_avg,
+            rating_count=rating_count,
+            units_sold=units_sold,
+            reviews=reviews or [],
         )
 
     def get_color_stock(self, product_id: int) -> List[ColorStockItem]:

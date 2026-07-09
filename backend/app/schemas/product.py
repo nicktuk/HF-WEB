@@ -16,6 +16,18 @@ class ColorStockItem(BaseModel):
         from_attributes = True
 
 
+class ProductReviewPublic(BaseModel):
+    """Calificación pública de un producto."""
+    id: int
+    rating: int
+    reviewer_name: str
+    comment: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ProductImageResponse(BaseModel):
     """Response schema for product image."""
     id: int
@@ -209,6 +221,10 @@ class ProductPublicResponse(BaseModel):
     color_stock: List[ColorStockItem] = []
     source_url: Optional[str] = None
     updated_at: Optional[datetime] = None
+    rating_avg: Optional[float] = None
+    rating_count: int = 0
+    units_sold: int = 0
+    reviews: List[ProductReviewPublic] = []
 
     class Config:
         from_attributes = True

@@ -41,6 +41,18 @@ export interface ProductPublic {
   color_stock?: ColorStockItem[];
   source_url?: string;
   updated_at?: string;
+  rating_avg?: number | null;
+  rating_count?: number;
+  units_sold?: number;
+  reviews?: ProductReview[];
+}
+
+export interface ProductReview {
+  id: number;
+  rating: number;
+  reviewer_name: string;
+  comment?: string | null;
+  created_at: string;
 }
 
 export interface ProductAdmin extends ProductPublic {
