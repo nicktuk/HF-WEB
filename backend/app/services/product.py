@@ -30,9 +30,10 @@ logger = logging.getLogger(__name__)
 
 
 def _fallback_units_sold(product_id: int) -> int:
-    """Número estable (no cambia entre requests) entre 1 y 10 para productos sin ventas reales."""
+    """Para productos sin ventas reales: unidades inventadas (1 a 10) x 20, estable por producto."""
     digest = hashlib.md5(str(product_id).encode()).hexdigest()
-    return (int(digest, 16) % 10) + 1
+    fake_quantity = (int(digest, 16) % 10) + 1
+    return fake_quantity * 20
 
 
 class ProductService:
