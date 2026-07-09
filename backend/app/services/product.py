@@ -3,6 +3,7 @@ from typing import Optional, List, Tuple
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 import csv
+import hashlib
 import io
 import re
 from sqlalchemy.orm import Session, joinedload
@@ -26,6 +27,12 @@ from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
 from app.services.cache import cache
 
 logger = logging.getLogger(__name__)
+
+
+def _fallback_units_sold(product_id: int) -> int:
+    """Número estable (no cambia entre requests) entre 1 y 10 para productos sin ventas reales."""
+    digest = hashlib.md5(str(product_id).encode()).hexdigest()
+    return (int(digest, 16) % 10) + 1
 
 
 class ProductService:
@@ -149,6 +156,9 @@ class ProductService:
                 .all()
             )
             units_sold_map = {row.product_id: int(row.qty) * 20 for row in sold_rows}
+            for pid in product_ids:
+                if not units_sold_map.get(pid):
+                    units_sold_map[pid] = _fallback_units_sold(pid)
 
         # Transform to public response
         public_products = [
@@ -214,6 +224,8 @@ class ProductService:
             .scalar()
         )
         units_sold = int(sold_qty or 0) * 20
+        if not units_sold:
+            units_sold = _fallback_units_sold(product.id)
 
         reviews = (
             self.db.query(ProductReview)
