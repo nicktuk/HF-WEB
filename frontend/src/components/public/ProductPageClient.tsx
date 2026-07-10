@@ -439,7 +439,6 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 whatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}
                 lowStockThreshold={lowStockThreshold}
                 showCTA={(effectiveStockQty ?? 0) <= 0}
-                hideStrip
               />
             </div>
           </div>
