@@ -90,6 +90,7 @@ export interface ProductAdmin extends ProductPublic {
   market_sample_count: number;
   stock_qty?: number;
   is_published: boolean;
+  alias_bot?: string | null;
 }
 
 export interface PendingPriceChange {
@@ -391,6 +392,7 @@ export interface ProductUpdateForm {
   image_colors?: (string | null)[];
   image_alt_texts?: (string | null)[];
   video_url?: string | null;
+  alias_bot?: string | null;
 }
 
 export interface SourceWebsiteCreateForm {
@@ -470,6 +472,7 @@ export interface Sale {
   installments?: number;
   seller_id: number;
   seller_nombre: string;
+  origen: string;
   delivered: boolean;
   paid: boolean;
   payment_method?: string | null;

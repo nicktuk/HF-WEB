@@ -75,6 +75,7 @@ export default function ProductEditPage() {
   const [brand, setBrand] = useState('');
   const [sku, setSku] = useState('');
   const [mostrarCodigo, setMostrarCodigo] = useState(false);
+  const [aliasBot, setAliasBot] = useState('');
 
   // AI generation state
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -158,6 +159,7 @@ export default function ProductEditPage() {
       setBrand(product.brand || '');
       setSku(product.sku || '');
       setMostrarCodigo(product.mostrar_codigo || false);
+      setAliasBot(product.alias_bot || '');
       // Initialize images
       const sortedImgs = [...product.images].sort((a, b) => (a.is_primary ? -1 : 1));
       setImageUrls(sortedImgs.map(img => img.url));
@@ -407,6 +409,7 @@ export default function ProductEditPage() {
         image_colors: imageColors,
         image_alt_texts: imageAltTexts,
         video_url: videoUrl || null,
+        alias_bot: aliasBot || null,
       },
     });
     // Save color stock for colors that are still assigned to images
@@ -1046,6 +1049,16 @@ export default function ProductEditPage() {
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
                   placeholder="Ej: ABC123"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Alias para el bot de vendedores"
+                  value={aliasBot}
+                  onChange={(e) => setAliasBot(e.target.value.slice(0, 40))}
+                  placeholder="Nombre corto (si no se define, se arma automático)"
+                  maxLength={40}
                 />
               </div>
 

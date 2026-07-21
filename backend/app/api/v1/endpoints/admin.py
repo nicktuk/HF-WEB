@@ -851,6 +851,7 @@ async def get_product_admin(
         custom_installment_price=p.custom_installment_price,
         stock_low_threshold=p.stock_low_threshold,
         video_url=p.video_url,
+        alias_bot=p.alias_bot,
         images=[{
             "id": img.id,
             "url": img.url,
@@ -1250,6 +1251,7 @@ async def update_product(
         custom_installment_price=product.custom_installment_price,
         stock_low_threshold=product.stock_low_threshold,
         video_url=product.video_url,
+        alias_bot=product.alias_bot,
         images=[{
             "id": img.id,
             "url": img.url,
@@ -2125,10 +2127,11 @@ async def list_sales(
     search: Optional[str] = Query(default=None, max_length=100),
     date_from: Optional[date_type] = Query(default=None),
     date_to: Optional[date_type] = Query(default=None),
+    origen: Optional[str] = Query(default=None),
     service = Depends(get_sales_service),
 ):
-    """List recent sales. Optionally filter by customer name, product name, or date range."""
-    return service.list_sales(limit=limit, search=search, date_from=date_from, date_to=date_to)
+    """List recent sales. Optionally filter by customer name, product name, date range or origen."""
+    return service.list_sales(limit=limit, search=search, date_from=date_from, date_to=date_to, origen=origen)
 
 
 @router.get(

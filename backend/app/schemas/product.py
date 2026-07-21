@@ -88,6 +88,7 @@ class ProductUpdate(BaseModel):
     image_alt_texts: Optional[List[Optional[str]]] = Field(None, max_length=10)
     video_url: Optional[str] = None
     mostrar_codigo: Optional[bool] = None
+    alias_bot: Optional[str] = Field(None, max_length=40)
 
     @field_validator("custom_name")
     @classmethod
@@ -149,6 +150,7 @@ class ProductResponse(BaseModel):
     custom_installment_price: Optional[Decimal] = None
     stock_low_threshold: Optional[int] = None
     video_url: Optional[str] = None
+    alias_bot: Optional[str] = None
     images: List[ProductImageResponse] = []
     created_at: datetime
     updated_at: datetime

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import verify_admin
+from app.core.phone import normalizar_celular
 from app.models.catalog_seller import CatalogSeller
 
 router = APIRouter()
@@ -16,6 +17,7 @@ def _catalog_seller_dict(s: CatalogSeller) -> dict:
         "id": s.id,
         "nombre": s.nombre,
         "celular": s.celular,
+        "bot_habilitado": s.bot_habilitado,
         "activo": s.activo,
     }
 
@@ -43,7 +45,14 @@ async def create_catalog_seller(
         raise HTTPException(400, "nombre es obligatorio")
     if db.query(CatalogSeller).filter(CatalogSeller.nombre == nombre).first():
         raise HTTPException(409, "Ya existe un vendedor con ese nombre")
-    s = CatalogSeller(nombre=nombre, celular=(body.get("celular") or "").strip() or None, activo=True)
+    celular = (body.get("celular") or "").strip() or None
+    s = CatalogSeller(
+        nombre=nombre,
+        celular=celular,
+        celular_normalizado=normalizar_celular(celular) if celular else None,
+        bot_habilitado=True,
+        activo=True,
+    )
     db.add(s)
     db.commit()
     db.refresh(s)
@@ -63,7 +72,11 @@ async def update_catalog_seller(
     if body.get("nombre"):
         s.nombre = body["nombre"].strip()
     if "celular" in body:
-        s.celular = (body.get("celular") or "").strip() or None
+        celular = (body.get("celular") or "").strip() or None
+        s.celular = celular
+        s.celular_normalizado = normalizar_celular(celular) if celular else None
+    if "bot_habilitado" in body:
+        s.bot_habilitado = bool(body["bot_habilitado"])
     if "activo" in body:
         s.activo = bool(body["activo"])
     db.commit()

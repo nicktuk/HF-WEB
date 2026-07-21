@@ -1173,6 +1173,8 @@ class ProductService:
             product.video_url = data.video_url if data.video_url else None
         if data.mostrar_codigo is not None:
             product.mostrar_codigo = data.mostrar_codigo
+        if 'alias_bot' in data.model_fields_set:
+            product.alias_bot = data.alias_bot if data.alias_bot else None
 
         # Update images if provided
         if data.image_urls is not None:

@@ -63,6 +63,7 @@ class Product(Base):
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")
     stock_low_threshold = Column(Integer, nullable=True, comment="Umbral de stock bajo por producto (override del global)")
+    alias_bot = Column(String(40), nullable=True, comment="Nombre corto para el bot de vendedores por WhatsApp")
 
     # Categorias
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True, comment="Categoria maestra local")
@@ -124,6 +125,15 @@ class Product(Base):
     def display_name(self) -> str:
         """Nombre a mostrar (custom o original)."""
         return self.custom_name or self.original_name
+
+    def display_name_bot(self, color_label: str | None = None) -> str:
+        """Nombre corto para el bot de vendedores: alias_bot si existe, si no nombre + color truncado a 60."""
+        if self.alias_bot:
+            return self.alias_bot
+        base = self.display_name
+        if color_label:
+            base = f"{base} {color_label}"
+        return base[:60]
 
     @property
     def display_name_with_code(self) -> str:

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     ADMIN_API_KEY: str = "change_me_in_production"
     SECRET_KEY: str = "change_me_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    BOT_VENDEDORES_KEY: str = "change_me_in_production"
 
     # CORS - stored as string, parsed via property
     ALLOWED_ORIGINS_STR: str = "http://localhost:3000"

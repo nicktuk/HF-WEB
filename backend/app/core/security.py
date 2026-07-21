@@ -12,6 +12,7 @@ from app.config import settings
 from app.db.session import get_db
 
 API_KEY_HEADER = APIKeyHeader(name="X-Admin-API-Key", auto_error=False)
+BOT_KEY_HEADER = APIKeyHeader(name="x-bot-key", auto_error=False)
 
 
 @dataclass
@@ -94,6 +95,17 @@ async def verify_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions",
+        )
+    return True
+
+
+async def verify_bot_key(api_key: str = Security(BOT_KEY_HEADER)) -> bool:
+    """FastAPI dependency para los endpoints del bot de vendedores. Header x-bot-key."""
+    if not api_key or api_key != settings.BOT_VENDEDORES_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing bot key",
+            headers={"WWW-Authenticate": "ApiKey"},
         )
     return True
 

@@ -14,6 +14,7 @@ class Sale(Base):
     notes = Column(Text, nullable=True)
     installments = Column(Integer, nullable=True)
     seller_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=False)
+    origen = Column(String(20), nullable=False, default="admin")
     delivered = Column(Boolean, default=False, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
     payment_method = Column(String(100), nullable=True)

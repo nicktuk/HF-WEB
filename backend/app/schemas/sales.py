@@ -84,6 +84,7 @@ class SaleResponse(BaseModel):
     installments: Optional[int] = None
     seller_id: int
     seller_nombre: str
+    origen: str
     delivered: bool
     paid: bool
     payment_method: Optional[str] = None

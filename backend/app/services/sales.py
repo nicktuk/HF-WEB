@@ -450,11 +450,15 @@ class SalesService:
         search: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        origen: str | None = None,
     ) -> list[Sale]:
         query = self.db.query(Sale).options(
             selectinload(Sale.items).selectinload(SaleItem.product),
             selectinload(Sale.installment_list),
         )
+
+        if origen:
+            query = query.filter(Sale.origen == origen)
 
         if search:
             search_term = f"%{search}%"
