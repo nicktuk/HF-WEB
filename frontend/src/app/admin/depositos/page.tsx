@@ -5,14 +5,13 @@ import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
-import { useDeposits, useCreateDeposit, useUpdateDeposit, useDeleteDeposit } from '@/hooks/useProducts';
+import { useDeposits, useCreateDeposit, useUpdateDeposit, useDeleteDeposit, useCatalogSellers } from '@/hooks/useProducts';
 import type { Deposit } from '@/types';
-
-const SELLERS = ['Facu', 'Heber'];
 
 export default function DepositosPage() {
   const apiKey = useApiKey() || '';
   const { data: deposits, isLoading } = useDeposits(apiKey);
+  const { data: sellers } = useCatalogSellers(apiKey, true);
   const createDeposit = useCreateDeposit(apiKey);
   const updateDeposit = useUpdateDeposit(apiKey);
   const deleteDeposit = useDeleteDeposit(apiKey);
@@ -27,7 +26,7 @@ export default function DepositosPage() {
     const name = newName.trim().toUpperCase();
     if (!name) return;
     try {
-      await createDeposit.mutateAsync({ name, seller: newSeller || null });
+      await createDeposit.mutateAsync({ name, seller_id: newSeller ? Number(newSeller) : null });
       setNewName('');
       setNewSeller('');
     } catch {
@@ -38,14 +37,14 @@ export default function DepositosPage() {
   const startEdit = (deposit: Deposit) => {
     setEditingId(deposit.id);
     setEditingName(deposit.name);
-    setEditingSeller(deposit.seller || '');
+    setEditingSeller(deposit.seller_id ? String(deposit.seller_id) : '');
   };
 
   const handleUpdate = async (id: number) => {
     const name = editingName.trim().toUpperCase();
     if (!name) return;
     try {
-      await updateDeposit.mutateAsync({ id, data: { name, seller: editingSeller || null } });
+      await updateDeposit.mutateAsync({ id, data: { name, seller_id: editingSeller ? Number(editingSeller) : null } });
       setEditingId(null);
     } catch {
       alert('Error al actualizar depósito');
@@ -93,7 +92,7 @@ export default function DepositosPage() {
             className="h-9 rounded-md border border-gray-300 px-3 text-sm text-gray-700 bg-white"
           >
             <option value="">Sin vendedor</option>
-            {SELLERS.map(s => <option key={s} value={s}>{s}</option>)}
+            {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </select>
           <Button onClick={handleCreate} disabled={!newName.trim() || createDeposit.isPending} size="sm">
             <Plus className="h-4 w-4 mr-1" />
@@ -145,11 +144,11 @@ export default function DepositosPage() {
                         className="h-7 rounded border border-gray-300 px-2 text-sm bg-white"
                       >
                         <option value="">Sin vendedor</option>
-                        {SELLERS.map(s => <option key={s} value={s}>{s}</option>)}
+                        {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                       </select>
                     ) : (
-                      deposit.seller
-                        ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">{deposit.seller}</span>
+                      deposit.seller_nombre
+                        ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">{deposit.seller_nombre}</span>
                         : <span className="text-gray-400 text-xs">—</span>
                     )}
                   </td>

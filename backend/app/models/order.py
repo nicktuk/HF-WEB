@@ -10,14 +10,19 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String(200), nullable=False)
     notes = Column(Text, nullable=True)
-    seller = Column(String(20), nullable=False, default="Facu")
+    seller_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=False)
     status = Column(String(20), nullable=False, default="active")  # active | completed_sale | completed_no_sale
     linked_sale_id = Column(Integer, ForeignKey("sales.id", ondelete="SET NULL"), nullable=True)
     no_sale_reason = Column(Text, nullable=True)
 
+    seller = relationship("CatalogSeller")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     attachments = relationship("OrderAttachment", back_populates="order", cascade="all, delete-orphan")
     linked_sale = relationship("Sale", foreign_keys=[linked_sale_id])
+
+    @property
+    def seller_nombre(self) -> str:
+        return self.seller.nombre
 
 
 class OrderItem(Base):

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
 from app.models.order import Order, OrderItem, OrderAttachment
+from app.models.catalog_seller import require_active_catalog_seller
 from app.schemas.order import OrderCreate, OrderUpdate, OrderClose, OrderStats
 from app.core.exceptions import NotFoundError, ValidationError
 
@@ -13,10 +14,11 @@ class OrdersService:
         self.db = db
 
     def create_order(self, data: OrderCreate) -> Order:
+        require_active_catalog_seller(self.db, data.seller_id)
         order = Order(
             customer_name=data.customer_name,
             notes=data.notes,
-            seller=data.seller,
+            seller_id=data.seller_id,
         )
         self.db.add(order)
         self.db.flush()
@@ -82,8 +84,9 @@ class OrdersService:
             order.customer_name = data.customer_name
         if data.notes is not None:
             order.notes = data.notes
-        if data.seller is not None:
-            order.seller = data.seller
+        if data.seller_id is not None:
+            require_active_catalog_seller(self.db, data.seller_id)
+            order.seller_id = data.seller_id
 
         if data.items is not None:
             # Replace all items

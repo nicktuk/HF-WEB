@@ -20,7 +20,7 @@ class OrderAttachmentCreate(BaseModel):
 class OrderCreate(BaseModel):
     customer_name: str = Field(..., min_length=1, max_length=200)
     notes: Optional[str] = None
-    seller: str = Field(default="Facu", max_length=20)
+    seller_id: int
     items: List[OrderItemCreate] = []
     attachments: List[OrderAttachmentCreate] = []
 
@@ -28,7 +28,7 @@ class OrderCreate(BaseModel):
 class OrderUpdate(BaseModel):
     customer_name: Optional[str] = Field(None, min_length=1, max_length=200)
     notes: Optional[str] = None
-    seller: Optional[str] = Field(None, max_length=20)
+    seller_id: Optional[int] = None
     items: Optional[List[OrderItemCreate]] = None
     attachments: Optional[List[OrderAttachmentCreate]] = None
 
@@ -63,7 +63,8 @@ class OrderResponse(BaseModel):
     id: int
     customer_name: str
     notes: Optional[str] = None
-    seller: str
+    seller_id: int
+    seller_nombre: str
     status: str
     linked_sale_id: Optional[int] = None
     no_sale_reason: Optional[str] = None

@@ -4,6 +4,7 @@ import type {
   ColorStockItem,
   Deposit,
   DepositStockItem,
+  CatalogSeller,
   SourceWebsite,
   MarketPriceStats,
   PriceComparison,
@@ -749,16 +750,34 @@ export const adminApi = {
     return fetchAPI('/admin/deposits', {}, apiKey);
   },
 
-  async createDeposit(apiKey: string, data: { name: string; seller?: string | null }): Promise<Deposit> {
+  async createDeposit(apiKey: string, data: { name: string; seller_id?: number | null }): Promise<Deposit> {
     return fetchAPI('/admin/deposits', { method: 'POST', body: JSON.stringify(data) }, apiKey);
   },
 
-  async updateDeposit(apiKey: string, id: number, data: { name?: string; is_active?: boolean; seller?: string | null }): Promise<Deposit> {
+  async updateDeposit(apiKey: string, id: number, data: { name?: string; is_active?: boolean; seller_id?: number | null }): Promise<Deposit> {
     return fetchAPI(`/admin/deposits/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, apiKey);
   },
 
   async deleteDeposit(apiKey: string, id: number): Promise<void> {
     return fetchAPI(`/admin/deposits/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  // Catalog sellers (vendedores del canal catálogo, ventas propias)
+  async getCatalogSellers(apiKey: string, activo?: boolean): Promise<CatalogSeller[]> {
+    const query = activo !== undefined ? `?activo=${activo}` : '';
+    return fetchAPI(`/admin/vendedores-catalogo${query}`, {}, apiKey);
+  },
+
+  async createCatalogSeller(apiKey: string, data: { nombre: string; celular?: string | null }): Promise<CatalogSeller> {
+    return fetchAPI('/admin/vendedores-catalogo', { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async updateCatalogSeller(apiKey: string, id: number, data: { nombre?: string; celular?: string | null; activo?: boolean }): Promise<CatalogSeller> {
+    return fetchAPI(`/admin/vendedores-catalogo/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async deactivateCatalogSeller(apiKey: string, id: number): Promise<{ ok: boolean }> {
+    return fetchAPI(`/admin/vendedores-catalogo/${id}`, { method: 'DELETE' }, apiKey);
   },
 
   async getDepositStock(apiKey: string, productId: number): Promise<DepositStockItem[]> {
@@ -820,7 +839,7 @@ export const adminApi = {
       customer_name?: string;
       notes?: string;
       installments?: number;
-      seller?: 'Facu' | 'Heber';
+      seller_id?: number;
       items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
       force?: boolean;
     }
@@ -941,7 +960,7 @@ export const adminApi = {
       date_from?: string;
       date_to?: string;
       product_id?: number;
-      payer?: string;
+      payer_id?: number;
     } = {}
   ): Promise<{
     items: any[];
@@ -958,7 +977,7 @@ export const adminApi = {
     if (params.date_from) searchParams.set('date_from', params.date_from);
     if (params.date_to) searchParams.set('date_to', params.date_to);
     if (params.product_id) searchParams.set('product_id', params.product_id.toString());
-    if (params.payer) searchParams.set('payer', params.payer);
+    if (params.payer_id) searchParams.set('payer_id', params.payer_id.toString());
 
     const query = searchParams.toString();
     return fetchAPI(`/admin/purchases${query ? `?${query}` : ''}`, {}, apiKey);
@@ -1008,7 +1027,7 @@ export const adminApi = {
   async addPaymentToPurchase(
     apiKey: string,
     purchaseId: number,
-    payment: { payer: 'Facu' | 'Heber'; amount: number; payment_method: string }
+    payment: { payer_id: number; amount: number; payment_method: string }
   ): Promise<any> {
     return fetchAPI(`/admin/purchases/${purchaseId}/payments`, {
       method: 'POST',
@@ -1029,7 +1048,7 @@ export const adminApi = {
    * Get purchases grouped by payer for dashboard
    */
   async getPurchasesByPayer(apiKey: string): Promise<{
-    by_payer: Array<{ payer: string; total_amount: number; payment_count: number }>;
+    by_payer: Array<{ payer_id: number; payer: string; total_amount: number; payment_count: number }>;
     without_payment: number;
   }> {
     return fetchAPI('/admin/stats/purchases-by-payer', {}, apiKey);

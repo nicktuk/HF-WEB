@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useApiKey } from '@/hooks/useAuth';
+import { useCatalogSellers } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { cn, formatDate } from '@/lib/utils';
 import type { Order, OrderItemCreate, OrderAttachmentCreate, OrderClose, Sale } from '@/types';
@@ -79,7 +80,7 @@ export default function PedidosPage() {
   // New order form state
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
-    seller: 'Facu' as 'Facu' | 'Heber',
+    seller_id: 0,
     notes: '',
     items: [{ description: '', quantity: 1, estimated_price: null as number | null }] as OrderItemCreate[],
     attachments: [] as OrderAttachmentCreate[]
@@ -96,6 +97,14 @@ export default function PedidosPage() {
   const statusParam = statusFilter === 'all' ? undefined :
     statusFilter === 'active' ? 'active' :
     undefined;
+
+  const { data: sellers } = useCatalogSellers(apiKey, true);
+
+  useEffect(() => {
+    if (newOrder.seller_id === 0 && sellers && sellers.length > 0) {
+      setNewOrder(prev => ({ ...prev, seller_id: sellers[0].id }));
+    }
+  }, [sellers]);
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders', statusParam, searchQuery],
@@ -208,7 +217,7 @@ export default function PedidosPage() {
   const resetNewOrderForm = () => {
     setNewOrder({
       customer_name: '',
-      seller: 'Facu',
+      seller_id: sellers?.[0]?.id ?? 0,
       notes: '',
       items: [{ description: '', quantity: 1, estimated_price: null }],
       attachments: []
@@ -360,7 +369,7 @@ export default function PedidosPage() {
     setEditingOrderId(order.id);
     setEditOrder({
       customer_name: order.customer_name,
-      seller: order.seller as 'Facu' | 'Heber',
+      seller_id: order.seller_id,
       notes: order.notes || '',
       items: order.items.map(item => ({
         description: item.description,
@@ -436,19 +445,18 @@ export default function PedidosPage() {
               Vendedor *
             </label>
             <select
-              value={data.seller}
+              value={data.seller_id}
               onChange={(e) => {
-                const seller = e.target.value as 'Facu' | 'Heber';
+                const seller_id = Number(e.target.value);
                 if (isEdit) {
-                  setEditOrder({ ...data, seller });
+                  setEditOrder({ ...data, seller_id });
                 } else {
-                  setNewOrder({ ...data, seller });
+                  setNewOrder({ ...data, seller_id });
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="Facu">Facu</option>
-              <option value="Heber">Heber</option>
+              {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
             </select>
           </div>
         </div>
@@ -854,7 +862,7 @@ export default function PedidosPage() {
                                   {order.customer_name}
                                 </td>
                                 <td className="px-3 py-1.5 text-gray-500 text-xs" rowSpan={itemCount}>
-                                  {order.seller}
+                                  {order.seller_nombre}
                                 </td>
                                 <td className="px-3 py-1.5 text-gray-400 text-xs whitespace-nowrap hidden md:table-cell" rowSpan={itemCount}>
                                   {formatOrderDate(order.created_at)}
@@ -912,7 +920,7 @@ export default function PedidosPage() {
                           <tr key={`empty-${order.id}`} className={cn('hover:bg-gray-50', order.status !== 'active' && 'opacity-60')}>
                             <td className="px-3 py-1.5 text-gray-400 italic" colSpan={3}>Sin items</td>
                             <td className="px-3 py-1.5 text-gray-900 truncate max-w-[9rem]">{order.customer_name}</td>
-                            <td className="px-3 py-1.5 text-gray-500 text-xs">{order.seller}</td>
+                            <td className="px-3 py-1.5 text-gray-500 text-xs">{order.seller_nombre}</td>
                             <td className="px-3 py-1.5 text-gray-400 text-xs whitespace-nowrap hidden md:table-cell">{formatOrderDate(order.created_at)}</td>
                             <td className="px-3 py-1.5 text-center">{getStatusBadge(order.status)}</td>
                             <td className="px-3 py-1.5 text-right">
@@ -1043,7 +1051,7 @@ export default function PedidosPage() {
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-900 text-sm">#{sale.id}</span>
                               <span className="text-sm text-gray-700">{sale.customer_name || 'Sin cliente'}</span>
-                              <span className="text-xs text-gray-400">{sale.seller}</span>
+                              <span className="text-xs text-gray-400">{sale.seller_nombre}</span>
                             </div>
                             <Link
                               href={`/admin/ventas/${sale.id}`}

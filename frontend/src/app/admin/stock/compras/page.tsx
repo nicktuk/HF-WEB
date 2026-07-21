@@ -16,6 +16,7 @@ import {
   useImportStockWithSupplier,
   useStockPurchases,
   useCreateManualPurchase,
+  useCatalogSellers,
 } from '@/hooks/useProducts';
 import { adminApi } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
@@ -54,7 +55,8 @@ interface PurchaseDetail {
   }>;
   payments: Array<{
     id: number;
-    payer: string;
+    payer_id: number;
+    payer_nombre: string;
     amount: number;
     payment_method: string;
     created_at: string;
@@ -73,7 +75,7 @@ export default function ComprasPage() {
   const [supplier, setSupplier] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [payerFilter, setPayerFilter] = useState<string>('');
+  const [payerFilter, setPayerFilter] = useState<string>(''); // seller id as string, '' = sin filtro
 
   // Import state
   const [isImportingStock, setIsImportingStock] = useState(false);
@@ -120,7 +122,7 @@ export default function ComprasPage() {
 
   // Payment form state
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [newPaymentPayer, setNewPaymentPayer] = useState<'Facu' | 'Heber'>('Facu');
+  const [newPaymentPayerId, setNewPaymentPayerId] = useState<number | ''>('');
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<{ name: string; is_business: boolean }[]>([]);
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
@@ -132,8 +134,16 @@ export default function ComprasPage() {
     supplier: supplier || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
-    payer: payerFilter || undefined,
+    payer_id: payerFilter ? Number(payerFilter) : undefined,
   });
+
+  const { data: sellers } = useCatalogSellers(apiKey, true);
+
+  useEffect(() => {
+    if (newPaymentPayerId === '' && sellers && sellers.length > 0) {
+      setNewPaymentPayerId(sellers[0].id);
+    }
+  }, [sellers]);
 
   const { data: suppliersData } = useSuppliers(apiKey);
   const { data: stockPurchases } = useStockPurchases(apiKey);
@@ -222,7 +232,7 @@ export default function ComprasPage() {
   };
 
   const handleAddPayment = async () => {
-    if (!selectedPurchaseId || !newPaymentAmount) return;
+    if (!selectedPurchaseId || !newPaymentAmount || !newPaymentPayerId) return;
     const amount = parseFloat(newPaymentAmount);
     if (isNaN(amount) || amount <= 0) return;
 
@@ -230,7 +240,7 @@ export default function ComprasPage() {
       await addPayment.mutateAsync({
         purchaseId: selectedPurchaseId,
         payment: {
-          payer: newPaymentPayer,
+          payer_id: newPaymentPayerId,
           amount,
           payment_method: newPaymentMethod,
         },
@@ -415,7 +425,7 @@ export default function ComprasPage() {
     if (!detail?.payments?.length) return;
     const rows = detail.payments.map((payment) => [
       payment.id,
-      payment.payer,
+      payment.payer_nombre,
       payment.payment_method,
       Number(payment.amount || 0).toFixed(2),
       formatDate(payment.created_at),
@@ -779,8 +789,7 @@ export default function ComprasPage() {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">Todos</option>
-              <option value="Facu">Facu</option>
-              <option value="Heber">Heber</option>
+              {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
             </select>
           </div>
           <div>
@@ -860,7 +869,7 @@ export default function ComprasPage() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                  {payerFilter && <th className="px-4 py-2 text-right text-xs font-medium text-blue-500 uppercase">{payerFilter}</th>}
+                  {payerFilter && <th className="px-4 py-2 text-right text-xs font-medium text-blue-500 uppercase">{sellers?.find(s => String(s.id) === payerFilter)?.nombre}</th>}
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pendiente</th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
@@ -985,12 +994,11 @@ export default function ComprasPage() {
                                           <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">Pagador</label>
                                             <select
-                                              value={newPaymentPayer}
-                                              onChange={(e) => setNewPaymentPayer(e.target.value as 'Facu' | 'Heber')}
+                                              value={newPaymentPayerId}
+                                              onChange={(e) => setNewPaymentPayerId(Number(e.target.value))}
                                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
                                             >
-                                              <option value="Facu">Facu</option>
-                                              <option value="Heber">Heber</option>
+                                              {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                             </select>
                                           </div>
                                           <div>
@@ -1032,8 +1040,8 @@ export default function ComprasPage() {
                                         {detail.payments.map((p) => (
                                           <div key={p.id} className="flex items-center justify-between bg-white rounded-lg border px-4 py-3">
                                             <div className="flex items-center gap-4">
-                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.payer === 'Facu' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                                {p.payer}
+                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.payer_id % 2 === 0 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                                {p.payer_nombre}
                                               </span>
                                               <span className="text-gray-600 text-sm">{p.payment_method}</span>
                                               <span className="text-xs text-gray-400">{formatDate(p.created_at)}</span>

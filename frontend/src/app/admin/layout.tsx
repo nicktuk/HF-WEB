@@ -54,6 +54,7 @@ const productosSubmenu = [
 const ventasSubmenu = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
+  { name: 'Vendedores', href: '/admin/vendedores-catalogo', icon: Store },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];

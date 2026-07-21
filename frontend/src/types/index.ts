@@ -107,8 +107,16 @@ export interface Deposit {
   id: number;
   name: string;
   is_active: boolean;
-  seller?: string | null;
+  seller_id?: number | null;
+  seller_nombre?: string | null;
   created_at: string;
+}
+
+export interface CatalogSeller {
+  id: number;
+  nombre: string;
+  celular: string | null;
+  activo: boolean;
 }
 
 export interface DepositStockItem {
@@ -428,7 +436,7 @@ export interface SaleCreateForm {
   notes?: string;
   installments?: number;
   installment_amounts?: number[];
-  seller: 'Facu' | 'Heber';
+  seller_id: number;
   items: SaleItemCreate[];
 }
 
@@ -460,7 +468,8 @@ export interface Sale {
   email?: string | null;
   notes?: string;
   installments?: number;
-  seller: string;
+  seller_id: number;
+  seller_nombre: string;
   delivered: boolean;
   paid: boolean;
   payment_method?: string | null;
@@ -552,7 +561,8 @@ export interface Order {
   id: number;
   customer_name: string;
   notes?: string | null;
-  seller: string;
+  seller_id: number;
+  seller_nombre: string;
   status: 'active' | 'completed_sale' | 'completed_no_sale';
   linked_sale_id?: number | null;
   no_sale_reason?: string | null;
@@ -577,7 +587,7 @@ export interface OrderAttachmentCreate {
 export interface OrderCreateForm {
   customer_name: string;
   notes?: string;
-  seller: string;
+  seller_id: number;
   items: OrderItemCreate[];
   attachments: OrderAttachmentCreate[];
 }

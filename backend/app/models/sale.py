@@ -13,7 +13,7 @@ class Sale(Base):
     customer_name = Column(String(200), nullable=True)
     notes = Column(Text, nullable=True)
     installments = Column(Integer, nullable=True)
-    seller = Column(String(20), nullable=False, default="Facu")
+    seller_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=False)
     delivered = Column(Boolean, default=False, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
     payment_method = Column(String(100), nullable=True)
@@ -23,6 +23,7 @@ class Sale(Base):
     delivered_amount = Column(Numeric(12, 2), nullable=False, default=0)
     paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
 
+    seller = relationship("CatalogSeller")
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
     installment_list = relationship(
         "SaleInstallment",
@@ -30,6 +31,10 @@ class Sale(Base):
         cascade="all, delete-orphan",
         order_by="SaleInstallment.number",
     )
+
+    @property
+    def seller_nombre(self) -> str:
+        return self.seller.nombre
 
 
 class SaleInstallment(Base):

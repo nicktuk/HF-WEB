@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useDeleteSale, useSale, useUpdateSale, useUpdateSaleInstallment } from '@/hooks/useProducts';
+import { useAdminProducts, useDeleteSale, useSale, useUpdateSale, useUpdateSaleInstallment, useCatalogSellers } from '@/hooks/useProducts';
 import { resolveImageUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, SaleInstallment } from '@/types';
@@ -74,9 +74,11 @@ export default function SaleDetailPage() {
   const [editCustomer, setEditCustomer] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editInstallments, setEditInstallments] = useState('');
-  const [editSeller, setEditSeller] = useState<'Facu' | 'Heber'>('Facu');
+  const [editSellerId, setEditSellerId] = useState<number | ''>('');
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
+
+  const { data: sellers } = useCatalogSellers(apiKey, true);
 
   const { data: productsData } = useAdminProducts(apiKey, {
     page: 1,
@@ -109,7 +111,7 @@ export default function SaleDetailPage() {
     setEditCustomer(sale.customer_name || '');
     setEditNotes(sale.notes || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
-    setEditSeller((sale.seller === 'Heber' ? 'Heber' : 'Facu'));
+    setEditSellerId(sale.seller_id);
     setEditItems(
       sale.items.map((item) => ({
         line_id: `sale-item-${item.id}`,
@@ -248,7 +250,7 @@ export default function SaleDetailPage() {
       customer_name: editCustomer || undefined,
       notes: editNotes || undefined,
       installments: editInstallments ? Number(editInstallments) : undefined,
-      seller: editSeller,
+      seller_id: editSellerId || undefined,
       items,
     };
 
@@ -312,7 +314,7 @@ export default function SaleDetailPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Venta #{sale.id}</h1>
             <p className="text-sm text-gray-500">
-              {sale.seller} · {sale.customer_name || 'Sin cliente'} · {totalItems} items
+              {sale.seller_nombre} · {sale.customer_name || 'Sin cliente'} · {totalItems} items
             </p>
           </div>
         </div>
@@ -609,17 +611,16 @@ export default function SaleDetailPage() {
               <span className="text-gray-500">Vendedor</span>
               {isEditing ? (
                 <select
-                  value={editSeller}
-                  onChange={(e) => setEditSeller(e.target.value as 'Facu' | 'Heber')}
+                  value={editSellerId}
+                  onChange={(e) => setEditSellerId(Number(e.target.value))}
                   className="px-3 py-2 border border-gray-300 rounded-lg"
                 >
-                  <option value="Facu">Facu</option>
-                  <option value="Heber">Heber</option>
+                  {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               ) : (
                 <span className="font-medium flex items-center gap-2">
-                  {sale.seller}
-                  {sale.seller === 'Web' && (
+                  {sale.seller_nombre}
+                  {sale.seller_nombre === 'Web' && (
                     <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full uppercase">Pedido web</span>
                   )}
                 </span>

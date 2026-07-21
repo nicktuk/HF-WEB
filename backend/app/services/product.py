@@ -15,6 +15,7 @@ from app.models.product import Product, ProductImage
 from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
 from app.models.stock import Deposit, StockPurchase
+from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
 from app.models.sale import Sale, SaleItem
 from app.models.product_review import ProductReview
 from app.models.source_website import SourceWebsite
@@ -605,16 +606,18 @@ class ProductService:
         deposit = self.db.query(Deposit).filter(Deposit.is_active == True).order_by(Deposit.id).first()
         return deposit.id if deposit else None
 
-    def create_deposit(self, name: str, seller: Optional[str] = None) -> Deposit:
+    def create_deposit(self, name: str, seller_id: Optional[int] = None) -> Deposit:
         if self.db.query(Deposit).filter(Deposit.name == name).first():
             raise DuplicateError("Deposit", name)
-        deposit = Deposit(name=name, seller=seller)
+        if seller_id is not None:
+            require_active_catalog_seller(self.db, seller_id)
+        deposit = Deposit(name=name, seller_id=seller_id)
         self.db.add(deposit)
         self.db.commit()
         self.db.refresh(deposit)
         return deposit
 
-    def update_deposit(self, deposit_id: int, name: Optional[str], is_active: Optional[bool], seller: Optional[str] = None) -> Deposit:
+    def update_deposit(self, deposit_id: int, name: Optional[str], is_active: Optional[bool], seller_id: Optional[int] = None) -> Deposit:
         deposit = self.db.query(Deposit).filter(Deposit.id == deposit_id).first()
         if not deposit:
             raise NotFoundError("Deposit", str(deposit_id))
@@ -622,8 +625,9 @@ class ProductService:
             deposit.name = name
         if is_active is not None:
             deposit.is_active = is_active
-        if seller is not None:
-            deposit.seller = seller
+        if seller_id is not None:
+            require_active_catalog_seller(self.db, seller_id)
+            deposit.seller_id = seller_id
         self.db.commit()
         self.db.refresh(deposit)
         return deposit
@@ -2271,12 +2275,17 @@ class ProductService:
         )
 
         # Stats by seller
-        sellers = ["Facu", "Heber"]
+        sellers = (
+            self.db.query(CatalogSeller)
+            .filter(CatalogSeller.activo.is_(True), CatalogSeller.nombre != "Web")
+            .order_by(CatalogSeller.nombre)
+            .all()
+        )
         by_seller = {}
         for seller in sellers:
             collected = (
                 self.db.query(func.coalesce(func.sum(Sale.paid_amount), 0))
-                .filter(Sale.seller == seller)
+                .filter(Sale.seller_id == seller.id)
                 .scalar()
             )
             pending_delivery = (
@@ -2286,7 +2295,7 @@ class ProductService:
                         0,
                     )
                 )
-                .filter(Sale.seller == seller)
+                .filter(Sale.seller_id == seller.id)
                 .scalar()
             )
             pending_payment = (
@@ -2301,10 +2310,10 @@ class ProductService:
                         0,
                     )
                 )
-                .filter(Sale.seller == seller)
+                .filter(Sale.seller_id == seller.id)
                 .scalar()
             )
-            by_seller[seller] = {
+            by_seller[seller.nombre] = {
                 "collected": float(collected or 0),
                 "pending_delivery": float(pending_delivery or 0),
                 "pending_payment": float(pending_payment or 0),
@@ -2583,7 +2592,7 @@ class ProductService:
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
         product_id: Optional[int] = None,
-        payer: Optional[str] = None,
+        payer_id: Optional[int] = None,
     ) -> Tuple[list, int, Optional[float]]:
         """Get all purchases with filters and pagination.
         Returns (purchases, total, payer_total) where payer_total is the sum
@@ -2612,11 +2621,11 @@ class ProductService:
                 )
             )
 
-        if payer:
+        if payer_id:
             query = query.filter(
                 Purchase.id.in_(
                     self.db.query(PurchasePayment.purchase_id)
-                    .filter(PurchasePayment.payer == payer)
+                    .filter(PurchasePayment.payer_id == payer_id)
                     .distinct()
                 )
             )
@@ -2625,12 +2634,12 @@ class ProductService:
 
         # Total pagado por ese pagador en todas las compras filtradas (sin paginar)
         payer_total: Optional[float] = None
-        if payer:
+        if payer_id:
             matching_ids = query.with_entities(Purchase.id).subquery()
             result = (
                 self.db.query(func.sum(PurchasePayment.amount))
                 .filter(
-                    PurchasePayment.payer == payer,
+                    PurchasePayment.payer_id == payer_id,
                     PurchasePayment.purchase_id.in_(
                         self.db.query(matching_ids.c.id)
                     ),
@@ -2703,17 +2712,18 @@ class ProductService:
         self.db.refresh(purchase)
         return purchase
 
-    def add_payment_to_purchase(self, purchase_id: int, payer: str, amount: Decimal, payment_method: str):
+    def add_payment_to_purchase(self, purchase_id: int, payer_id: int, amount: Decimal, payment_method: str):
         """Add a payment to a purchase."""
         from app.models.stock import Purchase, PurchasePayment
 
         purchase = self.db.query(Purchase).filter(Purchase.id == purchase_id).first()
         if not purchase:
             raise NotFoundError("Purchase", str(purchase_id))
+        require_active_catalog_seller(self.db, payer_id)
 
         payment = PurchasePayment(
             purchase_id=purchase_id,
-            payer=payer,
+            payer_id=payer_id,
             amount=amount,
             payment_method=payment_method,
         )
@@ -2752,17 +2762,20 @@ class ProductService:
         # Total by payer
         by_payer = (
             self.db.query(
-                PurchasePayment.payer,
+                CatalogSeller.id.label("payer_id"),
+                CatalogSeller.nombre.label("payer"),
                 func.sum(PurchasePayment.amount).label("total_amount"),
                 func.count(PurchasePayment.id).label("payment_count"),
             )
-            .group_by(PurchasePayment.payer)
+            .join(CatalogSeller, CatalogSeller.id == PurchasePayment.payer_id)
+            .group_by(CatalogSeller.id, CatalogSeller.nombre)
             .all()
         )
 
         result = {
             "by_payer": [
                 {
+                    "payer_id": row.payer_id,
                     "payer": row.payer,
                     "total_amount": float(row.total_amount or 0),
                     "payment_count": row.payment_count,

@@ -8,6 +8,7 @@ from sqlalchemy import func
 from app.models.sale import Sale, SaleItem, SaleInstallment
 from app.models.product import Product, ProductColorStock
 from app.models.stock import StockPurchase
+from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
 from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
 
@@ -70,13 +71,13 @@ class SalesService:
             return
         product.is_on_demand = stock <= 0
 
-    def _get_seller_deposit_id(self, seller: str | None) -> int | None:
-        if not seller:
+    def _get_seller_deposit_id(self, seller_id: int | None) -> int | None:
+        if not seller_id:
             return None
         from app.models.stock import Deposit
         deposit = (
             self.db.query(Deposit)
-            .filter(Deposit.seller == seller, Deposit.is_active == True)
+            .filter(Deposit.seller_id == seller_id, Deposit.is_active == True)
             .first()
         )
         return deposit.id if deposit else None
@@ -258,7 +259,7 @@ class SalesService:
         delivery_targets_by_ref: dict[str, bool] | None = None,
         paid_targets_by_ref: dict[str, bool] | None = None,
     ) -> None:
-        seller_deposit_id = self._get_seller_deposit_id(sale.seller)
+        seller_deposit_id = self._get_seller_deposit_id(sale.seller_id)
         for item in sale.items:
             item_ref = f"product:{item.product_id}:{(item.color or '').lower()}" if item.product_id is not None else f"manual:{(item.manual_product_name or '').strip().lower()}"
             current_qty = int(item.delivered_quantity or 0)
@@ -304,6 +305,7 @@ class SalesService:
         self.db.flush()
 
     def create_sale(self, data) -> Sale:
+        require_active_catalog_seller(self.db, data.seller_id)
         items, total_amount = self._normalize_items(
             data.items,
             force_delivered=True if data.delivered else None,
@@ -315,7 +317,7 @@ class SalesService:
             customer_name=data.customer_name,
             notes=data.notes,
             installments=data.installments,
-            seller=data.seller,
+            seller_id=data.seller_id,
             delivered=data.delivered,
             paid=data.paid,
             payment_method=getattr(data, 'payment_method', None),
@@ -407,10 +409,12 @@ class SalesService:
 
         total_amount = total_amount.quantize(Decimal("0.01"))
 
+        web_seller_id = self.db.query(CatalogSeller.id).filter(CatalogSeller.nombre == "Web").scalar()
+
         sale = Sale(
             customer_name=data.name,
             notes=data.notes,
-            seller="Web",
+            seller_id=web_seller_id,
             payment_method=data.payment_method,
             phone=data.phone,
             email=data.email,
@@ -508,7 +512,7 @@ class SalesService:
         notes: str | None = None,
         installments: int | None = None,
         installment_amounts: list | None = None,
-        seller: str | None = None,
+        seller_id: int | None = None,
         items: list | None = None,
         force: bool = False,
     ) -> Sale:
@@ -520,8 +524,9 @@ class SalesService:
             sale.customer_name = customer_name
         if notes is not None:
             sale.notes = notes
-        if seller is not None:
-            sale.seller = seller
+        if seller_id is not None:
+            require_active_catalog_seller(self.db, seller_id)
+            sale.seller_id = seller_id
         if payment_method is not None:
             sale.payment_method = payment_method
 

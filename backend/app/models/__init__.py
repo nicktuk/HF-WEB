@@ -11,6 +11,7 @@ from app.models.category import Category
 from app.models.category_mapping import CategoryMapping
 from app.models.subcategory import Subcategory
 from app.models.stock import Deposit, StockPurchase
+from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale, SaleItem
 from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
@@ -57,6 +58,7 @@ __all__ = [
     "Subcategory",
     "Deposit",
     "StockPurchase",
+    "CatalogSeller",
     "Sale",
     "SaleItem",
     "AnalyticsEvent",

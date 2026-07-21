@@ -380,7 +380,7 @@ async def get_deposits(service: ProductService = Depends(get_product_service)):
 async def create_deposit(data: DepositCreate, service: ProductService = Depends(get_product_service)):
     from app.core.exceptions import DuplicateError
     try:
-        return service.create_deposit(data.name, data.seller)
+        return service.create_deposit(data.name, data.seller_id)
     except DuplicateError:
         raise HTTPException(status_code=409, detail="Ya existe un depósito con ese nombre.")
 
@@ -397,7 +397,7 @@ async def update_deposit(
 ):
     from app.core.exceptions import NotFoundError
     try:
-        return service.update_deposit(deposit_id, data.name, data.is_active, data.seller)
+        return service.update_deposit(deposit_id, data.name, data.is_active, data.seller_id)
     except NotFoundError:
         raise HTTPException(status_code=404, detail="Depósito no encontrado.")
 
@@ -464,7 +464,7 @@ async def get_purchases(
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),
     product_id: Optional[int] = Query(default=None),
-    payer: Optional[str] = Query(default=None),
+    payer_id: Optional[int] = Query(default=None),
     service: ProductService = Depends(get_product_service),
 ):
     """Get all purchases with filters and pagination."""
@@ -485,7 +485,7 @@ async def get_purchases(
         date_from=date_from_parsed,
         date_to=date_to_parsed,
         product_id=product_id,
-        payer=payer,
+        payer_id=payer_id,
     )
 
     pages = (total + limit - 1) // limit if limit > 0 else 0
@@ -502,9 +502,9 @@ async def get_purchases(
             "item_count": len(p.items),
             "created_at": p.created_at,
         }
-        if payer:
+        if payer_id:
             item["payer_amount"] = float(
-                sum(pay.amount for pay in p.payments if pay.payer == payer)
+                sum(pay.amount for pay in p.payments if pay.payer_id == payer_id)
             )
         items.append(item)
 
@@ -514,7 +514,7 @@ async def get_purchases(
         "page": page,
         "limit": limit,
         "pages": pages,
-        **({"payer_total": payer_total} if payer else {}),
+        **({"payer_total": payer_total} if payer_id else {}),
     }
 
 
@@ -561,7 +561,8 @@ async def get_purchase_detail(
     payments = [
         PurchasePaymentResponse(
             id=p.id,
-            payer=p.payer,
+            payer_id=p.payer_id,
+            payer_nombre=p.payer_nombre,
             amount=p.amount,
             payment_method=p.payment_method,
             created_at=p.created_at,
@@ -599,7 +600,7 @@ async def add_payment_to_purchase(
     for payment_data in data.payments:
         purchase = service.add_payment_to_purchase(
             purchase_id,
-            payer=payment_data.payer,
+            payer_id=payment_data.payer_id,
             amount=payment_data.amount,
             payment_method=payment_data.payment_method,
         )
@@ -626,7 +627,8 @@ async def add_payment_to_purchase(
     payments = [
         PurchasePaymentResponse(
             id=p.id,
-            payer=p.payer,
+            payer_id=p.payer_id,
+            payer_nombre=p.payer_nombre,
             amount=p.amount,
             payment_method=p.payment_method,
             created_at=p.created_at,
@@ -681,13 +683,14 @@ async def get_purchases_by_payer(
 def get_account_balance(db: Session = Depends(get_db)):
     """Saldo por cuenta: cobrado (ventas) vs pagado (compras) por método de pago.
     Métodos 'del negocio': muestran balance cobrado - pagado.
-    Métodos personales: agrupados por pagador (Facu/Heber), solo egresos.
+    Métodos personales: agrupados por pagador (vendedor de catálogo), solo egresos.
     """
     import json
     from sqlalchemy import func
     from app.models.stock import PurchasePayment
     from app.models.sale import Sale
     from app.models.expense import Expense
+    from app.models.catalog_seller import CatalogSeller
     from app.services.app_settings import get_setting
 
     # Cargar config de métodos de pago
@@ -729,10 +732,11 @@ def get_account_balance(db: Session = Depends(get_db)):
     )
 
     # Egresos personales por pagador (métodos NO del negocio)
-    personal_by_payer = dict(
-        db.query(PurchasePayment.payer, func.sum(PurchasePayment.amount))
+    personal_by_payer = (
+        db.query(CatalogSeller.id, CatalogSeller.nombre, func.sum(PurchasePayment.amount))
+        .join(CatalogSeller, CatalogSeller.id == PurchasePayment.payer_id)
         .filter(PurchasePayment.payment_method.notin_(business_names) if business_names else True)
-        .group_by(PurchasePayment.payer)
+        .group_by(CatalogSeller.id, CatalogSeller.nombre)
         .all()
     )
 
@@ -752,8 +756,8 @@ def get_account_balance(db: Session = Depends(get_db)):
             })
 
     personal = [
-        {"payer": payer, "amount": float(amount or 0)}
-        for payer, amount in sorted(personal_by_payer.items())
+        {"payer_id": payer_id, "payer": payer, "amount": float(amount or 0)}
+        for payer_id, payer, amount in sorted(personal_by_payer, key=lambda row: row[1])
     ]
 
     return {"business": business, "personal": personal}
@@ -2175,7 +2179,7 @@ async def update_sale(
         notes=data.notes,
         installments=data.installments,
         installment_amounts=data.installment_amounts,
-        seller=data.seller,
+        seller_id=data.seller_id,
         items=data.items,
         force=data.force,
     )

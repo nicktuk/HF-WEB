@@ -1,7 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -59,6 +59,13 @@ api_router.include_router(
     comercios_admin.router,
     prefix="/admin",
     tags=["comercios-admin"]
+)
+
+# Catalog sellers (vendedores del canal catálogo, distinto de Vendedor mayorista)
+api_router.include_router(
+    catalog_sellers.router,
+    prefix="/admin",
+    tags=["catalog-sellers"]
 )
 
 # Source websites management

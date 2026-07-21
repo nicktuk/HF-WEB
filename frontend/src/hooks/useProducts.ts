@@ -177,7 +177,7 @@ export function useDeposits(apiKey: string) {
 export function useCreateDeposit(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; seller?: string | null }) => adminApi.createDeposit(apiKey, data),
+    mutationFn: (data: { name: string; seller_id?: number | null }) => adminApi.createDeposit(apiKey, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
     },
@@ -187,10 +187,50 @@ export function useCreateDeposit(apiKey: string) {
 export function useUpdateDeposit(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name?: string; is_active?: boolean; seller?: string | null } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; is_active?: boolean; seller_id?: number | null } }) =>
       adminApi.updateDeposit(apiKey, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
+    },
+  });
+}
+
+export function useCatalogSellers(apiKey: string, activo?: boolean) {
+  return useQuery({
+    queryKey: ['catalog-sellers', activo],
+    queryFn: () => adminApi.getCatalogSellers(apiKey, activo),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useCreateCatalogSeller(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { nombre: string; celular?: string | null }) => adminApi.createCatalogSeller(apiKey, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalog-sellers'] });
+    },
+  });
+}
+
+export function useUpdateCatalogSeller(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { nombre?: string; celular?: string | null; activo?: boolean } }) =>
+      adminApi.updateCatalogSeller(apiKey, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalog-sellers'] });
+    },
+  });
+}
+
+export function useDeactivateCatalogSeller(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deactivateCatalogSeller(apiKey, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalog-sellers'] });
     },
   });
 }
@@ -302,7 +342,7 @@ export function useUpdateSale(apiKey: string) {
         customer_name?: string;
         notes?: string;
         installments?: number;
-        seller?: 'Facu' | 'Heber';
+        seller_id?: number;
         items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
         force?: boolean;
       };
@@ -596,7 +636,7 @@ export function usePurchases(
     date_from?: string;
     date_to?: string;
     product_id?: number;
-    payer?: string;
+    payer_id?: number;
   } = {}
 ) {
   return useQuery({
@@ -633,7 +673,7 @@ export function useAddPaymentToPurchase(apiKey: string) {
       payment,
     }: {
       purchaseId: number;
-      payment: { payer: 'Facu' | 'Heber'; amount: number; payment_method: string };
+      payment: { payer_id: number; amount: number; payment_method: string };
     }) => adminApi.addPaymentToPurchase(apiKey, purchaseId, payment),
     onSuccess: (_, { purchaseId }) => {
       queryClient.invalidateQueries({ queryKey: ['purchase-detail', purchaseId] });

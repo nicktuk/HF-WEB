@@ -1,7 +1,7 @@
 """Schemas for stock operations."""
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List, Literal, Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -11,20 +11,21 @@ from pydantic import BaseModel
 
 class DepositCreate(BaseModel):
     name: str
-    seller: Optional[str] = None
+    seller_id: Optional[int] = None
 
 
 class DepositUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
-    seller: Optional[str] = None
+    seller_id: Optional[int] = None
 
 
 class DepositResponse(BaseModel):
     id: int
     name: str
     is_active: bool
-    seller: Optional[str] = None
+    seller_id: Optional[int] = None
+    seller_nombre: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -36,14 +37,15 @@ class DepositResponse(BaseModel):
 # ============================================
 
 class PurchasePaymentCreate(BaseModel):
-    payer: Literal["Facu", "Heber"]
+    payer_id: int
     amount: Decimal
     payment_method: str
 
 
 class PurchasePaymentResponse(BaseModel):
     id: int
-    payer: str
+    payer_id: int
+    payer_nombre: str
     amount: Decimal
     payment_method: str
     created_at: datetime
@@ -230,6 +232,7 @@ class SetDepositStockRequest(BaseModel):
 
 
 class PurchasesByPayerResponse(BaseModel):
+    payer_id: int
     payer: str
     total_amount: Decimal
     payment_count: int

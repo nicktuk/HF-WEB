@@ -21,7 +21,7 @@ class SaleCreate(BaseModel):
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
     installment_amounts: Optional[List[Decimal]] = None
-    seller: str = Field(default="Facu", pattern="^(Facu|Heber)$")
+    seller_id: int
     delivered: bool = False
     paid: bool = False
     payment_method: Optional[str] = None
@@ -38,7 +38,7 @@ class SaleUpdate(BaseModel):
     notes: Optional[str] = None
     installments: Optional[int] = Field(default=None, ge=0)
     installment_amounts: Optional[List[Decimal]] = None
-    seller: Optional[str] = Field(default=None, pattern="^(Facu|Heber)$")
+    seller_id: Optional[int] = None
     items: Optional[List[SaleItemCreate]] = None
     force: bool = False
     phone: Optional[str] = None
@@ -82,7 +82,8 @@ class SaleResponse(BaseModel):
     customer_name: Optional[str] = None
     notes: Optional[str] = None
     installments: Optional[int] = None
-    seller: str
+    seller_id: int
+    seller_nombre: str
     delivered: bool
     paid: bool
     payment_method: Optional[str] = None

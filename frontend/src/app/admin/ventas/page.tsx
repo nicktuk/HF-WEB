@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useUpdateSaleInstallment, useExpenses } from '@/hooks/useProducts';
+import { useAdminProducts, useCreateSale, useSales, useStockSummary, useUpdateSale, useUpdateSaleInstallment, useExpenses, useCatalogSellers } from '@/hooks/useProducts';
 import { adminApi, resolveImageUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import type { ProductAdmin, Sale, SaleItem, SaleItemCreate, SaleInstallment, PaymentMethodConfig } from '@/types';
@@ -64,7 +64,7 @@ export default function VentasPage() {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
-  const [seller, setSeller] = useState<'Facu' | 'Heber'>('Facu');
+  const [sellerId, setSellerId] = useState<number | ''>('');
   const [previewProduct, setPreviewProduct] = useState<ProductAdmin | null>(null);
   const [manualProductName, setManualProductName] = useState('');
   const [manualProductPrice, setManualProductPrice] = useState('');
@@ -109,6 +109,13 @@ export default function VentasPage() {
   const updateInstallment = useUpdateSaleInstallment(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 200, salesSearch || undefined, dateFrom || undefined, dateTo || undefined);
   const { data: expensesData } = useExpenses(apiKey);
+  const { data: sellers } = useCatalogSellers(apiKey, true);
+
+  useEffect(() => {
+    if (sellerId === '' && sellers && sellers.length > 0) {
+      setSellerId(sellers[0].id);
+    }
+  }, [sellers, sellerId]);
 
   const handleToggleItem = async (
     sale: Sale,
@@ -296,6 +303,10 @@ export default function VentasPage() {
   };
 
   const handleCreateSale = async () => {
+    if (!sellerId) {
+      alert('Seleccioná un vendedor');
+      return;
+    }
     // Validate: products with color variants must have a color selected
     const missingColor = cartItems.filter(item => {
       if (!item.product) return false;
@@ -329,7 +340,7 @@ export default function VentasPage() {
       notes: notes || undefined,
       installments: installmentsNum,
       installment_amounts: parsedAmounts,
-      seller,
+      seller_id: sellerId as number,
       items,
     });
 
@@ -460,7 +471,7 @@ export default function VentasPage() {
   const groupedSales = useMemo(() => {
     const groups: Record<string, typeof filteredSales> = {};
     filteredSales.forEach((sale) => {
-      const key = sale.seller || 'Sin vendedor';
+      const key = sale.seller_nombre || 'Sin vendedor';
       if (!groups[key]) groups[key] = [];
       groups[key].push(sale);
     });
@@ -747,12 +758,11 @@ export default function VentasPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
                 <select
-                  value={seller}
-                  onChange={(e) => setSeller(e.target.value as 'Facu' | 'Heber')}
+                  value={sellerId}
+                  onChange={(e) => setSellerId(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
                 >
-                  <option value="Facu">Facu</option>
-                  <option value="Heber">Heber</option>
+                  {sellers?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               </div>
               <div />
@@ -1255,8 +1265,8 @@ export default function VentasPage() {
                         </td>
                         <td className="px-3 py-2 text-gray-700">
                           <span className="flex items-center gap-1">
-                            {sale.seller || '-'}
-                            {sale.seller === 'Web' && (
+                            {sale.seller_nombre || '-'}
+                            {sale.seller_nombre === 'Web' && (
                               <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">Web</span>
                             )}
                           </span>

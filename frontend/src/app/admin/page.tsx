@@ -70,6 +70,7 @@ interface AccountBalanceItem {
 }
 
 interface PersonalItem {
+  payer_id: number;
   payer: string;
   amount: number;
 }
@@ -464,7 +465,7 @@ export default function AdminDashboard() {
                     <div key={item.payer} className="rounded-lg border bg-white p-4 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                          item.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                          item.payer_id % 2 === 0 ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
                         }`}>
                           {item.payer[0]}
                         </div>
@@ -557,7 +558,7 @@ export default function AdminDashboard() {
                             <div key={p.payer} className="rounded-lg border bg-white p-4 shadow-sm">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className={`h-7 w-7 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                                  p.payer === 'Facu' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                                  p.payer_id % 2 === 0 ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-green-400 to-green-600'
                                 }`}>
                                   {p.payer[0]}
                                 </div>

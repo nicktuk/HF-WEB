@@ -831,7 +831,7 @@ export default function ProductEditPage() {
                               {activeDeposits.map(d => (
                                 <th key={d.id} className="text-center px-2 pb-1 text-gray-500 font-medium whitespace-nowrap">
                                   {d.name}
-                                  {d.seller && <span className="ml-1 text-blue-500">({d.seller})</span>}
+                                  {d.seller_nombre && <span className="ml-1 text-blue-500">({d.seller_nombre})</span>}
                                 </th>
                               ))}
                               <th className="text-center px-2 pb-1 text-gray-500 font-medium">Total</th>
@@ -911,7 +911,7 @@ export default function ProductEditPage() {
                       <div key={deposit.id} className="flex items-center gap-3">
                         <span className="text-sm text-gray-700 w-28 truncate">
                           {deposit.name}
-                          {deposit.seller && <span className="ml-1 text-xs text-blue-500">({deposit.seller})</span>}
+                          {deposit.seller_nombre && <span className="ml-1 text-xs text-blue-500">({deposit.seller_nombre})</span>}
                         </span>
                         <input
                           type="number"

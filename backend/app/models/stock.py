@@ -14,10 +14,15 @@ class Deposit(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    seller = Column(String(50), nullable=True, comment="Vendedor asociado (ej: Facu, Heber)")
+    seller_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
+    seller = relationship("CatalogSeller")
     stock_purchases = relationship("StockPurchase", back_populates="deposit")
+
+    @property
+    def seller_nombre(self) -> str | None:
+        return self.seller.nombre if self.seller else None
 
 
 class Purchase(Base):
@@ -91,10 +96,15 @@ class PurchasePayment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     purchase_id = Column(Integer, ForeignKey("purchases.id", ondelete="CASCADE"), nullable=False, index=True)
-    payer = Column(String(20), nullable=False)  # "Facu" o "Heber"
+    payer_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=False)
     amount = Column(Numeric(12, 2), nullable=False)
     payment_method = Column(String(50), nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     # Relación
     purchase = relationship("Purchase", back_populates="payments")
+    payer = relationship("CatalogSeller")
+
+    @property
+    def payer_nombre(self) -> str:
+        return self.payer.nombre

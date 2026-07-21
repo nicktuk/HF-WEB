@@ -66,7 +66,7 @@ function SaleCard({ sale }: { sale: Sale }) {
         <div className="border-t">
           {sale.installments && (
             <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50">
-              Cuotas: {sale.installments} · Vendedor: {sale.seller}
+              Cuotas: {sale.installments} · Vendedor: {sale.seller_nombre}
             </p>
           )}
           <table className="w-full text-sm">
