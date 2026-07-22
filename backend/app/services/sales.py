@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from app.models.sale import Sale, SaleItem, SaleInstallment
-from app.models.product import Product, ProductColorStock
+from app.models.product import Product, ProductColorStock, ProductDepositStock
 from app.models.stock import StockPurchase
 from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
 from sqlalchemy import or_
@@ -111,6 +111,30 @@ class SalesService:
             stock = ProductColorStock(product_id=product_id, color=color, quantity=0, deposit_id=deposit_id)
             self.db.add(stock)
         stock.quantity = int(stock.quantity) + quantity
+
+    def _deduct_deposit_stock(self, product_id: int | None, deposit_id: int | None, quantity: int) -> None:
+        """Deduct from product_deposit_stock (manual per-deposit split for non-color products).
+        Lenient: no-ops if there's no row for that product/deposit, floors at 0 otherwise."""
+        if quantity <= 0 or product_id is None or deposit_id is None:
+            return
+        row = self.db.query(ProductDepositStock).filter(
+            ProductDepositStock.product_id == product_id,
+            ProductDepositStock.deposit_id == deposit_id,
+        ).first()
+        if row is None:
+            return
+        row.quantity = max(0, int(row.quantity) - quantity)
+
+    def _restore_deposit_stock(self, product_id: int | None, deposit_id: int | None, quantity: int) -> None:
+        if quantity <= 0 or product_id is None or deposit_id is None:
+            return
+        row = self.db.query(ProductDepositStock).filter(
+            ProductDepositStock.product_id == product_id,
+            ProductDepositStock.deposit_id == deposit_id,
+        ).first()
+        if row is None:
+            return
+        row.quantity = int(row.quantity) + quantity
 
     def _restore_stock(self, product_id: int | None, quantity: int) -> None:
         """Restore stock to purchases by decreasing out_quantity (LIFO)."""
@@ -270,7 +294,10 @@ class SalesService:
             delta = target_qty - current_qty
             if delta > 0:
                 self._deduct_stock(item.product_id, delta)
-                self._deduct_color_stock(item.product_id, item.color, delta, deposit_id=seller_deposit_id)
+                if item.color:
+                    self._deduct_color_stock(item.product_id, item.color, delta, deposit_id=seller_deposit_id)
+                else:
+                    self._deduct_deposit_stock(item.product_id, seller_deposit_id, delta)
                 # Record which deposit was used so restoration is exact
                 if seller_deposit_id is not None:
                     item.deposit_id = seller_deposit_id
@@ -278,7 +305,10 @@ class SalesService:
                 self._restore_stock(item.product_id, -delta)
                 # Use the deposit recorded at deduction time, fallback to seller's current deposit
                 restore_deposit_id = item.deposit_id if item.deposit_id is not None else seller_deposit_id
-                self._restore_color_stock(item.product_id, item.color, -delta, deposit_id=restore_deposit_id)
+                if item.color:
+                    self._restore_color_stock(item.product_id, item.color, -delta, deposit_id=restore_deposit_id)
+                else:
+                    self._restore_deposit_stock(item.product_id, restore_deposit_id, -delta)
             item.delivered_quantity = target_qty
 
             if paid_targets_by_ref is not None:
@@ -579,12 +609,18 @@ class SalesService:
                     if force:
                         try:
                             self._restore_stock(ci.product_id, delivered_qty)
-                            self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
+                            if ci.color:
+                                self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
+                            else:
+                                self._restore_deposit_stock(ci.product_id, restore_deposit_id, delivered_qty)
                         except ValidationError:
                             pass
                     else:
                         self._restore_stock(ci.product_id, delivered_qty)
-                        self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
+                        if ci.color:
+                            self._restore_color_stock(ci.product_id, ci.color, delivered_qty, deposit_id=restore_deposit_id)
+                        else:
+                            self._restore_deposit_stock(ci.product_id, restore_deposit_id, delivered_qty)
 
             # Remove existing ORM-linked items explicitly so sale.items is in sync.
             for ci in current_items:
@@ -668,12 +704,18 @@ class SalesService:
                 if force:
                     try:
                         self._restore_stock(item.product_id, delivered_qty)
-                        self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
+                        if item.color:
+                            self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
+                        else:
+                            self._restore_deposit_stock(item.product_id, restore_deposit_id, delivered_qty)
                     except ValidationError:
                         pass
                 else:
                     self._restore_stock(item.product_id, delivered_qty)
-                    self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
+                    if item.color:
+                        self._restore_color_stock(item.product_id, item.color, delivered_qty, deposit_id=restore_deposit_id)
+                    else:
+                        self._restore_deposit_stock(item.product_id, restore_deposit_id, delivered_qty)
 
         self.db.delete(sale)
         self.db.commit()

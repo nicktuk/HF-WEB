@@ -5,9 +5,8 @@ Convención de `varianteId` (no se crea una entidad "variante" nueva):
 - negativo -> -product_deposit_stock.id (producto sin color)
 
 Reutiliza SalesService.create_sale/update_sale para no duplicar la lógica de
-descuento de stock. product_deposit_stock (stock manual por depósito de
-productos sin color) se mantiene sincronizado únicamente acá, ya que nada más
-en el sistema lo descuenta.
+descuento de stock (incluye product_deposit_stock, el stock manual por
+depósito de productos sin color).
 """
 from typing import Optional
 
@@ -62,17 +61,6 @@ def _color_label(db: Session, product_id: int, color: Optional[str]) -> Optional
         .first()
     )
     return img.alt_text if img and img.alt_text else None
-
-
-def _decrement_deposit_stock(db: Session, product_id: int, deposit_id: int, cantidad: int) -> None:
-    row = (
-        db.query(ProductDepositStock)
-        .filter(ProductDepositStock.product_id == product_id, ProductDepositStock.deposit_id == deposit_id)
-        .first()
-    )
-    if row:
-        row.quantity = max(0, int(row.quantity) - cantidad)
-        db.commit()
 
 
 @router.get("/bot-vendedores/stock", dependencies=[Depends(verify_bot_key)])
@@ -181,10 +169,6 @@ async def crear_orden(body: dict, db: Session = Depends(get_db)):
     sale.origen = "vendedor"
     db.commit()
     db.refresh(sale)
-
-    if not es_color and entregado:
-        _decrement_deposit_stock(db, product.id, deposito.id, cantidad)
-
     db.refresh(row)
     label = _color_label(db, product.id, color)
 
@@ -245,9 +229,5 @@ async def entregar_orden(body: dict, db: Session = Depends(get_db)):
 
     SalesService(db).update_sale(sale.id, delivered=True, paid=None)
     db.refresh(sale)
-
-    for item in sale.items:
-        if item.color is None and item.product_id is not None and item.deposit_id is not None:
-            _decrement_deposit_stock(db, item.product_id, item.deposit_id, int(item.quantity))
 
     return {"ordenId": sale.id, "estado": "Entregado"}
