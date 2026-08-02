@@ -241,12 +241,15 @@ async def crear_orden(body: dict, db: Session = Depends(get_db)):
             "nombre": info["product"].display_name_bot(label),
             "cantidad": merged[variante_id]["cantidad"],
             "entregado": bool(sale_item.delivered) if sale_item else merged[variante_id]["entregado"],
+            "precioUnitario": float(sale_item.unit_price) if sale_item else float(info["unit_price"]),
+            "subtotal": float(sale_item.total_price) if sale_item else float(info["unit_price"]) * merged[variante_id]["cantidad"],
             "disponibleRestante": int(row.quantity),
         })
 
     return {
         "ordenId": sale.id,
         "estado": _estado_venta(sale),
+        "total": float(sale.total_amount or 0),
         "items": response_items,
     }
 
@@ -276,11 +279,13 @@ async def get_pendientes(celular: str = Query(...), db: Session = Depends(get_db
         product = db.query(Product).filter(Product.id == item.product_id).first() if item.product_id else None
         label = _color_label(db, item.product_id, item.color) if item.product_id else None
         nombre = product.display_name_bot(label) if product else (item.manual_product_name or "Producto")
+        cantidad_pendiente = int(item.quantity - item.delivered_quantity)
         lineas.append({
             "lineaId": item.id,
             "ordenId": sale.id,
             "nombre": nombre,
-            "cantidad": int(item.quantity - item.delivered_quantity),
+            "cantidad": cantidad_pendiente,
+            "subtotal": float(item.unit_price) * cantidad_pendiente,
             "cliente": sale.customer_name,
             "creada": sale.created_at.isoformat() if sale.created_at else None,
         })
