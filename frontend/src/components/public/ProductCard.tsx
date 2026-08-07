@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, X } from 'lucide-react';
+import { ShoppingCart, X, Check } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
 import { resolveImageUrl } from '@/lib/api';
@@ -21,6 +21,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const { data: catalogSettings } = useCatalogSettings();
   const { addItem } = useCart();
   const [pickingColor, setPickingColor] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   const t = {
     immediate: labels?.badge_text_immediate_delivery ?? 'Inmediata',
@@ -49,6 +50,8 @@ export function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
     e.preventDefault();
     addItem(product);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1200);
   }
 
   function handleStartPick(e: React.MouseEvent) {
@@ -62,6 +65,8 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     addItem(product, color, colorNameMap[color] ?? null);
     setPickingColor(false);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1200);
   }
 
   function handleCancelPick(e: React.MouseEvent) {
@@ -294,10 +299,14 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : (
             <button
               onClick={hasColors ? handleStartPick : handleAddDirect}
-              className="mt-1 w-full flex items-center justify-center gap-1.5 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-semibold py-2 transition-colors"
+              className={`mt-1 w-full flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold py-2 transition-colors ${
+                justAdded
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700'
+              }`}
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
-              Agregar al carrito
+              {justAdded ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
+              {justAdded ? 'Agregado' : 'Agregar al carrito'}
             </button>
           )}
         </div>

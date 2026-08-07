@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Search, Star, Zap, Lightbulb, Package, Menu, X, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -92,7 +93,7 @@ function PublicHeaderInner() {
   const onDemandLabel = badgeLabels?.badge_text_on_demand || 'Por pedido';
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
-  const { totalItems, openCart } = useCart();
+  const { totalItems } = useCart();
 
   return (
     <>
@@ -157,8 +158,8 @@ function PublicHeaderInner() {
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
                 {/* Cart button */}
-                <button
-                  onClick={openCart}
+                <Link
+                  href="/carrito"
                   className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
                   aria-label="Ver carrito"
                 >
@@ -168,7 +169,7 @@ function PublicHeaderInner() {
                       {totalItems > 9 ? '9+' : totalItems}
                     </span>
                   )}
-                </button>
+                </Link>
                 <button
                   onClick={() => setHowWeWorkOpen(true)}
                   className="flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-all duration-200"

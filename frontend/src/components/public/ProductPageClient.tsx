@@ -18,7 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Check } from 'lucide-react';
 
 export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
   const params = useParams();
@@ -41,6 +41,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
   const { data: badgeLabels } = useBadgeLabels();
   const { addItem } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
+
+  function handleAddToCart() {
+    if (!product) return;
+    addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+  }
 
   // Threshold: producto primero, luego global, luego default
   const lowStockThreshold = product?.stock_low_threshold ?? catalogSettings?.stock_low_threshold ?? 5;
@@ -413,13 +421,17 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             <div className="hidden md:block space-y-3">
               {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
                 <button
-                  onClick={() => addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null)}
-                  className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-3 transition-colors"
+                  onClick={handleAddToCart}
+                  className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-3 transition-colors ${
+                    justAdded
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
+                  }`}
                 >
-                  <ShoppingCart className="h-5 w-5" />
+                  {justAdded ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
                   <span className="flex items-center gap-2">
-                    Agregar al carrito
-                    {selectedColor && (
+                    {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
+                    {!justAdded && selectedColor && (
                       <span
                         className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
                         style={{ backgroundColor: selectedColor }}
@@ -463,13 +475,17 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden space-y-2">
         {(product.stock_qty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
           <button
-            onClick={() => addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null)}
-            className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700 font-semibold py-2.5 transition-colors"
+            onClick={handleAddToCart}
+            className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-2.5 transition-colors ${
+              justAdded
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
+            {justAdded ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
             <span className="flex items-center gap-2">
-              Agregar al carrito
-              {selectedColor && (
+              {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
+              {!justAdded && selectedColor && (
                 <span
                   className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
                   style={{ backgroundColor: selectedColor }}
