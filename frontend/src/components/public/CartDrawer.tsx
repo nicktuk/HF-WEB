@@ -6,11 +6,13 @@ import Image from 'next/image';
 import {
   X, ShoppingCart, Trash2, Plus, Minus,
   Banknote, ChevronLeft, CheckCircle2, Loader2,
+  Truck, Store, MessageCircle,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
+import { useCatalogSettings } from '@/hooks/useBadgeLabels';
 
 const MercadoPagoPaymentBrick = dynamic(
   () => import('./MercadoPagoPaymentBrick'),
@@ -19,6 +21,8 @@ const MercadoPagoPaymentBrick = dynamic(
 
 type Step = 'cart' | 'checkout' | 'mp-payment' | 'success';
 type PaymentFlow = 'card' | 'cash';
+type DeliveryMethod = 'pickup' | 'shipping' | 'agreement';
+type ShippingZone = 'amba' | 'resto_pais';
 
 interface CheckoutForm {
   name: string;
@@ -29,8 +33,14 @@ interface CheckoutForm {
 
 export function CartDrawer() {
   const { items, removeItem, updateQuantity, clearCart, isOpen, closeCart } = useCart();
+  const { data: catalogSettings } = useCatalogSettings();
+  const shippingMinPurchase = catalogSettings?.shipping_min_purchase ?? 0;
+  const shippingCostAmba = catalogSettings?.shipping_cost_amba ?? 0;
+  const shippingCostRestoPais = catalogSettings?.shipping_cost_resto_pais ?? 0;
   const [step, setStep] = useState<Step>('cart');
   const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod | null>(null);
+  const [shippingZone, setShippingZone] = useState<ShippingZone | null>(null);
   const [form, setForm] = useState<CheckoutForm>({ name: '', phone: '', email: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
@@ -69,11 +79,27 @@ export function CartDrawer() {
       setOrderId(null);
       setMpPreference(null);
       setMpBrickReady(false);
+      setDeliveryMethod(null);
+      setShippingZone(null);
+      setPaymentFlow(null);
     }
     closeCart();
   }
 
   const isCard = paymentFlow === 'card';
+
+  function getDeliveryLabel() {
+    if (deliveryMethod === 'shipping') {
+      return `Envío a domicilio (${shippingZone === 'amba' ? 'AMBA' : 'Resto del país'})`;
+    }
+    if (deliveryMethod === 'agreement') return 'Envío a coordinar (acuerdo aparte)';
+    return 'Retiro sin envío';
+  }
+
+  function buildNotes() {
+    const parts = [form.notes.trim(), deliveryMethod ? `Entrega: ${getDeliveryLabel()}` : null].filter(Boolean);
+    return parts.join(' | ') || undefined;
+  }
 
   const displayTotal = useMemo(() =>
     items.reduce((sum, i) => {
@@ -84,6 +110,16 @@ export function CartDrawer() {
     }, 0),
     [items, isCard]
   );
+
+  const shippingReady = shippingMinPurchase <= 0 || displayTotal >= shippingMinPurchase;
+  const shippingMissing = Math.max(0, shippingMinPurchase - displayTotal);
+  const shippingProgressPct = shippingMinPurchase > 0 ? Math.min(100, (displayTotal / shippingMinPurchase) * 100) : 100;
+  const canChooseShipping = shippingReady;
+
+  const shippingCost = deliveryMethod === 'shipping' && shippingZone
+    ? (shippingZone === 'amba' ? shippingCostAmba : shippingCostRestoPais)
+    : 0;
+  const grandTotal = displayTotal + shippingCost;
 
   const installmentPerPeriod = useMemo(() => {
     if (!isCard) return null;
@@ -105,6 +141,8 @@ export function CartDrawer() {
       const pref = await publicApi.createMPPreference({
         name: form.name.trim(),
         email: form.email.trim() || undefined,
+        delivery_method: deliveryMethod ?? undefined,
+        shipping_zone: shippingZone ?? undefined,
         items: items.map(i => ({
           product_id: i.product.id,
           quantity: i.quantity,
@@ -127,7 +165,9 @@ export function CartDrawer() {
       name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || undefined,
-      notes: form.notes.trim() || undefined,
+      notes: buildNotes(),
+      delivery_method: deliveryMethod ?? undefined,
+      shipping_zone: shippingZone ?? undefined,
       items: items.map(i => ({
         product_id: i.product.id,
         quantity: i.quantity,
@@ -148,7 +188,9 @@ export function CartDrawer() {
         email: form.email.trim() || undefined,
         payment_method: 'Efectivo / Transferencia',
         is_card_payment: false,
-        notes: form.notes.trim() || undefined,
+        notes: buildNotes(),
+        delivery_method: deliveryMethod ?? undefined,
+        shipping_zone: shippingZone ?? undefined,
         items: items.map(i => ({
           product_id: i.product.id,
           quantity: i.quantity,
@@ -159,7 +201,7 @@ export function CartDrawer() {
       setOrderId(result.id);
       setStep('success');
       trackPublicEvent('purchase', {
-        value: displayTotal,
+        value: grandTotal,
         num_items: items.reduce((s, i) => s + i.quantity, 0),
         content_ids: items.map(i => i.product.id),
         metadata: { payment_method: 'Efectivo / Transferencia' },
@@ -171,7 +213,8 @@ export function CartDrawer() {
     }
   }
 
-  const canGoToCheckout = items.length > 0 && paymentFlow !== null;
+  const canGoToCheckout = items.length > 0 && paymentFlow !== null && deliveryMethod !== null &&
+    (deliveryMethod !== 'shipping' || (canChooseShipping && shippingZone !== null));
   const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && !submitting;
 
   return (
@@ -287,11 +330,115 @@ export function CartDrawer() {
                 <div className="flex items-start justify-between">
                   <span className="text-sm text-zinc-500 mt-1">Total</span>
                   <div className="text-right">
-                    <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(displayTotal)}</span>
+                    <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
+                    {shippingCost > 0 && (
+                      <p className="text-xs text-zinc-400">Incluye envío {formatPrice(shippingCost)}</p>
+                    )}
                     {installmentPerPeriod && (
                       <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
                     )}
                   </div>
+                </div>
+
+                {/* Forma de entrega */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo lo recibís?</p>
+
+                  {shippingMinPurchase > 0 && !shippingReady && (
+                    <div className="rounded-xl border border-zinc-200 bg-white px-3 py-3 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold text-zinc-600">
+                          Te faltan {formatPrice(shippingMissing)} para poder elegir envío
+                        </span>
+                        <span className="text-zinc-400 tabular-nums shrink-0">{formatPrice(displayTotal)} / {formatPrice(shippingMinPurchase)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-primary-500 transition-all duration-300"
+                          style={{ width: `${shippingProgressPct}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-zinc-400">Mientras tanto podés pedir con &ldquo;Acuerdo de envío&rdquo; y lo coordinamos aparte.</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => { setDeliveryMethod('pickup'); setShippingZone(null); }}
+                      className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        deliveryMethod === 'pickup'
+                          ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
+                      }`}
+                    >
+                      <Store className="h-4 w-4" />
+                      <span className="leading-tight text-center">Sin envío</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!canChooseShipping) return;
+                        if (deliveryMethod === 'shipping') {
+                          setDeliveryMethod(null);
+                          setShippingZone(null);
+                        } else {
+                          setDeliveryMethod('shipping');
+                        }
+                      }}
+                      disabled={!canChooseShipping}
+                      className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        !canChooseShipping
+                          ? 'bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed'
+                          : deliveryMethod === 'shipping'
+                          ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
+                      }`}
+                    >
+                      <Truck className="h-4 w-4" />
+                      <span className="leading-tight text-center">Con envío</span>
+                    </button>
+                    <button
+                      onClick={() => { setDeliveryMethod('agreement'); setShippingZone(null); }}
+                      className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        deliveryMethod === 'agreement'
+                          ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
+                      }`}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="leading-tight text-center">Acuerdo de envío</span>
+                    </button>
+                  </div>
+
+                  {deliveryMethod === 'shipping' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setShippingZone('amba')}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
+                          shippingZone === 'amba'
+                            ? 'bg-primary-50 border-primary-400 text-primary-700'
+                            : 'bg-white border-zinc-200 text-zinc-600 hover:border-primary-300'
+                        }`}
+                      >
+                        <span>AMBA</span>
+                        <span className="tabular-nums">{formatPrice(shippingCostAmba)}</span>
+                      </button>
+                      <button
+                        onClick={() => setShippingZone('resto_pais')}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
+                          shippingZone === 'resto_pais'
+                            ? 'bg-primary-50 border-primary-400 text-primary-700'
+                            : 'bg-white border-zinc-200 text-zinc-600 hover:border-primary-300'
+                        }`}
+                      >
+                        <span>Resto del país</span>
+                        <span className="tabular-nums">{formatPrice(shippingCostRestoPais)}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {deliveryMethod === 'agreement' && (
+                    <p className="text-[11px] text-zinc-400 px-1">Pagás los productos ahora; coordinamos el envío y su costo por WhatsApp.</p>
+                  )}
                 </div>
 
                 {/* Forma de cobro — solo 2 opciones */}
@@ -328,7 +475,7 @@ export function CartDrawer() {
                     if (!canGoToCheckout) return;
                     setStep('checkout');
                     trackPublicEvent('initiate_checkout', {
-                      value: displayTotal,
+                      value: grandTotal,
                       num_items: items.reduce((s, i) => s + i.quantity, 0),
                     });
                   }}
@@ -338,8 +485,14 @@ export function CartDrawer() {
                   Realizar pedido
                 </button>
 
-                {!paymentFlow && items.length > 0 && (
-                  <p className="text-center text-[11px] text-zinc-400">Elegí cómo querés pagar para continuar</p>
+                {!canGoToCheckout && items.length > 0 && (
+                  <p className="text-center text-[11px] text-zinc-400">
+                    {!deliveryMethod
+                      ? 'Elegí cómo querés recibirlo para continuar'
+                      : deliveryMethod === 'shipping' && !shippingZone
+                      ? 'Elegí la zona de envío para continuar'
+                      : 'Elegí cómo querés pagar para continuar'}
+                  </p>
                 )}
 
                 <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1">
@@ -365,11 +518,11 @@ export function CartDrawer() {
                     <p className="text-xs font-semibold text-zinc-700">
                       {isCard ? 'Mercado Pago' : 'Efectivo / Transferencia'}
                     </p>
-                    <p className="text-xs text-zinc-400">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
+                    <p className="text-xs text-zinc-400">{items.length} {items.length === 1 ? 'producto' : 'productos'} · {getDeliveryLabel()}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(displayTotal)}</p>
+                  <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</p>
                   {installmentPerPeriod && (
                     <p className="text-[11px] text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
                   )}

@@ -1,5 +1,5 @@
 """Schemas for sales."""
-from typing import List, Optional
+from typing import List, Literal, Optional
 from decimal import Decimal
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -115,6 +115,8 @@ class PublicOrderCreate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=100)
     is_card_payment: bool = False
     notes: Optional[str] = None
+    delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
+    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
     items: List[PublicOrderItemCreate] = Field(..., min_length=1)
 
 

@@ -2,7 +2,7 @@
 import uuid
 import logging
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -11,9 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.config import settings
+from app.core.exceptions import ValidationError
 from app.models.product import Product
 from app.schemas.sales import PublicOrderCreate, PublicOrderItemCreate
-from app.services.app_settings import get_setting
+from app.services.app_settings import get_setting, get_shipping_config, SHIPPING_ZONE_LABELS
 from app.services.sales import SalesService
 
 router = APIRouter()
@@ -42,6 +43,8 @@ class MPPreferenceCartItem(BaseModel):
 class MPPreferenceRequest(BaseModel):
     name: str
     email: Optional[str] = None
+    delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
+    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
     items: List[MPPreferenceCartItem]
 
 
@@ -79,6 +82,8 @@ class MPProcessPaymentRequest(BaseModel):
     phone: str = Field(..., min_length=6, max_length=50)
     email: Optional[str] = None
     notes: Optional[str] = None
+    delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
+    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
     items: List[MPPreferenceCartItem]
 
 
@@ -92,10 +97,16 @@ class MPProcessPaymentResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _calculate_total(db: Session, items: List[MPPreferenceCartItem]) -> tuple[float, list]:
+def _calculate_total(
+    db: Session,
+    items: List[MPPreferenceCartItem],
+    delivery_method: Optional[str] = None,
+    shipping_zone: Optional[str] = None,
+) -> tuple[float, list]:
     """
     Fetches product prices from DB and returns (total, items_payload).
     items_payload is ready for the MP preference API.
+    Envío: costo y mínimo se recalculan server-side, nunca se confía en el cliente.
     """
     total = Decimal("0")
     items_payload = []
@@ -122,6 +133,26 @@ def _calculate_total(db: Session, items: List[MPPreferenceCartItem]) -> tuple[fl
             "currency_id": "ARS",
         })
 
+    if delivery_method == "shipping":
+        shipping_config = get_shipping_config(db)
+        min_purchase = Decimal(str(shipping_config["min_purchase"]))
+        if total < min_purchase:
+            raise ValidationError(
+                f"El pedido no alcanza el mínimo de compra para envío (${min_purchase})"
+            )
+        if shipping_zone not in ("amba", "resto_pais"):
+            raise ValidationError("Debés indicar la zona de envío (AMBA o Resto del país)")
+        shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
+        if shipping_cost > 0:
+            total += shipping_cost
+            items_payload.append({
+                "id": "shipping",
+                "title": f"Envío ({SHIPPING_ZONE_LABELS.get(shipping_zone, shipping_zone)})",
+                "quantity": 1,
+                "unit_price": float(shipping_cost),
+                "currency_id": "ARS",
+            })
+
     return float(total), items_payload
 
 
@@ -139,7 +170,7 @@ async def create_mp_preference(
     if not access_token or not public_key:
         raise HTTPException(status_code=503, detail="Mercado Pago no está configurado")
 
-    total, items_payload = _calculate_total(db, data.items)
+    total, items_payload = _calculate_total(db, data.items, data.delivery_method, data.shipping_zone)
 
     payer: dict = {"name": data.name}
     if data.email:
@@ -192,7 +223,7 @@ async def process_mp_payment(
         raise HTTPException(status_code=503, detail="Mercado Pago no está configurado")
 
     # Calculate real total from DB — never trust client-provided amount
-    real_total, _ = _calculate_total(db, data.items)
+    real_total, _ = _calculate_total(db, data.items, data.delivery_method, data.shipping_zone)
     provided_amount = round(data.form_data.transaction_amount, 2)
     if abs(provided_amount - round(real_total, 2)) > 1.0:
         logger.warning("MP amount mismatch: provided %.2f vs real %.2f", provided_amount, real_total)
@@ -261,6 +292,8 @@ async def process_mp_payment(
             payment_method=f"Mercado Pago ({payment_method_id})",
             is_card_payment=True,
             notes=data.notes,
+            delivery_method=data.delivery_method,
+            shipping_zone=data.shipping_zone,
             items=[
                 PublicOrderItemCreate(
                     product_id=i.product_id,

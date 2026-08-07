@@ -33,6 +33,30 @@ def set_setting(db: Session, key: str, value: Optional[str]) -> None:
     db.commit()
 
 
+SHIPPING_ZONE_LABELS: dict[str, str] = {
+    "amba": "AMBA",
+    "resto_pais": "Resto del país",
+}
+
+
+def get_shipping_config(db: Session) -> dict:
+    """Devuelve el mínimo de compra y el costo de envío por zona configurados en DB."""
+    min_purchase_str = get_setting(db, "SHIPPING_MIN_PURCHASE")
+    cost_amba_str = get_setting(db, "SHIPPING_COST_AMBA")
+    cost_resto_pais_str = get_setting(db, "SHIPPING_COST_RESTO_PAIS")
+    return {
+        "min_purchase": float(min_purchase_str) if min_purchase_str is not None else 0.0,
+        "amba": float(cost_amba_str) if cost_amba_str is not None else 0.0,
+        "resto_pais": float(cost_resto_pais_str) if cost_resto_pais_str is not None else 0.0,
+    }
+
+
+def get_shipping_cost(db: Session, zone: Optional[str]) -> float:
+    """Devuelve el costo de envío configurado para una zona ('amba' | 'resto_pais')."""
+    config = get_shipping_config(db)
+    return config.get(zone or "", 0.0)
+
+
 def get_badge_labels(db: Session) -> dict[str, str]:
     """Devuelve todos los textos de etiquetas, con fallback a defaults."""
     return {key: (get_setting(db, key) or default) for key, default in BADGE_DEFAULTS.items()}

@@ -35,6 +35,8 @@ import type {
   Expense,
   PublicOrderCreate,
   PublicOrderResponse,
+  DeliveryMethod,
+  ShippingZone,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -181,6 +183,8 @@ export const publicApi = {
   async createMPPreference(data: {
     name: string;
     email?: string;
+    delivery_method?: DeliveryMethod;
+    shipping_zone?: ShippingZone;
     items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
   }): Promise<{ preference_id: string; public_key: string; amount: number }> {
     return fetchAPI('/public/mp/preference', { method: 'POST', body: JSON.stringify(data) });
@@ -192,6 +196,8 @@ export const publicApi = {
     phone: string;
     email?: string;
     notes?: string;
+    delivery_method?: DeliveryMethod;
+    shipping_zone?: ShippingZone;
     items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
   }): Promise<{ status: string; sale_id?: number; message: string }> {
     return fetchAPI('/public/mp/process-payment', { method: 'POST', body: JSON.stringify(data) });
@@ -1203,11 +1209,11 @@ export const adminApi = {
   // Catalog Settings
   // ============================================
 
-  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean }> {
+  async getCatalogSettings(apiKey: string): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean; shipping_min_purchase: number; shipping_cost_amba: number; shipping_cost_resto_pais: number }> {
     return fetchAPI('/admin/settings/catalog', {}, apiKey);
   },
 
-  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string; stock_low_threshold?: number; show_by_sections?: boolean; group_by_category?: boolean; section_sort_order?: string; show_out_of_stock?: boolean; mobile_two_columns?: boolean; carousel_style?: string; on_demand_description?: string; popup_enabled?: boolean; popup_interval?: number; popup_slides?: Array<{ image: string; link: string }>; category_nav_style?: string; hide_out_of_stock_colors?: boolean }): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean }> {
+  async updateCatalogSettings(apiKey: string, data: { featured_pill_label?: string; stock_low_threshold?: number; show_by_sections?: boolean; group_by_category?: boolean; section_sort_order?: string; show_out_of_stock?: boolean; mobile_two_columns?: boolean; carousel_style?: string; on_demand_description?: string; popup_enabled?: boolean; popup_interval?: number; popup_slides?: Array<{ image: string; link: string }>; category_nav_style?: string; hide_out_of_stock_colors?: boolean; shipping_min_purchase?: number; shipping_cost_amba?: number; shipping_cost_resto_pais?: number }): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean; shipping_min_purchase: number; shipping_cost_amba: number; shipping_cost_resto_pais: number }> {
     return fetchAPI('/admin/settings/catalog', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -1323,9 +1329,9 @@ export const adminApi = {
 /**
  * Fetch public catalog settings (no auth required)
  */
-export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean }> {
+export async function fetchPublicCatalogSettings(): Promise<{ featured_pill_label: string; stock_low_threshold: number; show_by_sections: boolean; group_by_category: boolean; section_sort_order: string; show_out_of_stock: boolean; mobile_two_columns: boolean; carousel_style: string; on_demand_description: string; popup_enabled: boolean; popup_interval: number; popup_slides: Array<{ image: string; link: string }>; category_nav_style: string; hide_out_of_stock_colors: boolean; shipping_min_purchase: number; shipping_cost_amba: number; shipping_cost_resto_pais: number }> {
   const res = await fetch(`${API_URL}/admin/settings/public/catalog-settings`);
-  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos', stock_low_threshold: 5, show_by_sections: false, group_by_category: true, section_sort_order: 'asc', show_out_of_stock: true, mobile_two_columns: false, carousel_style: 'scroll', on_demand_description: 'Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos.', popup_enabled: false, popup_interval: 2, popup_slides: [], category_nav_style: 'pills', hide_out_of_stock_colors: false };
+  if (!res.ok) return { featured_pill_label: 'Nuevos ingresos', stock_low_threshold: 5, show_by_sections: false, group_by_category: true, section_sort_order: 'asc', show_out_of_stock: true, mobile_two_columns: false, carousel_style: 'scroll', on_demand_description: 'Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos.', popup_enabled: false, popup_interval: 2, popup_slides: [], category_nav_style: 'pills', hide_out_of_stock_colors: false, shipping_min_purchase: 0, shipping_cost_amba: 0, shipping_cost_resto_pais: 0 };
   return res.json();
 }
 

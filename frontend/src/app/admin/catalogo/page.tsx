@@ -18,6 +18,13 @@ export default function CatalogoConfigPage() {
   const [savingThreshold, setSavingThreshold] = useState(false);
   const [thresholdSaved, setThresholdSaved] = useState(false);
 
+  // Envío: mínimo de compra y costo por zona
+  const [shippingMinPurchase, setShippingMinPurchase] = useState('0');
+  const [shippingCostAmba, setShippingCostAmba] = useState('0');
+  const [shippingCostRestoPais, setShippingCostRestoPais] = useState('0');
+  const [savingShipping, setSavingShipping] = useState(false);
+  const [shippingSaved, setShippingSaved] = useState(false);
+
   // Show by sections
   const [showBySections, setShowBySections] = useState(false);
   const [savingShowBySections, setSavingShowBySections] = useState(false);
@@ -70,6 +77,9 @@ export default function CatalogoConfigPage() {
     adminApi.getCatalogSettings(apiKey)
       .then((data) => {
         setStockThreshold(String(data.stock_low_threshold ?? 5));
+        setShippingMinPurchase(String(data.shipping_min_purchase ?? 0));
+        setShippingCostAmba(String(data.shipping_cost_amba ?? 0));
+        setShippingCostRestoPais(String(data.shipping_cost_resto_pais ?? 0));
         setShowBySections(data.show_by_sections ?? false);
         setGroupByCategory(data.group_by_category ?? true);
         setSectionSortOrder((data.section_sort_order === 'desc' ? 'desc' : 'asc'));
@@ -96,6 +106,23 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar el umbral');
     } finally {
       setSavingThreshold(false);
+    }
+  }
+
+  async function handleSaveShipping() {
+    setSavingShipping(true);
+    try {
+      await adminApi.updateCatalogSettings(apiKey, {
+        shipping_min_purchase: Number(shippingMinPurchase),
+        shipping_cost_amba: Number(shippingCostAmba),
+        shipping_cost_resto_pais: Number(shippingCostRestoPais),
+      });
+      setShippingSaved(true);
+      setTimeout(() => setShippingSaved(false), 2000);
+    } catch {
+      showToast('error', 'Error al guardar la configuración de envío');
+    } finally {
+      setSavingShipping(false);
     }
   }
 
@@ -294,6 +321,57 @@ export default function CatalogoConfigPage() {
             <Button onClick={handleSaveThreshold} disabled={savingThreshold || stockThreshold === ''} className="gap-2">
               {savingThreshold ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {thresholdSaved ? 'Guardado ✓' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Envío */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Envío</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Si el cliente elige &ldquo;Con envío&rdquo; en el carrito, necesita alcanzar el mínimo para poder avanzar al pago (si no llega, puede elegir &ldquo;Acuerdo de envío&rdquo; y se coordina aparte). El costo de envío se suma al total según la zona elegida.
+          </p>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <label className="w-48 text-sm text-gray-600">Mínimo de compra</label>
+            <span className="text-sm text-gray-500">$</span>
+            <input
+              type="number"
+              min="0"
+              value={shippingMinPurchase}
+              onChange={(e) => setShippingMinPurchase(e.target.value)}
+              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-right shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="w-48 text-sm text-gray-600">Costo envío AMBA</label>
+            <span className="text-sm text-gray-500">$</span>
+            <input
+              type="number"
+              min="0"
+              value={shippingCostAmba}
+              onChange={(e) => setShippingCostAmba(e.target.value)}
+              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-right shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="w-48 text-sm text-gray-600">Costo envío Resto del país</label>
+            <span className="text-sm text-gray-500">$</span>
+            <input
+              type="number"
+              min="0"
+              value={shippingCostRestoPais}
+              onChange={(e) => setShippingCostRestoPais(e.target.value)}
+              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-right shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <Button onClick={handleSaveShipping} disabled={savingShipping} className="gap-2">
+              {savingShipping ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {shippingSaved ? 'Guardado ✓' : 'Guardar'}
             </Button>
           </div>
         </div>

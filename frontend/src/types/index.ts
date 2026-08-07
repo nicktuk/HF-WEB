@@ -509,6 +509,9 @@ export interface PublicOrderItem {
   is_card_payment?: boolean;
 }
 
+export type DeliveryMethod = 'pickup' | 'shipping' | 'agreement';
+export type ShippingZone = 'amba' | 'resto_pais';
+
 export interface PublicOrderCreate {
   name: string;
   phone: string;
@@ -516,6 +519,8 @@ export interface PublicOrderCreate {
   payment_method?: string;
   is_card_payment?: boolean;
   notes?: string;
+  delivery_method?: DeliveryMethod;
+  shipping_zone?: ShippingZone;
   items: PublicOrderItem[];
 }
 
