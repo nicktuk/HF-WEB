@@ -63,6 +63,7 @@ class MPPreferenceResponse(BaseModel):
     preference_id: str
     public_key: str
     amount: float
+    checkout_url: str
 
 
 class MPOrderStatusResponse(BaseModel):
@@ -203,10 +204,19 @@ async def create_mp_preference(
         logger.error("MP connection error: %s", exc)
         raise HTTPException(status_code=502, detail="Error de conexión con Mercado Pago")
 
+    # Con credenciales TEST, MP sólo acepta el checkout en su URL de sandbox.
+    is_test = access_token.startswith("TEST-")
+    checkout_url = (
+        (pref_data.get("sandbox_init_point") if is_test else pref_data.get("init_point"))
+        or pref_data.get("init_point")
+        or pref_data.get("sandbox_init_point")
+    )
+
     return MPPreferenceResponse(
         preference_id=pref_data["id"],
         public_key=public_key,
         amount=total,
+        checkout_url=checkout_url,
     )
 
 

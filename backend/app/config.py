@@ -104,7 +104,7 @@ class Settings(BaseSettings):
 
     # Canal Comercio
     COMERCIO_JWT_SECRET: str = "change_me_comercio_secret"
-    NEXT_PUBLIC_BASE_URL: str = "https://hefaproductos.com.ar"
+    NEXT_PUBLIC_BASE_URL: str = "https://www.hefaproductos.com.ar"
 
     # Canal Comercio — webhooks n8n
     N8N_WEBHOOK_SOLICITUD_COMERCIO: str = ""

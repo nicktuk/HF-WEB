@@ -188,7 +188,7 @@ export const publicApi = {
     delivery_method?: DeliveryMethod;
     shipping_zone?: ShippingZone;
     items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
-  }): Promise<{ preference_id: string; public_key: string; amount: number }> {
+  }): Promise<{ preference_id: string; public_key: string; amount: number; checkout_url: string }> {
     return fetchAPI('/public/mp/preference', { method: 'POST', body: JSON.stringify(data) });
   },
 

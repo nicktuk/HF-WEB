@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,12 +16,7 @@ import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 import { useCatalogSettings } from '@/hooks/useBadgeLabels';
 
-const MercadoPagoWalletButton = dynamic(
-  () => import('@/components/public/MercadoPagoWalletButton'),
-  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#009ee3]" /></div> }
-);
-
-type Step = 'cart' | 'checkout' | 'mp-payment' | 'success';
+type Step = 'cart' | 'checkout' | 'success';
 type PaymentFlow = 'card' | 'cash';
 type DeliveryMethod = 'pickup' | 'shipping' | 'agreement';
 type ShippingZone = 'amba' | 'resto_pais';
@@ -89,8 +83,6 @@ export default function CarritoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mpPreference, setMpPreference] = useState<{ preference_id: string; public_key: string; amount: number } | null>(null);
-  const [mpBrickReady, setMpBrickReady] = useState(false);
 
   const isCard = paymentFlow === 'card';
 
@@ -112,8 +104,6 @@ export default function CarritoPage() {
     setStep('cart');
     setForm({ name: '', phone: '', email: '', notes: '' });
     setOrderId(null);
-    setMpPreference(null);
-    setMpBrickReady(false);
     setDeliveryMethod(null);
     setShippingZone(null);
     setPaymentFlow(null);
@@ -171,11 +161,10 @@ export default function CarritoPage() {
           is_card_payment: true,
         })),
       });
-      setMpPreference(pref);
-      setStep('mp-payment');
+      // Redirige directo a Mercado Pago, sin pasos intermedios.
+      window.location.href = pref.checkout_url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar el pago. Intentá de nuevo.');
-    } finally {
       setSubmitting(false);
     }
   }
@@ -230,12 +219,9 @@ export default function CarritoPage() {
         <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
           {/* ── Header interno ── */}
           <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
-            {(step === 'checkout' || step === 'mp-payment') && (
+            {step === 'checkout' && (
               <button
-                onClick={() => {
-                  if (step === 'mp-payment') { setStep('checkout'); setMpPreference(null); setMpBrickReady(false); }
-                  else setStep('cart');
-                }}
+                onClick={() => setStep('cart')}
                 className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-zinc-100 transition-colors -ml-1"
                 aria-label="Volver"
               >
@@ -246,7 +232,6 @@ export default function CarritoPage() {
             <h1 className="font-bold text-lg text-zinc-900">
               {step === 'cart' ? 'Tu pedido'
                 : step === 'checkout' ? 'Tus datos'
-                : step === 'mp-payment' ? 'Pagar con Mercado Pago'
                 : '¡Pedido confirmado!'}
             </h1>
             {step === 'cart' && items.length > 0 && (
@@ -626,39 +611,6 @@ export default function CarritoPage() {
                 </p>
               </div>
             </>
-          )}
-
-          {/* ── STEP: mp-payment ── */}
-          {step === 'mp-payment' && mpPreference && (
-            <div className="px-4 sm:px-6 py-4 space-y-4">
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
-                <p className="text-xs text-zinc-500">{items.length} {items.length === 1 ? 'producto' : 'productos'}</p>
-                <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(mpPreference.amount)}</p>
-              </div>
-
-              {!mpBrickReady && (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#009ee3]" />
-                </div>
-              )}
-
-              {error && (
-                <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm text-rose-700">
-                  {error}
-                </div>
-              )}
-
-              <p className="text-center text-xs text-zinc-400">
-                Te vamos a redirigir a Mercado Pago para completar el pago de forma segura.
-              </p>
-
-              <MercadoPagoWalletButton
-                publicKey={mpPreference.public_key}
-                preferenceId={mpPreference.preference_id}
-                onError={(msg) => setError(msg)}
-                onReady={() => setMpBrickReady(true)}
-              />
-            </div>
           )}
 
           {/* ── STEP: success ── */}
