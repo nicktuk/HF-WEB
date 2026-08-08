@@ -12,8 +12,8 @@ import { formatPrice } from '@/lib/utils';
 import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 
-const MercadoPagoPaymentBrick = dynamic(
-  () => import('./MercadoPagoPaymentBrick'),
+const MercadoPagoWalletButton = dynamic(
+  () => import('./MercadoPagoWalletButton'),
   { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#009ee3]" /></div> }
 );
 
@@ -104,7 +104,9 @@ export function CartDrawer() {
     try {
       const pref = await publicApi.createMPPreference({
         name: form.name.trim(),
+        phone: form.phone.trim(),
         email: form.email.trim() || undefined,
+        notes: form.notes.trim() || undefined,
         items: items.map(i => ({
           product_id: i.product.id,
           quantity: i.quantity,
@@ -119,22 +121,6 @@ export function CartDrawer() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  async function handleMPProcessPayment(formData: unknown) {
-    return publicApi.processMPPayment({
-      form_data: formData,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim() || undefined,
-      notes: form.notes.trim() || undefined,
-      items: items.map(i => ({
-        product_id: i.product.id,
-        quantity: i.quantity,
-        color: i.color ?? undefined,
-        is_card_payment: true,
-      })),
-    });
   }
 
   async function handleSubmitOrder() {
@@ -205,7 +191,7 @@ export function CartDrawer() {
             <h2 className="font-bold text-lg text-zinc-900">
               {step === 'cart' ? 'Tu pedido'
                 : step === 'checkout' ? 'Tus datos'
-                : step === 'mp-payment' ? 'Pagar con tarjeta'
+                : step === 'mp-payment' ? 'Pagar con Mercado Pago'
                 : '¡Pedido confirmado!'}
             </h2>
             {step === 'cart' && items.length > 0 && (
@@ -496,22 +482,13 @@ export function CartDrawer() {
               </div>
             )}
 
-            <MercadoPagoPaymentBrick
+            <p className="text-center text-xs text-zinc-400">
+              Te vamos a redirigir a Mercado Pago para completar el pago de forma segura.
+            </p>
+
+            <MercadoPagoWalletButton
               publicKey={mpPreference.public_key}
               preferenceId={mpPreference.preference_id}
-              amount={mpPreference.amount}
-              payerEmail={form.email || undefined}
-              onProcessPayment={handleMPProcessPayment}
-              onSuccess={(saleId) => {
-                setOrderId(saleId ?? null);
-                setStep('success');
-                trackPublicEvent('purchase', {
-                  value: mpPreference.amount,
-                  num_items: items.reduce((s, i) => s + i.quantity, 0),
-                  content_ids: items.map(i => i.product.id),
-                  metadata: { payment_method: 'Tarjeta (MercadoPago)' },
-                });
-              }}
               onError={(msg) => setError(msg)}
               onReady={() => setMpBrickReady(true)}
             />

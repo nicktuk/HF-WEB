@@ -17,6 +17,7 @@ from app.models.analytics_event import AnalyticsEvent
 from app.models.order import Order, OrderItem, OrderAttachment
 from app.models.section import Section, SectionProduct
 from app.models.expense import Expense
+from app.models.mp_pending_order import MpPendingOrder
 from app.models.comercio import (
     Vendedor,
     Comercio,
@@ -68,6 +69,7 @@ __all__ = [
     "Section",
     "SectionProduct",
     "Expense",
+    "MpPendingOrder",
     "Vendedor",
     "Comercio",
     "ConfiguracionComercio",

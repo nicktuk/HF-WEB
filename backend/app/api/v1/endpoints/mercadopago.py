@@ -1,4 +1,12 @@
-"""Mercado Pago Checkout Bricks integration endpoints."""
+"""Mercado Pago Wallet Brick integration endpoints.
+
+Flow: the frontend creates a preference (and a pending order tied to it via
+external_reference), redirects the buyer to MP's hosted checkout, and MP
+notifies the backend via webhook when the payment is confirmed. The Sale is
+only created once the webhook confirms an approved/pending payment — never
+client-side — so a buyer closing the tab after paying can't skip it, and a
+buyer poking the API directly can't create a Sale without actually paying.
+"""
 import uuid
 import logging
 from decimal import Decimal
@@ -12,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.config import settings
 from app.models.product import Product
+from app.models.mp_pending_order import MpPendingOrder
 from app.schemas.sales import PublicOrderCreate, PublicOrderItemCreate
 from app.services.app_settings import get_setting
 from app.services.sales import SalesService
@@ -40,8 +49,10 @@ class MPPreferenceCartItem(BaseModel):
 
 
 class MPPreferenceRequest(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=200)
+    phone: str = Field(..., min_length=6, max_length=50)
     email: Optional[str] = None
+    notes: Optional[str] = None
     items: List[MPPreferenceCartItem]
 
 
@@ -51,41 +62,9 @@ class MPPreferenceResponse(BaseModel):
     amount: float
 
 
-class MPPayerIdentification(BaseModel):
-    type: Optional[str] = None
-    number: Optional[str] = None
-
-
-class MPPayer(BaseModel):
-    email: Optional[str] = None
-    identification: Optional[MPPayerIdentification] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-
-
-class MPFormData(BaseModel):
-    token: Optional[str] = None
-    payment_method_id: Optional[str] = None
-    transaction_amount: float
-    installments: Optional[int] = None
-    issuer_id: Optional[str] = None
-    payer: Optional[MPPayer] = None
-    payment_type_id: Optional[str] = None
-
-
-class MPProcessPaymentRequest(BaseModel):
-    form_data: MPFormData
-    name: str = Field(..., min_length=2, max_length=200)
-    phone: str = Field(..., min_length=6, max_length=50)
-    email: Optional[str] = None
-    notes: Optional[str] = None
-    items: List[MPPreferenceCartItem]
-
-
-class MPProcessPaymentResponse(BaseModel):
+class MPOrderStatusResponse(BaseModel):
     status: str
     sale_id: Optional[int] = None
-    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -134,23 +113,46 @@ async def create_mp_preference(
     data: MPPreferenceRequest,
     db: Session = Depends(get_db),
 ):
-    """Creates a MP preference for the Wallet (account money) Brick option."""
+    """Creates a MP preference + a pending order the webhook will complete once MP confirms payment."""
     access_token, public_key = _get_mp_credentials(db)
     if not access_token or not public_key:
         raise HTTPException(status_code=503, detail="Mercado Pago no está configurado")
 
     total, items_payload = _calculate_total(db, data.items)
 
+    external_reference = str(uuid.uuid4())
+
+    pending_order = MpPendingOrder(
+        id=external_reference,
+        name=data.name,
+        phone=data.phone,
+        email=data.email,
+        notes=data.notes,
+        items=[item.model_dump() for item in data.items],
+        amount=total,
+        status="pending",
+    )
+    db.add(pending_order)
+    db.commit()
+
     payer: dict = {"name": data.name}
     if data.email:
         payer["email"] = data.email
 
     notification_url = f"{settings.PROD_BACKEND_URL}/api/v1/public/mp/webhook"
+    return_url = f"{settings.NEXT_PUBLIC_BASE_URL}/pago/resultado?ref={external_reference}"
 
     preference_payload = {
         "items": items_payload,
         "payer": payer,
+        "external_reference": external_reference,
         "notification_url": notification_url,
+        "back_urls": {
+            "success": return_url,
+            "pending": return_url,
+            "failure": return_url,
+        },
+        "auto_return": "approved",
         "binary_mode": True,
     }
 
@@ -178,117 +180,17 @@ async def create_mp_preference(
 
 
 # ---------------------------------------------------------------------------
-# POST /mp/process-payment
+# GET /mp/order-status/{ref}
 # ---------------------------------------------------------------------------
 
-@router.post("/mp/process-payment", response_model=MPProcessPaymentResponse)
-async def process_mp_payment(
-    data: MPProcessPaymentRequest,
-    db: Session = Depends(get_db),
-):
-    """Processes a payment from the Payment Brick formData and creates a sale on success."""
-    access_token, _ = _get_mp_credentials(db)
-    if not access_token:
-        raise HTTPException(status_code=503, detail="Mercado Pago no está configurado")
+@router.get("/mp/order-status/{external_reference}", response_model=MPOrderStatusResponse)
+async def get_mp_order_status(external_reference: str, db: Session = Depends(get_db)):
+    """Polled by the return page to know whether the webhook already confirmed the payment."""
+    pending_order = db.query(MpPendingOrder).filter(MpPendingOrder.id == external_reference).first()
+    if not pending_order:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
-    # Calculate real total from DB — never trust client-provided amount
-    real_total, _ = _calculate_total(db, data.items)
-    provided_amount = round(data.form_data.transaction_amount, 2)
-    if abs(provided_amount - round(real_total, 2)) > 1.0:
-        logger.warning("MP amount mismatch: provided %.2f vs real %.2f", provided_amount, real_total)
-        raise HTTPException(status_code=422, detail="El monto del pago no coincide con el total del carrito")
-
-    # Build payment payload
-    payer_email = (
-        (data.form_data.payer.email if data.form_data.payer else None)
-        or data.email
-        or ""
-    )
-    payment_payload: dict = {
-        "transaction_amount": real_total,
-        "payment_method_id": data.form_data.payment_method_id,
-        "installments": data.form_data.installments or 1,
-        "payer": {"email": payer_email},
-    }
-
-    if data.form_data.token:
-        payment_payload["token"] = data.form_data.token
-
-    if data.form_data.issuer_id:
-        payment_payload["issuer_id"] = data.form_data.issuer_id
-
-    if data.form_data.payer:
-        p = data.form_data.payer
-        if p.identification and p.identification.type and p.identification.number:
-            payment_payload["payer"]["identification"] = {
-                "type": p.identification.type,
-                "number": p.identification.number,
-            }
-        if p.first_name:
-            payment_payload["payer"]["first_name"] = p.first_name
-        if p.last_name:
-            payment_payload["payer"]["last_name"] = p.last_name
-
-    idempotency_key = str(uuid.uuid4())
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{MP_API_BASE}/v1/payments",
-                json=payment_payload,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "X-Idempotency-Key": idempotency_key,
-                },
-            )
-            mp_data = resp.json()
-    except httpx.RequestError as exc:
-        logger.error("MP payment connection error: %s", exc)
-        raise HTTPException(status_code=502, detail="Error de conexión con Mercado Pago")
-
-    payment_status = mp_data.get("status", "rejected")
-    payment_method_id = mp_data.get("payment_method_id", "")
-    mp_payment_id = mp_data.get("id")
-
-    logger.info("MP payment %s — status: %s", mp_payment_id, payment_status)
-
-    if payment_status in ("approved", "pending", "in_process"):
-        service = SalesService(db)
-        order_data = PublicOrderCreate(
-            name=data.name,
-            phone=data.phone,
-            email=data.email,
-            payment_method=f"Mercado Pago ({payment_method_id})",
-            is_card_payment=True,
-            notes=data.notes,
-            items=[
-                PublicOrderItemCreate(
-                    product_id=i.product_id,
-                    quantity=i.quantity,
-                    color=i.color,
-                    is_card_payment=i.is_card_payment,
-                )
-                for i in data.items
-            ],
-        )
-        sale = service.create_public_order(order_data)
-
-        message = (
-            "¡Pago aprobado!" if payment_status == "approved"
-            else "Pago en proceso, te avisaremos cuando se confirme."
-        )
-        return MPProcessPaymentResponse(
-            status=payment_status,
-            sale_id=sale.id,
-            message=message,
-        )
-
-    # Rejected
-    status_detail = mp_data.get("status_detail", "")
-    raise HTTPException(
-        status_code=422,
-        detail=f"Pago rechazado ({status_detail}). Por favor intentá con otra tarjeta o método de pago.",
-    )
+    return MPOrderStatusResponse(status=pending_order.status, sale_id=pending_order.sale_id)
 
 
 # ---------------------------------------------------------------------------
@@ -297,7 +199,7 @@ async def process_mp_payment(
 
 @router.post("/mp/webhook")
 async def mp_webhook(request: Request, db: Session = Depends(get_db)):
-    """Receives MP payment notifications for status updates."""
+    """Receives MP payment notifications and creates the Sale once payment is confirmed."""
     try:
         body = await request.json()
     except Exception:
@@ -308,19 +210,87 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
 
     logger.info("MP webhook: topic=%s id=%s", topic, resource_id)
 
-    if topic == "payment" and resource_id:
-        access_token, _ = _get_mp_credentials(db)
-        if access_token:
-            try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await client.get(
-                        f"{MP_API_BASE}/v1/payments/{resource_id}",
-                        headers={"Authorization": f"Bearer {access_token}"},
-                    )
-                    if resp.is_success:
-                        payment_data = resp.json()
-                        logger.info("MP webhook payment %s status: %s", resource_id, payment_data.get("status"))
-            except Exception as exc:
-                logger.warning("MP webhook fetch failed: %s", exc)
+    if topic != "payment" or not resource_id:
+        return {"status": "ok"}
+
+    access_token, _ = _get_mp_credentials(db)
+    if not access_token:
+        return {"status": "ok"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{MP_API_BASE}/v1/payments/{resource_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if not resp.is_success:
+                logger.warning("MP webhook: payment %s fetch failed (%s)", resource_id, resp.status_code)
+                return {"status": "ok"}
+            payment_data = resp.json()
+    except Exception as exc:
+        logger.warning("MP webhook fetch failed: %s", exc)
+        return {"status": "ok"}
+
+    payment_status = payment_data.get("status")
+    external_reference = payment_data.get("external_reference")
+    logger.info("MP webhook payment %s status=%s ref=%s", resource_id, payment_status, external_reference)
+
+    if not external_reference:
+        return {"status": "ok"}
+
+    pending_order = db.query(MpPendingOrder).filter(MpPendingOrder.id == external_reference).first()
+    if not pending_order:
+        logger.warning("MP webhook: no pending order for ref=%s", external_reference)
+        return {"status": "ok"}
+
+    if pending_order.status == "completed":
+        # Already processed (MP can resend the same notification).
+        return {"status": "ok"}
+
+    if payment_status in ("rejected", "cancelled"):
+        pending_order.status = "failed"
+        pending_order.mp_payment_id = str(resource_id)
+        db.commit()
+        return {"status": "ok"}
+
+    if payment_status not in ("approved", "pending", "in_process"):
+        return {"status": "ok"}
+
+    items = [MPPreferenceCartItem(**item) for item in pending_order.items]
+    real_total, _ = _calculate_total(db, items)
+    paid_amount = round(float(payment_data.get("transaction_amount") or 0), 2)
+    if abs(paid_amount - round(real_total, 2)) > 1.0:
+        logger.error(
+            "MP webhook amount mismatch ref=%s: paid %.2f vs expected %.2f",
+            external_reference, paid_amount, real_total,
+        )
+        pending_order.status = "failed"
+        db.commit()
+        return {"status": "ok"}
+
+    payment_method_id = payment_data.get("payment_method_id", "")
+    order_data = PublicOrderCreate(
+        name=pending_order.name,
+        phone=pending_order.phone,
+        email=pending_order.email,
+        payment_method=f"Mercado Pago ({payment_method_id})",
+        is_card_payment=True,
+        notes=pending_order.notes,
+        items=[
+            PublicOrderItemCreate(
+                product_id=i.product_id,
+                quantity=i.quantity,
+                color=i.color,
+                is_card_payment=i.is_card_payment,
+            )
+            for i in items
+        ],
+    )
+    sale = SalesService(db).create_public_order(order_data)
+
+    pending_order.status = "completed"
+    pending_order.sale_id = sale.id
+    pending_order.mp_payment_id = str(resource_id)
+    db.commit()
 
     return {"status": "ok"}
