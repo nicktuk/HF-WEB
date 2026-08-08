@@ -11,6 +11,7 @@ from app.models.stock import StockPurchase
 from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
 from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
+from app.services.app_settings import get_shipping_config, SHIPPING_ZONE_LABELS
 
 
 class SalesService:
@@ -439,6 +440,23 @@ class SalesService:
 
         total_amount = total_amount.quantize(Decimal("0.01"))
 
+        # Envío: el costo y el mínimo siempre se recalculan server-side, nunca se confía en el cliente.
+        delivery_method = getattr(data, "delivery_method", None)
+        shipping_zone = getattr(data, "shipping_zone", None)
+        shipping_cost = Decimal("0")
+        if delivery_method == "shipping":
+            shipping_config = get_shipping_config(self.db)
+            min_purchase = Decimal(str(shipping_config["min_purchase"]))
+            if total_amount < min_purchase:
+                raise ValidationError(
+                    f"El pedido no alcanza el mínimo de compra para envío (${min_purchase})"
+                )
+            if shipping_zone not in ("amba", "resto_pais"):
+                raise ValidationError("Debés indicar la zona de envío (AMBA o Resto del país)")
+            shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
+
+        grand_total = (total_amount + shipping_cost).quantize(Decimal("0.01"))
+
         web_seller_id = self.db.query(CatalogSeller.id).filter(CatalogSeller.nombre == "Web").scalar()
 
         sale = Sale(
@@ -448,7 +466,7 @@ class SalesService:
             payment_method=data.payment_method,
             phone=data.phone,
             email=data.email,
-            total_amount=total_amount,
+            total_amount=grand_total,
             delivered=False,
             paid=False,
             delivered_amount=Decimal("0.00"),
@@ -468,6 +486,20 @@ class SalesService:
                 is_paid=False,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
+            ))
+
+        if shipping_cost > 0:
+            zone_label = SHIPPING_ZONE_LABELS.get(shipping_zone, shipping_zone)
+            self.db.add(SaleItem(
+                sale_id=sale.id,
+                product_id=None,
+                manual_product_name=f"Envío ({zone_label})",
+                color=None,
+                quantity=1,
+                delivered_quantity=0,
+                is_paid=False,
+                unit_price=shipping_cost,
+                total_price=shipping_cost,
             ))
 
         self.db.commit()

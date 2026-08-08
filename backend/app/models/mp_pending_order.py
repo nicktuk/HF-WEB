@@ -12,6 +12,8 @@ class MpPendingOrder(Base):
     phone = Column(String(50), nullable=False)
     email = Column(String(200), nullable=True)
     notes = Column(Text, nullable=True)
+    delivery_method = Column(String(20), nullable=True)  # pickup | shipping | agreement
+    shipping_zone = Column(String(20), nullable=True)  # amba | resto_pais
     items = Column(JSONB, nullable=False)
     amount = Column(Numeric(12, 2), nullable=False)
     status = Column(String(20), nullable=False, default="pending")  # pending | completed | failed

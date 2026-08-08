@@ -19,9 +19,6 @@ interface CartContextValue {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
-  isOpen: boolean;
-  openCart: () => void;
-  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -30,7 +27,6 @@ const STORAGE_KEY = 'hefa-cart';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -55,7 +51,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { id, product, quantity: 1, color, colorName }];
     });
-    setIsOpen(true);
   }, []);
 
   const removeItem = useCallback((id: string) => {
@@ -79,9 +74,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider value={{
       items, addItem, removeItem, updateQuantity, clearCart,
       totalItems, totalPrice,
-      isOpen,
-      openCart: () => setIsOpen(true),
-      closeCart: () => setIsOpen(false),
     }}>
       {children}
     </CartContext.Provider>

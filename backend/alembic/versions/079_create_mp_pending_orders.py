@@ -22,6 +22,8 @@ def upgrade():
         sa.Column('phone', sa.String(length=50), nullable=False),
         sa.Column('email', sa.String(length=200), nullable=True),
         sa.Column('notes', sa.Text(), nullable=True),
+        sa.Column('delivery_method', sa.String(length=20), nullable=True),
+        sa.Column('shipping_zone', sa.String(length=20), nullable=True),
         sa.Column('items', postgresql.JSONB(), nullable=False),
         sa.Column('amount', sa.Numeric(12, 2), nullable=False),
         sa.Column('status', sa.String(length=20), nullable=False, server_default='pending'),

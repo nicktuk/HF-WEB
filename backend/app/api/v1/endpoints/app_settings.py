@@ -135,6 +135,9 @@ def update_ai_settings(
 
 FEATURED_PILL_DEFAULT = "Nuevos ingresos"
 STOCK_LOW_THRESHOLD_DEFAULT = 5
+SHIPPING_MIN_PURCHASE_DEFAULT = 0.0
+SHIPPING_COST_AMBA_DEFAULT = 0.0
+SHIPPING_COST_RESTO_PAIS_DEFAULT = 0.0
 
 
 ON_DEMAND_DESCRIPTION_DEFAULT = "Este producto se consigue bajo pedido. Escribinos por WhatsApp y lo buscamos para vos."
@@ -160,6 +163,9 @@ class CatalogSettingsResponse(BaseModel):
     popup_slides: List[PopupSlide] = []
     category_nav_style: str = 'pills'
     hide_out_of_stock_colors: bool = False
+    shipping_min_purchase: float = SHIPPING_MIN_PURCHASE_DEFAULT
+    shipping_cost_amba: float = SHIPPING_COST_AMBA_DEFAULT
+    shipping_cost_resto_pais: float = SHIPPING_COST_RESTO_PAIS_DEFAULT
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -177,6 +183,9 @@ class CatalogSettingsUpdate(BaseModel):
     popup_slides: Optional[List[PopupSlide]] = None
     category_nav_style: Optional[str] = None
     hide_out_of_stock_colors: Optional[bool] = None
+    shipping_min_purchase: Optional[float] = None
+    shipping_cost_amba: Optional[float] = None
+    shipping_cost_resto_pais: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +232,12 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     category_nav_style = get_setting(db, "CATEGORY_NAV_STYLE") or "pills"
     hide_out_of_stock_colors_str = get_setting(db, "HIDE_OUT_OF_STOCK_COLORS")
     hide_out_of_stock_colors = hide_out_of_stock_colors_str == "true" if hide_out_of_stock_colors_str is not None else False
+    shipping_min_purchase_str = get_setting(db, "SHIPPING_MIN_PURCHASE")
+    shipping_min_purchase = float(shipping_min_purchase_str) if shipping_min_purchase_str is not None else SHIPPING_MIN_PURCHASE_DEFAULT
+    shipping_cost_amba_str = get_setting(db, "SHIPPING_COST_AMBA")
+    shipping_cost_amba = float(shipping_cost_amba_str) if shipping_cost_amba_str is not None else SHIPPING_COST_AMBA_DEFAULT
+    shipping_cost_resto_pais_str = get_setting(db, "SHIPPING_COST_RESTO_PAIS")
+    shipping_cost_resto_pais = float(shipping_cost_resto_pais_str) if shipping_cost_resto_pais_str is not None else SHIPPING_COST_RESTO_PAIS_DEFAULT
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -238,6 +253,9 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         popup_slides=popup_slides,
         category_nav_style=category_nav_style,
         hide_out_of_stock_colors=hide_out_of_stock_colors,
+        shipping_min_purchase=shipping_min_purchase,
+        shipping_cost_amba=shipping_cost_amba,
+        shipping_cost_resto_pais=shipping_cost_resto_pais,
     )
 
 
@@ -280,6 +298,12 @@ def update_catalog_settings(
         set_setting(db, "CATEGORY_NAV_STYLE", "menu" if data.category_nav_style == "menu" else "pills")
     if data.hide_out_of_stock_colors is not None:
         set_setting(db, "HIDE_OUT_OF_STOCK_COLORS", "true" if data.hide_out_of_stock_colors else "false")
+    if data.shipping_min_purchase is not None:
+        set_setting(db, "SHIPPING_MIN_PURCHASE", str(max(0.0, data.shipping_min_purchase)))
+    if data.shipping_cost_amba is not None:
+        set_setting(db, "SHIPPING_COST_AMBA", str(max(0.0, data.shipping_cost_amba)))
+    if data.shipping_cost_resto_pais is not None:
+        set_setting(db, "SHIPPING_COST_RESTO_PAIS", str(max(0.0, data.shipping_cost_resto_pais)))
     return get_catalog_settings(db=db)
 
 
@@ -321,6 +345,12 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
             popup_slides = [{"image": old_url, "link": ""}] if old_url else []
     hide_out_of_stock_colors_str = get_setting(db, "HIDE_OUT_OF_STOCK_COLORS")
     hide_out_of_stock_colors = hide_out_of_stock_colors_str == "true" if hide_out_of_stock_colors_str is not None else False
+    shipping_min_purchase_str = get_setting(db, "SHIPPING_MIN_PURCHASE")
+    shipping_min_purchase = float(shipping_min_purchase_str) if shipping_min_purchase_str is not None else SHIPPING_MIN_PURCHASE_DEFAULT
+    shipping_cost_amba_str = get_setting(db, "SHIPPING_COST_AMBA")
+    shipping_cost_amba = float(shipping_cost_amba_str) if shipping_cost_amba_str is not None else SHIPPING_COST_AMBA_DEFAULT
+    shipping_cost_resto_pais_str = get_setting(db, "SHIPPING_COST_RESTO_PAIS")
+    shipping_cost_resto_pais = float(shipping_cost_resto_pais_str) if shipping_cost_resto_pais_str is not None else SHIPPING_COST_RESTO_PAIS_DEFAULT
     return {
         "featured_pill_label": featured_label,
         "stock_low_threshold": threshold,
@@ -336,6 +366,9 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "popup_slides": popup_slides,
         "category_nav_style": get_setting(db, "CATEGORY_NAV_STYLE") or "pills",
         "hide_out_of_stock_colors": hide_out_of_stock_colors,
+        "shipping_min_purchase": shipping_min_purchase,
+        "shipping_cost_amba": shipping_cost_amba,
+        "shipping_cost_resto_pais": shipping_cost_resto_pais,
     }
 
 
