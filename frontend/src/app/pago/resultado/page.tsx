@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, XCircle, Clock } from 'lucide-react';
@@ -14,6 +14,31 @@ const POLL_INTERVAL_MS = 2500;
 const MAX_ATTEMPTS = 16; // ~40s, cubre el delay típico del webhook de MP
 
 export default function PagoResultadoPage() {
+  return (
+    <Suspense fallback={<PagoResultadoFallback />}>
+      <PagoResultadoContent />
+    </Suspense>
+  );
+}
+
+function PagoResultadoFallback() {
+  return (
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f7f4ef' }}>
+      <header className="bg-[#0D1B2A] py-4 px-4">
+        <div className="container mx-auto">
+          <Link href="/" className="text-xl font-black tracking-[0.18em] text-white hover:text-primary-300 transition-colors">
+            HE·FA
+          </Link>
+        </div>
+      </header>
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <Loader2 className="h-12 w-12 text-[#009ee3] animate-spin" />
+      </main>
+    </div>
+  );
+}
+
+function PagoResultadoContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
   const { items, clearCart } = useCart();
