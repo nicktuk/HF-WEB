@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingCart, Trash2, Plus, Minus,
-  Banknote, ChevronLeft, CheckCircle2, Loader2,
-  Truck, Store, MessageCircle, Check,
+  Banknote, ChevronLeft, CheckCircle2, XCircle, Loader2,
+  Truck, MessageCircle, Check,
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { useCart } from '@/context/CartContext';
@@ -76,6 +76,15 @@ function Stepper({ step }: { step: Step }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function ChecklistRow({ done, doneLabel, pendingLabel }: { done: boolean; doneLabel: string; pendingLabel: string }) {
+  return (
+    <div className={`flex items-center gap-1.5 text-xs font-medium ${done ? 'text-emerald-600' : 'text-rose-500'}`}>
+      {done ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
+      <span>{done ? doneLabel : pendingLabel}</span>
     </div>
   );
 }
@@ -157,14 +166,14 @@ export default function CarritoPage() {
   }, [items, isCard]);
 
   async function handleGoToMPPayment() {
-    if (!form.name.trim() || !form.phone.trim()) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
     try {
       const pref = await publicApi.createMPPreference({
         name: form.name.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim() || undefined,
+        email: form.email.trim(),
         notes: form.notes.trim() || undefined,
         delivery_method: deliveryMethod ?? undefined,
         shipping_zone: shippingZone ?? undefined,
@@ -192,14 +201,14 @@ export default function CarritoPage() {
   }
 
   async function handleSubmitOrder() {
-    if (!form.name.trim() || !form.phone.trim()) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
     try {
       const result = await publicApi.createOrder({
         name: form.name.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim() || undefined,
+        email: form.email.trim(),
         payment_method: 'Efectivo / Transferencia',
         is_card_payment: false,
         notes: form.notes.trim() || undefined,
@@ -235,15 +244,17 @@ export default function CarritoPage() {
     }
   }
 
-  const canGoToCheckout = items.length > 0 && paymentFlow !== null && deliveryMethod !== null &&
+  const deliveryReady = deliveryMethod !== null &&
     (deliveryMethod !== 'shipping' || (canChooseShipping && shippingZone !== null));
+  const canGoToCheckout = items.length > 0 && paymentFlow !== null && deliveryReady;
   const canSubmitAddress = deliveryMethod !== 'shipping' || (
     form.shippingStreet.trim().length > 0 &&
     form.shippingCity.trim().length > 0 &&
     form.shippingProvince.trim().length > 0 &&
     form.shippingPostalCode.trim().length > 0
   );
-  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && canSubmitAddress && !submitting;
+  const isValidEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim());
+  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && isValidEmail && canSubmitAddress && !submitting;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -382,18 +393,7 @@ export default function CarritoPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => { setDeliveryMethod('pickup'); setShippingZone(null); }}
-                        className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
-                          deliveryMethod === 'pickup'
-                            ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
-                            : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
-                        }`}
-                      >
-                        <Store className="h-4 w-4" />
-                        <span className="leading-tight text-center">Sin envío</span>
-                      </button>
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
                           if (!canChooseShipping) return;
@@ -490,6 +490,19 @@ export default function CarritoPage() {
                     </div>
                   </div>
 
+                  <div className="border-t border-zinc-200 pt-3 space-y-1.5">
+                    <ChecklistRow
+                      done={deliveryReady}
+                      doneLabel="Forma de entrega elegida"
+                      pendingLabel="Falta elegir cómo lo recibís"
+                    />
+                    <ChecklistRow
+                      done={!!paymentFlow}
+                      doneLabel="Forma de pago elegida"
+                      pendingLabel="Falta elegir cómo vas a pagar"
+                    />
+                  </div>
+
                   <button
                     onClick={() => {
                       if (!canGoToCheckout) return;
@@ -505,17 +518,7 @@ export default function CarritoPage() {
                     Realizar pedido
                   </button>
 
-                  {!canGoToCheckout && items.length > 0 && (
-                    <p className="text-center text-[11px] text-zinc-400">
-                      {!deliveryMethod
-                        ? 'Elegí cómo querés recibirlo para continuar'
-                        : deliveryMethod === 'shipping' && !shippingZone
-                        ? 'Elegí la zona de envío para continuar'
-                        : 'Elegí cómo querés pagar para continuar'}
-                    </p>
-                  )}
-
-                  <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1">
+                  <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2">
                     Vaciar carrito
                   </button>
                 </div>
@@ -581,7 +584,7 @@ export default function CarritoPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      Email <span className="text-zinc-400 font-normal">(opcional)</span>
+                      Email <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="email"

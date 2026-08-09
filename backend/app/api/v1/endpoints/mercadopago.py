@@ -52,7 +52,7 @@ class MPPreferenceCartItem(BaseModel):
 class MPPreferenceRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=200)
     phone: str = Field(..., min_length=6, max_length=50)
-    email: Optional[str] = None
+    email: str = Field(..., min_length=5, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     notes: Optional[str] = None
     delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
     shipping_zone: Optional[Literal["amba", "resto_pais"]] = None

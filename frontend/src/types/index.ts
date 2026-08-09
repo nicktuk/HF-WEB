@@ -523,7 +523,7 @@ export type ShippingZone = 'amba' | 'resto_pais';
 export interface PublicOrderCreate {
   name: string;
   phone: string;
-  email?: string;
+  email: string;
   payment_method?: string;
   is_card_payment?: boolean;
   notes?: string;

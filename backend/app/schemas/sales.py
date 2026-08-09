@@ -127,7 +127,7 @@ class PublicOrderItemCreate(BaseModel):
 class PublicOrderCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=200)
     phone: str = Field(..., min_length=6, max_length=50)
-    email: Optional[str] = Field(None, max_length=200)
+    email: str = Field(..., min_length=5, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     payment_method: Optional[str] = Field(None, max_length=100)
     is_card_payment: bool = False
     notes: Optional[str] = None

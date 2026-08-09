@@ -183,7 +183,7 @@ export const publicApi = {
   async createMPPreference(data: {
     name: string;
     phone: string;
-    email?: string;
+    email: string;
     notes?: string;
     delivery_method?: DeliveryMethod;
     shipping_zone?: ShippingZone;
