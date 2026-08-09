@@ -73,6 +73,12 @@ export default function SaleDetailPage() {
   const [isEditing, setIsEditing] = useState(() => searchParams?.get('mode') === 'edit');
   const [editCustomer, setEditCustomer] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [editShippingStreet, setEditShippingStreet] = useState('');
+  const [editShippingFloorApt, setEditShippingFloorApt] = useState('');
+  const [editShippingCity, setEditShippingCity] = useState('');
+  const [editShippingProvince, setEditShippingProvince] = useState('');
+  const [editShippingPostalCode, setEditShippingPostalCode] = useState('');
+  const [editShippingReference, setEditShippingReference] = useState('');
   const [editInstallments, setEditInstallments] = useState('');
   const [editSellerId, setEditSellerId] = useState<number | ''>('');
   const [editItems, setEditItems] = useState<EditItem[]>([]);
@@ -110,6 +116,12 @@ export default function SaleDetailPage() {
     if (!sale) return;
     setEditCustomer(sale.customer_name || '');
     setEditNotes(sale.notes || '');
+    setEditShippingStreet(sale.shipping_street || '');
+    setEditShippingFloorApt(sale.shipping_floor_apt || '');
+    setEditShippingCity(sale.shipping_city || '');
+    setEditShippingProvince(sale.shipping_province || '');
+    setEditShippingPostalCode(sale.shipping_postal_code || '');
+    setEditShippingReference(sale.shipping_reference || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
     setEditSellerId(sale.seller_id);
     setEditItems(
@@ -252,6 +264,14 @@ export default function SaleDetailPage() {
       installments: editInstallments ? Number(editInstallments) : undefined,
       seller_id: editSellerId || undefined,
       items,
+      ...(sale.delivery_method === 'shipping' ? {
+        shipping_street: editShippingStreet || undefined,
+        shipping_floor_apt: editShippingFloorApt || undefined,
+        shipping_city: editShippingCity || undefined,
+        shipping_province: editShippingProvince || undefined,
+        shipping_postal_code: editShippingPostalCode || undefined,
+        shipping_reference: editShippingReference || undefined,
+      } : {}),
     };
 
     try {
@@ -671,6 +691,72 @@ export default function SaleDetailPage() {
                 </>
               )}
             </div>
+            {sale.delivery_method && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Entrega</span>
+                <span className="font-medium">
+                  {sale.delivery_method === 'shipping'
+                    ? `Envío a domicilio (${sale.shipping_zone === 'amba' ? 'AMBA' : 'Resto del país'})`
+                    : sale.delivery_method === 'agreement'
+                    ? 'Envío a coordinar (acuerdo aparte)'
+                    : 'Retiro sin envío'}
+                </span>
+              </div>
+            )}
+            {sale.delivery_method === 'shipping' && (
+              <div>
+                <label className="block text-gray-500 mb-1">Dirección de entrega</label>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        className="col-span-2"
+                        placeholder="Calle y número"
+                        value={editShippingStreet}
+                        onChange={(e) => setEditShippingStreet(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Piso/Depto"
+                        value={editShippingFloorApt}
+                        onChange={(e) => setEditShippingFloorApt(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Localidad"
+                        value={editShippingCity}
+                        onChange={(e) => setEditShippingCity(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Código Postal"
+                        value={editShippingPostalCode}
+                        onChange={(e) => setEditShippingPostalCode(e.target.value)}
+                      />
+                    </div>
+                    <Input
+                      placeholder="Provincia"
+                      value={editShippingProvince}
+                      onChange={(e) => setEditShippingProvince(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Referencia (opcional)"
+                      value={editShippingReference}
+                      onChange={(e) => setEditShippingReference(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-gray-900">
+                    {sale.shipping_street || '-'}
+                    {sale.shipping_floor_apt ? `, ${sale.shipping_floor_apt}` : ''}
+                    <br />
+                    {[sale.shipping_city, sale.shipping_province, sale.shipping_postal_code].filter(Boolean).join(', ')}
+                    {sale.shipping_reference && (
+                      <div className="text-gray-500 text-xs mt-0.5">Ref: {sale.shipping_reference}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div>
               <label className="block text-gray-500 mb-1">Notas</label>
               {isEditing ? (

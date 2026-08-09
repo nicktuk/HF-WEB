@@ -56,6 +56,12 @@ class MPPreferenceRequest(BaseModel):
     notes: Optional[str] = None
     delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
     shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
+    shipping_street: Optional[str] = None
+    shipping_floor_apt: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_province: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
+    shipping_reference: Optional[str] = None
     items: List[MPPreferenceCartItem]
 
 
@@ -148,6 +154,17 @@ async def create_mp_preference(
     if not access_token or not public_key:
         raise HTTPException(status_code=503, detail="Mercado Pago no está configurado")
 
+    if data.delivery_method == "shipping":
+        required_address = {
+            "la calle y número": data.shipping_street,
+            "la localidad": data.shipping_city,
+            "la provincia": data.shipping_province,
+            "el código postal": data.shipping_postal_code,
+        }
+        missing = [label for label, value in required_address.items() if not (value and value.strip())]
+        if missing:
+            raise HTTPException(status_code=422, detail=f"Para envío, faltan estos datos de entrega: {', '.join(missing)}")
+
     total, items_payload = _calculate_total(db, data.items, data.delivery_method, data.shipping_zone)
 
     external_reference = str(uuid.uuid4())
@@ -160,6 +177,12 @@ async def create_mp_preference(
         notes=data.notes,
         delivery_method=data.delivery_method,
         shipping_zone=data.shipping_zone,
+        shipping_street=data.shipping_street,
+        shipping_floor_apt=data.shipping_floor_apt,
+        shipping_city=data.shipping_city,
+        shipping_province=data.shipping_province,
+        shipping_postal_code=data.shipping_postal_code,
+        shipping_reference=data.shipping_reference,
         items=[item.model_dump() for item in data.items],
         amount=total,
         status="pending",
@@ -319,6 +342,12 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
         notes=pending_order.notes,
         delivery_method=pending_order.delivery_method,
         shipping_zone=pending_order.shipping_zone,
+        shipping_street=pending_order.shipping_street,
+        shipping_floor_apt=pending_order.shipping_floor_apt,
+        shipping_city=pending_order.shipping_city,
+        shipping_province=pending_order.shipping_province,
+        shipping_postal_code=pending_order.shipping_postal_code,
+        shipping_reference=pending_order.shipping_reference,
         items=[
             PublicOrderItemCreate(
                 product_id=i.product_id,

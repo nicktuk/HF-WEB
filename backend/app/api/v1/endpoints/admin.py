@@ -2185,6 +2185,14 @@ async def update_sale(
         seller_id=data.seller_id,
         items=data.items,
         force=data.force,
+        delivery_method=data.delivery_method,
+        shipping_zone=data.shipping_zone,
+        shipping_street=data.shipping_street,
+        shipping_floor_apt=data.shipping_floor_apt,
+        shipping_city=data.shipping_city,
+        shipping_province=data.shipping_province,
+        shipping_postal_code=data.shipping_postal_code,
+        shipping_reference=data.shipping_reference,
     )
 
 

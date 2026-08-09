@@ -476,6 +476,14 @@ export interface Sale {
   delivered: boolean;
   paid: boolean;
   payment_method?: string | null;
+  delivery_method?: string | null;
+  shipping_zone?: string | null;
+  shipping_street?: string | null;
+  shipping_floor_apt?: string | null;
+  shipping_city?: string | null;
+  shipping_province?: string | null;
+  shipping_postal_code?: string | null;
+  shipping_reference?: string | null;
   total_amount: number;
   delivered_amount: number;
   paid_amount: number;
@@ -521,6 +529,12 @@ export interface PublicOrderCreate {
   notes?: string;
   delivery_method?: DeliveryMethod;
   shipping_zone?: ShippingZone;
+  shipping_street?: string;
+  shipping_floor_apt?: string;
+  shipping_city?: string;
+  shipping_province?: string;
+  shipping_postal_code?: string;
+  shipping_reference?: string;
   items: PublicOrderItem[];
 }
 

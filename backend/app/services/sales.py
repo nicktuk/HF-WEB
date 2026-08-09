@@ -455,6 +455,16 @@ class SalesService:
                 raise ValidationError("Debés indicar la zona de envío (AMBA o Resto del país)")
             shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
 
+            required_address = {
+                "la calle y número": getattr(data, "shipping_street", None),
+                "la localidad": getattr(data, "shipping_city", None),
+                "la provincia": getattr(data, "shipping_province", None),
+                "el código postal": getattr(data, "shipping_postal_code", None),
+            }
+            missing = [label for label, value in required_address.items() if not (value and value.strip())]
+            if missing:
+                raise ValidationError(f"Para envío, faltan estos datos de entrega: {', '.join(missing)}")
+
         grand_total = (total_amount + shipping_cost).quantize(Decimal("0.01"))
 
         web_seller_id = self.db.query(CatalogSeller.id).filter(CatalogSeller.nombre == "Web").scalar()
@@ -466,6 +476,14 @@ class SalesService:
             payment_method=data.payment_method,
             phone=data.phone,
             email=data.email,
+            delivery_method=delivery_method,
+            shipping_zone=shipping_zone if delivery_method == "shipping" else None,
+            shipping_street=getattr(data, "shipping_street", None) if delivery_method == "shipping" else None,
+            shipping_floor_apt=getattr(data, "shipping_floor_apt", None) if delivery_method == "shipping" else None,
+            shipping_city=getattr(data, "shipping_city", None) if delivery_method == "shipping" else None,
+            shipping_province=getattr(data, "shipping_province", None) if delivery_method == "shipping" else None,
+            shipping_postal_code=getattr(data, "shipping_postal_code", None) if delivery_method == "shipping" else None,
+            shipping_reference=getattr(data, "shipping_reference", None) if delivery_method == "shipping" else None,
             total_amount=grand_total,
             delivered=False,
             paid=False,
@@ -581,6 +599,14 @@ class SalesService:
         seller_id: int | None = None,
         items: list | None = None,
         force: bool = False,
+        delivery_method: str | None = None,
+        shipping_zone: str | None = None,
+        shipping_street: str | None = None,
+        shipping_floor_apt: str | None = None,
+        shipping_city: str | None = None,
+        shipping_province: str | None = None,
+        shipping_postal_code: str | None = None,
+        shipping_reference: str | None = None,
     ) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
@@ -595,6 +621,22 @@ class SalesService:
             sale.seller_id = seller_id
         if payment_method is not None:
             sale.payment_method = payment_method
+        if delivery_method is not None:
+            sale.delivery_method = delivery_method
+        if shipping_zone is not None:
+            sale.shipping_zone = shipping_zone
+        if shipping_street is not None:
+            sale.shipping_street = shipping_street
+        if shipping_floor_apt is not None:
+            sale.shipping_floor_apt = shipping_floor_apt
+        if shipping_city is not None:
+            sale.shipping_city = shipping_city
+        if shipping_province is not None:
+            sale.shipping_province = shipping_province
+        if shipping_postal_code is not None:
+            sale.shipping_postal_code = shipping_postal_code
+        if shipping_reference is not None:
+            sale.shipping_reference = shipping_reference
 
         if installments is not None:
             sale.installments = installments

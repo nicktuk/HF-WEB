@@ -345,6 +345,12 @@ export function useUpdateSale(apiKey: string) {
         seller_id?: number;
         items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
         force?: boolean;
+        shipping_street?: string;
+        shipping_floor_apt?: string;
+        shipping_city?: string;
+        shipping_province?: string;
+        shipping_postal_code?: string;
+        shipping_reference?: string;
       };
     }) =>
       adminApi.updateSale(apiKey, saleId, data),

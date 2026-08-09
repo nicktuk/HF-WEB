@@ -15,6 +15,14 @@ class Sale(Base):
     installments = Column(Integer, nullable=True)
     seller_id = Column(Integer, ForeignKey("catalog_sellers.id"), nullable=False)
     origen = Column(String(20), nullable=False, default="admin")
+    delivery_method = Column(String(20), nullable=True)  # pickup | shipping | agreement
+    shipping_zone = Column(String(20), nullable=True)  # amba | resto_pais
+    shipping_street = Column(String(255), nullable=True)
+    shipping_floor_apt = Column(String(100), nullable=True)
+    shipping_city = Column(String(150), nullable=True)
+    shipping_province = Column(String(100), nullable=True)
+    shipping_postal_code = Column(String(20), nullable=True)
+    shipping_reference = Column(String(255), nullable=True)
     delivered = Column(Boolean, default=False, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
     payment_method = Column(String(100), nullable=True)

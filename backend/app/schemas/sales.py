@@ -43,6 +43,14 @@ class SaleUpdate(BaseModel):
     force: bool = False
     phone: Optional[str] = None
     email: Optional[str] = None
+    delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
+    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
+    shipping_street: Optional[str] = None
+    shipping_floor_apt: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_province: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
+    shipping_reference: Optional[str] = None
 
 
 class SaleInstallmentUpdate(BaseModel):
@@ -90,6 +98,14 @@ class SaleResponse(BaseModel):
     payment_method: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    delivery_method: Optional[str] = None
+    shipping_zone: Optional[str] = None
+    shipping_street: Optional[str] = None
+    shipping_floor_apt: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_province: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
+    shipping_reference: Optional[str] = None
     total_amount: Decimal
     delivered_amount: Decimal
     paid_amount: Decimal
@@ -117,6 +133,12 @@ class PublicOrderCreate(BaseModel):
     notes: Optional[str] = None
     delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
     shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
+    shipping_street: Optional[str] = Field(None, max_length=255)
+    shipping_floor_apt: Optional[str] = Field(None, max_length=100)
+    shipping_city: Optional[str] = Field(None, max_length=150)
+    shipping_province: Optional[str] = Field(None, max_length=100)
+    shipping_postal_code: Optional[str] = Field(None, max_length=20)
+    shipping_reference: Optional[str] = Field(None, max_length=255)
     items: List[PublicOrderItemCreate] = Field(..., min_length=1)
 
 

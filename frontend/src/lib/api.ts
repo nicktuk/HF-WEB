@@ -187,6 +187,12 @@ export const publicApi = {
     notes?: string;
     delivery_method?: DeliveryMethod;
     shipping_zone?: ShippingZone;
+    shipping_street?: string;
+    shipping_floor_apt?: string;
+    shipping_city?: string;
+    shipping_province?: string;
+    shipping_postal_code?: string;
+    shipping_reference?: string;
     items: Array<{ product_id: number; quantity: number; color?: string; is_card_payment: boolean }>;
   }): Promise<{ preference_id: string; public_key: string; amount: number; checkout_url: string }> {
     return fetchAPI('/public/mp/preference', { method: 'POST', body: JSON.stringify(data) });
@@ -841,6 +847,14 @@ export const adminApi = {
       seller_id?: number;
       items?: Array<{ product_id?: number; product_name?: string; quantity: number; unit_price: number; delivered?: boolean; paid?: boolean }>;
       force?: boolean;
+      delivery_method?: DeliveryMethod;
+      shipping_zone?: ShippingZone;
+      shipping_street?: string;
+      shipping_floor_apt?: string;
+      shipping_city?: string;
+      shipping_province?: string;
+      shipping_postal_code?: string;
+      shipping_reference?: string;
     }
   ): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {
