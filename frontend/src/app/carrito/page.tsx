@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingCart, Trash2, Plus, Minus,
-  Banknote, ChevronLeft, CheckCircle2, XCircle, Loader2,
+  Banknote, ChevronLeft, CheckCircle2, Loader2,
   Truck, MessageCircle, Check,
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public/PublicHeader';
@@ -80,12 +80,13 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
-function ChecklistRow({ done, doneLabel, pendingLabel }: { done: boolean; doneLabel: string; pendingLabel: string }) {
-  return (
-    <div className={`flex items-center gap-1.5 text-xs font-medium ${done ? 'text-emerald-600' : 'text-rose-500'}`}>
-      {done ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
-      <span>{done ? doneLabel : pendingLabel}</span>
-    </div>
+function SectionDot({ done }: { done: boolean }) {
+  return done ? (
+    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 shrink-0">
+      <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+    </span>
+  ) : (
+    <span className="w-4 h-4 rounded-full border-2 border-amber-400 shrink-0" />
   );
 }
 
@@ -373,7 +374,10 @@ export default function CarritoPage() {
 
                   {/* Forma de entrega */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo lo recibís?</p>
+                    <div className="flex items-center gap-1.5">
+                      <SectionDot done={deliveryReady} />
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo lo recibís?</p>
+                    </div>
 
                     {shippingMinPurchase > 0 && !shippingReady && (
                       <div className="rounded-xl border border-zinc-200 bg-white px-3 py-3 space-y-1.5">
@@ -463,7 +467,10 @@ export default function CarritoPage() {
 
                   {/* Forma de cobro — solo 2 opciones */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo vas a pagar?</p>
+                    <div className="flex items-center gap-1.5">
+                      <SectionDot done={!!paymentFlow} />
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo vas a pagar?</p>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setPaymentFlow(paymentFlow === 'card' ? null : 'card')}
@@ -488,19 +495,6 @@ export default function CarritoPage() {
                         <span className="leading-tight text-center">Efectivo / Transferencia</span>
                       </button>
                     </div>
-                  </div>
-
-                  <div className="border-t border-zinc-200 pt-3 space-y-1.5">
-                    <ChecklistRow
-                      done={deliveryReady}
-                      doneLabel="Forma de entrega elegida"
-                      pendingLabel="Falta elegir cómo lo recibís"
-                    />
-                    <ChecklistRow
-                      done={!!paymentFlow}
-                      doneLabel="Forma de pago elegida"
-                      pendingLabel="Falta elegir cómo vas a pagar"
-                    />
                   </div>
 
                   <button
