@@ -3,6 +3,7 @@ import type {
   ProductAdmin,
   ColorStockItem,
   Deposit,
+  CodigoAmba,
   DepositStockItem,
   CatalogSeller,
   SourceWebsite,
@@ -186,7 +187,6 @@ export const publicApi = {
     email: string;
     notes?: string;
     delivery_method?: DeliveryMethod;
-    shipping_zone?: ShippingZone;
     shipping_street?: string;
     shipping_floor_apt?: string;
     shipping_city?: string;
@@ -200,6 +200,10 @@ export const publicApi = {
 
   async getMPOrderStatus(externalReference: string): Promise<{ status: string; sale_id?: number }> {
     return fetchAPI(`/public/mp/order-status/${externalReference}`);
+  },
+
+  async getShippingZone(postalCode: string): Promise<{ zone: ShippingZone; cost: number }> {
+    return fetchAPI(`/public/shipping/zone?postal_code=${encodeURIComponent(postalCode)}`);
   },
 
   /**
@@ -765,6 +769,19 @@ export const adminApi = {
 
   async deleteDeposit(apiKey: string, id: number): Promise<void> {
     return fetchAPI(`/admin/deposits/${id}`, { method: 'DELETE' }, apiKey);
+  },
+
+  // Códigos postales AMBA (clasificación automática de zona de envío)
+  async getCodigosAmba(apiKey: string): Promise<CodigoAmba[]> {
+    return fetchAPI('/admin/codigos-amba', {}, apiKey);
+  },
+
+  async createCodigoAmba(apiKey: string, data: { codigo_desde: number; codigo_hasta: number }): Promise<CodigoAmba> {
+    return fetchAPI('/admin/codigos-amba', { method: 'POST', body: JSON.stringify(data) }, apiKey);
+  },
+
+  async deleteCodigoAmba(apiKey: string, id: number): Promise<void> {
+    return fetchAPI(`/admin/codigos-amba/${id}`, { method: 'DELETE' }, apiKey);
   },
 
   // Catalog sellers (vendedores del canal catálogo, ventas propias)

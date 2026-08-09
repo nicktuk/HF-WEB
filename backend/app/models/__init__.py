@@ -18,6 +18,7 @@ from app.models.order import Order, OrderItem, OrderAttachment
 from app.models.section import Section, SectionProduct
 from app.models.expense import Expense
 from app.models.mp_pending_order import MpPendingOrder
+from app.models.codigo_amba import CodigoAmba
 from app.models.comercio import (
     Vendedor,
     Comercio,
@@ -70,6 +71,7 @@ __all__ = [
     "SectionProduct",
     "Expense",
     "MpPendingOrder",
+    "CodigoAmba",
     "Vendedor",
     "Comercio",
     "ConfiguracionComercio",

@@ -1,7 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers, bot_vendedores
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers, bot_vendedores, codigos_amba
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -66,6 +66,13 @@ api_router.include_router(
     catalog_sellers.router,
     prefix="/admin",
     tags=["catalog-sellers"]
+)
+
+# Códigos postales AMBA (clasificación automática de zona de envío)
+api_router.include_router(
+    codigos_amba.router,
+    prefix="/admin",
+    tags=["codigos-amba"]
 )
 
 # Bot de ventas de vendedores por WhatsApp (orquestado desde n8n)

@@ -32,6 +32,7 @@ import {
   Plane,
   Users,
   Store,
+  MapPin,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ const configSubmenu = [
   { name: 'Etiquetas', href: '/admin/etiquetas', icon: Tag },
   { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
   { name: 'Catalogo', href: '/admin/catalogo', icon: Settings },
+  { name: 'Códigos AMBA', href: '/admin/codigos-amba', icon: MapPin },
   { name: 'Pagos', href: '/admin/pagos', icon: CreditCard },
   { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
 ];

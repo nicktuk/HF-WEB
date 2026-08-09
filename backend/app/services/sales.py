@@ -12,6 +12,7 @@ from app.models.catalog_seller import CatalogSeller, require_active_catalog_sell
 from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
 from app.services.app_settings import get_shipping_config, SHIPPING_ZONE_LABELS
+from app.services.codigo_amba import classify_shipping_zone
 
 
 class SalesService:
@@ -440,21 +441,12 @@ class SalesService:
 
         total_amount = total_amount.quantize(Decimal("0.01"))
 
-        # Envío: el costo y el mínimo siempre se recalculan server-side, nunca se confía en el cliente.
+        # Envío: la zona (a partir del código postal), el costo y el mínimo siempre
+        # se recalculan server-side, nunca se confía en el cliente.
         delivery_method = getattr(data, "delivery_method", None)
-        shipping_zone = getattr(data, "shipping_zone", None)
+        shipping_zone = None
         shipping_cost = Decimal("0")
         if delivery_method == "shipping":
-            shipping_config = get_shipping_config(self.db)
-            min_purchase = Decimal(str(shipping_config["min_purchase"]))
-            if total_amount < min_purchase:
-                raise ValidationError(
-                    f"El pedido no alcanza el mínimo de compra para envío (${min_purchase})"
-                )
-            if shipping_zone not in ("amba", "resto_pais"):
-                raise ValidationError("Debés indicar la zona de envío (AMBA o Resto del país)")
-            shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
-
             required_address = {
                 "la calle y número": getattr(data, "shipping_street", None),
                 "la localidad": getattr(data, "shipping_city", None),
@@ -464,6 +456,15 @@ class SalesService:
             missing = [label for label, value in required_address.items() if not (value and value.strip())]
             if missing:
                 raise ValidationError(f"Para envío, faltan estos datos de entrega: {', '.join(missing)}")
+
+            shipping_zone = classify_shipping_zone(self.db, data.shipping_postal_code)
+            shipping_config = get_shipping_config(self.db)
+            min_purchase = Decimal(str(shipping_config["min_purchase"]))
+            if total_amount < min_purchase:
+                raise ValidationError(
+                    f"El pedido no alcanza el mínimo de compra para envío (${min_purchase})"
+                )
+            shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
 
         grand_total = (total_amount + shipping_cost).quantize(Decimal("0.01"))
 

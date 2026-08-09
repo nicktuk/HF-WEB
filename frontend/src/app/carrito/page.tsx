@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -95,13 +95,12 @@ export default function CarritoPage() {
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const { data: catalogSettings } = useCatalogSettings();
   const shippingMinPurchase = catalogSettings?.shipping_min_purchase ?? 0;
-  const shippingCostAmba = catalogSettings?.shipping_cost_amba ?? 0;
-  const shippingCostRestoPais = catalogSettings?.shipping_cost_resto_pais ?? 0;
 
   const [step, setStep] = useState<Step>('cart');
   const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod | null>(null);
-  const [shippingZone, setShippingZone] = useState<ShippingZone | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<{ zone: ShippingZone; cost: number } | null>(null);
+  const [quotingShipping, setQuotingShipping] = useState(false);
   const [form, setForm] = useState<CheckoutForm>({
     name: '', phone: '', email: '', notes: '',
     shippingStreet: '', shippingFloorApt: '', shippingCity: '', shippingProvince: '', shippingPostalCode: '', shippingReference: '',
@@ -114,7 +113,9 @@ export default function CarritoPage() {
 
   function getDeliveryLabel() {
     if (deliveryMethod === 'shipping') {
-      return `Envío a domicilio (${shippingZone === 'amba' ? 'AMBA' : 'Resto del país'})`;
+      return shippingQuote
+        ? `Envío a domicilio (${shippingQuote.zone === 'amba' ? 'AMBA' : 'Resto del país'})`
+        : 'Envío a domicilio';
     }
     if (deliveryMethod === 'agreement') return 'Envío a coordinar (acuerdo aparte)';
     return 'Retiro sin envío';
@@ -129,10 +130,35 @@ export default function CarritoPage() {
     });
     setOrderId(null);
     setDeliveryMethod(null);
-    setShippingZone(null);
+    setShippingQuote(null);
     setPaymentFlow(null);
     router.push('/');
   }
+
+  // Cotiza el envío según el código postal ingresado (la clasificación AMBA/resto es server-side).
+  useEffect(() => {
+    if (deliveryMethod !== 'shipping') {
+      setShippingQuote(null);
+      return;
+    }
+    const postalCode = form.shippingPostalCode.trim();
+    if (postalCode.length < 4) {
+      setShippingQuote(null);
+      return;
+    }
+    setQuotingShipping(true);
+    const handle = setTimeout(async () => {
+      try {
+        const quote = await publicApi.getShippingZone(postalCode);
+        setShippingQuote(quote);
+      } catch {
+        setShippingQuote(null);
+      } finally {
+        setQuotingShipping(false);
+      }
+    }, 500);
+    return () => { clearTimeout(handle); setQuotingShipping(false); };
+  }, [deliveryMethod, form.shippingPostalCode]);
 
   const displayTotal = useMemo(() =>
     items.reduce((sum, i) => {
@@ -149,9 +175,7 @@ export default function CarritoPage() {
   const shippingProgressPct = shippingMinPurchase > 0 ? Math.min(100, (displayTotal / shippingMinPurchase) * 100) : 100;
   const canChooseShipping = shippingReady;
 
-  const shippingCost = deliveryMethod === 'shipping' && shippingZone
-    ? (shippingZone === 'amba' ? shippingCostAmba : shippingCostRestoPais)
-    : 0;
+  const shippingCost = deliveryMethod === 'shipping' ? (shippingQuote?.cost ?? 0) : 0;
   const grandTotal = displayTotal + shippingCost;
 
   const installmentPerPeriod = useMemo(() => {
@@ -177,7 +201,6 @@ export default function CarritoPage() {
         email: form.email.trim(),
         notes: form.notes.trim() || undefined,
         delivery_method: deliveryMethod ?? undefined,
-        shipping_zone: shippingZone ?? undefined,
         ...(deliveryMethod === 'shipping' ? {
           shipping_street: form.shippingStreet.trim(),
           shipping_floor_apt: form.shippingFloorApt.trim() || undefined,
@@ -214,7 +237,6 @@ export default function CarritoPage() {
         is_card_payment: false,
         notes: form.notes.trim() || undefined,
         delivery_method: deliveryMethod ?? undefined,
-        shipping_zone: shippingZone ?? undefined,
         ...(deliveryMethod === 'shipping' ? {
           shipping_street: form.shippingStreet.trim(),
           shipping_floor_apt: form.shippingFloorApt.trim() || undefined,
@@ -245,8 +267,7 @@ export default function CarritoPage() {
     }
   }
 
-  const deliveryReady = deliveryMethod !== null &&
-    (deliveryMethod !== 'shipping' || (canChooseShipping && shippingZone !== null));
+  const deliveryReady = deliveryMethod !== null;
   const canGoToCheckout = items.length > 0 && paymentFlow !== null && deliveryReady;
   const canSubmitAddress = deliveryMethod !== 'shipping' || (
     form.shippingStreet.trim().length > 0 &&
@@ -255,7 +276,7 @@ export default function CarritoPage() {
     form.shippingPostalCode.trim().length > 0
   );
   const isValidEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim());
-  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && isValidEmail && canSubmitAddress && !submitting;
+  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && isValidEmail && canSubmitAddress && !quotingShipping && !submitting;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -363,8 +384,12 @@ export default function CarritoPage() {
                     <span className="text-sm text-zinc-500 mt-1">Total</span>
                     <div className="text-right">
                       <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
-                      {shippingCost > 0 && (
-                        <p className="text-xs text-zinc-400">Incluye envío {formatPrice(shippingCost)}</p>
+                      {deliveryMethod === 'shipping' && (
+                        <p className="text-xs text-zinc-400">
+                          {shippingCost > 0
+                            ? `Incluye envío ${formatPrice(shippingCost)}`
+                            : '+ envío, según tu código postal'}
+                        </p>
                       )}
                       {installmentPerPeriod && (
                         <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
@@ -401,12 +426,7 @@ export default function CarritoPage() {
                       <button
                         onClick={() => {
                           if (!canChooseShipping) return;
-                          if (deliveryMethod === 'shipping') {
-                            setDeliveryMethod(null);
-                            setShippingZone(null);
-                          } else {
-                            setDeliveryMethod('shipping');
-                          }
+                          setDeliveryMethod(deliveryMethod === 'shipping' ? null : 'shipping');
                         }}
                         disabled={!canChooseShipping}
                         className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
@@ -421,7 +441,7 @@ export default function CarritoPage() {
                         <span className="leading-tight text-center">Con envío</span>
                       </button>
                       <button
-                        onClick={() => { setDeliveryMethod('agreement'); setShippingZone(null); }}
+                        onClick={() => setDeliveryMethod('agreement')}
                         className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
                           deliveryMethod === 'agreement'
                             ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
@@ -434,30 +454,9 @@ export default function CarritoPage() {
                     </div>
 
                     {deliveryMethod === 'shipping' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setShippingZone('amba')}
-                          className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
-                            shippingZone === 'amba'
-                              ? 'bg-primary-50 border-primary-400 text-primary-700'
-                              : 'bg-white border-zinc-200 text-zinc-600 hover:border-primary-300'
-                          }`}
-                        >
-                          <span>AMBA</span>
-                          <span className="tabular-nums">{formatPrice(shippingCostAmba)}</span>
-                        </button>
-                        <button
-                          onClick={() => setShippingZone('resto_pais')}
-                          className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
-                            shippingZone === 'resto_pais'
-                              ? 'bg-primary-50 border-primary-400 text-primary-700'
-                              : 'bg-white border-zinc-200 text-zinc-600 hover:border-primary-300'
-                          }`}
-                        >
-                          <span>Resto del país</span>
-                          <span className="tabular-nums">{formatPrice(shippingCostRestoPais)}</span>
-                        </button>
-                      </div>
+                      <p className="text-[11px] text-zinc-400 px-1">
+                        El costo de envío se calcula según el código postal que cargues en el paso siguiente.
+                      </p>
                     )}
 
                     {deliveryMethod === 'agreement' && (
@@ -649,6 +648,14 @@ export default function CarritoPage() {
                           />
                         </div>
                       </div>
+
+                      {(quotingShipping || shippingQuote) && (
+                        <p className="text-[11px] text-zinc-500 px-1">
+                          {quotingShipping
+                            ? 'Calculando costo de envío...'
+                            : shippingQuote && `Zona detectada: ${shippingQuote.zone === 'amba' ? 'AMBA' : 'Resto del país'} — envío ${formatPrice(shippingQuote.cost)}`}
+                        </p>
+                      )}
 
                       <div>
                         <label className="block text-xs font-semibold text-zinc-700 mb-1">

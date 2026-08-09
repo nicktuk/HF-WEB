@@ -15,7 +15,8 @@ from app.schemas.sales import PublicOrderCreate, PublicOrderResponse
 from app.models.analytics_event import AnalyticsEvent
 from app.config import settings
 from app.db.session import get_db
-from app.services.app_settings import get_setting
+from app.services.app_settings import get_setting, get_shipping_config
+from app.services.codigo_amba import classify_shipping_zone
 from app.services.sales import SalesService
 from sqlalchemy.orm import Session
 
@@ -140,6 +141,14 @@ async def track_public_event(
         return MessageResponse(message="Event dropped", success=False)
 
     return MessageResponse(message="Event tracked", success=True)
+
+
+@router.get("/shipping/zone")
+async def get_shipping_zone(postal_code: str = Query(..., min_length=3), db: Session = Depends(get_db)):
+    """Clasifica un código postal como AMBA o resto del país y devuelve el costo configurado."""
+    zone = classify_shipping_zone(db, postal_code)
+    shipping_config = get_shipping_config(db)
+    return {"zone": zone, "cost": shipping_config[zone]}
 
 
 @router.post("/orders", response_model=PublicOrderResponse)

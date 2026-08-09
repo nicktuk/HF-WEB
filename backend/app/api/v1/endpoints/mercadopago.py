@@ -24,6 +24,7 @@ from app.models.product import Product
 from app.models.mp_pending_order import MpPendingOrder
 from app.schemas.sales import PublicOrderCreate, PublicOrderItemCreate
 from app.services.app_settings import get_setting, get_shipping_config, SHIPPING_ZONE_LABELS
+from app.services.codigo_amba import classify_shipping_zone
 from app.services.sales import SalesService
 
 router = APIRouter()
@@ -55,7 +56,6 @@ class MPPreferenceRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     notes: Optional[str] = None
     delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
-    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
     shipping_street: Optional[str] = None
     shipping_floor_apt: Optional[str] = None
     shipping_city: Optional[str] = None
@@ -85,12 +85,13 @@ def _calculate_total(
     db: Session,
     items: List[MPPreferenceCartItem],
     delivery_method: Optional[str] = None,
-    shipping_zone: Optional[str] = None,
-) -> tuple[float, list]:
+    postal_code: Optional[str] = None,
+) -> tuple[float, list, Optional[str]]:
     """
-    Fetches product prices from DB and returns (total, items_payload).
+    Fetches product prices from DB and returns (total, items_payload, shipping_zone).
     items_payload is ready for the MP preference API.
-    Envío: costo y mínimo se recalculan server-side, nunca se confía en el cliente.
+    Envío: costo, mínimo y zona (a partir del código postal) siempre se recalculan
+    server-side, nunca se confía en el cliente.
     """
     total = Decimal("0")
     items_payload = []
@@ -117,15 +118,15 @@ def _calculate_total(
             "currency_id": "ARS",
         })
 
+    shipping_zone = None
     if delivery_method == "shipping":
+        shipping_zone = classify_shipping_zone(db, postal_code)
         shipping_config = get_shipping_config(db)
         min_purchase = Decimal(str(shipping_config["min_purchase"]))
         if total < min_purchase:
             raise ValidationError(
                 f"El pedido no alcanza el mínimo de compra para envío (${min_purchase})"
             )
-        if shipping_zone not in ("amba", "resto_pais"):
-            raise ValidationError("Debés indicar la zona de envío (AMBA o Resto del país)")
         shipping_cost = Decimal(str(shipping_config[shipping_zone])).quantize(Decimal("0.01"))
         if shipping_cost > 0:
             total += shipping_cost
@@ -137,7 +138,7 @@ def _calculate_total(
                 "currency_id": "ARS",
             })
 
-    return float(total), items_payload
+    return float(total), items_payload, shipping_zone
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +166,9 @@ async def create_mp_preference(
         if missing:
             raise HTTPException(status_code=422, detail=f"Para envío, faltan estos datos de entrega: {', '.join(missing)}")
 
-    total, items_payload = _calculate_total(db, data.items, data.delivery_method, data.shipping_zone)
+    total, items_payload, computed_zone = _calculate_total(
+        db, data.items, data.delivery_method, data.shipping_postal_code
+    )
 
     external_reference = str(uuid.uuid4())
 
@@ -176,7 +179,7 @@ async def create_mp_preference(
         email=data.email,
         notes=data.notes,
         delivery_method=data.delivery_method,
-        shipping_zone=data.shipping_zone,
+        shipping_zone=computed_zone,
         shipping_street=data.shipping_street,
         shipping_floor_apt=data.shipping_floor_apt,
         shipping_city=data.shipping_city,
@@ -321,7 +324,7 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "ok"}
 
     items = [MPPreferenceCartItem(**item) for item in pending_order.items]
-    real_total, _ = _calculate_total(db, items, pending_order.delivery_method, pending_order.shipping_zone)
+    real_total, _, _ = _calculate_total(db, items, pending_order.delivery_method, pending_order.shipping_postal_code)
     paid_amount = round(float(payment_data.get("transaction_amount") or 0), 2)
     if abs(paid_amount - round(real_total, 2)) > 1.0:
         logger.error(
@@ -341,7 +344,6 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
         is_card_payment=True,
         notes=pending_order.notes,
         delivery_method=pending_order.delivery_method,
-        shipping_zone=pending_order.shipping_zone,
         shipping_street=pending_order.shipping_street,
         shipping_floor_apt=pending_order.shipping_floor_apt,
         shipping_city=pending_order.shipping_city,

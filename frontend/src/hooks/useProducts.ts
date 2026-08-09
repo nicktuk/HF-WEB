@@ -245,6 +245,35 @@ export function useDeleteDeposit(apiKey: string) {
   });
 }
 
+export function useCodigosAmba(apiKey: string) {
+  return useQuery({
+    queryKey: ['codigos-amba'],
+    queryFn: () => adminApi.getCodigosAmba(apiKey),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!apiKey,
+  });
+}
+
+export function useCreateCodigoAmba(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { codigo_desde: number; codigo_hasta: number }) => adminApi.createCodigoAmba(apiKey, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['codigos-amba'] });
+    },
+  });
+}
+
+export function useDeleteCodigoAmba(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteCodigoAmba(apiKey, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['codigos-amba'] });
+    },
+  });
+}
+
 export function useDepositStock(apiKey: string, productId: number) {
   return useQuery({
     queryKey: ['deposit-stock', productId],

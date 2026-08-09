@@ -113,6 +113,12 @@ export interface Deposit {
   created_at: string;
 }
 
+export interface CodigoAmba {
+  id: number;
+  codigo_desde: number;
+  codigo_hasta: number;
+}
+
 export interface CatalogSeller {
   id: number;
   nombre: string;
@@ -528,7 +534,6 @@ export interface PublicOrderCreate {
   is_card_payment?: boolean;
   notes?: string;
   delivery_method?: DeliveryMethod;
-  shipping_zone?: ShippingZone;
   shipping_street?: string;
   shipping_floor_apt?: string;
   shipping_city?: string;

@@ -132,7 +132,6 @@ class PublicOrderCreate(BaseModel):
     is_card_payment: bool = False
     notes: Optional[str] = None
     delivery_method: Optional[Literal["pickup", "shipping", "agreement"]] = None
-    shipping_zone: Optional[Literal["amba", "resto_pais"]] = None
     shipping_street: Optional[str] = Field(None, max_length=255)
     shipping_floor_apt: Optional[str] = Field(None, max_length=100)
     shipping_city: Optional[str] = Field(None, max_length=150)
