@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -108,6 +108,15 @@ export default function CarritoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const shippingStreetRef = useRef<HTMLInputElement>(null);
+  const shippingCityRef = useRef<HTMLInputElement>(null);
+  const shippingProvinceRef = useRef<HTMLSelectElement>(null);
+  const shippingPostalCodeRef = useRef<HTMLInputElement>(null);
 
   const isCard = paymentFlow === 'card';
 
@@ -191,7 +200,12 @@ export default function CarritoPage() {
   }, [items, isCard]);
 
   async function handleGoToMPPayment() {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      setShowFieldErrors(true);
+      setError('Completá los datos marcados en rojo para continuar.');
+      focusFirstInvalidField();
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -225,7 +239,12 @@ export default function CarritoPage() {
   }
 
   async function handleSubmitOrder() {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      setShowFieldErrors(true);
+      setError('Completá los datos marcados en rojo para continuar.');
+      focusFirstInvalidField();
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -269,14 +288,41 @@ export default function CarritoPage() {
 
   const deliveryReady = deliveryMethod !== null;
   const canGoToCheckout = items.length > 0 && paymentFlow !== null && deliveryReady;
-  const canSubmitAddress = deliveryMethod !== 'shipping' || (
-    form.shippingStreet.trim().length > 0 &&
-    form.shippingCity.trim().length > 0 &&
-    form.shippingProvince.trim().length > 0 &&
-    form.shippingPostalCode.trim().length > 0
-  );
+  const isShipping = deliveryMethod === 'shipping';
+  const nameValid = form.name.trim().length >= 2;
+  const phoneValid = form.phone.trim().length >= 6;
   const isValidEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim());
-  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6 && isValidEmail && canSubmitAddress && !quotingShipping && !submitting;
+  const streetValid = !isShipping || form.shippingStreet.trim().length > 0;
+  const cityValid = !isShipping || form.shippingCity.trim().length > 0;
+  const provinceValid = !isShipping || form.shippingProvince.trim().length > 0;
+  const postalValid = !isShipping || form.shippingPostalCode.trim().length > 0;
+  const canSubmitAddress = streetValid && cityValid && provinceValid && postalValid;
+  const canSubmit = nameValid && phoneValid && isValidEmail && canSubmitAddress && !quotingShipping && !submitting;
+
+  function focusFirstInvalidField() {
+    const fields: Array<[boolean, React.RefObject<HTMLInputElement | HTMLSelectElement>]> = [
+      [nameValid, nameRef],
+      [phoneValid, phoneRef],
+      [isValidEmail, emailRef],
+      ...(isShipping ? [
+        [streetValid, shippingStreetRef],
+        [cityValid, shippingCityRef],
+        [provinceValid, shippingProvinceRef],
+        [postalValid, shippingPostalCodeRef],
+      ] as Array<[boolean, React.RefObject<HTMLInputElement | HTMLSelectElement>]> : []),
+    ];
+    const firstInvalid = fields.find(([valid]) => !valid);
+    firstInvalid?.[1].current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    firstInvalid?.[1].current?.focus();
+  }
+
+  function fieldClass(valid: boolean) {
+    return `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-all ${
+      showFieldErrors && !valid
+        ? 'border-rose-400 ring-2 ring-rose-100 focus:border-rose-400 focus:ring-rose-100'
+        : 'border-zinc-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100'
+    }`;
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
@@ -552,13 +598,17 @@ export default function CarritoPage() {
                       Nombre <span className="text-rose-500">*</span>
                     </label>
                     <input
+                      ref={nameRef}
                       type="text"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="Tu nombre completo"
-                      className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                      className={fieldClass(nameValid)}
                       autoComplete="name"
                     />
+                    {showFieldErrors && !nameValid && (
+                      <p className="text-[11px] text-rose-600 mt-1">Ingresá tu nombre completo.</p>
+                    )}
                   </div>
 
                   <div>
@@ -566,13 +616,17 @@ export default function CarritoPage() {
                       Teléfono <span className="text-rose-500">*</span>
                     </label>
                     <input
+                      ref={phoneRef}
                       type="tel"
                       value={form.phone}
                       onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                       placeholder="Ej: 11 1234 5678"
-                      className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                      className={fieldClass(phoneValid)}
                       autoComplete="tel"
                     />
+                    {showFieldErrors && !phoneValid && (
+                      <p className="text-[11px] text-rose-600 mt-1">Ingresá un teléfono válido.</p>
+                    )}
                   </div>
 
                   <div>
@@ -580,13 +634,17 @@ export default function CarritoPage() {
                       Email <span className="text-rose-500">*</span>
                     </label>
                     <input
+                      ref={emailRef}
                       type="email"
                       value={form.email}
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="tu@email.com"
-                      className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                      className={fieldClass(isValidEmail)}
                       autoComplete="email"
                     />
+                    {showFieldErrors && !isValidEmail && (
+                      <p className="text-[11px] text-rose-600 mt-1">Ingresá un email válido.</p>
+                    )}
                   </div>
 
                   {deliveryMethod === 'shipping' && (
@@ -601,12 +659,16 @@ export default function CarritoPage() {
                             Calle y número <span className="text-rose-500">*</span>
                           </label>
                           <input
+                            ref={shippingStreetRef}
                             type="text"
                             value={form.shippingStreet}
                             onChange={e => setForm(f => ({ ...f, shippingStreet: e.target.value }))}
                             placeholder="Av. Siempre Viva 742"
-                            className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                            className={fieldClass(streetValid)}
                           />
+                          {showFieldErrors && !streetValid && (
+                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -628,24 +690,32 @@ export default function CarritoPage() {
                             Localidad <span className="text-rose-500">*</span>
                           </label>
                           <input
+                            ref={shippingCityRef}
                             type="text"
                             value={form.shippingCity}
                             onChange={e => setForm(f => ({ ...f, shippingCity: e.target.value }))}
                             placeholder="Ezeiza"
-                            className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                            className={fieldClass(cityValid)}
                           />
+                          {showFieldErrors && !cityValid && (
+                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-zinc-700 mb-1">
                             Código Postal <span className="text-rose-500">*</span>
                           </label>
                           <input
+                            ref={shippingPostalCodeRef}
                             type="text"
                             value={form.shippingPostalCode}
                             onChange={e => setForm(f => ({ ...f, shippingPostalCode: e.target.value }))}
                             placeholder="1804"
-                            className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                            className={fieldClass(postalValid)}
                           />
+                          {showFieldErrors && !postalValid && (
+                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                          )}
                         </div>
                       </div>
 
@@ -662,13 +732,17 @@ export default function CarritoPage() {
                           Provincia <span className="text-rose-500">*</span>
                         </label>
                         <select
+                          ref={shippingProvinceRef}
                           value={form.shippingProvince}
                           onChange={e => setForm(f => ({ ...f, shippingProvince: e.target.value }))}
-                          className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+                          className={`${fieldClass(provinceValid)} bg-white`}
                         >
                           <option value="">Elegí una provincia</option>
                           {PROVINCIAS.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
+                        {showFieldErrors && !provinceValid && (
+                          <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                        )}
                       </div>
 
                       <div>
@@ -711,7 +785,7 @@ export default function CarritoPage() {
                 {isCard ? (
                   <button
                     onClick={handleGoToMPPayment}
-                    disabled={!canSubmit}
+                    disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#009ee3] hover:bg-[#007fc2] active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
                   >
                     {submitting ? (
@@ -723,7 +797,7 @@ export default function CarritoPage() {
                 ) : (
                   <button
                     onClick={handleSubmitOrder}
-                    disabled={!canSubmit}
+                    disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
                   >
                     {submitting ? (
