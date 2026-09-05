@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingCart, Trash2, Plus, Minus,
   Banknote, ChevronLeft, CheckCircle2, Loader2,
   Truck, MessageCircle, Check,
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public/PublicHeader';
-import { useCart } from '@/context/CartContext';
+import { useCart, type CartItem } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 import { useCatalogSettings } from '@/hooks/useBadgeLabels';
+import { getBuyNowItem, saveBuyNowItem, clearBuyNowItem } from '@/lib/buyNow';
 
 type Step = 'cart' | 'checkout' | 'success';
 type PaymentFlow = 'card' | 'cash';
@@ -90,11 +91,49 @@ function SectionDot({ done }: { done: boolean }) {
   );
 }
 
-export default function CarritoPage() {
+function CarritoPageContent() {
   const router = useRouter();
-  const { items, removeItem, updateQuantity, clearCart } = useCart();
+  const searchParams = useSearchParams();
+  const isBuyNow = searchParams.get('buyNow') === '1';
+  const { items: cartItems, removeItem, updateQuantity, clearCart } = useCart();
+  const [buyNowItem, setBuyNowItemState] = useState<CartItem | null>(null);
   const { data: catalogSettings } = useCatalogSettings();
   const shippingMinPurchase = catalogSettings?.shipping_min_purchase ?? 0;
+
+  useEffect(() => {
+    if (isBuyNow) setBuyNowItemState(getBuyNowItem());
+  }, [isBuyNow]);
+
+  const items = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cartItems;
+
+  function handleQuantityChange(id: string, quantity: number) {
+    if (isBuyNow) {
+      if (quantity <= 0) {
+        clearBuyNowItem();
+        setBuyNowItemState(null);
+        router.push('/');
+        return;
+      }
+      setBuyNowItemState(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, quantity };
+        saveBuyNowItem(updated);
+        return updated;
+      });
+    } else {
+      updateQuantity(id, quantity);
+    }
+  }
+
+  function handleRemoveItem(id: string) {
+    if (isBuyNow) {
+      clearBuyNowItem();
+      setBuyNowItemState(null);
+      router.push('/');
+    } else {
+      removeItem(id);
+    }
+  }
 
   const [step, setStep] = useState<Step>('cart');
   const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
@@ -131,7 +170,12 @@ export default function CarritoPage() {
   }
 
   function handleFinish() {
-    clearCart();
+    if (isBuyNow) {
+      clearBuyNowItem();
+      setBuyNowItemState(null);
+    } else {
+      clearCart();
+    }
     setStep('cart');
     setForm({
       name: '', phone: '', email: '', notes: '',
@@ -328,26 +372,332 @@ export default function CarritoPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
       <PublicHeader />
 
-      <main className="container mx-auto px-4 py-6 pb-16 max-w-2xl">
+      <main className={`container mx-auto px-4 py-6 pb-16 ${step === 'checkout' ? 'max-w-5xl' : 'max-w-2xl'}`}>
         <Stepper step={step} />
 
+        {step === 'checkout' ? (
+          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
+            {/* ── LEFT: form ── */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStep('cart')}
+                  className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-zinc-100 transition-colors -ml-1 shrink-0"
+                  aria-label="Volver"
+                >
+                  <ChevronLeft className="h-5 w-5 text-zinc-600" />
+                </button>
+                <h1 className="text-xl sm:text-2xl font-bold text-zinc-900">Finalizá tu compra</h1>
+              </div>
+
+              {/* Productos */}
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden divide-y divide-zinc-100">
+                {items.map(item => {
+                  const primaryImage = item.product.images.find(img => img.is_primary) || item.product.images[0];
+                  const linePrice = isCard && item.product.installments_3 && item.product.installment_price
+                    ? item.product.installment_price * 3
+                    : (item.product.price ?? 0);
+                  return (
+                    <div key={item.id} className="flex gap-3 px-4 sm:px-5 py-3.5">
+                      {primaryImage ? (
+                        <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                          <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="56px" />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-zinc-100 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                        {item.color && item.colorName && (
+                          <p className="text-xs text-zinc-400 mt-0.5">Color: {item.colorName}</p>
+                        )}
+                        <p className="text-xs text-zinc-400 mt-0.5">Cantidad: {item.quantity}</p>
+                      </div>
+                      <span className="text-sm font-bold text-zinc-800 tabular-nums shrink-0">{formatPrice(linePrice * item.quantity)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Forma de entrega */}
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-4 sm:p-5 space-y-3">
+                <h2 className="font-bold text-zinc-900">Forma de entrega</h2>
+                <div className="flex gap-2 border-b border-zinc-100">
+                  <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b-2 border-primary-600 text-sm font-semibold text-primary-700">
+                    {deliveryMethod === 'agreement' ? <MessageCircle className="h-4 w-4" /> : <Truck className="h-4 w-4" />}
+                    {getDeliveryLabel()}
+                  </div>
+                </div>
+
+                {deliveryMethod === 'shipping' && (
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                          Calle y número <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          ref={shippingStreetRef}
+                          type="text"
+                          value={form.shippingStreet}
+                          onChange={e => setForm(f => ({ ...f, shippingStreet: e.target.value }))}
+                          placeholder="Av. Siempre Viva 742"
+                          className={fieldClass(streetValid)}
+                        />
+                        {showFieldErrors && !streetValid && (
+                          <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                          Piso/Depto <span className="text-zinc-400 font-normal">(opc.)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.shippingFloorApt}
+                          onChange={e => setForm(f => ({ ...f, shippingFloorApt: e.target.value }))}
+                          placeholder="3° A"
+                          className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                          Localidad <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          ref={shippingCityRef}
+                          type="text"
+                          value={form.shippingCity}
+                          onChange={e => setForm(f => ({ ...f, shippingCity: e.target.value }))}
+                          placeholder="Ezeiza"
+                          className={fieldClass(cityValid)}
+                        />
+                        {showFieldErrors && !cityValid && (
+                          <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                          Código Postal <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          ref={shippingPostalCodeRef}
+                          type="text"
+                          value={form.shippingPostalCode}
+                          onChange={e => setForm(f => ({ ...f, shippingPostalCode: e.target.value }))}
+                          placeholder="1804"
+                          className={fieldClass(postalValid)}
+                        />
+                        {showFieldErrors && !postalValid && (
+                          <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {(quotingShipping || shippingQuote) && (
+                      <p className="text-[11px] text-zinc-500 px-1">
+                        {quotingShipping
+                          ? 'Calculando costo de envío...'
+                          : shippingQuote && `Zona detectada: ${shippingQuote.zone === 'amba' ? 'AMBA' : 'Resto del país'} — envío ${formatPrice(shippingQuote.cost)}`}
+                      </p>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                        Provincia <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        ref={shippingProvinceRef}
+                        value={form.shippingProvince}
+                        onChange={e => setForm(f => ({ ...f, shippingProvince: e.target.value }))}
+                        className={`${fieldClass(provinceValid)} bg-white`}
+                      >
+                        <option value="">Elegí una provincia</option>
+                        {PROVINCIAS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      {showFieldErrors && !provinceValid && (
+                        <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                        Referencia <span className="text-zinc-400 font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.shippingReference}
+                        onChange={e => setForm(f => ({ ...f, shippingReference: e.target.value }))}
+                        placeholder="Portón negro, entre calles..."
+                        className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {deliveryMethod === 'agreement' && (
+                  <p className="text-xs text-zinc-400 pt-1">Pagás los productos ahora; coordinamos el envío y su costo por WhatsApp.</p>
+                )}
+              </div>
+
+              {/* Tus datos */}
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-4 sm:p-5 space-y-3">
+                <h2 className="font-bold text-zinc-900">Tus datos</h2>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Nombre <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={nameRef}
+                    type="text"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Tu nombre completo"
+                    className={fieldClass(nameValid)}
+                    autoComplete="name"
+                  />
+                  {showFieldErrors && !nameValid && (
+                    <p className="text-[11px] text-rose-600 mt-1">Ingresá tu nombre completo.</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Teléfono <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={phoneRef}
+                    type="tel"
+                    value={form.phone}
+                    onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                    placeholder="Ej: 11 1234 5678"
+                    className={fieldClass(phoneValid)}
+                    autoComplete="tel"
+                  />
+                  {showFieldErrors && !phoneValid && (
+                    <p className="text-[11px] text-rose-600 mt-1">Ingresá un teléfono válido.</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="tu@email.com"
+                    className={fieldClass(isValidEmail)}
+                    autoComplete="email"
+                  />
+                  {showFieldErrors && !isValidEmail && (
+                    <p className="text-[11px] text-rose-600 mt-1">Ingresá un email válido.</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Notas <span className="text-zinc-400 font-normal">(opcional)</span>
+                  </label>
+                  <textarea
+                    value={form.notes}
+                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="Aclaraciones, preferencias..."
+                    rows={3}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* ── RIGHT: resumen fijo ── */}
+            <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-5 space-y-4">
+                <h2 className="font-bold text-zinc-900">Resumen de compra</h2>
+
+                <dl className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-zinc-500">{items.length === 1 ? 'Producto' : 'Productos'}</dt>
+                    <dd className="font-semibold text-zinc-800 tabular-nums">{formatPrice(displayTotal)}</dd>
+                  </div>
+                  {isShipping && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-zinc-500">Envío</dt>
+                      <dd className="font-semibold text-zinc-800 tabular-nums">
+                        {shippingCost > 0 ? formatPrice(shippingCost) : 'Gratis'}
+                      </dd>
+                    </div>
+                  )}
+                  {deliveryMethod === 'agreement' && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-zinc-500">Envío</dt>
+                      <dd className="text-zinc-400 text-xs">A coordinar</dd>
+                    </div>
+                  )}
+                </dl>
+
+                <div className="border-t border-zinc-100 pt-3 flex items-start justify-between">
+                  <span className="text-sm font-semibold text-zinc-700 mt-1">Total</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
+                    {installmentPerPeriod && (
+                      <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
+                    )}
+                  </div>
+                </div>
+
+                {isCard ? (
+                  <button
+                    onClick={handleGoToMPPayment}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#009ee3] hover:bg-[#007fc2] active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Preparando pago...</>
+                    ) : (
+                      'Pagar y finalizar'
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmitOrder}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+                    ) : (
+                      'Confirmar pedido'
+                    )}
+                  </button>
+                )}
+                <p className="text-center text-[11px] text-zinc-400">
+                  {isCard
+                    ? 'Vas a pagar con tarjeta a través de Mercado Pago.'
+                    : 'Te contactaremos para coordinar la entrega y el pago.'}
+                </p>
+              </div>
+            </aside>
+          </div>
+        ) : (
         <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
           {/* ── Header interno ── */}
           <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
-            {step === 'checkout' && (
-              <button
-                onClick={() => setStep('cart')}
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-zinc-100 transition-colors -ml-1"
-                aria-label="Volver"
-              >
-                <ChevronLeft className="h-5 w-5 text-zinc-600" />
-              </button>
-            )}
             <ShoppingCart className="h-5 w-5 text-primary-600" />
             <h1 className="font-bold text-lg text-zinc-900">
-              {step === 'cart' ? 'Tu pedido'
-                : step === 'checkout' ? 'Tus datos'
-                : '¡Pedido confirmado!'}
+              {step === 'cart' ? (isBuyNow ? 'Confirmá tu compra' : 'Tu pedido') : '¡Pedido confirmado!'}
             </h1>
             {step === 'cart' && items.length > 0 && (
               <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
@@ -365,7 +715,7 @@ export default function CarritoPage() {
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 text-zinc-400 px-4 py-16">
                   <ShoppingCart className="h-16 w-16 opacity-20" />
-                  <p className="font-medium">Tu carrito está vacío</p>
+                  <p className="font-medium">{isBuyNow ? 'No hay ningún producto seleccionado' : 'Tu carrito está vacío'}</p>
                   <Link href="/" className="text-sm text-primary-600 font-semibold hover:underline">
                     Ir al catálogo
                   </Link>
@@ -401,17 +751,17 @@ export default function CarritoPage() {
                           )}
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-1.5">
-                              <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
                                 <Minus className="h-3 w-3 text-zinc-600" />
                               </button>
                               <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
-                              <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
                                 <Plus className="h-3 w-3 text-zinc-600" />
                               </button>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(linePrice * item.quantity)}</span>
-                              <button onClick={() => removeItem(item.id)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
+                              <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
@@ -557,262 +907,22 @@ export default function CarritoPage() {
                     Realizar pedido
                   </button>
 
-                  <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2">
-                    Vaciar carrito
+                  <button
+                    onClick={() => {
+                      if (isBuyNow) {
+                        clearBuyNowItem();
+                        setBuyNowItemState(null);
+                        router.push('/');
+                      } else {
+                        clearCart();
+                      }
+                    }}
+                    className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2"
+                  >
+                    {isBuyNow ? 'Cancelar compra' : 'Vaciar carrito'}
                   </button>
                 </div>
               )}
-            </>
-          )}
-
-          {/* ── STEP: checkout ── */}
-          {step === 'checkout' && (
-            <>
-              <div className="px-4 sm:px-6 py-4 space-y-4">
-                {/* Resumen */}
-                <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {isCard
-                      ? <Image src="/mercadopago-logo.svg" alt="Mercado Pago" width={72} height={46} className="rounded" />
-                      : <Banknote className="h-4 w-4 text-primary-600" />
-                    }
-                    <div>
-                      <p className="text-xs font-semibold text-zinc-700">
-                        {isCard ? 'Mercado Pago' : 'Efectivo / Transferencia'}
-                      </p>
-                      <p className="text-xs text-zinc-400">{items.length} {items.length === 1 ? 'producto' : 'productos'} · {getDeliveryLabel()}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</p>
-                    {installmentPerPeriod && (
-                      <p className="text-[11px] text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Formulario */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      Nombre <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      ref={nameRef}
-                      type="text"
-                      value={form.name}
-                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="Tu nombre completo"
-                      className={fieldClass(nameValid)}
-                      autoComplete="name"
-                    />
-                    {showFieldErrors && !nameValid && (
-                      <p className="text-[11px] text-rose-600 mt-1">Ingresá tu nombre completo.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      Teléfono <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      ref={phoneRef}
-                      type="tel"
-                      value={form.phone}
-                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="Ej: 11 1234 5678"
-                      className={fieldClass(phoneValid)}
-                      autoComplete="tel"
-                    />
-                    {showFieldErrors && !phoneValid && (
-                      <p className="text-[11px] text-rose-600 mt-1">Ingresá un teléfono válido.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      Email <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      ref={emailRef}
-                      type="email"
-                      value={form.email}
-                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                      placeholder="tu@email.com"
-                      className={fieldClass(isValidEmail)}
-                      autoComplete="email"
-                    />
-                    {showFieldErrors && !isValidEmail && (
-                      <p className="text-[11px] text-rose-600 mt-1">Ingresá un email válido.</p>
-                    )}
-                  </div>
-
-                  {deliveryMethod === 'shipping' && (
-                    <div className="space-y-3 rounded-xl border border-primary-100 bg-primary-50/40 p-3">
-                      <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide flex items-center gap-1.5">
-                        <Truck className="h-3.5 w-3.5" /> Datos de entrega
-                      </p>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="col-span-2">
-                          <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                            Calle y número <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            ref={shippingStreetRef}
-                            type="text"
-                            value={form.shippingStreet}
-                            onChange={e => setForm(f => ({ ...f, shippingStreet: e.target.value }))}
-                            placeholder="Av. Siempre Viva 742"
-                            className={fieldClass(streetValid)}
-                          />
-                          {showFieldErrors && !streetValid && (
-                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                            Piso/Depto <span className="text-zinc-400 font-normal">(opc.)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={form.shippingFloorApt}
-                            onChange={e => setForm(f => ({ ...f, shippingFloorApt: e.target.value }))}
-                            placeholder="3° A"
-                            className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                            Localidad <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            ref={shippingCityRef}
-                            type="text"
-                            value={form.shippingCity}
-                            onChange={e => setForm(f => ({ ...f, shippingCity: e.target.value }))}
-                            placeholder="Ezeiza"
-                            className={fieldClass(cityValid)}
-                          />
-                          {showFieldErrors && !cityValid && (
-                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                            Código Postal <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            ref={shippingPostalCodeRef}
-                            type="text"
-                            value={form.shippingPostalCode}
-                            onChange={e => setForm(f => ({ ...f, shippingPostalCode: e.target.value }))}
-                            placeholder="1804"
-                            className={fieldClass(postalValid)}
-                          />
-                          {showFieldErrors && !postalValid && (
-                            <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {(quotingShipping || shippingQuote) && (
-                        <p className="text-[11px] text-zinc-500 px-1">
-                          {quotingShipping
-                            ? 'Calculando costo de envío...'
-                            : shippingQuote && `Zona detectada: ${shippingQuote.zone === 'amba' ? 'AMBA' : 'Resto del país'} — envío ${formatPrice(shippingQuote.cost)}`}
-                        </p>
-                      )}
-
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                          Provincia <span className="text-rose-500">*</span>
-                        </label>
-                        <select
-                          ref={shippingProvinceRef}
-                          value={form.shippingProvince}
-                          onChange={e => setForm(f => ({ ...f, shippingProvince: e.target.value }))}
-                          className={`${fieldClass(provinceValid)} bg-white`}
-                        >
-                          <option value="">Elegí una provincia</option>
-                          {PROVINCIAS.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                        {showFieldErrors && !provinceValid && (
-                          <p className="text-[11px] text-rose-600 mt-1">Requerido.</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                          Referencia <span className="text-zinc-400 font-normal">(opcional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={form.shippingReference}
-                          onChange={e => setForm(f => ({ ...f, shippingReference: e.target.value }))}
-                          placeholder="Portón negro, entre calles..."
-                          className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      Notas <span className="text-zinc-400 font-normal">(opcional)</span>
-                    </label>
-                    <textarea
-                      value={form.notes}
-                      onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                      placeholder="Aclaraciones, preferencias..."
-                      rows={3}
-                      className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all resize-none"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm text-rose-700">
-                    {error}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t px-4 sm:px-6 py-4 bg-zinc-50 space-y-2">
-                {isCard ? (
-                  <button
-                    onClick={handleGoToMPPayment}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#009ee3] hover:bg-[#007fc2] active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Preparando pago...</>
-                    ) : (
-                      'Continuar al pago'
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSubmitOrder}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-semibold py-3.5 transition-all disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
-                    ) : (
-                      'Confirmar pedido'
-                    )}
-                  </button>
-                )}
-                <p className="text-center text-[11px] text-zinc-400">
-                  {isCard
-                    ? 'Vas a pagar con tarjeta a través de Mercado Pago.'
-                    : 'Te contactaremos para coordinar la entrega y el pago.'}
-                </p>
-              </div>
             </>
           )}
 
@@ -845,7 +955,16 @@ export default function CarritoPage() {
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
+  );
+}
+
+export default function CarritoPage() {
+  return (
+    <Suspense fallback={null}>
+      <CarritoPageContent />
+    </Suspense>
   );
 }
