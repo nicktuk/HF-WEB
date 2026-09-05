@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
+import { setBuyNowItem } from '@/lib/buyNow';
 import { ShoppingCart, Check } from 'lucide-react';
 
 export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
@@ -48,6 +49,18 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
+  }
+
+  function handleBuyNow() {
+    if (!product) return;
+    setBuyNowItem(product, 1, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null);
+    trackPublicEvent('initiate_checkout', {
+      value: product.price ?? undefined,
+      num_items: 1,
+      content_ids: [product.id],
+      metadata: { screen: 'buy_now' },
+    });
+    router.push('/carrito?buyNow=1');
   }
 
   // Threshold: producto primero, luego global, luego default
@@ -421,6 +434,20 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
             <div className="hidden md:block space-y-3">
               {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
                 <button
+                  onClick={handleBuyNow}
+                  className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 transition-colors"
+                >
+                  Comprar
+                  {selectedColor && (
+                    <span
+                      className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-white/50 inline-block"
+                      style={{ backgroundColor: selectedColor }}
+                    />
+                  )}
+                </button>
+              )}
+              {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
+                <button
                   onClick={handleAddToCart}
                   className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-3 transition-colors ${
                     justAdded
@@ -474,25 +501,39 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
       {/* Mobile CTA — fixed bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden space-y-2">
         {(product.stock_qty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
-          <button
-            onClick={handleAddToCart}
-            className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-2.5 transition-colors ${
-              justAdded
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
-            }`}
-          >
-            {justAdded ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-            <span className="flex items-center gap-2">
-              {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
-              {!justAdded && selectedColor && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddToCart}
+              className={`flex items-center justify-center gap-2 flex-1 rounded-xl border-2 font-semibold py-2.5 transition-colors ${
+                justAdded
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
+              }`}
+            >
+              {justAdded ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+              <span className="flex items-center gap-2">
+                {justAdded ? 'Agregado' : 'Agregar'}
+                {!justAdded && selectedColor && (
+                  <span
+                    className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
+                    style={{ backgroundColor: selectedColor }}
+                  />
+                )}
+              </span>
+            </button>
+            <button
+              onClick={handleBuyNow}
+              className="flex items-center justify-center gap-2 flex-1 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 transition-colors"
+            >
+              Comprar
+              {selectedColor && (
                 <span
-                  className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
+                  className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-white/50 inline-block"
                   style={{ backgroundColor: selectedColor }}
                 />
               )}
-            </span>
-          </button>
+            </button>
+          </div>
         )}
         <StockAvailability
           isCheckStock={product.is_check_stock}

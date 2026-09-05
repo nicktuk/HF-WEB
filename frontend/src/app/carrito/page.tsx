@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingCart, Trash2, Plus, Minus,
   Banknote, ChevronLeft, CheckCircle2, Loader2,
   Truck, MessageCircle, Check,
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public/PublicHeader';
-import { useCart } from '@/context/CartContext';
+import { useCart, type CartItem } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { publicApi, resolveImageUrl } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
 import { useCatalogSettings } from '@/hooks/useBadgeLabels';
+import { getBuyNowItem, saveBuyNowItem, clearBuyNowItem } from '@/lib/buyNow';
 
 type Step = 'cart' | 'checkout' | 'success';
 type PaymentFlow = 'card' | 'cash';
@@ -90,11 +91,49 @@ function SectionDot({ done }: { done: boolean }) {
   );
 }
 
-export default function CarritoPage() {
+function CarritoPageContent() {
   const router = useRouter();
-  const { items, removeItem, updateQuantity, clearCart } = useCart();
+  const searchParams = useSearchParams();
+  const isBuyNow = searchParams.get('buyNow') === '1';
+  const { items: cartItems, removeItem, updateQuantity, clearCart } = useCart();
+  const [buyNowItem, setBuyNowItemState] = useState<CartItem | null>(null);
   const { data: catalogSettings } = useCatalogSettings();
   const shippingMinPurchase = catalogSettings?.shipping_min_purchase ?? 0;
+
+  useEffect(() => {
+    if (isBuyNow) setBuyNowItemState(getBuyNowItem());
+  }, [isBuyNow]);
+
+  const items = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cartItems;
+
+  function handleQuantityChange(id: string, quantity: number) {
+    if (isBuyNow) {
+      if (quantity <= 0) {
+        clearBuyNowItem();
+        setBuyNowItemState(null);
+        router.push('/');
+        return;
+      }
+      setBuyNowItemState(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, quantity };
+        saveBuyNowItem(updated);
+        return updated;
+      });
+    } else {
+      updateQuantity(id, quantity);
+    }
+  }
+
+  function handleRemoveItem(id: string) {
+    if (isBuyNow) {
+      clearBuyNowItem();
+      setBuyNowItemState(null);
+      router.push('/');
+    } else {
+      removeItem(id);
+    }
+  }
 
   const [step, setStep] = useState<Step>('cart');
   const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
@@ -131,7 +170,12 @@ export default function CarritoPage() {
   }
 
   function handleFinish() {
-    clearCart();
+    if (isBuyNow) {
+      clearBuyNowItem();
+      setBuyNowItemState(null);
+    } else {
+      clearCart();
+    }
     setStep('cart');
     setForm({
       name: '', phone: '', email: '', notes: '',
@@ -653,7 +697,7 @@ export default function CarritoPage() {
           <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
             <ShoppingCart className="h-5 w-5 text-primary-600" />
             <h1 className="font-bold text-lg text-zinc-900">
-              {step === 'cart' ? 'Tu pedido' : '¡Pedido confirmado!'}
+              {step === 'cart' ? (isBuyNow ? 'Confirmá tu compra' : 'Tu pedido') : '¡Pedido confirmado!'}
             </h1>
             {step === 'cart' && items.length > 0 && (
               <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
@@ -671,7 +715,7 @@ export default function CarritoPage() {
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 text-zinc-400 px-4 py-16">
                   <ShoppingCart className="h-16 w-16 opacity-20" />
-                  <p className="font-medium">Tu carrito está vacío</p>
+                  <p className="font-medium">{isBuyNow ? 'No hay ningún producto seleccionado' : 'Tu carrito está vacío'}</p>
                   <Link href="/" className="text-sm text-primary-600 font-semibold hover:underline">
                     Ir al catálogo
                   </Link>
@@ -707,17 +751,17 @@ export default function CarritoPage() {
                           )}
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-1.5">
-                              <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
                                 <Minus className="h-3 w-3 text-zinc-600" />
                               </button>
                               <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
-                              <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
                                 <Plus className="h-3 w-3 text-zinc-600" />
                               </button>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(linePrice * item.quantity)}</span>
-                              <button onClick={() => removeItem(item.id)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
+                              <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
@@ -863,8 +907,19 @@ export default function CarritoPage() {
                     Realizar pedido
                   </button>
 
-                  <button onClick={clearCart} className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2">
-                    Vaciar carrito
+                  <button
+                    onClick={() => {
+                      if (isBuyNow) {
+                        clearBuyNowItem();
+                        setBuyNowItemState(null);
+                        router.push('/');
+                      } else {
+                        clearCart();
+                      }
+                    }}
+                    className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2"
+                  >
+                    {isBuyNow ? 'Cancelar compra' : 'Vaciar carrito'}
                   </button>
                 </div>
               )}
@@ -903,5 +958,13 @@ export default function CarritoPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function CarritoPage() {
+  return (
+    <Suspense fallback={null}>
+      <CarritoPageContent />
+    </Suspense>
   );
 }
