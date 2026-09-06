@@ -360,7 +360,7 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
             for i in items
         ],
     )
-    sale = SalesService(db).create_public_order(order_data)
+    sale = SalesService(db).create_public_order(order_data, mark_paid=(payment_status == "approved"))
 
     pending_order.status = "completed"
     pending_order.sale_id = sale.id

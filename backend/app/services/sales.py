@@ -391,7 +391,7 @@ class SalesService:
         self.db.refresh(sale)
         return sale
 
-    def create_public_order(self, data) -> Sale:
+    def create_public_order(self, data, mark_paid: bool = False) -> Sale:
         """Create a sale from a public catalog order (no unit price supplied by caller)."""
         if not data.items:
             raise ValidationError("El pedido debe tener al menos un producto")
@@ -487,9 +487,9 @@ class SalesService:
             shipping_reference=getattr(data, "shipping_reference", None) if delivery_method == "shipping" else None,
             total_amount=grand_total,
             delivered=False,
-            paid=False,
+            paid=mark_paid,
             delivered_amount=Decimal("0.00"),
-            paid_amount=Decimal("0.00"),
+            paid_amount=grand_total if mark_paid else Decimal("0.00"),
         )
         self.db.add(sale)
         self.db.flush()
@@ -502,7 +502,7 @@ class SalesService:
                 color=item["color"],
                 quantity=item["quantity"],
                 delivered_quantity=0,
-                is_paid=False,
+                is_paid=mark_paid,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
             ))
@@ -516,7 +516,7 @@ class SalesService:
                 color=None,
                 quantity=1,
                 delivered_quantity=0,
-                is_paid=False,
+                is_paid=mark_paid,
                 unit_price=shipping_cost,
                 total_price=shipping_cost,
             ))
