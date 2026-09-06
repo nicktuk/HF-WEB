@@ -372,7 +372,7 @@ function CarritoPageContent() {
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
       <PublicHeader />
 
-      <main className={`container mx-auto px-4 py-6 pb-16 ${step === 'checkout' ? 'max-w-7xl' : 'max-w-2xl'}`}>
+      <main className={`container mx-auto px-4 py-6 pb-16 ${step === 'success' ? 'max-w-2xl' : 'max-w-7xl'}`}>
         <Stepper step={step} />
 
         {step === 'checkout' ? (
@@ -393,7 +393,9 @@ function CarritoPageContent() {
               {/* Productos */}
               <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden divide-y divide-zinc-100">
                 {items.map(item => {
-                  const primaryImage = item.product.images.find(img => img.is_primary) || item.product.images[0];
+                  const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
+                    || item.product.images.find(img => img.is_primary)
+                    || item.product.images[0];
                   const linePrice = isCard && item.product.installments_3 && item.product.installment_price
                     ? item.product.installment_price * 3
                     : (item.product.price ?? 0);
@@ -632,7 +634,9 @@ function CarritoPageContent() {
 
                 <div className="space-y-3">
                   {items.map(item => {
-                    const primaryImage = item.product.images.find(img => img.is_primary) || item.product.images[0];
+                    const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
+                      || item.product.images.find(img => img.is_primary)
+                      || item.product.images[0];
                     return (
                       <div key={item.id} className="flex items-center gap-3">
                         {primaryImage ? (
@@ -721,27 +725,23 @@ function CarritoPageContent() {
               </div>
             </aside>
           </div>
-        ) : (
-        <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
-          {/* ── Header interno ── */}
-          <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
-            <ShoppingCart className="h-5 w-5 text-primary-600" />
-            <h1 className="font-bold text-lg text-zinc-900">
-              {step === 'cart' ? (isBuyNow ? 'Confirmá tu compra' : 'Tu pedido') : '¡Pedido confirmado!'}
-            </h1>
-            {step === 'cart' && items.length > 0 && (
-              <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
-            )}
-            {step === 'cart' && (
-              <Link href="/" className="ml-auto text-xs font-semibold text-zinc-400 hover:text-zinc-600 transition-colors">
-                Seguir comprando
-              </Link>
-            )}
-          </div>
+        ) : step === 'cart' ? (
+          <div className="lg:grid lg:grid-cols-[1fr_440px] lg:gap-8 lg:items-start">
+            {/* ── LEFT: productos ── */}
+            <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
+              <div className="flex items-center gap-2 px-5 sm:px-6 py-4 border-b">
+                <ShoppingCart className="h-5 w-5 text-primary-600" />
+                <h1 className="text-lg font-bold text-zinc-900">
+                  {isBuyNow ? 'Confirmá tu compra' : 'Tu pedido'}
+                </h1>
+                {items.length > 0 && (
+                  <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
+                )}
+                <Link href="/" className="ml-auto text-xs font-semibold text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Seguir comprando
+                </Link>
+              </div>
 
-          {/* ── STEP: cart ── */}
-          {step === 'cart' && (
-            <>
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 text-zinc-400 px-4 py-16">
                   <ShoppingCart className="h-16 w-16 opacity-20" />
@@ -753,46 +753,48 @@ function CarritoPageContent() {
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {items.map(item => {
-                    const primaryImage = item.product.images.find(img => img.is_primary) || item.product.images[0];
+                    const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
+                      || item.product.images.find(img => img.is_primary)
+                      || item.product.images[0];
                     const linePrice = isCard && item.product.installments_3 && item.product.installment_price
                       ? item.product.installment_price * 3
                       : (item.product.price ?? 0);
                     return (
-                      <li key={item.id} className="flex gap-3 px-4 sm:px-6 py-3">
+                      <li key={item.id} className="flex gap-4 px-5 sm:px-6 py-4">
                         {primaryImage ? (
-                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
-                            <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="64px" />
+                          <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                            <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="80px" />
                           </div>
                         ) : (
-                          <div className="w-16 h-16 rounded-lg bg-zinc-100 shrink-0" />
+                          <div className="w-20 h-20 rounded-lg bg-zinc-100 shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                          <p className="text-base font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
                           {item.color && (
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="w-3 h-3 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
-                              {item.colorName && <span className="text-[11px] text-zinc-400">{item.colorName}</span>}
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
+                              {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
                             </div>
                           )}
                           {isCard && item.product.installments_3 && item.product.installment_price && (
-                            <p className="text-[11px] text-teal-600 font-semibold mt-0.5">
+                            <p className="text-xs text-teal-600 font-semibold mt-1">
                               3 cuotas de {formatPrice(item.product.installment_price)} c/u
                             </p>
                           )}
-                          <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center gap-1.5">
-                              <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
-                                <Minus className="h-3 w-3 text-zinc-600" />
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-7 h-7 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
+                                <Minus className="h-3.5 w-3.5 text-zinc-600" />
                               </button>
                               <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
-                              <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-6 h-6 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
-                                <Plus className="h-3 w-3 text-zinc-600" />
+                              <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-7 h-7 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
+                                <Plus className="h-3.5 w-3.5 text-zinc-600" />
                               </button>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(linePrice * item.quantity)}</span>
-                              <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
-                                <Trash2 className="h-3.5 w-3.5" />
+                              <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
@@ -802,14 +804,18 @@ function CarritoPageContent() {
                   })}
                 </ul>
               )}
+            </div>
 
-              {items.length > 0 && (
-                <div className="border-t px-4 sm:px-6 py-4 space-y-3 bg-zinc-50">
-                  {/* Total */}
+            {/* ── RIGHT: resumen + acciones, sticky ── */}
+            {items.length > 0 && (
+              <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
+                <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-6 space-y-5">
+                  <h2 className="text-lg font-bold text-zinc-900">Resumen de compra</h2>
+
                   <div className="flex items-start justify-between">
                     <span className="text-sm text-zinc-500 mt-1">Total</span>
                     <div className="text-right">
-                      <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
+                      <span className="text-3xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
                       {deliveryMethod === 'shipping' && (
                         <p className="text-xs text-zinc-400">
                           {shippingCost > 0
@@ -824,14 +830,14 @@ function CarritoPageContent() {
                   </div>
 
                   {/* Forma de entrega */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 border-t border-zinc-100 pt-4">
                     <div className="flex items-center gap-1.5">
                       <SectionDot done={deliveryReady} />
                       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo lo recibís?</p>
                     </div>
 
                     {shippingMinPurchase > 0 && !shippingReady && (
-                      <div className="rounded-xl border border-zinc-200 bg-white px-3 py-3 space-y-1.5">
+                      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 space-y-1.5">
                         <div className="flex items-center justify-between gap-2 text-xs">
                           <span className="font-semibold text-zinc-600">
                             Te faltan {formatPrice(shippingMissing)} para poder elegir envío
@@ -952,38 +958,42 @@ function CarritoPageContent() {
                     {isBuyNow ? 'Cancelar compra' : 'Vaciar carrito'}
                   </button>
                 </div>
-              )}
-            </>
-          )}
+              </aside>
+            )}
+          </div>
+        ) : (
+        <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
+            <ShoppingCart className="h-5 w-5 text-primary-600" />
+            <h1 className="font-bold text-lg text-zinc-900">¡Pedido confirmado!</h1>
+          </div>
 
           {/* ── STEP: success ── */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center gap-5 px-6 py-16 text-center">
-              <div className="flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50">
-                <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-xl font-bold text-zinc-900">¡Pedido recibido!</h2>
-                {orderId && (
-                  <p className="text-sm text-zinc-500">
-                    Pedido <span className="font-bold text-zinc-800">#{orderId}</span>
-                  </p>
-                )}
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  {isCard
-                    ? <>¡Tu pago fue procesado! Te contactaremos al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega.</>
-                    : <>Te vamos a contactar al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega y el pago.</>
-                  }
-                </p>
-              </div>
-              <button
-                onClick={handleFinish}
-                className="w-full max-w-xs rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3.5 transition-all"
-              >
-                Seguir comprando
-              </button>
+          <div className="flex flex-col items-center justify-center gap-5 px-6 py-16 text-center">
+            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500" />
             </div>
-          )}
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-zinc-900">¡Pedido recibido!</h2>
+              {orderId && (
+                <p className="text-sm text-zinc-500">
+                  Pedido <span className="font-bold text-zinc-800">#{orderId}</span>
+                </p>
+              )}
+              <p className="text-sm text-zinc-500 leading-relaxed">
+                {isCard
+                  ? <>¡Tu pago fue procesado! Te contactaremos al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega.</>
+                  : <>Te vamos a contactar al <span className="font-semibold text-zinc-700">{form.phone}</span> para coordinar la entrega y el pago.</>
+                }
+              </p>
+            </div>
+            <button
+              onClick={handleFinish}
+              className="w-full max-w-xs rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3.5 transition-all"
+            >
+              Seguir comprando
+            </button>
+          </div>
         </div>
         )}
       </main>
