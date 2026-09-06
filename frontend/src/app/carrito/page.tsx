@@ -391,7 +391,7 @@ function CarritoPageContent() {
               </div>
 
               {/* Productos */}
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden divide-y divide-zinc-100">
+              <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden divide-y divide-zinc-100">
                 {items.map(item => {
                   const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
                     || item.product.images.find(img => img.is_primary)
@@ -400,33 +400,33 @@ function CarritoPageContent() {
                     ? item.product.installment_price * 3
                     : (item.product.price ?? 0);
                   return (
-                    <div key={item.id} className="flex gap-4 px-5 sm:px-6 py-4">
+                    <div key={item.id} className="flex gap-4 lg:gap-5 px-5 sm:px-6 py-4 lg:py-5">
                       {primaryImage ? (
-                        <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
-                          <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="80px" />
+                        <div className="relative w-20 h-20 lg:w-28 lg:h-28 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                          <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="(min-width: 1024px) 112px, 80px" />
                         </div>
                       ) : (
-                        <div className="w-20 h-20 rounded-lg bg-zinc-100 shrink-0" />
+                        <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-lg bg-zinc-100 shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                        <p className="text-base lg:text-lg font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
                         {item.color && (
                           <div className="flex items-center gap-1.5 mt-1">
                             <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
-                            {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
+                            {item.colorName && <span className="text-xs lg:text-sm text-zinc-500">{item.colorName}</span>}
                           </div>
                         )}
-                        <p className="text-xs text-zinc-400 mt-1">Cantidad: {item.quantity}</p>
+                        <p className="text-xs lg:text-sm text-zinc-400 mt-1">Cantidad: {item.quantity}</p>
                       </div>
-                      <span className="text-sm font-bold text-zinc-800 tabular-nums shrink-0">{formatPrice(linePrice * item.quantity)}</span>
+                      <span className="text-sm lg:text-base font-bold text-zinc-800 tabular-nums shrink-0">{formatPrice(linePrice * item.quantity)}</span>
                     </div>
                   );
                 })}
               </div>
 
               {/* Forma de entrega */}
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-5 sm:p-6 space-y-3">
-                <h2 className="text-lg font-bold text-zinc-900">Forma de entrega</h2>
+              <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden p-5 sm:p-6 space-y-3">
+                <h2 className="text-lg lg:text-xl font-bold text-zinc-900">Forma de entrega</h2>
                 <div className="flex gap-2 border-b border-zinc-100">
                   <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b-2 border-primary-600 text-sm font-semibold text-primary-700">
                     {deliveryMethod === 'agreement' ? <MessageCircle className="h-4 w-4" /> : <Truck className="h-4 w-4" />}
@@ -549,8 +549,8 @@ function CarritoPageContent() {
               </div>
 
               {/* Tus datos */}
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-5 sm:p-6 space-y-3">
-                <h2 className="text-lg font-bold text-zinc-900">Tus datos</h2>
+              <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden p-5 sm:p-6 space-y-3">
+                <h2 className="text-lg lg:text-xl font-bold text-zinc-900">Tus datos</h2>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -629,39 +629,10 @@ function CarritoPageContent() {
 
             {/* ── RIGHT: resumen fijo ── */}
             <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-6 space-y-5">
-                <h2 className="text-lg font-bold text-zinc-900">Resumen de compra</h2>
+              <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 p-6 lg:p-7 space-y-5">
+                <h2 className="text-lg lg:text-xl font-bold text-zinc-900">Resumen de compra</h2>
 
-                <div className="space-y-3">
-                  {items.map(item => {
-                    const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
-                      || item.product.images.find(img => img.is_primary)
-                      || item.product.images[0];
-                    return (
-                      <div key={item.id} className="flex items-center gap-3">
-                        {primaryImage ? (
-                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
-                            <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="64px" />
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-lg bg-zinc-100 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
-                          {item.color && (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
-                              {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
-                            </div>
-                          )}
-                          <p className="text-xs text-zinc-400 mt-0.5">Cantidad: {item.quantity}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <dl className="space-y-2 text-sm border-t border-zinc-100 pt-4">
+                <dl className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <dt className="text-zinc-500">{items.length === 1 ? 'Producto' : 'Productos'}</dt>
                     <dd className="font-semibold text-zinc-800 tabular-nums">{formatPrice(displayTotal)}</dd>
@@ -727,113 +698,94 @@ function CarritoPageContent() {
           </div>
         ) : step === 'cart' ? (
           <div className="lg:grid lg:grid-cols-[1fr_440px] lg:gap-8 lg:items-start">
-            {/* ── LEFT: productos ── */}
-            <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
-              <div className="flex items-center gap-2 px-5 sm:px-6 py-4 border-b">
-                <ShoppingCart className="h-5 w-5 text-primary-600" />
-                <h1 className="text-lg font-bold text-zinc-900">
-                  {isBuyNow ? 'Confirmá tu compra' : 'Tu pedido'}
-                </h1>
-                {items.length > 0 && (
-                  <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
-                )}
-                <Link href="/" className="ml-auto text-xs font-semibold text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Seguir comprando
-                </Link>
-              </div>
-
-              {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 text-zinc-400 px-4 py-16">
-                  <ShoppingCart className="h-16 w-16 opacity-20" />
-                  <p className="font-medium">{isBuyNow ? 'No hay ningún producto seleccionado' : 'Tu carrito está vacío'}</p>
-                  <Link href="/" className="text-sm text-primary-600 font-semibold hover:underline">
-                    Ir al catálogo
+            {/* ── LEFT: todo lo seleccionable ── */}
+            <div className="space-y-6">
+              {/* Productos */}
+              <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden">
+                <div className="flex items-center gap-2 px-5 sm:px-6 py-4 border-b">
+                  <ShoppingCart className="h-5 w-5 text-primary-600" />
+                  <h1 className="text-lg lg:text-xl font-bold text-zinc-900">
+                    {isBuyNow ? 'Confirmá tu compra' : 'Tu pedido'}
+                  </h1>
+                  {items.length > 0 && (
+                    <span className="text-sm text-zinc-500">({items.length} {items.length === 1 ? 'producto' : 'productos'})</span>
+                  )}
+                  <Link href="/" className="ml-auto text-xs font-semibold text-zinc-400 hover:text-zinc-600 transition-colors">
+                    Seguir comprando
                   </Link>
                 </div>
-              ) : (
-                <ul className="divide-y divide-zinc-100">
-                  {items.map(item => {
-                    const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
-                      || item.product.images.find(img => img.is_primary)
-                      || item.product.images[0];
-                    const linePrice = isCard && item.product.installments_3 && item.product.installment_price
-                      ? item.product.installment_price * 3
-                      : (item.product.price ?? 0);
-                    return (
-                      <li key={item.id} className="flex gap-4 px-5 sm:px-6 py-4">
-                        {primaryImage ? (
-                          <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
-                            <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="80px" />
-                          </div>
-                        ) : (
-                          <div className="w-20 h-20 rounded-lg bg-zinc-100 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-base font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
-                          {item.color && (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
-                              {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
-                            </div>
-                          )}
-                          {isCard && item.product.installments_3 && item.product.installment_price && (
-                            <p className="text-xs text-teal-600 font-semibold mt-1">
-                              3 cuotas de {formatPrice(item.product.installment_price)} c/u
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex items-center gap-1.5">
-                              <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-7 h-7 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
-                                <Minus className="h-3.5 w-3.5 text-zinc-600" />
-                              </button>
-                              <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
-                              <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-7 h-7 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
-                                <Plus className="h-3.5 w-3.5 text-zinc-600" />
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(linePrice * item.quantity)}</span>
-                              <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
 
-            {/* ── RIGHT: resumen + acciones, sticky ── */}
-            {items.length > 0 && (
-              <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
-                <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-6 space-y-5">
-                  <h2 className="text-lg font-bold text-zinc-900">Resumen de compra</h2>
-
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-zinc-500 mt-1">Total</span>
-                    <div className="text-right">
-                      <span className="text-3xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
-                      {deliveryMethod === 'shipping' && (
-                        <p className="text-xs text-zinc-400">
-                          {shippingCost > 0
-                            ? `Incluye envío ${formatPrice(shippingCost)}`
-                            : '+ envío, según tu código postal'}
-                        </p>
-                      )}
-                      {installmentPerPeriod && (
-                        <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
-                      )}
-                    </div>
+                {items.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 text-zinc-400 px-4 py-16">
+                    <ShoppingCart className="h-16 w-16 opacity-20" />
+                    <p className="font-medium">{isBuyNow ? 'No hay ningún producto seleccionado' : 'Tu carrito está vacío'}</p>
+                    <Link href="/" className="text-sm text-primary-600 font-semibold hover:underline">
+                      Ir al catálogo
+                    </Link>
                   </div>
+                ) : (
+                  <ul className="divide-y divide-zinc-100">
+                    {items.map(item => {
+                      const primaryImage = (item.color && item.product.images.find(img => img.color === item.color))
+                        || item.product.images.find(img => img.is_primary)
+                        || item.product.images[0];
+                      const linePrice = isCard && item.product.installments_3 && item.product.installment_price
+                        ? item.product.installment_price * 3
+                        : (item.product.price ?? 0);
+                      return (
+                        <li key={item.id} className="flex gap-4 lg:gap-5 px-5 sm:px-6 py-4 lg:py-5">
+                          {primaryImage ? (
+                            <div className="relative w-20 h-20 lg:w-28 lg:h-28 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                              <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="(min-width: 1024px) 112px, 80px" />
+                            </div>
+                          ) : (
+                            <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-lg bg-zinc-100 shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base lg:text-lg font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                            {item.color && (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
+                                {item.colorName && <span className="text-xs lg:text-sm text-zinc-500">{item.colorName}</span>}
+                              </div>
+                            )}
+                            {isCard && item.product.installments_3 && item.product.installment_price && (
+                              <p className="text-xs lg:text-sm text-teal-600 font-semibold mt-1">
+                                3 cuotas de {formatPrice(item.product.installment_price)} c/u
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between mt-3">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Reducir cantidad">
+                                  <Minus className="h-3.5 w-3.5 text-zinc-600" />
+                                </button>
+                                <span className="w-6 text-center text-sm lg:text-base font-bold tabular-nums">{item.quantity}</span>
+                                <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-full border border-zinc-200 hover:bg-zinc-100 transition-colors" aria-label="Aumentar cantidad">
+                                  <Plus className="h-3.5 w-3.5 text-zinc-600" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm lg:text-base font-bold text-zinc-800 tabular-nums">{formatPrice(linePrice * item.quantity)}</span>
+                                <button onClick={() => handleRemoveItem(item.id)} className="flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors text-zinc-300" aria-label="Eliminar producto">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
 
+              {items.length > 0 && (
+                <>
                   {/* Forma de entrega */}
-                  <div className="space-y-2 border-t border-zinc-100 pt-4">
+                  <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden p-5 sm:p-6 lg:p-7 space-y-3">
                     <div className="flex items-center gap-1.5">
                       <SectionDot done={deliveryReady} />
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo lo recibís?</p>
+                      <h2 className="text-lg lg:text-xl font-bold text-zinc-900">¿Cómo lo recibís?</h2>
                     </div>
 
                     {shippingMinPurchase > 0 && !shippingReady && (
@@ -854,14 +806,14 @@ function CarritoPageContent() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => {
                           if (!canChooseShipping) return;
                           setDeliveryMethod(deliveryMethod === 'shipping' ? null : 'shipping');
                         }}
                         disabled={!canChooseShipping}
-                        className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center gap-1.5 px-3 py-3 lg:py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
                           !canChooseShipping
                             ? 'bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed'
                             : deliveryMethod === 'shipping'
@@ -869,43 +821,43 @@ function CarritoPageContent() {
                             : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
                         }`}
                       >
-                        <Truck className="h-4 w-4" />
+                        <Truck className="h-5 w-5" />
                         <span className="leading-tight text-center">Con envío</span>
                       </button>
                       <button
                         onClick={() => setDeliveryMethod('agreement')}
-                        className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center gap-1.5 px-3 py-3 lg:py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
                           deliveryMethod === 'agreement'
                             ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
                             : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
                         }`}
                       >
-                        <MessageCircle className="h-4 w-4" />
+                        <MessageCircle className="h-5 w-5" />
                         <span className="leading-tight text-center">Acuerdo de envío</span>
                       </button>
                     </div>
 
                     {deliveryMethod === 'shipping' && (
-                      <p className="text-[11px] text-zinc-400 px-1">
+                      <p className="text-xs text-zinc-400 px-1">
                         El costo de envío se calcula según el código postal que cargues en el paso siguiente.
                       </p>
                     )}
 
                     {deliveryMethod === 'agreement' && (
-                      <p className="text-[11px] text-zinc-400 px-1">Pagás los productos ahora; coordinamos el envío y su costo por WhatsApp.</p>
+                      <p className="text-xs text-zinc-400 px-1">Pagás los productos ahora; coordinamos el envío y su costo por WhatsApp.</p>
                     )}
                   </div>
 
                   {/* Forma de cobro — solo 2 opciones */}
-                  <div className="space-y-2">
+                  <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden p-5 sm:p-6 lg:p-7 space-y-3">
                     <div className="flex items-center gap-1.5">
                       <SectionDot done={!!paymentFlow} />
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">¿Cómo vas a pagar?</p>
+                      <h2 className="text-lg lg:text-xl font-bold text-zinc-900">¿Cómo vas a pagar?</h2>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => setPaymentFlow(paymentFlow === 'card' ? null : 'card')}
-                        className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        className={`flex flex-col items-center gap-1.5 px-3 py-3 lg:py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
                           paymentFlow === 'card'
                             ? 'bg-[#009ee3] border-[#009ee3] text-white shadow-sm'
                             : 'bg-white border-zinc-200 text-zinc-700 hover:border-[#009ee3]/40 hover:bg-[#009ee3]/5'
@@ -916,7 +868,7 @@ function CarritoPageContent() {
                       </button>
                       <button
                         onClick={() => setPaymentFlow(paymentFlow === 'cash' ? null : 'cash')}
-                        className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        className={`flex flex-col items-center gap-1.5 px-3 py-3 lg:py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
                           paymentFlow === 'cash'
                             ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
                             : 'bg-white border-zinc-200 text-zinc-700 hover:border-primary-300 hover:bg-primary-50'
@@ -925,6 +877,61 @@ function CarritoPageContent() {
                         <Banknote className="h-5 w-5" />
                         <span className="leading-tight text-center">Efectivo / Transferencia</span>
                       </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (isBuyNow) {
+                        clearBuyNowItem();
+                        setBuyNowItemState(null);
+                        router.push('/');
+                      } else {
+                        clearCart();
+                      }
+                    }}
+                    className="text-xs text-zinc-400 hover:text-rose-500 transition-colors"
+                  >
+                    {isBuyNow ? 'Cancelar compra' : 'Vaciar carrito'}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── RIGHT: resumen simple, sticky ── */}
+            {items.length > 0 && (
+              <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
+                <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 p-6 lg:p-7 space-y-5">
+                  <h2 className="text-lg lg:text-xl font-bold text-zinc-900">Resumen de compra</h2>
+
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <dt className="text-zinc-500">{items.length === 1 ? 'Producto' : 'Productos'}</dt>
+                      <dd className="font-semibold text-zinc-800 tabular-nums">{formatPrice(displayTotal)}</dd>
+                    </div>
+                    {deliveryMethod === 'shipping' && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-zinc-500">Envío</dt>
+                        <dd className="font-semibold text-zinc-800 tabular-nums">
+                          {shippingCost > 0 ? formatPrice(shippingCost) : 'A calcular'}
+                        </dd>
+                      </div>
+                    )}
+                    {deliveryMethod === 'agreement' && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-zinc-500">Envío</dt>
+                        <dd className="text-zinc-400 text-xs">A coordinar</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  <div className="border-t border-zinc-100 pt-4 flex items-start justify-between">
+                    <span className="text-sm font-semibold text-zinc-700 mt-1">Total</span>
+                    <div className="text-right">
+                      <span className="text-3xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
+                      {installmentPerPeriod && (
+                        <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
+                      )}
                     </div>
                   </div>
 
@@ -942,27 +949,12 @@ function CarritoPageContent() {
                   >
                     Realizar pedido
                   </button>
-
-                  <button
-                    onClick={() => {
-                      if (isBuyNow) {
-                        clearBuyNowItem();
-                        setBuyNowItemState(null);
-                        router.push('/');
-                      } else {
-                        clearCart();
-                      }
-                    }}
-                    className="w-full text-xs text-zinc-400 hover:text-rose-500 transition-colors py-1 border-t border-zinc-200 pt-2"
-                  >
-                    {isBuyNow ? 'Cancelar compra' : 'Vaciar carrito'}
-                  </button>
                 </div>
               </aside>
             )}
           </div>
         ) : (
-        <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden">
+        <div className="rounded-2xl bg-zinc-50 shadow-sm border border-zinc-200 overflow-hidden">
           <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b">
             <ShoppingCart className="h-5 w-5 text-primary-600" />
             <h1 className="font-bold text-lg text-zinc-900">¡Pedido confirmado!</h1>
