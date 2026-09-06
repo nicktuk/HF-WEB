@@ -372,13 +372,13 @@ function CarritoPageContent() {
     <div className="min-h-screen" style={{ backgroundColor: '#e0f2fe' }}>
       <PublicHeader />
 
-      <main className={`container mx-auto px-4 py-6 pb-16 ${step === 'checkout' ? 'max-w-5xl' : 'max-w-2xl'}`}>
+      <main className={`container mx-auto px-4 py-6 pb-16 ${step === 'checkout' ? 'max-w-7xl' : 'max-w-2xl'}`}>
         <Stepper step={step} />
 
         {step === 'checkout' ? (
-          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
+          <div className="lg:grid lg:grid-cols-[1fr_440px] lg:gap-8 lg:items-start">
             {/* ── LEFT: form ── */}
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setStep('cart')}
@@ -398,20 +398,23 @@ function CarritoPageContent() {
                     ? item.product.installment_price * 3
                     : (item.product.price ?? 0);
                   return (
-                    <div key={item.id} className="flex gap-3 px-4 sm:px-5 py-3.5">
+                    <div key={item.id} className="flex gap-4 px-5 sm:px-6 py-4">
                       {primaryImage ? (
-                        <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
-                          <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="56px" />
+                        <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                          <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="80px" />
                         </div>
                       ) : (
-                        <div className="w-14 h-14 rounded-lg bg-zinc-100 shrink-0" />
+                        <div className="w-20 h-20 rounded-lg bg-zinc-100 shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
-                        {item.color && item.colorName && (
-                          <p className="text-xs text-zinc-400 mt-0.5">Color: {item.colorName}</p>
+                        <p className="text-base font-semibold text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                        {item.color && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
+                            {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
+                          </div>
                         )}
-                        <p className="text-xs text-zinc-400 mt-0.5">Cantidad: {item.quantity}</p>
+                        <p className="text-xs text-zinc-400 mt-1">Cantidad: {item.quantity}</p>
                       </div>
                       <span className="text-sm font-bold text-zinc-800 tabular-nums shrink-0">{formatPrice(linePrice * item.quantity)}</span>
                     </div>
@@ -420,8 +423,8 @@ function CarritoPageContent() {
               </div>
 
               {/* Forma de entrega */}
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-4 sm:p-5 space-y-3">
-                <h2 className="font-bold text-zinc-900">Forma de entrega</h2>
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-5 sm:p-6 space-y-3">
+                <h2 className="text-lg font-bold text-zinc-900">Forma de entrega</h2>
                 <div className="flex gap-2 border-b border-zinc-100">
                   <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b-2 border-primary-600 text-sm font-semibold text-primary-700">
                     {deliveryMethod === 'agreement' ? <MessageCircle className="h-4 w-4" /> : <Truck className="h-4 w-4" />}
@@ -544,8 +547,8 @@ function CarritoPageContent() {
               </div>
 
               {/* Tus datos */}
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-4 sm:p-5 space-y-3">
-                <h2 className="font-bold text-zinc-900">Tus datos</h2>
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 overflow-hidden p-5 sm:p-6 space-y-3">
+                <h2 className="text-lg font-bold text-zinc-900">Tus datos</h2>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -624,10 +627,37 @@ function CarritoPageContent() {
 
             {/* ── RIGHT: resumen fijo ── */}
             <aside className="mt-5 lg:mt-0 lg:sticky lg:top-6">
-              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-5 space-y-4">
-                <h2 className="font-bold text-zinc-900">Resumen de compra</h2>
+              <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 p-6 space-y-5">
+                <h2 className="text-lg font-bold text-zinc-900">Resumen de compra</h2>
 
-                <dl className="space-y-2 text-sm">
+                <div className="space-y-3">
+                  {items.map(item => {
+                    const primaryImage = item.product.images.find(img => img.is_primary) || item.product.images[0];
+                    return (
+                      <div key={item.id} className="flex items-center gap-3">
+                        {primaryImage ? (
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-50 border shrink-0">
+                            <Image src={resolveImageUrl(primaryImage.url) ?? primaryImage.url} alt={item.product.name} fill className="object-contain" sizes="64px" />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-zinc-100 shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 line-clamp-2 leading-snug">{item.product.name}</p>
+                          {item.color && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-zinc-200 shrink-0" style={{ backgroundColor: item.color }} />
+                              {item.colorName && <span className="text-xs text-zinc-500">{item.colorName}</span>}
+                            </div>
+                          )}
+                          <p className="text-xs text-zinc-400 mt-0.5">Cantidad: {item.quantity}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <dl className="space-y-2 text-sm border-t border-zinc-100 pt-4">
                   <div className="flex items-center justify-between">
                     <dt className="text-zinc-500">{items.length === 1 ? 'Producto' : 'Productos'}</dt>
                     <dd className="font-semibold text-zinc-800 tabular-nums">{formatPrice(displayTotal)}</dd>
@@ -648,10 +678,10 @@ function CarritoPageContent() {
                   )}
                 </dl>
 
-                <div className="border-t border-zinc-100 pt-3 flex items-start justify-between">
+                <div className="border-t border-zinc-100 pt-4 flex items-start justify-between">
                   <span className="text-sm font-semibold text-zinc-700 mt-1">Total</span>
                   <div className="text-right">
-                    <span className="text-2xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
+                    <span className="text-3xl font-extrabold text-zinc-900 tabular-nums">{formatPrice(grandTotal)}</span>
                     {installmentPerPeriod && (
                       <p className="text-xs text-teal-600 font-semibold">3 cuotas de {formatPrice(installmentPerPeriod)}</p>
                     )}
