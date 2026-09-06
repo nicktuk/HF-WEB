@@ -95,6 +95,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     if (match) setSelectedImage(match);
   };
 
+  // Sync color selection to whatever image is showing (gallery drives color too)
+  const handleSelectImage = (image: ProductImage) => {
+    setSelectedImage(image);
+    if (image.color && image.color !== selectedColor) {
+      setSelectedColor(image.color);
+    }
+  };
+
   const sortedImages = hideOutOfStockColors
     ? (product?.images ?? []).filter(img => !img.color || (colorStockMap[img.color] ?? 0) > 0)
     : (product?.images ?? []);
@@ -103,13 +111,13 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   const goToPrev = () => {
     if (sortedImages.length < 2) return;
     const prev = (currentIndex - 1 + sortedImages.length) % sortedImages.length;
-    setSelectedImage(sortedImages[prev]);
+    handleSelectImage(sortedImages[prev]);
   };
 
   const goToNext = () => {
     if (sortedImages.length < 2) return;
     const next = (currentIndex + 1) % sortedImages.length;
-    setSelectedImage(sortedImages[next]);
+    handleSelectImage(sortedImages[next]);
   };
 
   const swipeStartX = useRef<number | null>(null);
@@ -264,7 +272,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                     {sortedImages.map((_, i) => (
                       <button
                         key={i}
-                        onClick={() => setSelectedImage(sortedImages[i])}
+                        onClick={() => handleSelectImage(sortedImages[i])}
                         className={`h-1.5 rounded-full transition-all ${
                           i === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-gray-400/70 hover:bg-gray-600'
                         }`}
@@ -282,7 +290,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 {sortedImages.map((image, index) => (
                   <button
                     key={image.id}
-                    onClick={() => setSelectedImage(image)}
+                    onClick={() => handleSelectImage(image)}
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                       selectedImage?.id === image.id ? 'border-primary-500' : 'border-gray-200 hover:border-gray-300'
                     }`}
