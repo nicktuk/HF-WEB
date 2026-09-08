@@ -101,9 +101,9 @@ class Product(Base):
     def final_price(self) -> int | None:
         """Calcula el precio final con markup o precio custom, redondeado hacia arriba."""
         import math
-        if self.custom_price is not None:
+        if self.custom_price is not None and float(self.custom_price) > 0:
             return math.ceil(float(self.custom_price))
-        if self.original_price is not None:
+        if self.original_price is not None and float(self.original_price) > 0:
             price = float(self.original_price) * (1 + float(self.markup_percentage) / 100)
             return math.ceil(price)
         return None
