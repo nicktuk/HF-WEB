@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useApiKey } from '@/hooks/useAuth'
+import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
@@ -56,6 +57,8 @@ export default function ComerciosAdminPage() {
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroSearch, setFiltroSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [otpResult, setOtpResult] = useState<{ nombreLocal: string; otp: string } | null>(null)
+  const [copiado, setCopiado] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!apiKey) return
@@ -104,12 +107,23 @@ export default function ComerciosAdminPage() {
     const res = await apiFetch(`/admin/comercios/${id}/asignar-otp`, apiKey, { method: 'POST' })
     if (res.ok) {
       const data = await res.json() as { otp: string }
-      alert(`Contraseña temporal: ${data.otp}\n\nComunicásela al comercio por WhatsApp — no se vuelve a mostrar.`)
+      setCopiado(false)
+      setOtpResult({ nombreLocal, otp: data.otp })
     } else {
       alert('No se pudo asignar la contraseña temporal.')
     }
     await fetchData()
     setUpdatingId(null)
+  }
+
+  async function copiarOtp(otp: string) {
+    try {
+      await navigator.clipboard.writeText(otp)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // Sin permiso de clipboard: el usuario igual puede seleccionar el texto del input.
+    }
   }
 
   return (
@@ -251,6 +265,42 @@ export default function ComerciosAdminPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        isOpen={otpResult !== null}
+        onClose={() => setOtpResult(null)}
+        title="Contraseña temporal asignada"
+        size="sm"
+      >
+        <ModalContent className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Comunicásela a <strong>{otpResult?.nombreLocal}</strong> por WhatsApp — no se vuelve a mostrar.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={otpResult?.otp ?? ''}
+              onFocus={e => e.target.select()}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider text-center focus:outline-none focus:ring-2 focus:ring-gray-300"
+            />
+            <button
+              onClick={() => otpResult && copiarOtp(otpResult.otp)}
+              className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {copiado ? 'Copiado ✓' : 'Copiar'}
+            </button>
+          </div>
+        </ModalContent>
+        <ModalFooter>
+          <button
+            onClick={() => setOtpResult(null)}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+          >
+            Cerrar
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
