@@ -73,11 +73,11 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`, filter: 'blur(10px)', opacity: 0.12 * theme.glowOpacity }}
       />
 
-      <div className="relative max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-8 lg:py-12">
+      <div className="relative max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 pt-4 pb-8 lg:pt-5 lg:pb-12">
 
         {montoMinimo > 0 && (
           <div
-            className="mb-6 rounded-2xl px-5 py-3 text-sm"
+            className="mb-4 rounded-2xl px-5 py-3 text-sm"
             style={{ backgroundColor: theme.accentTint(0.1), border: `1.5px solid ${theme.accentTint(0.3)}`, color: theme.accent }}
           >
             Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
@@ -85,7 +85,7 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
         )}
 
         {/* Filtros */}
-        <div className="flex flex-wrap gap-3 mb-10 lg:mb-14">
+        <div className="flex flex-wrap gap-3 mb-4 lg:mb-6">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: theme.textFaint }} />
             <input
@@ -147,32 +147,31 @@ function CarouselRow({
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg lg:text-xl font-bold" style={{ color: theme.textPrimary }}>{title}</h2>
-        <div className="hidden sm:flex items-center gap-2">
-          <button
-            onClick={() => scrollBy(-560)}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-            style={{ backgroundColor: theme.inputBg, border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-            aria-label="Anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => scrollBy(560)}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-            style={{ backgroundColor: theme.inputBg, border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-            aria-label="Siguiente"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      <h2 className="text-lg lg:text-xl font-bold mb-4" style={{ color: theme.textPrimary }}>{title}</h2>
 
-      <div ref={scrollerRef} className="flex gap-4 lg:gap-5 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
-        {productos.map(p => (
-          <ProductCard key={p.id} producto={p} onAdd={onAdd} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} />
-        ))}
+      <div className="relative">
+        <div ref={scrollerRef} className="flex gap-4 lg:gap-5 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
+          {productos.map(p => (
+            <ProductCard key={p.id} producto={p} onAdd={onAdd} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} />
+          ))}
+        </div>
+
+        <button
+          onClick={() => scrollBy(-560)}
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center shadow-lg opacity-90 hover:opacity-100 transition-opacity backdrop-blur-sm"
+          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}`, color: theme.textPrimary }}
+          aria-label="Anterior"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => scrollBy(560)}
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center shadow-lg opacity-90 hover:opacity-100 transition-opacity backdrop-blur-sm"
+          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}`, color: theme.textPrimary }}
+          aria-label="Siguiente"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
       </div>
     </section>
   )
