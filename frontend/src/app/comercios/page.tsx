@@ -65,12 +65,10 @@ export default function ComerciosLanding() {
       {/* Hero */}
       <section className="header-texture text-white py-16 sm:py-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-3 mb-5">
-            <span className="text-3xl font-black tracking-[0.16em] text-white">HE·FA</span>
-            <span className="text-[10px] uppercase tracking-[0.22em] text-blue-200/70 font-semibold border-l border-white/20 pl-3">
-              Canal Comercios
-            </span>
-          </div>
+          <span className="text-3xl font-black tracking-[0.16em] text-white">HE·FA</span>
+          <p className="text-base sm:text-lg uppercase tracking-[0.35em] font-extrabold text-white mt-2 mb-5">
+            Portal Comercios
+          </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">Precios de mayorista, sin vueltas</h1>
           <p className="text-lg text-blue-100/90 max-w-xl mx-auto">
             Para revendedores y comercios de bazar, hogar y electrodomésticos en zona sur GBA.
