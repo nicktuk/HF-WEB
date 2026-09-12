@@ -1,7 +1,6 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Percent, Headphones, Zap } from 'lucide-react'
 
@@ -24,7 +23,6 @@ const BENEFICIOS = [
 ]
 
 export default function ComerciosLanding() {
-  const router = useRouter()
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +46,11 @@ export default function ComerciosLanding() {
         return
       }
 
-      router.push('/comercios/catalogo')
+      // Navegación dura: el router de Next.js cachea /comercios/catalogo
+      // (staleTimes.dynamic en next.config.js) y un router.push podría
+      // reusar la versión sin sesión ya visitada, mostrando el preview de
+      // nuevo como si el login no hubiera funcionado.
+      window.location.href = '/comercios/catalogo'
     } catch {
       setError('Error de conexión. Intentá de nuevo.')
     } finally {

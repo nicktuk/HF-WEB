@@ -1,7 +1,6 @@
 ﻿'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ShoppingCart, LogOut, ClipboardList } from 'lucide-react'
 import { useComercioCart } from '@/hooks/useComercioCart'
 
@@ -10,12 +9,14 @@ interface Props {
 }
 
 export function ComercioHeader({ nombreLocal }: Props) {
-  const router = useRouter()
   const itemCount = useComercioCart(s => s.itemCount())
 
   async function handleLogout() {
     await fetch('/api/comercios/auth/logout', { method: 'POST' })
-    router.push('/comercios')
+    // Navegación dura: limpia también el router cache del cliente, para que
+    // /comercios/catalogo no quede mostrando una versión con sesión cacheada
+    // (staleTimes.dynamic en next.config.js) después de cerrar sesión.
+    window.location.href = '/comercios'
   }
 
   return (
