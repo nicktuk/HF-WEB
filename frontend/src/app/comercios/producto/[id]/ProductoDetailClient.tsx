@@ -9,7 +9,7 @@ import { useComercioTheme } from '@/hooks/useComercioTheme'
 import { getComercioTheme, getTramoScaleColor } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
-import { getComercioIcon } from '@/lib/comercio-icons'
+import { parseDescripcionConIconos } from '@/lib/comercio-icons'
 import { SavingsBar } from '../../_components/SavingsBar'
 import type { ComercioIconItem } from '@/types'
 
@@ -262,28 +262,26 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
 
             {p.descripcion && (
               <div
-                className="mb-4 rounded-xl px-4 py-3"
+                className="mb-4 rounded-xl px-4 py-3 space-y-2"
                 style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
               >
-                <p className="text-sm whitespace-pre-line" style={{ color: theme.textPrimary }}>{p.descripcion}</p>
-              </div>
-            )}
-
-            {p.iconos && p.iconos.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {p.iconos.map((item, index) => {
-                  const IconComponent = getComercioIcon(item.icon)
-                  return (
-                    <div
-                      key={`${item.icon}-${index}`}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2"
-                      style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-                    >
-                      {IconComponent && <IconComponent className="h-4 w-4 shrink-0" style={{ color: theme.accent }} />}
-                      <p className="text-xs font-medium" style={{ color: theme.textPrimary }}>{item.label}</p>
+                {parseDescripcionConIconos(p.descripcion, p.iconos).map((line, index) =>
+                  line.isBullet ? (
+                    <div key={index} className="flex items-start gap-2">
+                      {line.icon ? (
+                        <line.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.accent }} />
+                      ) : (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full shrink-0 mt-[7px]"
+                          style={{ backgroundColor: theme.textMuted }}
+                        />
+                      )}
+                      <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
                     </div>
+                  ) : (
+                    <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
                   )
-                })}
+                )}
               </div>
             )}
 

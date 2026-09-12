@@ -17,7 +17,7 @@ class ProductComercioImageResponse(BaseModel):
 
 class ComercioIconItem(BaseModel):
     icon: str = Field(..., max_length=40)
-    label: str = Field(..., max_length=60)
+    label: str = Field(..., max_length=200)
 
 
 class ProductComercioConfigUpdate(BaseModel):
@@ -26,7 +26,7 @@ class ProductComercioConfigUpdate(BaseModel):
     unidades_por_bulto: Optional[int] = Field(None, ge=1)
     cantidad_minima: Optional[int] = Field(None, ge=1)
     descripcion: Optional[str] = Field(None, max_length=5000)
-    iconos: Optional[List[ComercioIconItem]] = Field(None, max_length=8)
+    iconos: Optional[List[ComercioIconItem]] = Field(None, max_length=15)
     image_urls: Optional[List[str]] = Field(None, max_length=10)
     image_alt_texts: Optional[List[Optional[str]]] = Field(None, max_length=10)
 

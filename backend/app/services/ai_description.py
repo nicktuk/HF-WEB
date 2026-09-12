@@ -107,36 +107,54 @@ COMERCIO_ICON_WHITELIST = [
     "Battery", "BatteryCharging", "Zap", "Gauge", "Timer", "Clock",
     "Truck", "Package", "PackageCheck", "Boxes",
     "Cpu", "HardDrive", "Monitor", "Smartphone", "Wifi", "Volume2", "Camera",
-    "Layers", "Hammer", "Wrench", "Ruler", "Weight",
+    "Layers", "Hammer", "Wrench", "Ruler", "Weight", "Palette",
     "ThermometerSun", "Snowflake", "Flame", "Droplet", "Wind", "Recycle",
     "Users", "ThumbsUp", "Star",
 ]
 
+# Íconos de reserva por si el LLM no devuelve un nombre válido para alguna línea
+# — nunca dejamos una característica sin ícono.
+_FALLBACK_ICON = "CheckCircle"
+
 ICONS_PROMPT_TEMPLATE = """\
-Sos un experto en marketing B2B para un catálogo mayorista de electrónica y \
-tecnología en Argentina.
+Sos un experto en marketing B2B para un catálogo mayorista en Argentina.
 
-Basándote en la siguiente descripción de producto, elegí entre 3 y 6 \
-características clave para destacar como íconos en la ficha del producto.
-
-Para cada característica devolvé:
-• "icon": el nombre EXACTO de un ícono de esta lista cerrada (no inventes otros, \
+A continuación tenés una lista numerada de características de un producto, \
+una por línea. Para CADA línea, en el mismo orden, elegí el ícono de esta \
+lista cerrada que mejor la represente visualmente (no inventes otros nombres, \
 no agregues variantes): {icon_whitelist}
-• "label": texto corto (máximo 5 palabras), serio y concreto, en español \
-argentino, describiendo esa característica puntual del producto (ej: \
-"Batería de larga duración", "Envío a todo el país", "Garantía de fábrica")
 
 Reglas:
-• NO repitas el mismo ícono dos veces
-• NO inventes datos que no estén en la descripción
-• NO uses emojis ni signos de exclamación
-• Si la descripción no da para 3 características reales, devolvé menos (mínimo 1)
+• Respondé con exactamente {count} ítems, uno por línea, en el mismo orden
+• Un ícono puede repetirse si varias líneas representan algo similar
+• Si ninguno de la lista encaja bien con una línea, usá "{fallback_icon}"
 
-Descripción del producto:
-{descripcion}
+Características:
+{numbered_bullets}
 
-Respondé SOLO con un JSON válido, sin texto adicional, con esta forma exacta:
-[{{"icon": "NombreIcono", "label": "Texto corto"}}, ...]"""
+Respondé SOLO con un JSON array de strings (los nombres de ícono, en orden), \
+sin texto adicional, con esta forma exacta:
+["NombreIcono1", "NombreIcono2", ...]"""
+
+
+_BULLET_PREFIX_RE = re.compile(r'^[•\-*‣▪●·►▶]\s*')
+
+
+def _extract_bullets(descripcion: str) -> List[str]:
+    """Extrae las líneas con viñeta de una descripción (una característica por
+    línea). Líneas sin viñeta (ej. la oración de apertura) se ignoran a
+    propósito — el ícono va sobre las características, no sobre el título."""
+    bullets: List[str] = []
+    for raw_line in descripcion.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = _BULLET_PREFIX_RE.match(line)
+        if match:
+            cleaned = line[match.end():].strip()
+            if cleaned:
+                bullets.append(cleaned)
+    return bullets
 
 
 class AIDescriptionService:
@@ -252,10 +270,27 @@ class AIDescriptionService:
     # ------------------------------------------------------------------
 
     async def generate_comercio_icons(self, descripcion: str, config: Optional[Dict] = None) -> List[Dict]:
+        """Asigna un ícono a cada línea con viñeta de la descripción (una
+        característica por línea). El texto de cada línea lo tomamos nosotros
+        tal cual está escrito — a la IA solo le pedimos el ícono, así el
+        resultado siempre tiene la misma cantidad de ítems que viñetas haya,
+        en el mismo orden, sin depender de que el modelo reescriba bien el
+        texto."""
+        bullets = _extract_bullets(descripcion)
+        if not bullets:
+            raise RuntimeError(
+                "No se detectaron líneas de características en la descripción. "
+                "Escribí cada característica en su propia línea empezando con '• '."
+            )
+        bullets = bullets[:15]
+
         cfg = config or {}
+        numbered_bullets = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(bullets))
         prompt = ICONS_PROMPT_TEMPLATE.format(
             icon_whitelist=", ".join(COMERCIO_ICON_WHITELIST),
-            descripcion=descripcion[:2000],
+            count=len(bullets),
+            numbered_bullets=numbered_bullets,
+            fallback_icon=_FALLBACK_ICON,
         )
 
         provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
@@ -265,30 +300,21 @@ class AIDescriptionService:
             raw = await self._call_claude(prompt, None, cfg)
 
         match = re.search(r'\[.*\]', raw, re.DOTALL)
-        if not match:
-            raise RuntimeError("La IA no devolvió un JSON válido.")
-
-        try:
-            items = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            raise RuntimeError("La IA no devolvió un JSON válido.")
+        icon_names: List[str] = []
+        if match:
+            try:
+                parsed = json.loads(match.group(0))
+                if isinstance(parsed, list):
+                    icon_names = [str(v).strip() for v in parsed]
+            except json.JSONDecodeError:
+                icon_names = []
 
         icons: List[Dict] = []
-        seen_icons = set()
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            icon = str(item.get("icon", "")).strip()
-            label = str(item.get("label", "")).strip()
-            if icon not in COMERCIO_ICON_WHITELIST or not label or icon in seen_icons:
-                continue
-            seen_icons.add(icon)
-            icons.append({"icon": icon, "label": label[:60]})
-            if len(icons) >= 6:
-                break
-
-        if not icons:
-            raise RuntimeError("La IA no pudo sugerir íconos a partir de esta descripción.")
+        for i, label in enumerate(bullets):
+            icon = icon_names[i] if i < len(icon_names) else ""
+            if icon not in COMERCIO_ICON_WHITELIST:
+                icon = _FALLBACK_ICON
+            icons.append({"icon": icon, "label": label[:200]})
 
         return icons
 

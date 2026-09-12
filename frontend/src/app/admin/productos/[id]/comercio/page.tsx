@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
 import { uploadImages, resolveImageUrl, aiApi } from '@/lib/api';
 import { useAdminProduct, useComercioConfig, useSetComercioConfig } from '@/hooks/useProducts';
-import { getComercioIcon } from '@/lib/comercio-icons';
+import { parseDescripcionConIconos } from '@/lib/comercio-icons';
 import type { ComercioIconItem } from '@/types';
 
 export default function ProductComercioConfigPage() {
@@ -90,8 +90,12 @@ export default function ProductComercioConfigPage() {
     }
   };
 
-  const handleRemoveIcon = (index: number) => {
-    setIconos(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveIcon = (label: string) => {
+    setIconos(prev => {
+      const idx = prev.findIndex(i => i.label === label);
+      if (idx === -1) return prev;
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
   };
 
   const handleRemoveImage = (index: number) => {
@@ -267,34 +271,43 @@ export default function ProductComercioConfigPage() {
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={5}
-              placeholder="Descripción para el comprador mayorista..."
+              placeholder={'Mate listo térmico 2 en 1\n• Capacidad: 500 ml\n• Acero inoxidable\n• Incluye bombilla'}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+            <p className="text-xs text-gray-500">
+              Escribí cada característica en su propia línea empezando con &ldquo;• &rdquo; — la IA le pone un ícono a cada una de esas líneas.
+            </p>
 
             {iconsError && (
               <p className="text-sm text-red-600">{iconsError}</p>
             )}
 
-            {iconos.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {iconos.map((item, index) => {
-                  const IconComponent = getComercioIcon(item.icon);
-                  return (
-                    <div
-                      key={`${item.icon}-${index}`}
-                      className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm text-gray-700"
-                    >
-                      {IconComponent && <IconComponent className="h-3.5 w-3.5 text-primary-600 shrink-0" />}
-                      <span>{item.label}</span>
-                      <button
-                        onClick={() => handleRemoveIcon(index)}
-                        className="p-0.5 text-gray-400 hover:text-gray-700"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+            {descripcion.trim() && (
+              <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                {parseDescripcionConIconos(descripcion, iconos).map((line, index) =>
+                  line.isBullet ? (
+                    <div key={index} className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 min-w-0">
+                        {line.icon ? (
+                          <line.icon className="h-4 w-4 shrink-0 mt-0.5 text-primary-600" />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0 mt-[7px]" />
+                        )}
+                        <p className="text-sm text-gray-700">{line.text}</p>
+                      </div>
+                      {line.icon && (
+                        <button
+                          onClick={() => handleRemoveIcon(line.text)}
+                          className="p-0.5 text-gray-400 hover:text-gray-700 shrink-0"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
-                  );
-                })}
+                  ) : (
+                    <p key={index} className="text-sm font-semibold text-gray-900">{line.text}</p>
+                  )
+                )}
               </div>
             )}
           </CardContent>
