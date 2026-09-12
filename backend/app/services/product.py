@@ -21,7 +21,9 @@ from app.models.product_review import ProductReview
 from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
 from app.models.product import ProductColorStock, ProductDepositStock
+from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
 from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem, ProductReviewPublic
+from app.schemas.product_comercio import ProductComercioConfigUpdate
 from app.scrapers.registry import ScraperRegistry
 from app.scrapers.base import ScrapedProduct
 from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
@@ -364,6 +366,59 @@ class ProductService:
                 self.db.add(row)
         self.db.commit()
         return self.get_deposit_stock(product_id)
+
+    def get_comercio_config(self, product_id: int) -> ProductComercioConfig:
+        """Get-or-create: cada producto tiene a lo sumo una config de comercio,
+        pero no todos la tienen todavía cargada."""
+        config = self.db.query(ProductComercioConfig).filter(
+            ProductComercioConfig.product_id == product_id
+        ).first()
+        if not config:
+            config = ProductComercioConfig(product_id=product_id)
+            self.db.add(config)
+            self.db.commit()
+            self.db.refresh(config)
+        return config
+
+    def get_comercio_images(self, product_id: int) -> List[ProductComercioImage]:
+        return (
+            self.db.query(ProductComercioImage)
+            .filter(ProductComercioImage.product_id == product_id)
+            .order_by(ProductComercioImage.display_order)
+            .all()
+        )
+
+    def set_comercio_config(self, product_id: int, data: ProductComercioConfigUpdate) -> ProductComercioConfig:
+        config = self.get_comercio_config(product_id)
+
+        if data.es_mayorista is not None:
+            config.es_mayorista = data.es_mayorista
+        if 'precio_mayorista_override' in data.model_fields_set:
+            config.precio_mayorista_override = data.precio_mayorista_override
+        if 'unidades_por_bulto' in data.model_fields_set:
+            config.unidades_por_bulto = data.unidades_por_bulto
+        if 'cantidad_minima' in data.model_fields_set:
+            config.cantidad_minima = data.cantidad_minima
+        if 'descripcion' in data.model_fields_set:
+            config.descripcion = data.descripcion
+
+        if data.image_urls is not None:
+            alt_texts = data.image_alt_texts or []
+            for img in self.get_comercio_images(product_id):
+                self.db.delete(img)
+            for i, img_url in enumerate(data.image_urls):
+                if img_url:
+                    alt_text = alt_texts[i] if i < len(alt_texts) else None
+                    self.db.add(ProductComercioImage(
+                        product_id=product_id,
+                        url=img_url,
+                        display_order=i,
+                        alt_text=alt_text or None,
+                    ))
+
+        self.db.commit()
+        self.db.refresh(config)
+        return config
 
     def get_deposit_stock_bulk(self, product_ids: List[int]) -> dict:
         """Returns {product_id: [{deposit_id, deposit_name, quantity}]} for multiple products.
@@ -1147,12 +1202,6 @@ class ProductService:
             product.custom_installment_price = data.custom_installment_price
         if 'stock_low_threshold' in data.model_fields_set:
             product.stock_low_threshold = data.stock_low_threshold
-        if 'unidades_por_bulto' in data.model_fields_set:
-            product.unidades_por_bulto = data.unidades_por_bulto
-        if 'cantidad_minima' in data.model_fields_set:
-            product.cantidad_minima = data.cantidad_minima
-        if data.es_mayorista is not None:
-            product.es_mayorista = data.es_mayorista
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:

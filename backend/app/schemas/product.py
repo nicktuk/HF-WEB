@@ -71,9 +71,6 @@ class ProductUpdate(BaseModel):
     installments_3: Optional[bool] = None
     custom_installment_price: Optional[Decimal] = Field(None, ge=0)
     stock_low_threshold: Optional[int] = Field(None, ge=0)
-    unidades_por_bulto: Optional[int] = Field(None, ge=1)
-    cantidad_minima: Optional[int] = Field(None, ge=1)
-    es_mayorista: Optional[bool] = None
     markup_percentage: Optional[Decimal] = Field(None, ge=0)
     custom_name: Optional[str] = Field(None, max_length=500)
     original_price: Optional[Decimal] = Field(None, ge=0)
@@ -138,9 +135,6 @@ class ProductResponse(BaseModel):
     mostrar_codigo: bool = False
     min_purchase_qty: Optional[int] = None
     kit_content: Optional[str] = None
-    unidades_por_bulto: Optional[int] = None
-    cantidad_minima: Optional[int] = None
-    es_mayorista: bool = False
     category: Optional[str] = None
     category_id: Optional[int] = None
     subcategory: Optional[str] = None

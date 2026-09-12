@@ -2,6 +2,8 @@ import type {
   ProductPublic,
   ProductAdmin,
   ColorStockItem,
+  ProductComercioConfig,
+  ProductComercioConfigUpdateForm,
   Deposit,
   CodigoAmba,
   DepositStockItem,
@@ -358,6 +360,17 @@ export const adminApi = {
     return fetchAPI(`/admin/products/${productId}/color-stock`, {
       method: 'PUT',
       body: JSON.stringify(items),
+    }, apiKey);
+  },
+
+  async getComercioConfig(apiKey: string, productId: number): Promise<ProductComercioConfig> {
+    return fetchAPI(`/admin/products/${productId}/comercio`, {}, apiKey);
+  },
+
+  async setComercioConfig(apiKey: string, productId: number, data: ProductComercioConfigUpdateForm): Promise<ProductComercioConfig> {
+    return fetchAPI(`/admin/products/${productId}/comercio`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     }, apiKey);
   },
 

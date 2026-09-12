@@ -43,8 +43,6 @@ class Product(Base):
     mostrar_codigo = Column(Boolean, default=False, nullable=False, comment="Mostrar código interno en el catálogo público")
     min_purchase_qty = Column(Integer, nullable=True, comment="Cantidad minima de compra")
     kit_content = Column(Text, nullable=True, comment="Contenido del kit/combo")
-    unidades_por_bulto = Column(Integer, nullable=True, comment="Unidades por bulto en el canal comercios (aún no usado en el catálogo — pendiente de retomar)")
-    cantidad_minima = Column(Integer, nullable=True, comment="Cantidad mínima de compra por producto en el canal comercios")
 
     # ConfiguraciÃ³n del revendedor
     enabled = Column(Boolean, default=False, nullable=False, index=True)
@@ -60,8 +58,6 @@ class Product(Base):
     is_on_demand = Column(Boolean, default=True, nullable=False, index=True, comment="Producto disponible solo por pedido (sin stock físico)")
     markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup en porcentaje (ej: 25 para 25%)")
     wholesale_markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup mayorista en porcentaje")
-    es_mayorista = Column(Boolean, default=False, nullable=False, index=True, comment="Visible en catálogo mayorista")
-    precio_mayorista_override = Column(Numeric(12, 2), nullable=True, comment="Precio mayorista manual (pisa el descuento general)")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")

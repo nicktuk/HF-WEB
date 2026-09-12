@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.models.comercio import Comercio
-from app.models.product import ProductImage
+from app.models.product_comercio import ProductComercioImage
 from app.config import settings
 from app.services import comercio_catalog, comercio_password
 from app.services.comercio_auth import DUMMY_HASH, hash_password, verify_password
@@ -193,9 +193,9 @@ async def reset_password(
 
 
 def _imagen_url(db: Session, product_id: int) -> Optional[str]:
-    img = db.query(ProductImage).filter(
-        ProductImage.product_id == product_id
-    ).order_by(ProductImage.display_order).first()
+    img = db.query(ProductComercioImage).filter(
+        ProductComercioImage.product_id == product_id
+    ).order_by(ProductComercioImage.display_order).first()
     return img.url if img else None
 
 
@@ -219,9 +219,9 @@ async def get_catalogo_preview(db: Session = Depends(get_db)):
                 "marca": p.brand,
                 "categoria": p.category,
                 "imagen_url": _imagen_url(db, p.id),
-                "cantidad_minima": p.cantidad_minima,
+                "cantidad_minima": config.cantidad_minima if config else None,
             }
-            for p, _costo, _stock in visibles
+            for p, _costo, _stock, config in visibles
         ],
     }
 

@@ -40,6 +40,7 @@ from app.schemas.product import (
     ProductSelectedExport,
     ColorStockItem,
 )
+from app.schemas.product_comercio import ProductComercioConfigUpdate, ProductComercioConfigResponse
 from app.schemas.whatsapp import (
     WhatsAppFilterRequest,
     WhatsAppMessageRequest,
@@ -836,9 +837,6 @@ async def get_product_admin(
         mostrar_codigo=p.mostrar_codigo,
         min_purchase_qty=p.min_purchase_qty,
         kit_content=p.kit_content,
-        unidades_por_bulto=p.unidades_por_bulto,
-        cantidad_minima=p.cantidad_minima,
-        es_mayorista=p.es_mayorista,
         category=p.category_ref.name if p.category_ref else None,
         category_id=p.category_id,
         subcategory=p.subcategory,
@@ -1253,9 +1251,6 @@ async def update_product(
         installments_3=product.installments_3,
         custom_installment_price=product.custom_installment_price,
         stock_low_threshold=product.stock_low_threshold,
-        unidades_por_bulto=product.unidades_por_bulto,
-        cantidad_minima=product.cantidad_minima,
-        es_mayorista=product.es_mayorista,
         video_url=product.video_url,
         alias_bot=product.alias_bot,
         images=[{
@@ -1328,6 +1323,51 @@ async def set_deposit_stock(
 ):
     items = [{"deposit_id": i.deposit_id, "quantity": i.quantity} for i in data.items]
     return service.set_deposit_stock(product_id, items)
+
+
+@router.get(
+    "/products/{product_id}/comercio",
+    response_model=ProductComercioConfigResponse,
+    dependencies=[Depends(get_admin_user)],
+)
+async def get_product_comercio_config(
+    product_id: int,
+    service: ProductService = Depends(get_product_service),
+):
+    config = service.get_comercio_config(product_id)
+    images = service.get_comercio_images(product_id)
+    return ProductComercioConfigResponse(
+        product_id=config.product_id,
+        es_mayorista=config.es_mayorista,
+        precio_mayorista_override=config.precio_mayorista_override,
+        unidades_por_bulto=config.unidades_por_bulto,
+        cantidad_minima=config.cantidad_minima,
+        descripcion=config.descripcion,
+        images=[{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in images],
+    )
+
+
+@router.patch(
+    "/products/{product_id}/comercio",
+    response_model=ProductComercioConfigResponse,
+    dependencies=[Depends(get_admin_user)],
+)
+async def update_product_comercio_config(
+    product_id: int,
+    data: ProductComercioConfigUpdate,
+    service: ProductService = Depends(get_product_service),
+):
+    config = service.set_comercio_config(product_id, data)
+    images = service.get_comercio_images(product_id)
+    return ProductComercioConfigResponse(
+        product_id=config.product_id,
+        es_mayorista=config.es_mayorista,
+        precio_mayorista_override=config.precio_mayorista_override,
+        unidades_por_bulto=config.unidades_por_bulto,
+        cantidad_minima=config.cantidad_minima,
+        descripcion=config.descripcion,
+        images=[{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in images],
+    )
 
 
 @router.post(

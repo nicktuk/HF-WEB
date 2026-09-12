@@ -64,9 +64,6 @@ export default function ProductEditPage() {
   const [installments3, setInstallments3] = useState(false);
   const [customInstallmentPrice, setCustomInstallmentPrice] = useState('');
   const [stockLowThreshold, setStockLowThreshold] = useState<string>('');
-  const [unidadesPorBulto, setUnidadesPorBulto] = useState<string>('');
-  const [cantidadMinima, setCantidadMinima] = useState<string>('');
-  const [esMayorista, setEsMayorista] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -147,9 +144,6 @@ export default function ProductEditPage() {
       setIsCheckStock(product.is_check_stock || false);
       setIsOnDemand(product.is_on_demand ?? true);
       setStockLowThreshold(product.stock_low_threshold != null ? String(product.stock_low_threshold) : '');
-      setUnidadesPorBulto(product.unidades_por_bulto != null ? String(product.unidades_por_bulto) : '');
-      setCantidadMinima(product.cantidad_minima != null ? String(product.cantidad_minima) : '');
-      setEsMayorista(product.es_mayorista || false);
       setIsPublished(product.is_published || false);
       setPublishWithoutStock(product.publish_without_stock || false);
       setInstallments3(product.installments_3 || false);
@@ -400,9 +394,6 @@ export default function ProductEditPage() {
         installments_3: installments3,
         custom_installment_price: customInstallmentPrice ? parseFloat(customInstallmentPrice) : null,
         stock_low_threshold: stockLowThreshold !== '' ? Number(stockLowThreshold) : null,
-        unidades_por_bulto: unidadesPorBulto !== '' ? Number(unidadesPorBulto) : null,
-        cantidad_minima: cantidadMinima !== '' ? Number(cantidadMinima) : null,
-        es_mayorista: esMayorista,
         markup_percentage: markup,
         custom_name: customName || '',
         original_price: originalPrice ? parseFloat(originalPrice) : null,
@@ -1383,62 +1374,20 @@ export default function ProductEditPage() {
                 />
               </div>
 
-              {/* Visible en canal comercios */}
+              {/* Canal comercios — configuración propia, separada de este editor */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Visible en canal comercios</p>
+                  <p className="font-medium">Canal comercios</p>
                   <p className="text-sm text-gray-500">
-                    Habilita este producto en el catálogo mayorista (/comercios)
+                    Visibilidad, precio, unidades por bulto, descripción y fotos propias del canal mayorista
                   </p>
                 </div>
-                <button
-                  onClick={() => setEsMayorista(!esMayorista)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    esMayorista ? 'bg-primary-600' : 'bg-gray-200'
-                  }`}
+                <Link
+                  href={`/admin/productos/${productId}/comercio`}
+                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      esMayorista ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Unidades por bulto — canal comercios */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Unidades por bulto (comercios)</p>
-                  <p className="text-xs text-gray-500">
-                    Define el múltiplo mínimo de compra en el canal comercios. Vacío = se vende suelto.
-                  </p>
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  value={unidadesPorBulto}
-                  onChange={(e) => setUnidadesPorBulto(e.target.value)}
-                  placeholder="Suelto"
-                  className="w-24 shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Cantidad mínima de compra — canal comercios */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Cantidad mínima (comercios)</p>
-                  <p className="text-xs text-gray-500">
-                    Mínimo de unidades para comprar este producto en el canal comercios. Vacío = sin mínimo.
-                  </p>
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  value={cantidadMinima}
-                  onChange={(e) => setCantidadMinima(e.target.value)}
-                  placeholder="Sin mínimo"
-                  className="w-24 shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                  Configurar →
+                </Link>
               </div>
 
               {/* Publicar toggle */}

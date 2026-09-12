@@ -5,6 +5,7 @@ from app.models.customer import Customer
 from app.models.app_setting import AppSetting
 from app.models.source_website import SourceWebsite
 from app.models.product import Product, ProductImage, ProductDepositStock
+from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
 from app.models.product_review import ProductReview
 from app.models.market_price import PriceSource, MarketPrice, MarketPriceStats
 from app.models.category import Category
@@ -52,6 +53,8 @@ __all__ = [
     "SourceWebsite",
     "Product",
     "ProductImage",
+    "ProductComercioConfig",
+    "ProductComercioImage",
     "ProductReview",
     "PriceSource",
     "MarketPrice",

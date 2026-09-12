@@ -25,6 +25,7 @@ interface ProductoDetalle {
   categoria: string | null
   subcategoria: string | null
   kit_content: string | null
+  descripcion: string | null
   unidades_por_bulto: number | null
   cantidad_minima: number | null
   precio_comercio: number
@@ -253,6 +254,15 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                     <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {p.descripcion && (
+              <div
+                className="mb-4 rounded-xl px-4 py-3"
+                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+              >
+                <p className="text-sm whitespace-pre-line" style={{ color: theme.textPrimary }}>{p.descripcion}</p>
               </div>
             )}
 

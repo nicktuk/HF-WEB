@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.product import ProductImage
+from app.models.product_comercio import ProductComercioImage
 from app.models.comercio import Comercio, PedidoComercio, PedidoComercioItem
 from app.config import settings
 from app.services import comercio_catalog
@@ -41,16 +41,16 @@ def get_comercio_id(authorization: str = Header(..., alias="Authorization")) -> 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _imagen_url(db: Session, product_id: int) -> Optional[str]:
-    img = db.query(ProductImage).filter(
-        ProductImage.product_id == product_id
-    ).order_by(ProductImage.display_order).first()
+    img = db.query(ProductComercioImage).filter(
+        ProductComercioImage.product_id == product_id
+    ).order_by(ProductComercioImage.display_order).first()
     return img.url if img else None
 
 
 def _galeria(db: Session, product_id: int) -> list[dict]:
-    imgs = db.query(ProductImage).filter(
-        ProductImage.product_id == product_id
-    ).order_by(ProductImage.display_order).all()
+    imgs = db.query(ProductComercioImage).filter(
+        ProductComercioImage.product_id == product_id
+    ).order_by(ProductComercioImage.display_order).all()
     return [{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in imgs]
 
 
@@ -128,8 +128,9 @@ async def get_catalogo(
     tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
 
     items = []
-    for p, costo, stock in visibles:
-        precio_m = comercio_catalog.precio_referencia(costo, p.precio_mayorista_override, cfg, p.final_price)
+    for p, costo, stock, config in visibles:
+        override = config.precio_mayorista_override if config else None
+        precio_m = comercio_catalog.precio_referencia(costo, override, cfg, p.final_price)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -141,8 +142,8 @@ async def get_catalogo(
             "imagen_url": _imagen_url(db, p.id),
             "categoria": p.category,
             "subcategoria": p.subcategory,
-            "unidades_por_bulto": p.unidades_por_bulto,
-            "cantidad_minima": p.cantidad_minima,
+            "unidades_por_bulto": config.unidades_por_bulto if config else None,
+            "cantidad_minima": config.cantidad_minima if config else None,
             "is_featured": bool(p.is_featured),
             "is_immediate_delivery": bool(p.is_immediate_delivery),
             "is_best_seller": bool(p.is_best_seller),
@@ -176,8 +177,9 @@ async def get_producto_detalle(
     if not resultado:
         raise HTTPException(404, "Producto no encontrado.")
 
-    p, costo, stock = resultado
-    precio_m = comercio_catalog.precio_referencia(costo, p.precio_mayorista_override, cfg, p.final_price)
+    p, costo, stock, config = resultado
+    override = config.precio_mayorista_override if config else None
+    precio_m = comercio_catalog.precio_referencia(costo, override, cfg, p.final_price)
     tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
 
     return {
@@ -188,8 +190,9 @@ async def get_producto_detalle(
         "categoria": p.category,
         "subcategoria": p.subcategory,
         "kit_content": p.kit_content,
-        "unidades_por_bulto": p.unidades_por_bulto,
-        "cantidad_minima": p.cantidad_minima,
+        "descripcion": config.descripcion if config else None,
+        "unidades_por_bulto": config.unidades_por_bulto if config else None,
+        "cantidad_minima": config.cantidad_minima if config else None,
         "precio_comercio": int(precio_m),
         "precio_venta": p.final_price,
         "stock": stock,
@@ -202,7 +205,7 @@ async def get_producto_detalle(
         "modo_precio": cfg.modo_precio,
         "redondeo": int(cfg.redondeo),
         "tramos_descuento": tramos,
-        "override": p.precio_mayorista_override is not None,
+        "override": override is not None,
     }
 
 
@@ -244,20 +247,22 @@ async def crear_pedido(
         resultado = comercio_catalog.producto_visible(db, cfg, inp.producto_id)
         if not resultado:
             raise HTTPException(422, f"Producto {inp.producto_id} no disponible.")
-        p, costo, stock = resultado
+        p, costo, stock, config = resultado
+        cantidad_minima = config.cantidad_minima if config else None
+        override = config.precio_mayorista_override if config else None
 
         # Validación por bulto en pausa (se retoma más adelante):
-        # if p.unidades_por_bulto and inp.cantidad % p.unidades_por_bulto != 0:
-        #     raise HTTPException(422, f"'{p.display_name}' se vende por bultos de {p.unidades_por_bulto} u.")
+        # if config and config.unidades_por_bulto and inp.cantidad % config.unidades_por_bulto != 0:
+        #     raise HTTPException(422, f"'{p.display_name}' se vende por bultos de {config.unidades_por_bulto} u.")
 
-        if p.cantidad_minima and inp.cantidad < p.cantidad_minima:
-            raise HTTPException(422, f"'{p.display_name}' requiere un mínimo de {p.cantidad_minima} u. (pediste {inp.cantidad}).")
+        if cantidad_minima and inp.cantidad < cantidad_minima:
+            raise HTTPException(422, f"'{p.display_name}' requiere un mínimo de {cantidad_minima} u. (pediste {inp.cantidad}).")
 
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
         precio_u = comercio_catalog.precio_comercio(
-            costo, p.precio_mayorista_override, cfg, p.final_price, inp.cantidad, tramos,
+            costo, override, cfg, p.final_price, inp.cantidad, tramos,
         )
         subtotal = precio_u * inp.cantidad
         total += subtotal

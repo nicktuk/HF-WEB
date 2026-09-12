@@ -73,9 +73,6 @@ export interface ProductAdmin extends ProductPublic {
   mostrar_codigo: boolean;
   min_purchase_qty?: number;
   kit_content?: string;
-  unidades_por_bulto?: number | null;
-  cantidad_minima?: number | null;
-  es_mayorista: boolean;
   enabled: boolean;
   is_featured: boolean;
   subcategory?: string;
@@ -95,6 +92,32 @@ export interface ProductAdmin extends ProductPublic {
   stock_qty?: number;
   is_published: boolean;
   alias_bot?: string | null;
+}
+
+export interface ProductComercioImage {
+  id: number;
+  url: string;
+  alt_text?: string | null;
+}
+
+export interface ProductComercioConfig {
+  product_id: number;
+  es_mayorista: boolean;
+  precio_mayorista_override?: number | null;
+  unidades_por_bulto?: number | null;
+  cantidad_minima?: number | null;
+  descripcion?: string | null;
+  images: ProductComercioImage[];
+}
+
+export interface ProductComercioConfigUpdateForm {
+  es_mayorista?: boolean;
+  precio_mayorista_override?: number | null;
+  unidades_por_bulto?: number | null;
+  cantidad_minima?: number | null;
+  descripcion?: string | null;
+  image_urls?: string[];
+  image_alt_texts?: (string | null)[];
 }
 
 export interface PendingPriceChange {
@@ -385,9 +408,6 @@ export interface ProductUpdateForm {
   installments_3?: boolean;
   custom_installment_price?: number | null;
   stock_low_threshold?: number | null;
-  unidades_por_bulto?: number | null;
-  cantidad_minima?: number | null;
-  es_mayorista?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   original_price?: number | null;

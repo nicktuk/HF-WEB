@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem, DepositStockItem } from '@/types';
+import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem, DepositStockItem, ProductComercioConfigUpdateForm } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -321,6 +321,26 @@ export function useSetColorStock(apiKey: string) {
     onSuccess: (_, { productId }) => {
       queryClient.invalidateQueries({ queryKey: ['color-stock', productId] });
       queryClient.invalidateQueries({ queryKey: ['public-product'] });
+    },
+  });
+}
+
+export function useComercioConfig(apiKey: string, productId: number) {
+  return useQuery({
+    queryKey: ['comercio-config', productId],
+    queryFn: () => adminApi.getComercioConfig(apiKey, productId),
+    staleTime: 30 * 1000,
+    enabled: !!apiKey && !!productId,
+  });
+}
+
+export function useSetComercioConfig(apiKey: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, data }: { productId: number; data: ProductComercioConfigUpdateForm }) =>
+      adminApi.setComercioConfig(apiKey, productId, data),
+    onSuccess: (_, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: ['comercio-config', productId] });
     },
   });
 }
