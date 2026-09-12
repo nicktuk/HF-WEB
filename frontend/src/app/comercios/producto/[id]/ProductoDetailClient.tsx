@@ -135,7 +135,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   src={resolveImageUrl(actual.url) ?? actual.url}
                   alt={actual.alt_text || p.nombre}
                   fill
-                  className="object-contain"
+                  className="object-cover"
                   priority
                 />
               ) : (

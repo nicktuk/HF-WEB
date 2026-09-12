@@ -101,7 +101,7 @@ export function ProductCard({ product }: ProductCardProps) {
               src={resolveImageUrl(primaryImage.url) ?? primaryImage.url}
               alt={primaryImage.alt_text || product.name}
               fill
-              className="object-contain group-hover:scale-[1.07] transition-transform duration-500 ease-out"
+              className="object-cover group-hover:scale-[1.07] transition-transform duration-500 ease-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

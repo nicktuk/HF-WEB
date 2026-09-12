@@ -223,7 +223,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                   src={resolveImageUrl(selectedImage.url) ?? selectedImage.url}
                   alt={selectedImage.alt_text || product.name}
                   fill
-                  className="object-contain"
+                  className="object-cover"
                   priority
                 />
               ) : (

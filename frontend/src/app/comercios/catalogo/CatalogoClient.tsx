@@ -230,7 +230,7 @@ function ProductCard({
       <Link href={`/comercios/producto/${p.id}`} className="contents">
         <div className="relative m-2.5 rounded-xl aspect-square" style={{ backgroundColor: theme.imagePlate }}>
           {imgUrl ? (
-            <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-3" unoptimized />
+            <Image src={imgUrl} alt={p.nombre} fill className="object-cover" unoptimized />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: '#B7AF9C' }}>Sin imagen</div>
           )}

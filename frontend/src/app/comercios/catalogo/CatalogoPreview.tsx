@@ -60,7 +60,7 @@ export function CatalogoPreview({ productos }: Props) {
                 <div key={p.id} className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                   <div className="aspect-square bg-zinc-50 relative">
                     {imgUrl ? (
-                      <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-2" unoptimized />
+                      <Image src={imgUrl} alt={p.nombre} fill className="object-cover" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xs">Sin imagen</div>
                     )}
