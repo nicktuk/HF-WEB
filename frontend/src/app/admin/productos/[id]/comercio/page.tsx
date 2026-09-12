@@ -4,13 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, X, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Upload, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKey } from '@/hooks/useAuth';
-import { uploadImages, resolveImageUrl } from '@/lib/api';
+import { uploadImages, resolveImageUrl, aiApi } from '@/lib/api';
 import { useAdminProduct, useComercioConfig, useSetComercioConfig } from '@/hooks/useProducts';
+import { getComercioIcon } from '@/lib/comercio-icons';
+import type { ComercioIconItem } from '@/types';
 
 export default function ProductComercioConfigPage() {
   const params = useParams();
@@ -26,11 +28,14 @@ export default function ProductComercioConfigPage() {
   const [unidadesPorBulto, setUnidadesPorBulto] = useState('');
   const [cantidadMinima, setCantidadMinima] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [iconos, setIconos] = useState<ComercioIconItem[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageAltTexts, setImageAltTexts] = useState<(string | null)[]>([]);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isGeneratingIcons, setIsGeneratingIcons] = useState(false);
+  const [iconsError, setIconsError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
 
@@ -42,6 +47,7 @@ export default function ProductComercioConfigPage() {
       setUnidadesPorBulto(config.unidades_por_bulto != null ? String(config.unidades_por_bulto) : '');
       setCantidadMinima(config.cantidad_minima != null ? String(config.cantidad_minima) : '');
       setDescripcion(config.descripcion || '');
+      setIconos(config.iconos || []);
       setImageUrls(config.images.map(i => i.url));
       setImageAltTexts(config.images.map(i => i.alt_text ?? null));
     }
@@ -64,6 +70,28 @@ export default function ProductComercioConfigPage() {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleGenerateIcons = async () => {
+    if (!descripcion.trim()) {
+      setIconsError('Escribí primero una descripción para poder generar íconos.');
+      return;
+    }
+    setIsGeneratingIcons(true);
+    setIconsError(null);
+    try {
+      const res = await aiApi.generateComercioIcons(apiKey, productId, descripcion);
+      setIconos(res.icons);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Error al generar íconos';
+      setIconsError(msg);
+    } finally {
+      setIsGeneratingIcons(false);
+    }
+  };
+
+  const handleRemoveIcon = (index: number) => {
+    setIconos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveImage = (index: number) => {
@@ -96,6 +124,7 @@ export default function ProductComercioConfigPage() {
         unidades_por_bulto: unidadesPorBulto !== '' ? Number(unidadesPorBulto) : null,
         cantidad_minima: cantidadMinima !== '' ? Number(cantidadMinima) : null,
         descripcion: descripcion || null,
+        iconos: iconos.length > 0 ? iconos : null,
         image_urls: imageUrls,
         image_alt_texts: imageAltTexts,
       },
@@ -114,7 +143,7 @@ export default function ProductComercioConfigPage() {
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       <div className="sticky top-0 z-30 bg-gray-100/80 backdrop-blur border-b border-gray-200">
         <div className="px-4 py-3 flex items-center gap-4">
           <Link
@@ -214,12 +243,26 @@ export default function ProductComercioConfigPage() {
 
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">Descripción (canal comercios)</h2>
-            <p className="text-sm text-gray-500">
-              Propia de este canal — no se toma la del catálogo minorista.
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="font-semibold">Descripción (canal comercios)</h2>
+                <p className="text-sm text-gray-500">
+                  Propia de este canal — no se toma la del catálogo minorista.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerateIcons}
+                disabled={isGeneratingIcons}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                title="Generar íconos con IA a partir de la descripción"
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${isGeneratingIcons ? 'animate-pulse' : ''}`} />
+                {isGeneratingIcons ? 'Generando...' : 'Generar íconos con IA'}
+              </button>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
@@ -227,6 +270,33 @@ export default function ProductComercioConfigPage() {
               placeholder="Descripción para el comprador mayorista..."
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+
+            {iconsError && (
+              <p className="text-sm text-red-600">{iconsError}</p>
+            )}
+
+            {iconos.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {iconos.map((item, index) => {
+                  const IconComponent = getComercioIcon(item.icon);
+                  return (
+                    <div
+                      key={`${item.icon}-${index}`}
+                      className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm text-gray-700"
+                    >
+                      {IconComponent && <IconComponent className="h-3.5 w-3.5 text-primary-600 shrink-0" />}
+                      <span>{item.label}</span>
+                      <button
+                        onClick={() => handleRemoveIcon(index)}
+                        className="p-0.5 text-gray-400 hover:text-gray-700"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -302,28 +372,28 @@ export default function ProductComercioConfigPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
-        <div className="max-w-2xl space-y-2">
-          <Button
-            onClick={handleSave}
-            isLoading={updateMutation.isPending || isUploading}
-            className="w-full"
-          >
-            Guardar cambios
-          </Button>
-          {updateMutation.isError && (
-            <p className="text-sm text-red-600 text-center">
-              {updateMutation.error instanceof Error ? updateMutation.error.message : 'Error al guardar.'}
-            </p>
-          )}
-          {updateMutation.isSuccess && (
-            <p className="text-sm text-green-600 text-center">
-              Cambios guardados correctamente.
-            </p>
-          )}
-        </div>
+        <Card>
+          <CardContent className="space-y-2 pt-6">
+            <Button
+              onClick={handleSave}
+              isLoading={updateMutation.isPending || isUploading}
+              className="w-full"
+            >
+              Guardar cambios
+            </Button>
+            {updateMutation.isError && (
+              <p className="text-sm text-red-600 text-center">
+                {updateMutation.error instanceof Error ? updateMutation.error.message : 'Error al guardar.'}
+              </p>
+            )}
+            {updateMutation.isSuccess && (
+              <p className="text-sm text-green-600 text-center">
+                Cambios guardados correctamente.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -15,12 +15,18 @@ class ProductComercioImageResponse(BaseModel):
         from_attributes = True
 
 
+class ComercioIconItem(BaseModel):
+    icon: str = Field(..., max_length=40)
+    label: str = Field(..., max_length=60)
+
+
 class ProductComercioConfigUpdate(BaseModel):
     es_mayorista: Optional[bool] = None
     precio_mayorista_override: Optional[Decimal] = Field(None, ge=0)
     unidades_por_bulto: Optional[int] = Field(None, ge=1)
     cantidad_minima: Optional[int] = Field(None, ge=1)
     descripcion: Optional[str] = Field(None, max_length=5000)
+    iconos: Optional[List[ComercioIconItem]] = Field(None, max_length=8)
     image_urls: Optional[List[str]] = Field(None, max_length=10)
     image_alt_texts: Optional[List[Optional[str]]] = Field(None, max_length=10)
 
@@ -32,7 +38,16 @@ class ProductComercioConfigResponse(BaseModel):
     unidades_por_bulto: Optional[int] = None
     cantidad_minima: Optional[int] = None
     descripcion: Optional[str] = None
+    iconos: Optional[List[ComercioIconItem]] = None
     images: List[ProductComercioImageResponse] = []
 
     class Config:
         from_attributes = True
+
+
+class GenerateComercioIconsRequest(BaseModel):
+    descripcion: str = Field(..., min_length=3, max_length=5000)
+
+
+class GenerateComercioIconsResponse(BaseModel):
+    icons: List[ComercioIconItem]

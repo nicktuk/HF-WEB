@@ -1343,6 +1343,7 @@ async def get_product_comercio_config(
         unidades_por_bulto=config.unidades_por_bulto,
         cantidad_minima=config.cantidad_minima,
         descripcion=config.descripcion,
+        iconos=config.iconos,
         images=[{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in images],
     )
 
@@ -1366,6 +1367,7 @@ async def update_product_comercio_config(
         unidades_por_bulto=config.unidades_por_bulto,
         cantidad_minima=config.cantidad_minima,
         descripcion=config.descripcion,
+        iconos=config.iconos,
         images=[{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in images],
     )
 

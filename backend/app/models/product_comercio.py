@@ -3,7 +3,7 @@ propósito: todo lo que solo aplica al canal mayorista (visibilidad, precio
 manual, reglas de compra, descripción y fotos propias) vive acá, para no
 seguir mezclándolo con los campos del catálogo minorista.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Text, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Text, Numeric, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -19,6 +19,7 @@ class ProductComercioConfig(Base):
     unidades_por_bulto = Column(Integer, nullable=True, comment="Unidades por bulto en el canal comercios")
     cantidad_minima = Column(Integer, nullable=True, comment="Cantidad mínima de compra en el canal comercios")
     descripcion = Column(Text, nullable=True, comment="Descripción propia del canal comercios (no la del minorista)")
+    iconos = Column(JSON, nullable=True, comment="Íconos destacados generados por IA a partir de la descripción: [{icon, label}]")
 
     product = relationship("Product", backref="comercio_config", uselist=False)
 

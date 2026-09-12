@@ -9,7 +9,9 @@ import { useComercioTheme } from '@/hooks/useComercioTheme'
 import { getComercioTheme, getTramoScaleColor } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
+import { getComercioIcon } from '@/lib/comercio-icons'
 import { SavingsBar } from '../../_components/SavingsBar'
+import type { ComercioIconItem } from '@/types'
 
 interface Imagen {
   id: number
@@ -26,6 +28,7 @@ interface ProductoDetalle {
   subcategoria: string | null
   kit_content: string | null
   descripcion: string | null
+  iconos: ComercioIconItem[] | null
   unidades_por_bulto: number | null
   cantidad_minima: number | null
   precio_comercio: number
@@ -263,6 +266,24 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                 style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
               >
                 <p className="text-sm whitespace-pre-line" style={{ color: theme.textPrimary }}>{p.descripcion}</p>
+              </div>
+            )}
+
+            {p.iconos && p.iconos.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {p.iconos.map((item, index) => {
+                  const IconComponent = getComercioIcon(item.icon)
+                  return (
+                    <div
+                      key={`${item.icon}-${index}`}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2"
+                      style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                    >
+                      {IconComponent && <IconComponent className="h-4 w-4 shrink-0" style={{ color: theme.accent }} />}
+                      <p className="text-xs font-medium" style={{ color: theme.textPrimary }}>{item.label}</p>
+                    </div>
+                  )
+                })}
               </div>
             )}
 

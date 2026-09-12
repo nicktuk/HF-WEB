@@ -4,6 +4,7 @@ import type {
   ColorStockItem,
   ProductComercioConfig,
   ProductComercioConfigUpdateForm,
+  ComercioIconItem,
   Deposit,
   CodigoAmba,
   DepositStockItem,
@@ -1508,6 +1509,17 @@ export const aiApi = {
     productId: number,
   ): Promise<{ product_id: number; name: string }> {
     return fetchAPI(`/admin/ai/generate-name/${productId}`, { method: 'POST' }, apiKey);
+  },
+
+  async generateComercioIcons(
+    apiKey: string,
+    productId: number,
+    descripcion: string,
+  ): Promise<{ icons: ComercioIconItem[] }> {
+    return fetchAPI(`/admin/ai/comercio-icons/${productId}`, {
+      method: 'POST',
+      body: JSON.stringify({ descripcion }),
+    }, apiKey);
   },
 
   async processImage(

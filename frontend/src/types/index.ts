@@ -100,6 +100,11 @@ export interface ProductComercioImage {
   alt_text?: string | null;
 }
 
+export interface ComercioIconItem {
+  icon: string;
+  label: string;
+}
+
 export interface ProductComercioConfig {
   product_id: number;
   es_mayorista: boolean;
@@ -107,6 +112,7 @@ export interface ProductComercioConfig {
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
   descripcion?: string | null;
+  iconos?: ComercioIconItem[] | null;
   images: ProductComercioImage[];
 }
 
@@ -116,6 +122,7 @@ export interface ProductComercioConfigUpdateForm {
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
   descripcion?: string | null;
+  iconos?: ComercioIconItem[] | null;
   image_urls?: string[];
   image_alt_texts?: (string | null)[];
 }

@@ -401,6 +401,8 @@ class ProductService:
             config.cantidad_minima = data.cantidad_minima
         if 'descripcion' in data.model_fields_set:
             config.descripcion = data.descripcion
+        if 'iconos' in data.model_fields_set:
+            config.iconos = [i.model_dump() for i in data.iconos] if data.iconos else None
 
         if data.image_urls is not None:
             alt_texts = data.image_alt_texts or []

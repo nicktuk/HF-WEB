@@ -11,6 +11,7 @@ Pipeline por producto:
 """
 import asyncio
 import base64
+import json
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -96,6 +97,46 @@ Reglas:
 • Respondé SOLO con el nombre limpio, una sola línea, sin comillas ni explicaciones
 
 Nombre original: {name}{brand_line}"""
+
+
+# Whitelist cerrada de íconos "serios" (lucide-react) — el frontend solo sabe
+# renderizar estos nombres, así que el LLM tiene que elegir de esta lista y
+# nunca inventar uno nuevo.
+COMERCIO_ICON_WHITELIST = [
+    "Shield", "ShieldCheck", "Lock", "BadgeCheck", "Award", "CheckCircle",
+    "Battery", "BatteryCharging", "Zap", "Gauge", "Timer", "Clock",
+    "Truck", "Package", "PackageCheck", "Boxes",
+    "Cpu", "HardDrive", "Monitor", "Smartphone", "Wifi", "Volume2", "Camera",
+    "Layers", "Hammer", "Wrench", "Ruler", "Weight",
+    "ThermometerSun", "Snowflake", "Flame", "Droplet", "Wind", "Recycle",
+    "Users", "ThumbsUp", "Star",
+]
+
+ICONS_PROMPT_TEMPLATE = """\
+Sos un experto en marketing B2B para un catálogo mayorista de electrónica y \
+tecnología en Argentina.
+
+Basándote en la siguiente descripción de producto, elegí entre 3 y 6 \
+características clave para destacar como íconos en la ficha del producto.
+
+Para cada característica devolvé:
+• "icon": el nombre EXACTO de un ícono de esta lista cerrada (no inventes otros, \
+no agregues variantes): {icon_whitelist}
+• "label": texto corto (máximo 5 palabras), serio y concreto, en español \
+argentino, describiendo esa característica puntual del producto (ej: \
+"Batería de larga duración", "Envío a todo el país", "Garantía de fábrica")
+
+Reglas:
+• NO repitas el mismo ícono dos veces
+• NO inventes datos que no estén en la descripción
+• NO uses emojis ni signos de exclamación
+• Si la descripción no da para 3 características reales, devolvé menos (mínimo 1)
+
+Descripción del producto:
+{descripcion}
+
+Respondé SOLO con un JSON válido, sin texto adicional, con esta forma exacta:
+[{{"icon": "NombreIcono", "label": "Texto corto"}}, ...]"""
 
 
 class AIDescriptionService:
@@ -205,6 +246,51 @@ class AIDescriptionService:
         clean = re.sub(r'\s*[-–—|]\s*$', '', clean.strip())
         clean = re.sub(r'\s{2,}', ' ', clean).strip()
         return clean
+
+    # ------------------------------------------------------------------
+    # Generación de íconos destacados (canal comercios)
+    # ------------------------------------------------------------------
+
+    async def generate_comercio_icons(self, descripcion: str, config: Optional[Dict] = None) -> List[Dict]:
+        cfg = config or {}
+        prompt = ICONS_PROMPT_TEMPLATE.format(
+            icon_whitelist=", ".join(COMERCIO_ICON_WHITELIST),
+            descripcion=descripcion[:2000],
+        )
+
+        provider = cfg.get("AI_PROVIDER") or settings.AI_PROVIDER
+        if provider == "openai":
+            raw = await self._call_openai(prompt, None, cfg)
+        else:
+            raw = await self._call_claude(prompt, None, cfg)
+
+        match = re.search(r'\[.*\]', raw, re.DOTALL)
+        if not match:
+            raise RuntimeError("La IA no devolvió un JSON válido.")
+
+        try:
+            items = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            raise RuntimeError("La IA no devolvió un JSON válido.")
+
+        icons: List[Dict] = []
+        seen_icons = set()
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            icon = str(item.get("icon", "")).strip()
+            label = str(item.get("label", "")).strip()
+            if icon not in COMERCIO_ICON_WHITELIST or not label or icon in seen_icons:
+                continue
+            seen_icons.add(icon)
+            icons.append({"icon": icon, "label": label[:60]})
+            if len(icons) >= 6:
+                break
+
+        if not icons:
+            raise RuntimeError("La IA no pudo sugerir íconos a partir de esta descripción.")
+
+        return icons
 
     # ------------------------------------------------------------------
     # Fetch URL origen

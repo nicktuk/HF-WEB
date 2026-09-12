@@ -23,6 +23,7 @@ from app.models.product import Product
 from app.services.ai_description import JobState, _jobs, get_ai_service
 from app.services.app_settings import get_ai_config
 from app.config import settings
+from app.schemas.product_comercio import GenerateComercioIconsRequest, GenerateComercioIconsResponse
 
 router = APIRouter()
 
@@ -263,6 +264,36 @@ async def generate_name(
         raise HTTPException(status_code=502, detail=str(exc))
 
     return NameResponse(product_id=product_id, name=name)
+
+
+# ---------------------------------------------------------------------------
+# POST /comercio-icons/{product_id}  →  íconos sugeridos para el canal comercios
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/comercio-icons/{product_id}",
+    response_model=GenerateComercioIconsResponse,
+    dependencies=[Depends(get_admin_user)],
+)
+async def generate_comercio_icons(
+    product_id: int,
+    req: GenerateComercioIconsRequest,
+    db: Session = Depends(get_db),
+):
+    """Sugiere íconos a partir de la descripción del canal comercios. No
+    persiste — el admin revisa y guarda desde el editor de config comercio."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    ai_config = get_ai_config(db)
+    ai = get_ai_service()
+    try:
+        icons = await ai.generate_comercio_icons(req.descripcion, config=ai_config)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    return GenerateComercioIconsResponse(icons=icons)
 
 
 # ---------------------------------------------------------------------------

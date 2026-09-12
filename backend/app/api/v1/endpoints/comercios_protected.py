@@ -191,6 +191,7 @@ async def get_producto_detalle(
         "subcategoria": p.subcategory,
         "kit_content": p.kit_content,
         "descripcion": config.descripcion if config else None,
+        "iconos": config.iconos if config else None,
         "unidades_por_bulto": config.unidades_por_bulto if config else None,
         "cantidad_minima": config.cantidad_minima if config else None,
         "precio_comercio": int(precio_m),
