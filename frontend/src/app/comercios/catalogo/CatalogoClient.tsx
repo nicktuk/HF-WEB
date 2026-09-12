@@ -73,7 +73,7 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`, filter: 'blur(10px)', opacity: 0.12 * theme.glowOpacity }}
       />
 
-      <div className="relative max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 pt-4 pb-8 lg:pt-5 lg:pb-12">
+      <div className="relative w-full px-5 sm:px-8 lg:px-12 pt-4 pb-8 lg:pt-5 lg:pb-12">
 
         {montoMinimo > 0 && (
           <div
