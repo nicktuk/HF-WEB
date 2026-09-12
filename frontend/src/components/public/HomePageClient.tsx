@@ -270,7 +270,7 @@ export function HomePageContent() {
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
   const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !searchFromUrl;
-  const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory;
+  const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory && !sortNewFirst;
 
   const groupedProducts = useMemo(() => {
     if (!showGroupedByCategory) {
