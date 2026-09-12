@@ -237,15 +237,6 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
                 </p>
               )}
-              {enModoDescuento && p.tramos_descuento.length > 0 && (
-                <SavingsBar
-                  precioVenta={p.precio_venta as number}
-                  cantidad={cantidad}
-                  tramos={p.tramos_descuento}
-                  redondeo={p.redondeo}
-                  theme={theme}
-                />
-              )}
             </div>
 
             {datosConcretos.length > 0 && (
@@ -279,10 +270,17 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
 
             {enModoDescuento && p.tramos_descuento.length > 0 && (
-              <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.06), border: `1.5px solid ${theme.accentTint(0.35)}` }}>
-                <p className="text-xs font-bold uppercase tracking-wide px-4 pt-3 pb-1" style={{ color: theme.accent }}>
-                  Descuento por cantidad
-                </p>
+              <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
+                <div className="px-4 pt-3 pb-2">
+                  <SavingsBar
+                    precioVenta={p.precio_venta as number}
+                    cantidad={cantidad}
+                    tramos={p.tramos_descuento}
+                    redondeo={p.redondeo}
+                    theme={theme}
+                  />
+                </div>
+                <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
                 <table className="w-full text-sm">
                   <tbody>
                     {(() => {
@@ -292,10 +290,10 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                           && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                         const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
                         return (
-                          <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.14) } : undefined}>
-                            <td className="px-4 py-1.5 font-medium" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                            <td className="py-1.5 font-bold" style={{ color: colorTramo }}>−{t.descuento_porcentaje}%</td>
-                            <td className="px-4 py-1.5 text-right font-bold" style={{ color: theme.textPrimary }}>
+                          <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
+                            <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                            <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
+                            <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
                               ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
                             </td>
                           </tr>

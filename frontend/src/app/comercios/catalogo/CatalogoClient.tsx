@@ -282,21 +282,18 @@ function ProductCard({
           </p>
 
           {enModoDescuento && tramosDescuento.length > 0 && (
-            <SavingsBar
-              precioVenta={p.precio_venta as number}
-              cantidad={cantidad}
-              tramos={tramosDescuento}
-              redondeo={redondeo}
-              theme={theme}
-              compact
-            />
-          )}
-
-          {enModoDescuento && tramosDescuento.length > 0 && (
-            <div className="rounded-lg overflow-hidden mt-1" style={{ backgroundColor: theme.accentTint(0.06), border: `1.5px solid ${theme.accentTint(0.35)}` }}>
-              <p className="text-[10px] font-bold uppercase tracking-wide px-2.5 pt-2" style={{ color: theme.accent }}>
-                Descuento por cantidad
-              </p>
+            <div className="rounded-xl overflow-hidden mt-1" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
+              <div className="px-3 pt-2.5 pb-2">
+                <SavingsBar
+                  precioVenta={p.precio_venta as number}
+                  cantidad={cantidad}
+                  tramos={tramosDescuento}
+                  redondeo={redondeo}
+                  theme={theme}
+                  compact
+                />
+              </div>
+              <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
               <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                 <tbody>
                   {(() => {
@@ -306,10 +303,10 @@ function ProductCard({
                         && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                       const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
                       return (
-                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.14) } : undefined}>
-                          <td className="py-1.5 pl-2.5 font-semibold" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                          <td className="py-1.5 font-bold" style={{ color: colorTramo }}>−{t.descuento_porcentaje}%</td>
-                          <td className="py-1.5 pr-2.5 text-right font-bold" style={{ color: theme.textPrimary }}>
+                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
+                          <td className="py-2 pl-3 font-semibold" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                          <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
+                          <td className="py-2 pr-3 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
                             ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
                           </td>
                         </tr>
