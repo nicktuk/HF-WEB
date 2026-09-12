@@ -60,7 +60,7 @@ export function ComercioHeader({ nombreLocal }: Props) {
           {itemCount > 0 && (
             <span
               className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold leading-none"
-              style={{ backgroundColor: '#B4F42A', color: '#0D1B2A' }}
+              style={{ backgroundColor: '#FFFFFF', color: '#0D1B2A' }}
             >
               {itemCount}
             </span>

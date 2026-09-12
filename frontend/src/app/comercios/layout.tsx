@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from 'next'
+import { ComercioBodyBg } from './_components/ComercioBodyBg'
 
 export const metadata: Metadata = {
   title: 'Portal Comercio — HEFA',
@@ -6,5 +7,10 @@ export const metadata: Metadata = {
 }
 
 export default function ComerciosLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <ComercioBodyBg />
+      {children}
+    </>
+  )
 }

@@ -8,7 +8,7 @@ import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 
-const LIME = '#B4F42A'
+const ACCENT = '#5B9DF9'
 
 interface Producto {
   id: number
@@ -58,15 +58,15 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
   const tituloCarousel = categoria || (search.trim() !== '' ? 'Resultados' : 'Catálogo')
 
   return (
-    <div className="relative" style={{ backgroundColor: '#0D1B2A', minHeight: '100vh' }}>
+    <div className="relative overflow-x-hidden" style={{ backgroundColor: '#0D1B2A', minHeight: '100vh' }}>
       {/* Glow decorativo */}
       <div
         className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full opacity-25"
-        style={{ background: `radial-gradient(circle, ${LIME} 0%, transparent 68%)`, filter: 'blur(10px)' }}
+        style={{ background: `radial-gradient(circle, ${ACCENT} 0%, transparent 68%)`, filter: 'blur(10px)' }}
       />
       <div
         className="pointer-events-none absolute top-[420px] -left-40 w-[420px] h-[420px] rounded-full opacity-[0.12]"
-        style={{ background: `radial-gradient(circle, ${LIME} 0%, transparent 70%)`, filter: 'blur(10px)' }}
+        style={{ background: `radial-gradient(circle, ${ACCENT} 0%, transparent 70%)`, filter: 'blur(10px)' }}
       />
 
       <div className="relative max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-8 lg:py-12">
@@ -74,7 +74,7 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
         {montoMinimo > 0 && (
           <div
             className="mb-6 rounded-2xl px-5 py-3 text-sm"
-            style={{ backgroundColor: 'rgba(180,244,42,0.1)', border: '1px solid rgba(180,244,42,0.25)', color: LIME }}
+            style={{ backgroundColor: 'rgba(91,157,249,0.1)', border: '1px solid rgba(91,157,249,0.25)', color: ACCENT }}
           >
             Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
           </div>
@@ -216,7 +216,7 @@ function ProductCard({
   return (
     <div
       className={`shrink-0 ${CARD_WIDTH} rounded-2xl overflow-hidden flex flex-col`}
-      style={{ backgroundColor: '#132845', border: '1px solid rgba(180,244,42,0.14)' }}
+      style={{ backgroundColor: '#132845', border: '1px solid rgba(91,157,249,0.14)' }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
         <div className="relative m-2.5 rounded-xl aspect-square" style={{ backgroundColor: '#F4F1E7' }}>
@@ -260,7 +260,7 @@ function ProductCard({
               </span>
             )}
             {p.cantidad_minima && (
-              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: 'rgba(180,244,42,0.12)', color: LIME }}>
+              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: 'rgba(91,157,249,0.12)', color: ACCENT }}>
                 Mín. {p.cantidad_minima} u.
               </span>
             )}
@@ -268,31 +268,36 @@ function ProductCard({
 
           {enModoDescuento ? (
             <div className="mt-0.5">
-              <p className="text-lg font-extrabold" style={{ color: LIME }}>${precioUnitario.toLocaleString('es-AR')}</p>
+              <p className="text-lg font-extrabold" style={{ color: ACCENT }}>${precioUnitario.toLocaleString('es-AR')}</p>
               <p className="text-[10px]" style={{ color: 'rgba(244,246,242,0.4)' }}>Lista ${(p.precio_venta as number).toLocaleString('es-AR')}</p>
             </div>
           ) : (
-            <p className="text-lg font-extrabold mt-0.5" style={{ color: LIME }}>${precioUnitario.toLocaleString('es-AR')}</p>
+            <p className="text-lg font-extrabold mt-0.5" style={{ color: ACCENT }}>${precioUnitario.toLocaleString('es-AR')}</p>
           )}
 
           {enModoDescuento && tramosDescuento.length > 0 && (
-            <table className="w-full text-[10px] mt-0.5" style={{ borderCollapse: 'collapse' }}>
-              <tbody>
-                {tramosDescuento.map(t => {
-                  const activo = cantidad >= t.cantidad_minima
-                    && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                  return (
-                    <tr key={t.cantidad_minima} style={activo ? { backgroundColor: 'rgba(180,244,42,0.12)' } : undefined}>
-                      <td className="py-0.5 pl-1" style={{ color: activo ? LIME : 'rgba(244,246,242,0.55)' }}>{t.cantidad_minima}+ u.</td>
-                      <td className="py-0.5" style={{ color: activo ? LIME : 'rgba(244,246,242,0.55)' }}>{t.descuento_porcentaje}%</td>
-                      <td className="py-0.5 pr-1 text-right font-semibold" style={{ color: activo ? LIME : '#EFF3F8' }}>
-                        ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <div className="rounded-lg overflow-hidden mt-1" style={{ backgroundColor: 'rgba(91,157,249,0.08)', border: '1px solid rgba(91,157,249,0.3)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-wide px-2.5 pt-2" style={{ color: ACCENT }}>
+                Descuento por cantidad
+              </p>
+              <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+                <tbody>
+                  {tramosDescuento.map(t => {
+                    const activo = cantidad >= t.cantidad_minima
+                      && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                    return (
+                      <tr key={t.cantidad_minima} style={activo ? { backgroundColor: 'rgba(91,157,249,0.22)' } : undefined}>
+                        <td className="py-1.5 pl-2.5 font-semibold" style={{ color: activo ? '#FFFFFF' : 'rgba(244,246,242,0.6)' }}>{t.cantidad_minima}+ u.</td>
+                        <td className="py-1.5 font-bold" style={{ color: activo ? ACCENT : 'rgba(244,246,242,0.6)' }}>−{t.descuento_porcentaje}%</td>
+                        <td className="py-1.5 pr-2.5 text-right font-bold" style={{ color: activo ? '#FFFFFF' : '#EFF3F8' }}>
+                          ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {!p.is_on_demand && (
@@ -332,8 +337,8 @@ function ProductCard({
             onClick={handleAdd}
             className="w-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold py-2.5 transition-colors"
             style={added
-              ? { backgroundColor: 'rgba(180,244,42,0.15)', color: LIME, border: `1px solid ${LIME}` }
-              : { backgroundColor: LIME, color: '#0D1B2A' }}
+              ? { backgroundColor: 'rgba(91,157,249,0.15)', color: ACCENT, border: `1px solid ${ACCENT}` }
+              : { backgroundColor: '#FFFFFF', color: '#0D1B2A' }}
           >
             {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
             {added ? 'Agregado' : 'Agregar al pedido'}
