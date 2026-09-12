@@ -59,6 +59,12 @@ export default function ComerciosAdminPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [otpResult, setOtpResult] = useState<{ nombreLocal: string; otp: string } | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  function showToast(message: string, type: 'success' | 'error' = 'success') {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const fetchData = useCallback(async () => {
     if (!apiKey) return
@@ -102,7 +108,6 @@ export default function ComerciosAdminPage() {
   }
 
   async function asignarOtp(id: number, nombreLocal: string) {
-    if (!confirm(`¿Asignar una contraseña temporal a "${nombreLocal}"? Va a tener que cambiarla en su próximo login.`)) return
     setUpdatingId(id)
     const res = await apiFetch(`/admin/comercios/${id}/asignar-otp`, apiKey, { method: 'POST' })
     if (res.ok) {
@@ -110,7 +115,7 @@ export default function ComerciosAdminPage() {
       setCopiado(false)
       setOtpResult({ nombreLocal, otp: data.otp })
     } else {
-      alert('No se pudo asignar la contraseña temporal.')
+      showToast('No se pudo asignar la contraseña temporal.', 'error')
     }
     await fetchData()
     setUpdatingId(null)
@@ -128,6 +133,14 @@ export default function ComerciosAdminPage() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white shadow-lg ${
+          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Comercios</h1>
