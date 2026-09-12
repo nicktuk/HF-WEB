@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { publicApi, resolveImageUrl, fetchPublicCatalogSettings } from '@/lib/api';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
+import { setBuyNowItem } from '@/lib/buyNow';
 import { ShoppingCart, Check } from 'lucide-react';
 
 export default function ProductPageClient({ initialData }: { initialData?: ProductPublic }) {
@@ -48,6 +49,18 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     addItem(product, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
+  }
+
+  function handleBuyNow() {
+    if (!product) return;
+    setBuyNowItem(product, 1, selectedColor, selectedColor ? (colorNameMap[selectedColor] ?? null) : null);
+    trackPublicEvent('initiate_checkout', {
+      value: product.price ?? undefined,
+      num_items: 1,
+      content_ids: [product.id],
+      metadata: { screen: 'buy_now' },
+    });
+    router.push('/carrito?buyNow=1');
   }
 
   // Threshold: producto primero, luego global, luego default
@@ -82,6 +95,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
     if (match) setSelectedImage(match);
   };
 
+  // Sync color selection to whatever image is showing (gallery drives color too)
+  const handleSelectImage = (image: ProductImage) => {
+    setSelectedImage(image);
+    if (image.color && image.color !== selectedColor) {
+      setSelectedColor(image.color);
+    }
+  };
+
   const sortedImages = hideOutOfStockColors
     ? (product?.images ?? []).filter(img => !img.color || (colorStockMap[img.color] ?? 0) > 0)
     : (product?.images ?? []);
@@ -90,13 +111,13 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
   const goToPrev = () => {
     if (sortedImages.length < 2) return;
     const prev = (currentIndex - 1 + sortedImages.length) % sortedImages.length;
-    setSelectedImage(sortedImages[prev]);
+    handleSelectImage(sortedImages[prev]);
   };
 
   const goToNext = () => {
     if (sortedImages.length < 2) return;
     const next = (currentIndex + 1) % sortedImages.length;
-    setSelectedImage(sortedImages[next]);
+    handleSelectImage(sortedImages[next]);
   };
 
   const swipeStartX = useRef<number | null>(null);
@@ -119,6 +140,14 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
       setSelectedImage(primary);
     }
   }, [product]);
+
+  // Auto-select the first color (and its photo) as if the user had clicked it
+  useEffect(() => {
+    if (selectedColor) return;
+    if (uniqueColors.length === 0) return;
+    handleSelectColor(uniqueColors[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, catalogSettings, selectedColor]);
 
   useEffect(() => {
     if (!product) return;
@@ -243,7 +272,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                     {sortedImages.map((_, i) => (
                       <button
                         key={i}
-                        onClick={() => setSelectedImage(sortedImages[i])}
+                        onClick={() => handleSelectImage(sortedImages[i])}
                         className={`h-1.5 rounded-full transition-all ${
                           i === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-gray-400/70 hover:bg-gray-600'
                         }`}
@@ -261,7 +290,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                 {sortedImages.map((image, index) => (
                   <button
                     key={image.id}
-                    onClick={() => setSelectedImage(image)}
+                    onClick={() => handleSelectImage(image)}
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                       selectedImage?.id === image.id ? 'border-primary-500' : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -370,13 +399,8 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
             {/* Color selector — explicit, in buy box */}
             {uniqueColors.length > 0 && (
-              <div className="mb-5">
-                <p className="text-sm font-semibold text-gray-700 mb-2.5">
-                  Color
-                  {selectedColor && colorNameMap[selectedColor] && (
-                    <span className="font-normal text-gray-500 ml-1.5">— {colorNameMap[selectedColor]}</span>
-                  )}
-                </p>
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-700 mb-2.5">Color</p>
                 <div className="flex gap-3 flex-wrap">
                   {uniqueColors.map(color => {
                     const qty = colorStockMap[color];
@@ -411,35 +435,48 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
                     ¡Últimas {colorStockMap[selectedColor]} unidad{colorStockMap[selectedColor] === 1 ? '' : 'es'}!
                   </p>
                 )}
-                {uniqueColors.length > 0 && !selectedColor && (
-                  <p className="text-xs text-gray-400 mt-1.5">Seleccioná un color para agregar al carrito</p>
-                )}
               </div>
+            )}
+
+            {selectedColor && (
+              <p className="text-sm text-gray-600 mb-6">
+                Color: <span className="font-semibold text-gray-800">{colorNameMap[selectedColor] ?? selectedColor}</span>
+              </p>
             )}
 
             {/* Stock Availability + WhatsApp CTA — desktop */}
             <div className="hidden md:block space-y-3">
-              {(effectiveStockQty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
-                <button
-                  onClick={handleAddToCart}
-                  className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-3 transition-colors ${
-                    justAdded
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                      : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
-                  }`}
-                >
-                  {justAdded ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
-                  <span className="flex items-center gap-2">
-                    {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
-                    {!justAdded && selectedColor && (
-                      <span
-                        className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
-                        style={{ backgroundColor: selectedColor }}
-                      />
-                    )}
-                  </span>
-                </button>
-              )}
+              <button
+                onClick={handleBuyNow}
+                className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 transition-colors"
+              >
+                Comprar
+                {selectedColor && (
+                  <span
+                    className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-white/50 inline-block"
+                    style={{ backgroundColor: selectedColor }}
+                  />
+                )}
+              </button>
+              <button
+                onClick={handleAddToCart}
+                className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-3 transition-colors ${
+                  justAdded
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
+                }`}
+              >
+                {justAdded ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+                <span className="flex items-center gap-2">
+                  {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
+                  {!justAdded && selectedColor && (
+                    <span
+                      className="w-4 h-4 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
+                      style={{ backgroundColor: selectedColor }}
+                    />
+                  )}
+                </span>
+              </button>
               <StockAvailability
                 isCheckStock={product.is_check_stock}
                 isImmediateDelivery={product.is_immediate_delivery}
@@ -473,10 +510,10 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
 
       {/* Mobile CTA — fixed bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg md:hidden space-y-2">
-        {(product.stock_qty ?? 0) > 0 && (uniqueColors.length === 0 || selectedColor) && (
+        <div className="flex gap-2">
           <button
             onClick={handleAddToCart}
-            className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 font-semibold py-2.5 transition-colors ${
+            className={`flex items-center justify-center gap-2 flex-1 rounded-xl border-2 font-semibold py-2.5 transition-colors ${
               justAdded
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                 : 'border-primary-300 bg-primary-50 hover:bg-primary-100 text-primary-700'
@@ -484,7 +521,7 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
           >
             {justAdded ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
             <span className="flex items-center gap-2">
-              {justAdded ? 'Agregado al carrito' : 'Agregar al carrito'}
+              {justAdded ? 'Agregado' : 'Agregar'}
               {!justAdded && selectedColor && (
                 <span
                   className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-primary-300 inline-block"
@@ -493,7 +530,19 @@ export default function ProductPageClient({ initialData }: { initialData?: Produ
               )}
             </span>
           </button>
-        )}
+          <button
+            onClick={handleBuyNow}
+            className="flex items-center justify-center gap-2 flex-1 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 transition-colors"
+          >
+            Comprar
+            {selectedColor && (
+              <span
+                className="w-3.5 h-3.5 rounded-full border border-white shadow-sm ring-1 ring-white/50 inline-block"
+                style={{ backgroundColor: selectedColor }}
+              />
+            )}
+          </button>
+        </div>
         <StockAvailability
           isCheckStock={product.is_check_stock}
           isImmediateDelivery={product.is_immediate_delivery}

@@ -387,8 +387,8 @@ export interface ProductUpdateForm {
   cantidad_minima?: number | null;
   markup_percentage?: number;
   custom_name?: string;
-  original_price?: number;
-  custom_price?: number;
+  original_price?: number | null;
+  custom_price?: number | null;
   display_order?: number;
   category?: string;
   category_id?: number;

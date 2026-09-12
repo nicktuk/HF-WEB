@@ -175,9 +175,9 @@ class ProductResponse(BaseModel):
     @computed_field
     @property
     def final_price(self) -> Optional[Decimal]:
-        if self.custom_price is not None:
+        if self.custom_price is not None and self.custom_price > 0:
             return self.custom_price
-        if self.original_price is not None and self.markup_percentage is not None:
+        if self.original_price is not None and self.original_price > 0 and self.markup_percentage is not None:
             return self.original_price * (1 + self.markup_percentage / 100)
         return None
 

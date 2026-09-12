@@ -1092,13 +1092,14 @@ class ProductService:
         # Validate: cannot enable product without setting a price
         if data.enabled is True:
             # Determine the effective values after this update
-            effective_custom_price = data.custom_price if data.custom_price is not None else product.custom_price
+            effective_custom_price = data.custom_price if 'custom_price' in data.model_fields_set else product.custom_price
             effective_markup = data.markup_percentage if data.markup_percentage is not None else product.markup_percentage
+            effective_original_price = data.original_price if 'original_price' in data.model_fields_set else product.original_price
 
             # Check if there will be a valid price after update
             has_custom_price = effective_custom_price is not None and float(effective_custom_price) > 0
             has_markup = effective_markup is not None and float(effective_markup) > 0
-            has_original_price = product.original_price is not None and float(product.original_price) > 0
+            has_original_price = effective_original_price is not None and float(effective_original_price) > 0
 
             if not has_custom_price and not has_markup and not has_original_price:
                 from app.core.exceptions import ValidationError
@@ -1147,10 +1148,10 @@ class ProductService:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:
             product.custom_name = data.custom_name if data.custom_name else None
-        if data.original_price is not None:
-            product.original_price = data.original_price if data.original_price > 0 else None
-        if data.custom_price is not None:
-            product.custom_price = data.custom_price if data.custom_price > 0 else None
+        if 'original_price' in data.model_fields_set:
+            product.original_price = data.original_price if data.original_price and data.original_price > 0 else None
+        if 'custom_price' in data.model_fields_set:
+            product.custom_price = data.custom_price if data.custom_price and data.custom_price > 0 else None
         if data.display_order is not None:
             product.display_order = data.display_order
         if data.category is not None:
