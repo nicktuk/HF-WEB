@@ -8,6 +8,31 @@
 
 ---
 
+## Sesión 2026-09-12
+
+### Recupero de contraseña — canal Comercios
+
+**Backend:**
+- Migración `087_add_password_reset_to_comercio.py`: `reset_token_hash`, `reset_token_expires_at`, `debe_cambiar_password` en `mayoristas`.
+- `backend/app/services/comercio_auth.py` (nuevo): hashing bcrypt compartido (`hash_password`, `verify_password`, `DUMMY_HASH`), movido desde `comercios_public.py` para que lo usen también `comercios_admin.py` y `comercios_protected.py`.
+- `backend/app/services/comercio_password.py` (nuevo): generación de token de reset (`secrets.token_urlsafe`), hash sha256 del token, generación de OTP (8 chars, sin 0/O/1/I/L), envío de mails (SMTP, mismas env vars `IS_EMAIL_*` que Import Scorer).
+- `comercios_public.py`: `POST /public/comercios/forgot-password` (busca por usuario; si tiene email manda link de reset por mail; si no tiene email, avisa a HEFA por mail — nueva env var `COMERCIO_ALERT_EMAIL_TO`) y `POST /public/comercios/reset-password` (valida token+expiración, min 8 caracteres).
+- `comercios_protected.py`: `POST /comercios/set-password` (autenticado por JWT, sin pedir password actual — pensado para el flujo de OTP forzada).
+- `comercios_admin.py`: `POST /admin/comercios/{id}/asignar-otp` — genera OTP, la muestra una sola vez, marca `debe_cambiar_password = true`.
+- **Protección de enumeración**: el backend es honesto (`no_encontrado` / `enviado` / `sin_email`); la capa Next.js colapsa `no_encontrado` y `enviado` en el mismo mensaje genérico. `sin_email` sí se distingue (decisión de negocio explícita).
+
+**Frontend:**
+- Nuevas rutas API: `app/api/comercios/auth/forgot-password`, `.../reset-password`, `.../set-password` (rate-limited con `lib/rate-limiter.ts`, mismo patrón que `login/route.ts`).
+- `lib/comercio-jwt.ts`: payload del JWT suma `debe_cambiar_password`.
+- `middleware.ts`: si `debe_cambiar_password` es true, redirige a `/comercios/cambiar-password` (agregado al matcher) antes de dejar pasar a rutas protegidas.
+- Páginas nuevas: `comercios/olvide-password`, `comercios/reset-password` (lee `?token=`), `comercios/cambiar-password` (post-OTP, sin pedir password actual).
+- `comercios/page.tsx`: link "¿Olvidaste tu contraseña?" y redirect condicional post-login según `debe_cambiar_password`.
+- `admin/comercios/page.tsx`: botón "Asignar OTP" por comercio (usa `X-Admin-API-Key` como el resto del archivo), muestra la OTP en un `alert()` para comunicarla por WhatsApp.
+
+**Alcance:** solo recupero (olvidé contraseña + OTP admin + cambio forzado). No se agregó una pantalla de "cambiar contraseña" para comercios ya logueados que la recuerden — no se pidió.
+
+---
+
 ## Sesión 2026-04-02
 
 ### Métodos de pago configurables con flag is_business

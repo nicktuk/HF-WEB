@@ -16,6 +16,7 @@ from app.models.product import ProductImage
 from app.models.comercio import Comercio, PedidoComercio, PedidoComercioItem
 from app.config import settings
 from app.services import comercio_catalog
+from app.services.comercio_auth import hash_password
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -70,6 +71,34 @@ async def get_comercio_info(
         "nombre_local": m.nombre_local,
         "ubicacion_local": m.ubicacion_local,
     }
+
+
+class SetPasswordRequest(BaseModel):
+    password: str
+
+
+@router.post("/set-password")
+async def set_password(
+    body: SetPasswordRequest,
+    comercio_id: int = Depends(get_comercio_id),
+    db: Session = Depends(get_db),
+):
+    """Cambio de contraseña sin pedir la actual: solo alcanzable con una
+    sesión ya autenticada (típicamente tras loguearse con una OTP asignada
+    por el admin), lo que ya prueba posesión de la cuenta."""
+    if len(body.password) < 8:
+        raise HTTPException(422, "La contraseña debe tener al menos 8 caracteres.")
+
+    comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
+    if not comercio:
+        raise HTTPException(404, "not_found")
+
+    comercio.password_hash = hash_password(body.password)
+    comercio.debe_cambiar_password = False
+    comercio.reset_token_hash = None
+    comercio.reset_token_expires_at = None
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/pricing-config")

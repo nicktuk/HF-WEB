@@ -111,6 +111,9 @@ class Settings(BaseSettings):
     N8N_WEBHOOK_ACTIVACION_COMERCIO: str = ""
     N8N_WEBHOOK_PEDIDO_COMERCIO: str = ""
 
+    # Canal Comercio — recupero de contraseña
+    COMERCIO_ALERT_EMAIL_TO: str = ""
+
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001
     BESTBUY_API_KEY: str = ""          # developers.bestbuy.com (gratuito)

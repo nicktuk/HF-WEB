@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 
 const COOKIE = 'hefa_comercio_session'
 const MAYORISTA_LOGIN = '/comercios'
+const CAMBIAR_PASSWORD = '/comercios/cambiar-password'
 
 function getSecret() {
   return new TextEncoder().encode(process.env.COMERCIO_JWT_SECRET ?? '')
@@ -27,6 +28,12 @@ export async function middleware(request: NextRequest) {
       return res
     }
 
+    // Comercio con OTP asignada por admin: forzar cambio antes de dejarlo
+    // pasar a cualquier otra ruta protegida.
+    if (payload.debe_cambiar_password && request.nextUrl.pathname !== CAMBIAR_PASSWORD) {
+      return NextResponse.redirect(new URL(CAMBIAR_PASSWORD, request.url))
+    }
+
     return NextResponse.next()
   } catch {
     const res = NextResponse.redirect(new URL(MAYORISTA_LOGIN, request.url))
@@ -43,5 +50,6 @@ export const config = {
     '/comercios/pedidos/:path*',
     '/comercios/pedido/:path*',
     '/comercios/producto/:path*',
+    '/comercios/cambiar-password',
   ],
 }

@@ -30,7 +30,10 @@ export async function GET(request: NextRequest) {
   // La sesión es fija desde el login original: se conserva el mismo `exp`
   // en vez de reiniciar el conteo a 24hs.
   if (estado !== payload.estado) {
-    const newToken = await signComercioToken({ comercio_id: payload.comercio_id, estado }, payload.exp)
+    const newToken = await signComercioToken(
+      { comercio_id: payload.comercio_id, estado, debe_cambiar_password: payload.debe_cambiar_password },
+      payload.exp,
+    )
     const remaining = Math.max(0, (payload.exp ?? 0) - Math.floor(Date.now() / 1000))
     const response = NextResponse.json({ comercio_id: payload.comercio_id, estado })
     response.cookies.set(COMERCIO_COOKIE_NAME, newToken, {

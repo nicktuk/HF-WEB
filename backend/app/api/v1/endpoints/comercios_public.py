@@ -1,11 +1,10 @@
 ﻿"""Public comercio endpoints — sin autenticación requerida."""
 import logging
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
-import bcrypt as _bcrypt
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -13,25 +12,11 @@ from app.db.session import get_db
 from app.models.comercio import Comercio
 from app.models.product import ProductImage
 from app.config import settings
-from app.services import comercio_catalog
+from app.services import comercio_catalog, comercio_password
+from app.services.comercio_auth import DUMMY_HASH, hash_password, verify_password
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# Hash dummy hardcodeado para timing-safe comparison cuando el usuario no existe.
-# Evita inicializar bcrypt en tiempo de import (incompatible con bcrypt>=4.0 + passlib).
-_DUMMY_HASH = b"$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"
-
-
-def _hash_password(password: str) -> str:
-    return _bcrypt.hashpw(password.encode()[:72], _bcrypt.gensalt()).decode()
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    try:
-        return _bcrypt.checkpw(plain.encode()[:72], hashed.encode())
-    except Exception:
-        return False
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -66,8 +51,18 @@ class ComercioPublic(BaseModel):
     celular: str | None
     email: str | None
     vendedor_id: int | None
+    debe_cambiar_password: bool
 
     model_config = {"from_attributes": True}
+
+
+class ForgotPasswordRequest(BaseModel):
+    usuario: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -85,7 +80,7 @@ async def crear_solicitud(
     if not body.celular and not body.email:
         raise HTTPException(status_code=422, detail="Ingresá al menos un celular o email.")
 
-    password_hash = _hash_password(body.password)
+    password_hash = hash_password(body.password)
     comercio = Comercio(
         nombre=body.nombre.strip(),
         apellido=body.apellido.strip(),
@@ -122,8 +117,8 @@ async def login_comercio(
     ).first()
 
     # Siempre correr bcrypt para evitar timing attacks
-    stored = comercio.password_hash.encode() if comercio else _DUMMY_HASH
-    password_ok = _verify_password(body.password, stored.decode() if isinstance(stored, bytes) else stored)
+    stored = comercio.password_hash.encode() if comercio else DUMMY_HASH
+    password_ok = verify_password(body.password, stored.decode() if isinstance(stored, bytes) else stored)
 
     if not comercio or not password_ok:
         raise HTTPException(status_code=401, detail="credenciales_invalidas")
@@ -135,6 +130,66 @@ async def login_comercio(
         raise HTTPException(status_code=403, detail="cuenta_inactiva")
 
     return comercio
+
+
+@router.post("/comercios/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Inicia el recupero de contraseña. La protección contra enumeración de
+    usuarios se aplica en la capa Next.js (que colapsa 'no_encontrado' y
+    'enviado' en el mismo mensaje genérico); acá se devuelve el estado real.
+    """
+    comercio = db.query(Comercio).filter(
+        Comercio.usuario == body.usuario.strip().lower()
+    ).first()
+
+    if not comercio:
+        return {"estado": "no_encontrado"}
+
+    if not comercio.email:
+        background_tasks.add_task(comercio_password.enviar_alerta_sin_email, comercio)
+        return {"estado": "sin_email"}
+
+    token = comercio_password.generar_token_reset()
+    comercio.reset_token_hash = comercio_password.hash_token(token)
+    comercio.reset_token_expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=comercio_password.RESET_TOKEN_TTL_MINUTES
+    )
+    db.commit()
+
+    background_tasks.add_task(comercio_password.enviar_mail_reset, comercio, token)
+    return {"estado": "enviado"}
+
+
+@router.post("/comercios/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    if len(body.password) < 8:
+        raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 8 caracteres.")
+
+    token_hash = comercio_password.hash_token(body.token)
+    comercio = db.query(Comercio).filter(Comercio.reset_token_hash == token_hash).first()
+
+    now = datetime.now(timezone.utc)
+    expira = comercio.reset_token_expires_at if comercio else None
+    if expira is not None and expira.tzinfo is None:
+        expira = expira.replace(tzinfo=timezone.utc)
+
+    if not comercio or not expira or expira < now:
+        raise HTTPException(status_code=400, detail="El link no es válido o expiró. Pedí uno nuevo.")
+
+    comercio.password_hash = hash_password(body.password)
+    comercio.reset_token_hash = None
+    comercio.reset_token_expires_at = None
+    comercio.debe_cambiar_password = False
+    db.commit()
+
+    return {"ok": True}
 
 
 def _imagen_url(db: Session, product_id: int) -> Optional[str]:

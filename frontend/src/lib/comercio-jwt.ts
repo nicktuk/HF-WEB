@@ -3,6 +3,7 @@
 export interface ComercioJwtPayload extends JWTPayload {
   comercio_id: number
   estado: string
+  debe_cambiar_password: boolean
 }
 
 const COOKIE_NAME = 'hefa_comercio_session'

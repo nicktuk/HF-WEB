@@ -30,6 +30,7 @@ interface Comercio {
   vendedor_nombre: string | null
   activado_at: string | null
   created_at: string | null
+  debe_cambiar_password: boolean
 }
 
 interface Vendedor {
@@ -93,6 +94,20 @@ export default function ComerciosAdminPage() {
       method: 'PATCH',
       body: JSON.stringify({ vendedor_id: vendedor_id ? parseInt(vendedor_id) : null }),
     })
+    await fetchData()
+    setUpdatingId(null)
+  }
+
+  async function asignarOtp(id: number, nombreLocal: string) {
+    if (!confirm(`¿Asignar una contraseña temporal a "${nombreLocal}"? Va a tener que cambiarla en su próximo login.`)) return
+    setUpdatingId(id)
+    const res = await apiFetch(`/admin/comercios/${id}/asignar-otp`, apiKey, { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json() as { otp: string }
+      alert(`Contraseña temporal: ${data.otp}\n\nComunicásela al comercio por WhatsApp — no se vuelve a mostrar.`)
+    } else {
+      alert('No se pudo asignar la contraseña temporal.')
+    }
     await fetchData()
     setUpdatingId(null)
   }
@@ -219,6 +234,14 @@ export default function ComerciosAdminPage() {
                             Suspender
                           </button>
                         )}
+                        <button
+                          disabled={isUpdating}
+                          onClick={() => asignarOtp(m.id, m.nombre_local)}
+                          title="Asignar contraseña temporal (para comercios sin email registrado)"
+                          className="px-2 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Asignar OTP
+                        </button>
                       </div>
                     </td>
                   </tr>

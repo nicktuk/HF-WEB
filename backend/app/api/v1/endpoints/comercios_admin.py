@@ -16,6 +16,8 @@ from app.models.comercio import (
     PedidoComercio,
     PedidoComercioItem,
 )
+from app.services import comercio_password
+from app.services.comercio_auth import hash_password
 
 router = APIRouter()
 
@@ -42,6 +44,7 @@ def _comercio_dict(m: Comercio) -> dict:
         "vendedor_nombre": m.vendedor.nombre if m.vendedor else None,
         "activado_at": m.activado_at.isoformat() if m.activado_at else None,
         "created_at": m.created_at.isoformat() if m.created_at else None,
+        "debe_cambiar_password": bool(m.debe_cambiar_password),
     }
 
 
@@ -114,6 +117,29 @@ async def assign_vendedor_to_comercio(
     db.commit()
     db.refresh(m)
     return _comercio_dict(m)
+
+
+@router.post("/comercios/{comercio_id}/asignar-otp")
+async def asignar_otp(
+    comercio_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Genera una contraseña temporal (OTP) para un comercio que no puede
+    resolver su recupero por mail (sin email registrado). Se devuelve en
+    texto plano una sola vez para que el admin se la comunique por WhatsApp;
+    el comercio queda forzado a cambiarla en su próximo login."""
+    m = db.query(Comercio).filter(Comercio.id == comercio_id).first()
+    if not m:
+        raise HTTPException(404, "Comercio no encontrado")
+
+    otp = comercio_password.generar_otp()
+    m.password_hash = hash_password(otp)
+    m.debe_cambiar_password = True
+    m.reset_token_hash = None
+    m.reset_token_expires_at = None
+    db.commit()
+    return {"ok": True, "otp": otp}
 
 
 # ─── Vendedores ─────────────────────────────────────────────────────────────────

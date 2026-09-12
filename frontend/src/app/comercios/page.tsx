@@ -39,7 +39,7 @@ export default function ComerciosLanding() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario, password }),
       })
-      const data = await res.json() as { error?: string }
+      const data = await res.json() as { error?: string; comercio?: { debe_cambiar_password?: boolean } }
 
       if (!res.ok) {
         setError(data.error ?? 'Error al iniciar sesión.')
@@ -50,7 +50,9 @@ export default function ComerciosLanding() {
       // (staleTimes.dynamic en next.config.js) y un router.push podría
       // reusar la versión sin sesión ya visitada, mostrando el preview de
       // nuevo como si el login no hubiera funcionado.
-      window.location.href = '/comercios/catalogo'
+      window.location.href = data.comercio?.debe_cambiar_password
+        ? '/comercios/cambiar-password'
+        : '/comercios/catalogo'
     } catch {
       setError('Error de conexión. Intentá de nuevo.')
     } finally {
@@ -139,6 +141,12 @@ export default function ComerciosLanding() {
             >
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
+
+            <div className="text-center">
+              <Link href="/comercios/olvide-password" className="text-xs text-zinc-500 hover:text-primary-600 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 pt-6 border-t border-zinc-100 text-center">

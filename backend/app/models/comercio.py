@@ -59,6 +59,9 @@ class Comercio(Base):
     )
     vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="SET NULL"), nullable=True)
     activado_at = Column(DateTime, nullable=True)
+    reset_token_hash = Column(Text, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
+    debe_cambiar_password = Column(Boolean, nullable=False, default=False)
 
     vendedor = relationship("Vendedor", back_populates="comercios")
     pedidos = relationship("PedidoComercio", back_populates="comercio")

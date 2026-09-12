@@ -50,7 +50,11 @@ export async function POST(request: NextRequest) {
   resetRateLimit(`login:ip:${ip}`)
   resetRateLimit(`login:user:${usuario}`)
 
-  const token = await signComercioToken({ comercio_id: comercio.id, estado: comercio.estado })
+  const token = await signComercioToken({
+    comercio_id: comercio.id,
+    estado: comercio.estado,
+    debe_cambiar_password: Boolean(comercio.debe_cambiar_password),
+  })
 
   const response = NextResponse.json({ ok: true, comercio })
   response.cookies.set(COMERCIO_COOKIE_NAME, token, {
