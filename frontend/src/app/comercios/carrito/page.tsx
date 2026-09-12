@@ -1,18 +1,31 @@
-﻿'use client'
+'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useComercioCart } from '@/hooks/useComercioCart'
 
 export default function CarritoPage() {
   const router = useRouter()
-  const { items, update, remove, total, clear } = useComercioCart()
+  const { items, update, remove, total, clear, precioUnitario, setPricingConfig } = useComercioCart()
   const [notas, setNotas] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // El carrito puede visitarse directo (sin pasar antes por el catálogo o la
+  // ficha de producto), así que trae la config de precios por su cuenta.
+  useEffect(() => {
+    fetch('/api/comercios/pricing-config')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setPricingConfig(data)
+      })
+      .catch(() => {})
+  }, [setPricingConfig])
+
   const totalVal = total()
+  const itemsBajoMinimo = items.filter(i => i.cantidad_minima && i.cantidad < i.cantidad_minima)
+  const puedeConfirmar = itemsBajoMinimo.length === 0
 
   async function handleConfirmar() {
     setError(null)
@@ -65,12 +78,13 @@ export default function CarritoPage() {
           {items.map(item => {
             const minima = item.cantidad_minima ?? null
             const alcanzaMinimo = !minima || item.cantidad >= minima
+            const precio = precioUnitario(item)
             return (
               <div key={item.producto_id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-800 truncate">{item.nombre}</p>
                   <p className="text-xs text-zinc-500">
-                    ${item.precio_comercio.toLocaleString('es-AR')} c/u
+                    ${precio.toLocaleString('es-AR')} c/u
                   </p>
                   {minima && (
                     <p className={`text-xs mt-0.5 ${alcanzaMinimo ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -98,7 +112,7 @@ export default function CarritoPage() {
                 </div>
 
                 <p className="text-sm font-semibold text-zinc-900 w-24 text-right">
-                  ${(item.precio_comercio * item.cantidad).toLocaleString('es-AR')}
+                  ${(precio * item.cantidad).toLocaleString('es-AR')}
                 </p>
 
                 <button
@@ -128,6 +142,12 @@ export default function CarritoPage() {
             </span>
           </div>
 
+          {!puedeConfirmar && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              Ajustá la cantidad de {itemsBajoMinimo.length === 1 ? 'este producto' : 'estos productos'} para llegar a su mínimo antes de confirmar.
+            </p>
+          )}
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -136,7 +156,7 @@ export default function CarritoPage() {
 
           <button
             onClick={handleConfirmar}
-            disabled={loading || items.length === 0}
+            disabled={loading || items.length === 0 || !puedeConfirmar}
             className="w-full bg-primary-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Confirmando...' : 'Confirmar pedido'}

@@ -31,6 +31,9 @@ export default async function CatalogoPage() {
         <CatalogoClient
           productos={productos}
           montoMinimo={config.monto_minimo_pedido}
+          modoPrecio={config.modo_precio}
+          redondeo={config.redondeo}
+          tramosDescuento={config.tramos_descuento}
         />
       </main>
     </div>

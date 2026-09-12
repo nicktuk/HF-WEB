@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.product import Product, ProductImage
+from app.models.product import ProductImage
 from app.models.comercio import Comercio, PedidoComercio, PedidoComercioItem
 from app.config import settings
 from app.services import comercio_catalog
@@ -46,6 +46,13 @@ def _imagen_url(db: Session, product_id: int) -> Optional[str]:
     return img.url if img else None
 
 
+def _galeria(db: Session, product_id: int) -> list[dict]:
+    imgs = db.query(ProductImage).filter(
+        ProductImage.product_id == product_id
+    ).order_by(ProductImage.display_order).all()
+    return [{"id": i.id, "url": i.url, "alt_text": i.alt_text} for i in imgs]
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/info")
@@ -65,6 +72,23 @@ async def get_comercio_info(
     }
 
 
+@router.get("/pricing-config")
+async def get_pricing_config(
+    comercio_id: int = Depends(get_comercio_id),
+    db: Session = Depends(get_db),
+):
+    """Config de precios liviana, para recalcular precios en el carrito sin
+    depender de que el comercio haya pasado antes por el catálogo."""
+    cfg = comercio_catalog.get_config(db)
+    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    return {
+        "modo_precio": cfg.modo_precio,
+        "redondeo": int(cfg.redondeo),
+        "tramos_descuento": tramos,
+        "monto_minimo_pedido": int(cfg.monto_minimo_pedido or 0),
+    }
+
+
 @router.get("/catalogo")
 async def get_catalogo(
     comercio_id: int = Depends(get_comercio_id),
@@ -72,15 +96,17 @@ async def get_catalogo(
 ):
     cfg = comercio_catalog.get_config(db)
     visibles = comercio_catalog.productos_visibles(db, cfg)
+    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
 
     items = []
     for p, costo, stock in visibles:
-        precio_m = comercio_catalog.precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
+        precio_m = comercio_catalog.precio_referencia(costo, p.precio_mayorista_override, cfg, p.final_price)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
             "marca": p.brand,
             "precio_comercio": int(precio_m),
+            "precio_venta": p.final_price,
             "stock": stock,
             "is_on_demand": bool(p.is_on_demand),
             "imagen_url": _imagen_url(db, p.id),
@@ -98,7 +124,56 @@ async def get_catalogo(
         "config": {
             "monto_minimo_pedido": int(cfg.monto_minimo_pedido or 0),
             "descuento_porcentaje": float(cfg.descuento_porcentaje),
+            "modo_precio": cfg.modo_precio,
+            "redondeo": int(cfg.redondeo),
+            "tramos_descuento": tramos,
         },
+    }
+
+
+@router.get("/productos/{producto_id}")
+async def get_producto_detalle(
+    producto_id: int,
+    comercio_id: int = Depends(get_comercio_id),
+    db: Session = Depends(get_db),
+):
+    """Ficha de producto del canal comercios: solo datos concretos, sin
+    descripción de marketing ni calificaciones (eso es exclusivo del sitio
+    minorista). Reutiliza comercio_catalog.producto_visible para no mostrar
+    productos que no estén habilitados en este canal.
+    """
+    cfg = comercio_catalog.get_config(db)
+    resultado = comercio_catalog.producto_visible(db, cfg, producto_id)
+    if not resultado:
+        raise HTTPException(404, "Producto no encontrado.")
+
+    p, costo, stock = resultado
+    precio_m = comercio_catalog.precio_referencia(costo, p.precio_mayorista_override, cfg, p.final_price)
+    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+
+    return {
+        "id": p.id,
+        "nombre": p.display_name,
+        "marca": p.brand,
+        "sku": p.codigo_interno if p.mostrar_codigo else p.sku,
+        "categoria": p.category,
+        "subcategoria": p.subcategory,
+        "kit_content": p.kit_content,
+        "unidades_por_bulto": p.unidades_por_bulto,
+        "cantidad_minima": p.cantidad_minima,
+        "precio_comercio": int(precio_m),
+        "precio_venta": p.final_price,
+        "stock": stock,
+        "is_on_demand": bool(p.is_on_demand),
+        "video_url": p.video_url,
+        "imagenes": _galeria(db, p.id),
+        "is_featured": bool(p.is_featured),
+        "is_immediate_delivery": bool(p.is_immediate_delivery),
+        "is_best_seller": bool(p.is_best_seller),
+        "modo_precio": cfg.modo_precio,
+        "redondeo": int(cfg.redondeo),
+        "tramos_descuento": tramos,
+        "override": p.precio_mayorista_override is not None,
     }
 
 
@@ -124,6 +199,7 @@ async def crear_pedido(
         raise HTTPException(422, "El pedido no tiene items.")
 
     cfg = comercio_catalog.get_config(db)
+    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
     comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
     if not comercio or comercio.estado != "activo":
         raise HTTPException(403, "cuenta_inactiva")
@@ -134,13 +210,12 @@ async def crear_pedido(
     for inp in body.items:
         if inp.cantidad <= 0:
             continue
-        p = db.query(Product).filter(
-            Product.id == inp.producto_id,
-            Product.es_mayorista == True,
-            Product.enabled == True,
-        ).first()
-        if not p:
+        # Reutiliza las mismas reglas de visibilidad del catálogo (producto,
+        # costo y stock ya resueltos) — nunca confiar en datos del cliente.
+        resultado = comercio_catalog.producto_visible(db, cfg, inp.producto_id)
+        if not resultado:
             raise HTTPException(422, f"Producto {inp.producto_id} no disponible.")
+        p, costo, stock = resultado
 
         # Validación por bulto en pausa (se retoma más adelante):
         # if p.unidades_por_bulto and inp.cantidad % p.unidades_por_bulto != 0:
@@ -149,15 +224,12 @@ async def crear_pedido(
         if p.cantidad_minima and inp.cantidad < p.cantidad_minima:
             raise HTTPException(422, f"'{p.display_name}' requiere un mínimo de {p.cantidad_minima} u. (pediste {inp.cantidad}).")
 
-        stock = comercio_catalog.stock_total(db, p.id)
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
-        costo = comercio_catalog.ultimo_precio_compra(db, p.id) or p.original_price
-        if costo is None:
-            raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
-
-        precio_u = comercio_catalog.precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
+        precio_u = comercio_catalog.precio_comercio(
+            costo, p.precio_mayorista_override, cfg, p.final_price, inp.cantidad, tramos,
+        )
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})

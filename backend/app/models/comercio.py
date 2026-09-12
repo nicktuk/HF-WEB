@@ -76,6 +76,24 @@ class ConfiguracionComercio(Base):
     tipo_markup = Column(sa.String(10), nullable=False, default='fijo')
     # Si True: incluye en el catálogo todos los productos habilitados con stock > 0 y markup > 50%
     mostrar_todos_con_stock = Column(Boolean, nullable=False, default=False)
+    # 'markup': precio_comercio se calcula sobre el costo de compra (tipo_markup/descuento_porcentaje).
+    # 'descuento': precio_comercio se calcula descontando un % (según comercio_descuento_tramos,
+    # elegido por la cantidad pedida) sobre el precio minorista.
+    modo_precio = Column(sa.String(10), nullable=False, default='markup')
+
+
+class DescuentoTramoComercio(Base):
+    """Tramo de la matriz cantidad/descuento usada cuando modo_precio == 'descuento'.
+
+    A partir de `cantidad_minima` unidades de un mismo producto en el pedido,
+    se aplica `descuento_porcentaje` sobre el precio minorista. Se usa siempre
+    el tramo de mayor cantidad_minima que la cantidad pedida alcance.
+    """
+    __tablename__ = "comercio_descuento_tramos"
+
+    id = Column(Integer, primary_key=True)
+    cantidad_minima = Column(Integer, nullable=False, unique=True)
+    descuento_porcentaje = Column(Numeric(5, 2), nullable=False)
 
 
 class PedidoComercio(Base):

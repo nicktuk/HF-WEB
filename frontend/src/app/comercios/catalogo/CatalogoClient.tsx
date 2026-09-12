@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { ShoppingCart, Check, Star, Zap, Award } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { resolveImageUrl } from '@/lib/api'
+import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 
 interface Producto {
   id: number
   nombre: string
   marca: string | null
   precio_comercio: number
+  precio_venta: number | null
   stock: number
   is_on_demand: boolean
   imagen_url: string | null
@@ -26,12 +29,20 @@ interface Producto {
 interface Props {
   productos: Producto[]
   montoMinimo: number
+  modoPrecio: 'markup' | 'descuento'
+  redondeo: number
+  tramosDescuento: TramoDescuento[]
 }
 
-export function CatalogoClient({ productos, montoMinimo }: Props) {
+export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, tramosDescuento }: Props) {
   const [search, setSearch] = useState('')
   const [categoria, setCategoria] = useState('')
   const add = useComercioCart(s => s.add)
+  const setPricingConfig = useComercioCart(s => s.setPricingConfig)
+
+  useEffect(() => {
+    setPricingConfig({ modo_precio: modoPrecio, redondeo, tramos_descuento: tramosDescuento })
+  }, [modoPrecio, redondeo, tramosDescuento, setPricingConfig])
 
   const categorias = Array.from(new Set(productos.map(p => p.categoria).filter(Boolean))) as string[]
 
@@ -76,7 +87,14 @@ export function CatalogoClient({ productos, montoMinimo }: Props) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {filtered.map(p => (
-          <ProductCard key={p.id} producto={p} onAdd={add} />
+          <ProductCard
+            key={p.id}
+            producto={p}
+            onAdd={add}
+            modoPrecio={modoPrecio}
+            redondeo={redondeo}
+            tramosDescuento={tramosDescuento}
+          />
         ))}
       </div>
     </div>
@@ -86,14 +104,26 @@ export function CatalogoClient({ productos, montoMinimo }: Props) {
 function ProductCard({
   producto: p,
   onAdd,
+  modoPrecio,
+  redondeo,
+  tramosDescuento,
 }: {
   producto: Producto
   onAdd: (item: Omit<CartItem, 'cantidad'>, cantidad: number) => void
+  modoPrecio: 'markup' | 'descuento'
+  redondeo: number
+  tramosDescuento: TramoDescuento[]
 }) {
   const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
   const [added, setAdded] = useState(false)
 
   const imgUrl = resolveImageUrl(p.imagen_url)
+  const faltan = p.cantidad_minima ? Math.max(0, p.cantidad_minima - cantidad) : 0
+  const enModoDescuento = modoPrecio === 'descuento' && p.precio_venta != null
+
+  const precioUnitario = enModoDescuento
+    ? calcularPrecioPorDescuento(p.precio_venta as number, cantidad, tramosDescuento, redondeo)
+    : p.precio_comercio
 
   function handleAdd() {
     onAdd(
@@ -102,6 +132,7 @@ function ProductCard({
         nombre: p.nombre,
         imagen_url: p.imagen_url,
         precio_comercio: p.precio_comercio,
+        precio_venta: p.precio_venta,
         cantidad_minima: p.cantidad_minima,
       },
       cantidad,
@@ -112,82 +143,122 @@ function ProductCard({
 
   return (
     <div className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm card-lift overflow-hidden flex flex-col">
-      <div className="aspect-square bg-zinc-50 relative">
-        {imgUrl ? (
-          <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-2" unoptimized />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xs">Sin imagen</div>
-        )}
+      <Link href={`/comercios/producto/${p.id}`} className="contents">
+        <div className="aspect-square bg-zinc-50 relative">
+          {imgUrl ? (
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-2" unoptimized />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xs">Sin imagen</div>
+          )}
 
-        {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {p.is_featured && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Star className="w-2.5 h-2.5 fill-current" />
-                Nuevo
+          {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
+              {p.is_featured && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Star className="w-2.5 h-2.5 fill-current" />
+                  Nuevo
+                </span>
+              )}
+              {p.is_immediate_delivery && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Zap className="w-2.5 h-2.5 fill-current" />
+                  Inmediata
+                </span>
+              )}
+              {p.is_best_seller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Award className="w-2.5 h-2.5" />
+                  Top
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-3 pt-3 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2 min-h-[16px]">
+            {p.categoria && (
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 truncate">{p.categoria}</p>
+            )}
+            {p.marca && (
+              <p className="text-[10px] text-zinc-400 truncate text-right shrink-0">{p.marca}</p>
+            )}
+          </div>
+
+          <p className="text-sm text-zinc-800 font-semibold leading-snug line-clamp-2 hover:text-primary-700 transition-colors">{p.nombre}</p>
+
+          <div className="flex flex-wrap gap-1">
+            {p.unidades_por_bulto && (
+              <span className="text-[10px] text-zinc-500 bg-zinc-100 rounded px-1.5 py-0.5">
+                Bulto x{p.unidades_por_bulto}
               </span>
             )}
-            {p.is_immediate_delivery && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Zap className="w-2.5 h-2.5 fill-current" />
-                Inmediata
-              </span>
-            )}
-            {p.is_best_seller && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Award className="w-2.5 h-2.5" />
-                Top
+            {p.cantidad_minima && (
+              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5">
+                Mín. {p.cantidad_minima} u.
               </span>
             )}
           </div>
-        )}
-      </div>
 
-      <div className="p-3 flex flex-col gap-1.5 flex-1">
-        <div className="flex items-center justify-between gap-2 min-h-[16px]">
-          {p.categoria && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 truncate">{p.categoria}</p>
+          {enModoDescuento ? (
+            <div className="mt-0.5">
+              <p className="text-lg font-extrabold text-zinc-900">
+                ${precioUnitario.toLocaleString('es-AR')}
+              </p>
+              <p className="text-[10px] text-zinc-400">
+                Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')}
+              </p>
+            </div>
+          ) : (
+            <p className="text-lg font-extrabold text-zinc-900 mt-0.5">
+              ${precioUnitario.toLocaleString('es-AR')}
+            </p>
           )}
-          {p.marca && (
-            <p className="text-[10px] text-zinc-400 truncate text-right shrink-0">{p.marca}</p>
-          )}
-        </div>
 
-        <p className="text-sm text-zinc-800 font-semibold leading-snug line-clamp-2">{p.nombre}</p>
-
-        <div className="flex flex-wrap gap-1">
-          {p.unidades_por_bulto && (
-            <span className="text-[10px] text-zinc-500 bg-zinc-100 rounded px-1.5 py-0.5">
-              Bulto x{p.unidades_por_bulto}
-            </span>
-          )}
-          {p.cantidad_minima && (
-            <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5">
-              Mín. {p.cantidad_minima} u.
-            </span>
+          {!p.is_on_demand && (
+            <p className="text-xs text-zinc-500">Stock: <strong>{p.stock}</strong> u.</p>
           )}
         </div>
+      </Link>
 
-        <p className="text-lg font-extrabold text-zinc-900 mt-0.5">
-          ${p.precio_comercio.toLocaleString('es-AR')}
-        </p>
+      {enModoDescuento && tramosDescuento.length > 0 && (
+        <div className="mx-3 mt-1 rounded-lg bg-zinc-50 border border-zinc-100 overflow-hidden">
+          <table className="w-full text-[10px]">
+            <thead>
+              <tr className="text-zinc-400">
+                <th className="text-left font-medium px-2 py-1">Cant.</th>
+                <th className="text-left font-medium px-2 py-1">Desc.</th>
+                <th className="text-right font-medium px-2 py-1">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tramosDescuento.map(t => (
+                <tr key={t.cantidad_minima} className="border-t border-zinc-100">
+                  <td className="px-2 py-1 text-zinc-600">{t.cantidad_minima}+</td>
+                  <td className="px-2 py-1 text-emerald-600 font-medium">{t.descuento_porcentaje}%</td>
+                  <td className="px-2 py-1 text-right font-semibold text-zinc-800">
+                    ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        {!p.is_on_demand && (
-          <p className="text-xs text-zinc-500">Stock: <strong>{p.stock}</strong> u.</p>
-        )}
-
-        <div className="flex items-center gap-1.5 mt-auto pt-1">
+      <div className="px-3 pb-3 flex flex-col gap-1.5 flex-1">
+        <div className="flex items-center gap-1.5 mt-auto pt-2">
           <button
-            onClick={() => setCantidad(c => Math.max(p.cantidad_minima || 1, c - 1))}
+            onClick={() => setCantidad(c => Math.max(1, c - 1))}
             className="w-7 h-7 border border-zinc-300 rounded-lg text-sm font-medium hover:bg-zinc-50"
           >
             −
           </button>
           <input
             type="number"
-            min={p.cantidad_minima || 1}
+            min={1}
             value={cantidad}
-            onChange={e => setCantidad(Math.max(p.cantidad_minima || 1, parseInt(e.target.value) || 1))}
+            onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-12 text-center border border-zinc-300 rounded-lg text-sm py-0.5 focus:outline-none"
           />
           <button
@@ -198,17 +269,23 @@ function ProductCard({
           </button>
         </div>
 
-        <button
-          onClick={handleAdd}
-          className={`w-full flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold py-2 transition-colors ${
-            added
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700'
-          }`}
-        >
-          {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-          {added ? 'Agregado' : 'Agregar al pedido'}
-        </button>
+        {faltan > 0 ? (
+          <p className="text-[11px] text-amber-600 font-medium text-center">
+            Te faltan {faltan} u. para el mínimo de {p.cantidad_minima}
+          </p>
+        ) : (
+          <button
+            onClick={handleAdd}
+            className={`w-full flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold py-2 transition-colors ${
+              added
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700'
+            }`}
+          >
+            {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
+            {added ? 'Agregado' : 'Agregar al pedido'}
+          </button>
+        )}
       </div>
     </div>
   )

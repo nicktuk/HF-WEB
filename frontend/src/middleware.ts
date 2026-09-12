@@ -42,5 +42,6 @@ export const config = {
     '/comercios/carrito/:path*',
     '/comercios/pedidos/:path*',
     '/comercios/pedido/:path*',
+    '/comercios/producto/:path*',
   ],
 }

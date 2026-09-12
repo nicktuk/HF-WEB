@@ -12,6 +12,7 @@ from app.models.comercio import (
     Comercio,
     Vendedor,
     ConfiguracionComercio,
+    DescuentoTramoComercio,
     PedidoComercio,
     PedidoComercioItem,
 )
@@ -202,6 +203,7 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "monto_minimo_pedido": float(cfg.monto_minimo_pedido),
         "tipo_markup": cfg.tipo_markup or 'fijo',
         "mostrar_todos_con_stock": bool(cfg.mostrar_todos_con_stock),
+        "modo_precio": cfg.modo_precio or 'markup',
     }
 
 
@@ -231,6 +233,10 @@ async def update_comercio_config(
         if body["tipo_markup"] not in ("fijo", "variable"):
             raise HTTPException(400, "tipo_markup debe ser 'fijo' o 'variable'")
         cfg.tipo_markup = body["tipo_markup"]
+    if "modo_precio" in body:
+        if body["modo_precio"] not in ("markup", "descuento"):
+            raise HTTPException(400, "modo_precio debe ser 'markup' o 'descuento'")
+        cfg.modo_precio = body["modo_precio"]
     if "descuento_porcentaje" in body:
         val = float(body["descuento_porcentaje"])
         if val < 0:
@@ -246,6 +252,50 @@ async def update_comercio_config(
     db.commit()
     db.refresh(cfg)
     return _config_dict(cfg)
+
+
+@router.get("/comercios/config/tramos")
+async def get_comercio_tramos(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    tramos = db.query(DescuentoTramoComercio).order_by(DescuentoTramoComercio.cantidad_minima).all()
+    return [
+        {"id": t.id, "cantidad_minima": t.cantidad_minima, "descuento_porcentaje": float(t.descuento_porcentaje)}
+        for t in tramos
+    ]
+
+
+@router.put("/comercios/config/tramos")
+async def set_comercio_tramos(
+    body: list[dict],
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Reemplaza toda la matriz cantidad/descuento. Se manda la lista completa cada vez."""
+    cantidades_vistas: set[int] = set()
+    nuevos: list[DescuentoTramoComercio] = []
+    for row in body:
+        cantidad = int(row.get("cantidad_minima", 0))
+        descuento = float(row.get("descuento_porcentaje", 0))
+        if cantidad < 1:
+            raise HTTPException(400, "cantidad_minima debe ser >= 1")
+        if descuento < 0 or descuento > 100:
+            raise HTTPException(400, "descuento_porcentaje debe estar entre 0 y 100")
+        if cantidad in cantidades_vistas:
+            raise HTTPException(400, f"cantidad_minima {cantidad} está repetida")
+        cantidades_vistas.add(cantidad)
+        nuevos.append(DescuentoTramoComercio(cantidad_minima=cantidad, descuento_porcentaje=descuento))
+
+    db.query(DescuentoTramoComercio).delete()
+    db.add_all(nuevos)
+    db.commit()
+
+    tramos = db.query(DescuentoTramoComercio).order_by(DescuentoTramoComercio.cantidad_minima).all()
+    return [
+        {"id": t.id, "cantidad_minima": t.cantidad_minima, "descuento_porcentaje": float(t.descuento_porcentaje)}
+        for t in tramos
+    ]
 
 
 # ─── Pedidos ───────────────────────────────────────────────────────────────────
