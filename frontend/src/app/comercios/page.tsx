@@ -71,10 +71,12 @@ export default function ComerciosLanding() {
               Canal Comercios
             </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">Precios de mayorista, sin vueltas</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-3">Precios de mayorista, sin vueltas</h1>
           <p className="text-lg text-blue-100/90 max-w-xl mx-auto">
             Para revendedores y comercios de bazar, hogar y electrodomésticos en zona sur GBA.
-            Comprá con tu cuenta aprobada al precio especial del canal.
+          </p>
+          <p className="text-xl sm:text-2xl font-extrabold mt-3" style={{ color: '#FF7A50' }}>
+            Comprá con tu cuenta aprobada al precio especial del canal
           </p>
         </div>
 
