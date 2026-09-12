@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Check, Star, Zap, Award, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ShoppingCart, Check, Star, Zap, Award, ChevronLeft, ChevronRight, Search, Package } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
 import { getComercioTheme, type ComercioTheme } from '@/lib/comercio-theme'
@@ -274,14 +274,14 @@ function ProductCard({
             )}
           </div>
 
-          {enModoDescuento ? (
-            <div className="mt-0.5">
-              <p className="text-lg font-extrabold" style={{ color: theme.savings }}>${precioUnitario.toLocaleString('es-AR')}</p>
-              <p className="text-[10px]" style={{ color: theme.textFaint }}>Lista ${(p.precio_venta as number).toLocaleString('es-AR')}</p>
-            </div>
-          ) : (
-            <p className="text-lg font-extrabold mt-0.5" style={{ color: theme.accent }}>${precioUnitario.toLocaleString('es-AR')}</p>
-          )}
+          <p className="text-lg font-extrabold mt-0.5 text-center" style={{ color: enModoDescuento ? theme.savings : theme.accent }}>
+            ${precioUnitario.toLocaleString('es-AR')}
+            {enModoDescuento && (
+              <span className="text-[10px] font-normal ml-1.5" style={{ color: theme.textFaint }}>
+                Minorista: ${(p.precio_venta as number).toLocaleString('es-AR')}
+              </span>
+            )}
+          </p>
 
           {enModoDescuento && tramosDescuento.length > 0 && (
             <SavingsBar
@@ -319,20 +319,27 @@ function ProductCard({
             </div>
           )}
 
-          {!p.is_on_demand && (
-            p.stock <= 5 ? (
-              <p className="text-xs font-bold" style={{ color: theme.urgency }}>
-                ¡Últimas {p.stock} unidades!
-              </p>
-            ) : (
-              <p className="text-xs" style={{ color: theme.textMuted }}>Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.</p>
-            )
-          )}
         </div>
       </Link>
 
+      {!p.is_on_demand && (
+        <div className="flex-1 flex items-center justify-center px-3.5 py-1 min-h-[24px]">
+          {p.stock <= 5 ? (
+            <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: theme.urgency }}>
+              <Package className="h-3.5 w-3.5" />
+              ¡Últimas {p.stock} unidades!
+            </p>
+          ) : (
+            <p className="text-xs flex items-center gap-1.5" style={{ color: theme.textMuted }}>
+              <Package className="h-3.5 w-3.5" />
+              Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="px-3.5 pb-3.5 pt-2 flex flex-col gap-1.5 mt-auto">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-center gap-1.5">
           <button
             onClick={() => setCantidad(c => Math.max(1, c - 1))}
             className="w-7 h-7 rounded-lg text-sm font-medium"
