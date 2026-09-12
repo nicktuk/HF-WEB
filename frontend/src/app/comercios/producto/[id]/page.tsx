@@ -18,11 +18,9 @@ export default async function ProductoDetailPage({ params }: { params: { id: str
   const info = await infoRes.json()
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#0D1B2A' }}>
       <ComercioHeader nombreLocal={info.nombre_local} />
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <ProductoDetailClient producto={producto} />
-      </main>
+      <ProductoDetailClient producto={producto} />
     </div>
   )
 }
