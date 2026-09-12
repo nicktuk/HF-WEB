@@ -55,7 +55,7 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
   })
 
   const cardProps = { modoPrecio, redondeo, tramosDescuento, onAdd: add }
-  const buscando = search.trim() !== '' || categoria !== ''
+  const tituloCarousel = categoria || (search.trim() !== '' ? 'Resultados' : 'Catálogo')
 
   return (
     <div className="relative" style={{ backgroundColor: '#0D1B2A', minHeight: '100vh' }}>
@@ -110,24 +110,8 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
           <p style={{ color: 'rgba(244,246,242,0.5)' }} className="text-sm">No hay productos que coincidan.</p>
         )}
 
-        {buscando ? (
-          filtered.length > 0 && (
-            <CarouselRow title={categoria || 'Resultados'} productos={filtered} {...cardProps} />
-          )
-        ) : (
-          <div className="flex flex-col gap-12 lg:gap-16">
-            {categorias.map(cat => {
-              const items = productos.filter(p => p.categoria === cat)
-              if (items.length === 0) return null
-              return <CarouselRow key={cat} title={cat} productos={items} {...cardProps} />
-            })}
-            {(() => {
-              const sinCategoria = productos.filter(p => !p.categoria)
-              return sinCategoria.length > 0 ? (
-                <CarouselRow title="Otros productos" productos={sinCategoria} {...cardProps} />
-              ) : null
-            })()}
-          </div>
+        {filtered.length > 0 && (
+          <CarouselRow title={tituloCarousel} productos={filtered} {...cardProps} />
         )}
       </div>
     </div>
@@ -201,6 +185,7 @@ function ProductCard({
   redondeo: number
   tramosDescuento: TramoDescuento[]
 }) {
+  const CARD_WIDTH = tramosDescuento.length > 0 && modoPrecio === 'descuento' ? 'w-[220px] lg:w-[260px]' : 'w-[190px] lg:w-[220px]'
   const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
   const [added, setAdded] = useState(false)
 
@@ -230,7 +215,7 @@ function ProductCard({
 
   return (
     <div
-      className="shrink-0 w-[190px] lg:w-[220px] rounded-2xl overflow-hidden flex flex-col"
+      className={`shrink-0 ${CARD_WIDTH} rounded-2xl overflow-hidden flex flex-col`}
       style={{ backgroundColor: '#132845', border: '1px solid rgba(180,244,42,0.14)' }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
@@ -288,6 +273,26 @@ function ProductCard({
             </div>
           ) : (
             <p className="text-lg font-extrabold mt-0.5" style={{ color: LIME }}>${precioUnitario.toLocaleString('es-AR')}</p>
+          )}
+
+          {enModoDescuento && tramosDescuento.length > 0 && (
+            <table className="w-full text-[10px] mt-0.5" style={{ borderCollapse: 'collapse' }}>
+              <tbody>
+                {tramosDescuento.map(t => {
+                  const activo = cantidad >= t.cantidad_minima
+                    && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                  return (
+                    <tr key={t.cantidad_minima} style={activo ? { backgroundColor: 'rgba(180,244,42,0.12)' } : undefined}>
+                      <td className="py-0.5 pl-1" style={{ color: activo ? LIME : 'rgba(244,246,242,0.55)' }}>{t.cantidad_minima}+ u.</td>
+                      <td className="py-0.5" style={{ color: activo ? LIME : 'rgba(244,246,242,0.55)' }}>{t.descuento_porcentaje}%</td>
+                      <td className="py-0.5 pr-1 text-right font-semibold" style={{ color: activo ? LIME : '#EFF3F8' }}>
+                        ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
 
           {!p.is_on_demand && (
