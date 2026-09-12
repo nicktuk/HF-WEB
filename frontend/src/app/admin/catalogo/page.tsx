@@ -37,6 +37,10 @@ export default function CatalogoConfigPage() {
   const [showOutOfStock, setShowOutOfStock] = useState(true);
   const [savingShowOutOfStock, setSavingShowOutOfStock] = useState(false);
 
+  // Mostrar nuevos primero
+  const [sortNewFirst, setSortNewFirst] = useState(false);
+  const [savingSortNewFirst, setSavingSortNewFirst] = useState(false);
+
   // Hide out of stock colors
   const [hideOutOfStockColors, setHideOutOfStockColors] = useState(false);
   const [savingHideOutOfStockColors, setSavingHideOutOfStockColors] = useState(false);
@@ -84,6 +88,7 @@ export default function CatalogoConfigPage() {
         setGroupByCategory(data.group_by_category ?? true);
         setSectionSortOrder((data.section_sort_order === 'desc' ? 'desc' : 'asc'));
         setShowOutOfStock(data.show_out_of_stock ?? true);
+        setSortNewFirst(data.sort_new_first ?? false);
         setHideOutOfStockColors(data.hide_out_of_stock_colors ?? false);
         setMobileTwoColumns(data.mobile_two_columns ?? false);
         setCarouselStyle(data.carousel_style === 'slider' ? 'slider' : 'scroll');
@@ -159,6 +164,18 @@ export default function CatalogoConfigPage() {
       showToast('error', 'Error al guardar la configuración');
     } finally {
       setSavingShowOutOfStock(false);
+    }
+  }
+
+  async function handleToggleSortNewFirst(value: boolean) {
+    setSavingSortNewFirst(true);
+    try {
+      const updated = await adminApi.updateCatalogSettings(apiKey, { sort_new_first: value });
+      setSortNewFirst(updated.sort_new_first);
+    } catch {
+      showToast('error', 'Error al guardar la configuración');
+    } finally {
+      setSavingSortNewFirst(false);
     }
   }
 
@@ -446,6 +463,37 @@ export default function CatalogoConfigPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Mostrar nuevos primero */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="font-medium text-gray-800">Orden del catálogo</h2>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Mostrar nuevos primero</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                Los productos marcados como "Nuevo" se muestran primero, ordenados por fecha de activación (el más reciente arriba). El resto del catálogo sigue el orden habitual.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={savingSortNewFirst}
+              onClick={() => handleToggleSortNewFirst(!sortNewFirst)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                sortNewFirst ? 'bg-blue-600' : 'bg-gray-200'
+              } ${savingSortNewFirst ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  sortNewFirst ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </div>
 

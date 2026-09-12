@@ -67,13 +67,16 @@ class ProductService:
         """
         skip = (page - 1) * limit
 
+        from app.services.app_settings import get_setting
+        sort_new_first = get_setting(self.db, "SORT_NEW_FIRST") == "true"
+
         # Try cache first
-        cache_key = f"catalog:{page}:{limit}:{category}:{subcategory}:{search}:{featured}:{immediate_delivery}:{hide_out_of_stock}"
+        cache_key = f"catalog:{page}:{limit}:{category}:{subcategory}:{search}:{featured}:{immediate_delivery}:{hide_out_of_stock}:{sort_new_first}"
         cached_result = cache.get_product(cache_key)
         if cached_result:
             return cached_result
 
-        products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
+        products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock, sort_new_first)
         total = self.repo.count_enabled(category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
 
         product_ids = [p.id for p in products]
@@ -310,6 +313,7 @@ class ProductService:
             video_url=product.video_url,
             color_stock=color_stock,
             updated_at=product.updated_at,
+            activated_at=product.activated_at,
             rating_avg=rating_avg,
             rating_count=rating_count,
             units_sold=units_sold,
@@ -1050,6 +1054,7 @@ class ProductService:
             min_purchase_qty=scraped.min_purchase_qty,
             kit_content=scraped.kit_content,
             enabled=data.enabled,
+            activated_at=datetime.utcnow() if data.enabled else None,
             is_featured=True,  # Mark new scraped products as "Nuevo"
             markup_percentage=data.markup_percentage,
             source_category=scraped.categories[0] if scraped.categories else None,
@@ -1110,6 +1115,8 @@ class ProductService:
 
         # Update fields
         if data.enabled is not None:
+            if data.enabled is True and product.enabled is not True:
+                product.activated_at = datetime.utcnow()
             product.enabled = data.enabled
         if data.is_featured is not None:
             product.is_featured = data.is_featured
@@ -1358,6 +1365,7 @@ class ProductService:
             sku=data.sku,
             codigo_interno=self._generate_codigo_interno(),
             enabled=data.enabled,
+            activated_at=datetime.utcnow() if data.enabled else None,
             is_featured=data.is_featured,
             is_immediate_delivery=data.is_immediate_delivery,
             is_on_demand=data.is_on_demand if not data.is_immediate_delivery else False,
@@ -1476,6 +1484,7 @@ class ProductService:
         ).update(
             {
                 Product.enabled: True,
+                Product.activated_at: datetime.utcnow(),
                 Product.markup_percentage: markup_percentage
             },
             synchronize_session=False
@@ -1500,6 +1509,7 @@ class ProductService:
         """
         update_data = {
             Product.enabled: True,
+            Product.activated_at: datetime.utcnow(),
             Product.markup_percentage: markup_percentage
         }
         if category:

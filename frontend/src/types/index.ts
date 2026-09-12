@@ -41,6 +41,7 @@ export interface ProductPublic {
   color_stock?: ColorStockItem[];
   source_url?: string;
   updated_at?: string;
+  activated_at?: string | null;
   rating_avg?: number | null;
   rating_count?: number;
   units_sold?: number;

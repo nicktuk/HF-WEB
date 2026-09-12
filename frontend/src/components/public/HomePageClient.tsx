@@ -162,6 +162,7 @@ export function HomePageContent() {
   const showOutOfStock = catalogSettings?.show_out_of_stock ?? true;
   const mobileTwo = catalogSettings?.mobile_two_columns ?? false;
   const carouselStyle = catalogSettings?.carousel_style ?? 'scroll';
+  const sortNewFirst = catalogSettings?.sort_new_first ?? false;
 
   const { data: sections } = useQuery({
     queryKey: ['public-sections'],
@@ -234,6 +235,21 @@ export function HomePageContent() {
     );
 
     return [...items].sort((a, b) => {
+      if (sortNewFirst) {
+        const aIsNew = a.is_featured ? 0 : 1;
+        const bIsNew = b.is_featured ? 0 : 1;
+        if (aIsNew !== bIsNew) {
+          return aIsNew - bIsNew;
+        }
+        if (a.is_featured && b.is_featured) {
+          const aActivated = a.activated_at ? new Date(a.activated_at).getTime() : 0;
+          const bActivated = b.activated_at ? new Date(b.activated_at).getTime() : 0;
+          if (aActivated !== bActivated) {
+            return bActivated - aActivated;
+          }
+        }
+      }
+
       const aCategoryOrder = categoryOrder.get(a.category || '') ?? Number.POSITIVE_INFINITY;
       const bCategoryOrder = categoryOrder.get(b.category || '') ?? Number.POSITIVE_INFINITY;
       if (aCategoryOrder !== bCategoryOrder) {

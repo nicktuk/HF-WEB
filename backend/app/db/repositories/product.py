@@ -48,6 +48,7 @@ class ProductRepository(BaseRepository[Product]):
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None,
         hide_out_of_stock: bool = False,
+        sort_new_first: bool = False,
     ) -> List[Product]:
         """Get enabled products for public catalog."""
         query = (
@@ -118,18 +119,26 @@ class ProductRepository(BaseRepository[Product]):
             query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
             query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
+        new_first_order = ()
+        if sort_new_first:
+            new_first_order = (
+                case((Product.is_featured == True, 0), else_=1),
+                Product.activated_at.desc(),
+            )
+
         if category:
             immediate_first = case(
                 (Product.is_immediate_delivery == True, 1),
                 else_=0
             )
             query = query.order_by(
+                *new_first_order,
                 immediate_first.desc(),
                 Product.display_order,
                 Product.created_at.desc()
             )
         else:
-            query = query.order_by(Product.display_order, Product.created_at.desc())
+            query = query.order_by(*new_first_order, Product.display_order, Product.created_at.desc())
 
         return query.offset(skip).limit(limit).all()
 
@@ -357,10 +366,13 @@ class ProductRepository(BaseRepository[Product]):
 
     def bulk_update_enabled(self, product_ids: List[int], enabled: bool) -> int:
         """Bulk update enabled status. Returns count of updated rows."""
+        update_data = {Product.enabled: enabled}
+        if enabled:
+            update_data[Product.activated_at] = datetime.utcnow()
         count = (
             self.db.query(Product)
             .filter(Product.id.in_(product_ids))
-            .update({Product.enabled: enabled}, synchronize_session=False)
+            .update(update_data, synchronize_session=False)
         )
         self.db.commit()
         return count

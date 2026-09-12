@@ -227,6 +227,7 @@ class ProductPublicResponse(BaseModel):
     color_stock: List[ColorStockItem] = []
     source_url: Optional[str] = None
     updated_at: Optional[datetime] = None
+    activated_at: Optional[datetime] = None
     rating_avg: Optional[float] = None
     rating_count: int = 0
     units_sold: int = 0

@@ -166,6 +166,7 @@ class CatalogSettingsResponse(BaseModel):
     shipping_min_purchase: float = SHIPPING_MIN_PURCHASE_DEFAULT
     shipping_cost_amba: float = SHIPPING_COST_AMBA_DEFAULT
     shipping_cost_resto_pais: float = SHIPPING_COST_RESTO_PAIS_DEFAULT
+    sort_new_first: bool = False
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -186,6 +187,7 @@ class CatalogSettingsUpdate(BaseModel):
     shipping_min_purchase: Optional[float] = None
     shipping_cost_amba: Optional[float] = None
     shipping_cost_resto_pais: Optional[float] = None
+    sort_new_first: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +240,8 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     shipping_cost_amba = float(shipping_cost_amba_str) if shipping_cost_amba_str is not None else SHIPPING_COST_AMBA_DEFAULT
     shipping_cost_resto_pais_str = get_setting(db, "SHIPPING_COST_RESTO_PAIS")
     shipping_cost_resto_pais = float(shipping_cost_resto_pais_str) if shipping_cost_resto_pais_str is not None else SHIPPING_COST_RESTO_PAIS_DEFAULT
+    sort_new_first_str = get_setting(db, "SORT_NEW_FIRST")
+    sort_new_first = sort_new_first_str == "true" if sort_new_first_str is not None else False
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -256,6 +260,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         shipping_min_purchase=shipping_min_purchase,
         shipping_cost_amba=shipping_cost_amba,
         shipping_cost_resto_pais=shipping_cost_resto_pais,
+        sort_new_first=sort_new_first,
     )
 
 
@@ -304,6 +309,9 @@ def update_catalog_settings(
         set_setting(db, "SHIPPING_COST_AMBA", str(max(0.0, data.shipping_cost_amba)))
     if data.shipping_cost_resto_pais is not None:
         set_setting(db, "SHIPPING_COST_RESTO_PAIS", str(max(0.0, data.shipping_cost_resto_pais)))
+    if data.sort_new_first is not None:
+        set_setting(db, "SORT_NEW_FIRST", "true" if data.sort_new_first else "false")
+        cache.invalidate_all_products()
     return get_catalog_settings(db=db)
 
 
@@ -369,6 +377,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "shipping_min_purchase": shipping_min_purchase,
         "shipping_cost_amba": shipping_cost_amba,
         "shipping_cost_resto_pais": shipping_cost_resto_pais,
+        "sort_new_first": get_setting(db, "SORT_NEW_FIRST") == "true",
     }
 
 

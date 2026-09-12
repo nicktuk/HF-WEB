@@ -48,6 +48,7 @@ class Product(Base):
 
     # ConfiguraciÃ³n del revendedor
     enabled = Column(Boolean, default=False, nullable=False, index=True)
+    activated_at = Column(DateTime, nullable=True, comment="Fecha en que el producto pasó a habilitado por última vez")
     is_featured = Column(Boolean, default=False, nullable=False, index=True, comment="Marcado como novedad")
     is_immediate_delivery = Column(Boolean, default=False, nullable=False, index=True, comment="Entrega inmediata")
     is_check_stock = Column(Boolean, default=False, nullable=False, index=True, comment="Consultar stock (excluye nuevo e inmediata)")
