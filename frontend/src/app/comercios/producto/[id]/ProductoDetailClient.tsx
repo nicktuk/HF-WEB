@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Star, Zap, Award, Package } from 'lucide-react'
 import { useComercioCart } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
-import { getComercioTheme } from '@/lib/comercio-theme'
+import { getComercioTheme, getTramoScaleColor } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 import { SavingsBar } from '../../_components/SavingsBar'
@@ -63,6 +63,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
   const precioUnitario = enModoDescuento
     ? calcularPrecioPorDescuento(p.precio_venta as number, cantidad, p.tramos_descuento, p.redondeo)
     : p.precio_comercio
+  const descuentoAplicado = enModoDescuento && precioUnitario < (p.precio_venta as number)
 
   const faltan = p.cantidad_minima ? Math.max(0, p.cantidad_minima - cantidad) : 0
 
@@ -228,7 +229,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
 
             <div className="mb-4">
-              <p className="text-2xl font-extrabold" style={{ color: enModoDescuento ? theme.savings : theme.accent }}>
+              <p className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
                 ${precioUnitario.toLocaleString('es-AR')}
               </p>
               {enModoDescuento && (
@@ -284,19 +285,23 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                 </p>
                 <table className="w-full text-sm">
                   <tbody>
-                    {p.tramos_descuento.map(t => {
-                      const activo = cantidad >= t.cantidad_minima
-                        && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                      return (
-                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.savingsTint(0.14) } : undefined}>
-                          <td className="px-4 py-1.5 font-medium" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                          <td className="py-1.5 font-bold" style={{ color: theme.savings }}>−{t.descuento_porcentaje}%</td>
-                          <td className="px-4 py-1.5 text-right font-bold" style={{ color: theme.textPrimary }}>
-                            ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {(() => {
+                      const maxDescuento = Math.max(...p.tramos_descuento.map(t => t.descuento_porcentaje))
+                      return p.tramos_descuento.map(t => {
+                        const activo = cantidad >= t.cantidad_minima
+                          && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                        const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                        return (
+                          <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.14) } : undefined}>
+                            <td className="px-4 py-1.5 font-medium" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                            <td className="py-1.5 font-bold" style={{ color: colorTramo }}>−{t.descuento_porcentaje}%</td>
+                            <td className="px-4 py-1.5 text-right font-bold" style={{ color: theme.textPrimary }}>
+                              ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    })()}
                   </tbody>
                 </table>
               </div>

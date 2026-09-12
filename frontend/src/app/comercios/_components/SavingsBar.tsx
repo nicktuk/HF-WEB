@@ -1,7 +1,7 @@
 'use client'
 
 import { calcularDescuentoPorCantidad, calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
-import type { ComercioTheme } from '@/lib/comercio-theme'
+import { getTramoScaleColor, type ComercioTheme } from '@/lib/comercio-theme'
 
 interface Props {
   precioVenta: number
@@ -10,23 +10,6 @@ interface Props {
   redondeo: number
   theme: ComercioTheme
   compact?: boolean
-}
-
-type RGB = [number, number, number]
-const ROJO: RGB = [214, 71, 42]
-const AMARILLO: RGB = [235, 179, 43]
-const VERDE: RGB = [30, 180, 110]
-
-function mezclar(a: RGB, b: RGB, t: number): string {
-  const r = Math.round(a[0] + (b[0] - a[0]) * t)
-  const g = Math.round(a[1] + (b[1] - a[1]) * t)
-  const bl = Math.round(a[2] + (b[2] - a[2]) * t)
-  return `rgb(${r}, ${g}, ${bl})`
-}
-
-function colorDeProgreso(t: number): string {
-  if (t <= 0.5) return mezclar(ROJO, AMARILLO, t / 0.5)
-  return mezclar(AMARILLO, VERDE, (t - 0.5) / 0.5)
 }
 
 export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, compact }: Props) {
@@ -42,7 +25,7 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
 
   const proximoTramo = ordenados.find(t => t.cantidad_minima > cantidad)
 
-  const fill = colorDeProgreso(progreso)
+  const fill = getTramoScaleColor(progreso)
 
   return (
     <div className={compact ? 'mt-0.5' : 'mt-1'}>

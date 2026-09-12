@@ -75,3 +75,25 @@ const LIGHT: ComercioTheme = {
 export function getComercioTheme(mode: ComercioThemeMode): ComercioTheme {
   return mode === 'dark' ? DARK : LIGHT
 }
+
+// Escala roja -> naranja -> verde para diferenciar visualmente los tramos de
+// descuento (tramo bajo = rojo, tramo alto = verde), usada en la matriz de
+// cantidad/descuento y en la barra de ahorro.
+type RGB = [number, number, number]
+const ESCALA_ROJO: RGB = [214, 71, 42]
+const ESCALA_NARANJA: RGB = [235, 130, 43]
+const ESCALA_VERDE: RGB = [22, 197, 94]
+
+function mezclarRGB(a: RGB, b: RGB, t: number): string {
+  const r = Math.round(a[0] + (b[0] - a[0]) * t)
+  const g = Math.round(a[1] + (b[1] - a[1]) * t)
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t)
+  return `rgb(${r}, ${g}, ${bl})`
+}
+
+/** t en [0,1]: 0 = rojo (peor tramo), 0.5 = naranja, 1 = verde (mejor tramo). */
+export function getTramoScaleColor(t: number): string {
+  const clamped = Math.min(1, Math.max(0, t))
+  if (clamped <= 0.5) return mezclarRGB(ESCALA_ROJO, ESCALA_NARANJA, clamped / 0.5)
+  return mezclarRGB(ESCALA_NARANJA, ESCALA_VERDE, (clamped - 0.5) / 0.5)
+}

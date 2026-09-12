@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ShoppingCart, Check, Star, Zap, Award, ChevronLeft, ChevronRight, Search, Package } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
-import { getComercioTheme, type ComercioTheme } from '@/lib/comercio-theme'
+import { getComercioTheme, getTramoScaleColor, type ComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 import { SavingsBar } from '../_components/SavingsBar'
@@ -204,6 +204,7 @@ function ProductCard({
   const precioUnitario = enModoDescuento
     ? calcularPrecioPorDescuento(p.precio_venta as number, cantidad, tramosDescuento, redondeo)
     : p.precio_comercio
+  const descuentoAplicado = enModoDescuento && precioUnitario < (p.precio_venta as number)
 
   function handleAdd() {
     onAdd(
@@ -274,13 +275,11 @@ function ProductCard({
             )}
           </div>
 
-          <p className="text-lg font-extrabold mt-0.5 text-center" style={{ color: enModoDescuento ? theme.savings : theme.accent }}>
-            ${precioUnitario.toLocaleString('es-AR')}
-            {enModoDescuento && (
-              <span className="text-[10px] font-normal ml-1.5" style={{ color: theme.textFaint }}>
-                Minorista: ${(p.precio_venta as number).toLocaleString('es-AR')}
-              </span>
+          <p className="text-lg font-extrabold mt-0.5 text-center" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+            {!descuentoAplicado && (
+              <span className="text-[10px] font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
             )}
+            ${precioUnitario.toLocaleString('es-AR')}
           </p>
 
           {enModoDescuento && tramosDescuento.length > 0 && (
@@ -301,19 +300,23 @@ function ProductCard({
               </p>
               <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                 <tbody>
-                  {tramosDescuento.map(t => {
-                    const activo = cantidad >= t.cantidad_minima
-                      && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                    return (
-                      <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.savingsTint(0.14) } : undefined}>
-                        <td className="py-1.5 pl-2.5 font-semibold" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                        <td className="py-1.5 font-bold" style={{ color: theme.savings }}>−{t.descuento_porcentaje}%</td>
-                        <td className="py-1.5 pr-2.5 text-right font-bold" style={{ color: theme.textPrimary }}>
-                          ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {(() => {
+                    const maxDescuento = Math.max(...tramosDescuento.map(t => t.descuento_porcentaje))
+                    return tramosDescuento.map(t => {
+                      const activo = cantidad >= t.cantidad_minima
+                        && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                      const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                      return (
+                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.14) } : undefined}>
+                          <td className="py-1.5 pl-2.5 font-semibold" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                          <td className="py-1.5 font-bold" style={{ color: colorTramo }}>−{t.descuento_porcentaje}%</td>
+                          <td className="py-1.5 pr-2.5 text-right font-bold" style={{ color: theme.textPrimary }}>
+                            ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  })()}
                 </tbody>
               </table>
             </div>
