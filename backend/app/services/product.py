@@ -1151,6 +1151,8 @@ class ProductService:
             product.unidades_por_bulto = data.unidades_por_bulto
         if 'cantidad_minima' in data.model_fields_set:
             product.cantidad_minima = data.cantidad_minima
+        if data.es_mayorista is not None:
+            product.es_mayorista = data.es_mayorista
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:

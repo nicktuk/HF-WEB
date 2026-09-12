@@ -75,6 +75,7 @@ export interface ProductAdmin extends ProductPublic {
   kit_content?: string;
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
+  es_mayorista: boolean;
   enabled: boolean;
   is_featured: boolean;
   subcategory?: string;
@@ -386,6 +387,7 @@ export interface ProductUpdateForm {
   stock_low_threshold?: number | null;
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
+  es_mayorista?: boolean;
   markup_percentage?: number;
   custom_name?: string;
   original_price?: number | null;
