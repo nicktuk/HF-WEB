@@ -26,15 +26,18 @@ export async function GET(request: NextRequest) {
     return _clearAndUnauth()
   }
 
-  // Si el estado cambió respecto al JWT, renovar el cookie con el estado actualizado
+  // Si el estado cambió respecto al JWT, renovar el cookie con el estado actualizado.
+  // La sesión es fija desde el login original: se conserva el mismo `exp`
+  // en vez de reiniciar el conteo a 24hs.
   if (estado !== payload.estado) {
-    const newToken = await signComercioToken({ comercio_id: payload.comercio_id, estado })
+    const newToken = await signComercioToken({ comercio_id: payload.comercio_id, estado }, payload.exp)
+    const remaining = Math.max(0, (payload.exp ?? 0) - Math.floor(Date.now() / 1000))
     const response = NextResponse.json({ comercio_id: payload.comercio_id, estado })
     response.cookies.set(COMERCIO_COOKIE_NAME, newToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: remaining,
       path: '/',
     })
     return response

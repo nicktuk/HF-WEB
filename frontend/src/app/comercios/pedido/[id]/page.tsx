@@ -31,20 +31,20 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
   const estadoInfo = ESTADOS[pedido.estado] ?? { label: pedido.estado, color: 'bg-gray-100 text-gray-700' }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <ComercioHeader nombreLocal={info.nombre_local} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/comercios/pedidos" className="text-sm text-gray-500 hover:underline">
+          <Link href="/comercios/pedidos" className="text-sm text-zinc-500 hover:underline">
             ← Mis pedidos
           </Link>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+        <div className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-lg font-bold text-gray-800">Pedido #{pedido.id}</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h1 className="text-lg font-bold text-zinc-800">Pedido #{pedido.id}</h1>
+              <p className="text-xs text-zinc-400 mt-0.5">
                 {new Date(pedido.created_at).toLocaleDateString('es-AR', {
                   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 })}

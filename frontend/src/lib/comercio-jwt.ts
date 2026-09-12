@@ -14,11 +14,24 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
-export async function signComercioToken(payload: Omit<ComercioJwtPayload, keyof JWTPayload>): Promise<string> {
+const SESSION_DURATION = '24h'
+
+/**
+ * Firma el JWT de sesión del comercio.
+ *
+ * Por defecto expira a las 24hs desde este momento. Al pasar `expiresAt`
+ * (timestamp absoluto en segundos, tomado del `exp` de un JWT previo) se
+ * conserva ese vencimiento en vez de reiniciar el conteo — así la sesión es
+ * fija desde el login original, no se extiende por revalidaciones de /me.
+ */
+export async function signComercioToken(
+  payload: Omit<ComercioJwtPayload, keyof JWTPayload>,
+  expiresAt?: number,
+): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: ALG })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(expiresAt ?? SESSION_DURATION)
     .sign(getSecret())
 }
 

@@ -34,6 +34,8 @@ def _comercio_dict(m: Comercio) -> dict:
         "email": m.email,
         "nombre_local": m.nombre_local,
         "ubicacion_local": m.ubicacion_local,
+        "rubro": m.rubro,
+        "rubros_interes": m.rubros_interes,
         "estado": m.estado,
         "vendedor_id": m.vendedor_id,
         "vendedor_nombre": m.vendedor.nombre if m.vendedor else None,

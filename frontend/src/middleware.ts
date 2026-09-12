@@ -37,7 +37,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/comercios/catalogo/:path*',
+    // /comercios/catalogo queda fuera: sin sesión muestra un preview sin
+    // precios/stock en vez de redirigir (ver app/comercios/catalogo/page.tsx).
     '/comercios/carrito/:path*',
     '/comercios/pedidos/:path*',
     '/comercios/pedido/:path*',

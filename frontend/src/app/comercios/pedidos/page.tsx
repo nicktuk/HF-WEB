@@ -26,34 +26,34 @@ export default async function PedidosPage() {
   const info = await infoRes.json()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <ComercioHeader nombreLocal={info.nombre_local} />
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-xl font-bold text-gray-800 mb-6">Mis pedidos</h1>
+        <h1 className="text-xl font-bold text-zinc-800 mb-6">Mis pedidos</h1>
 
         {pedidos.length === 0 ? (
-          <p className="text-gray-500 text-sm">Todavía no hiciste ningún pedido.</p>
+          <p className="text-zinc-500 text-sm">Todavía no hiciste ningún pedido.</p>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+          <div className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm divide-y divide-zinc-100">
             {pedidos.map(p => (
               <Link
                 key={p.id}
                 href={`/comercios/pedido/${p.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Pedido #{p.id}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-sm font-medium text-zinc-800">Pedido #{p.id}</p>
+                  <p className="text-xs text-zinc-400">
                     {new Date(p.created_at).toLocaleDateString('es-AR', {
                       day: '2-digit', month: '2-digit', year: 'numeric'
                     })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-zinc-900">
                     ${p.total.toLocaleString('es-AR')}
                   </p>
-                  <p className="text-xs text-gray-500">{ESTADOS[p.estado] ?? p.estado}</p>
+                  <p className="text-xs text-zinc-500">{ESTADOS[p.estado] ?? p.estado}</p>
                 </div>
               </Link>
             ))}

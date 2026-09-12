@@ -1,5 +1,4 @@
 ﻿"""Comercio protected endpoints — requieren JWT de comercio activo."""
-import math
 import json
 import logging
 import urllib.request
@@ -11,15 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.db.session import get_db
 from app.models.product import Product, ProductImage
-from app.models.comercio import (
-    Comercio, ConfiguracionComercio, PedidoComercio, PedidoComercioItem
-)
-from app.models.stock import StockPurchase
+from app.models.comercio import Comercio, PedidoComercio, PedidoComercioItem
 from app.config import settings
+from app.services import comercio_catalog
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -42,45 +38,6 @@ def get_comercio_id(authorization: str = Header(..., alias="Authorization")) -> 
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
-
-def _get_config(db: Session) -> ConfiguracionComercio:
-    cfg = db.query(ConfiguracionComercio).first()
-    if not cfg:
-        cfg = ConfiguracionComercio(descuento_porcentaje=25, redondeo=100, monto_minimo_pedido=0)
-    return cfg
-
-
-def _precio_comercio(
-    costo: Decimal,
-    override: Optional[Decimal],
-    cfg: ConfiguracionComercio,
-    precio_venta: Optional[int] = None,
-) -> Decimal:
-    if override is not None:
-        return override
-    if cfg.tipo_markup == 'variable' and precio_venta is not None:
-        # promedio entre precio de compra y precio de venta (= mitad del markup actual)
-        precio = (float(costo) + float(precio_venta)) / 2
-    else:
-        precio = float(costo) * (1 + float(cfg.descuento_porcentaje) / 100)
-    if cfg.redondeo > 0:
-        precio = math.ceil(precio / cfg.redondeo) * cfg.redondeo
-    return Decimal(str(int(precio)))
-
-
-def _ultimo_precio_compra(db: Session, product_id: int) -> Optional[Decimal]:
-    result = db.query(StockPurchase.unit_price).filter(
-        StockPurchase.product_id == product_id
-    ).order_by(StockPurchase.purchase_date.desc()).first()
-    return Decimal(str(result[0])) if result else None
-
-
-def _stock_total(db: Session, product_id: int) -> int:
-    result = db.query(
-        func.coalesce(func.sum(StockPurchase.quantity - StockPurchase.out_quantity), 0)
-    ).filter(StockPurchase.product_id == product_id).scalar()
-    return int(result or 0)
-
 
 def _imagen_url(db: Session, product_id: int) -> Optional[str]:
     img = db.query(ProductImage).filter(
@@ -113,58 +70,27 @@ async def get_catalogo(
     comercio_id: int = Depends(get_comercio_id),
     db: Session = Depends(get_db),
 ):
-    cfg = _get_config(db)
-
-    if cfg.mostrar_todos_con_stock:
-        products = (
-            db.query(Product)
-            .filter(Product.enabled == True)
-            .order_by(Product.display_order, Product.id)
-            .all()
-        )
-    else:
-        products = (
-            db.query(Product)
-            .filter(Product.enabled == True, Product.es_mayorista == True)
-            .order_by(Product.display_order, Product.id)
-            .all()
-        )
+    cfg = comercio_catalog.get_config(db)
+    visibles = comercio_catalog.productos_visibles(db, cfg)
 
     items = []
-    for p in products:
-        costo = _ultimo_precio_compra(db, p.id)
-
-        if cfg.mostrar_todos_con_stock:
-            if costo is None:
-                continue
-            stock = _stock_total(db, p.id)
-            if stock == 0:
-                continue
-            precio_venta = p.final_price
-            if precio_venta is None:
-                continue
-            markup = (float(precio_venta) - float(costo)) / float(precio_venta) * 100
-            if markup <= 50:
-                continue
-        else:
-            if costo is None:
-                costo = p.original_price
-            if costo is None:
-                continue
-            stock = _stock_total(db, p.id)
-            if stock == 0 and not p.is_on_demand:
-                continue
-
-        precio_m = _precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
+    for p, costo, stock in visibles:
+        precio_m = comercio_catalog.precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
         items.append({
             "id": p.id,
             "nombre": p.display_name,
+            "marca": p.brand,
             "precio_comercio": int(precio_m),
             "stock": stock,
             "is_on_demand": bool(p.is_on_demand),
             "imagen_url": _imagen_url(db, p.id),
             "categoria": p.category,
             "subcategoria": p.subcategory,
+            "unidades_por_bulto": p.unidades_por_bulto,
+            "cantidad_minima": p.cantidad_minima,
+            "is_featured": bool(p.is_featured),
+            "is_immediate_delivery": bool(p.is_immediate_delivery),
+            "is_best_seller": bool(p.is_best_seller),
         })
 
     return {
@@ -197,7 +123,7 @@ async def crear_pedido(
     if not body.items:
         raise HTTPException(422, "El pedido no tiene items.")
 
-    cfg = _get_config(db)
+    cfg = comercio_catalog.get_config(db)
     comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
     if not comercio or comercio.estado != "activo":
         raise HTTPException(403, "cuenta_inactiva")
@@ -216,15 +142,22 @@ async def crear_pedido(
         if not p:
             raise HTTPException(422, f"Producto {inp.producto_id} no disponible.")
 
-        stock = _stock_total(db, p.id)
+        # Validación por bulto en pausa (se retoma más adelante):
+        # if p.unidades_por_bulto and inp.cantidad % p.unidades_por_bulto != 0:
+        #     raise HTTPException(422, f"'{p.display_name}' se vende por bultos de {p.unidades_por_bulto} u.")
+
+        if p.cantidad_minima and inp.cantidad < p.cantidad_minima:
+            raise HTTPException(422, f"'{p.display_name}' requiere un mínimo de {p.cantidad_minima} u. (pediste {inp.cantidad}).")
+
+        stock = comercio_catalog.stock_total(db, p.id)
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
-        costo = _ultimo_precio_compra(db, p.id) or p.original_price
+        costo = comercio_catalog.ultimo_precio_compra(db, p.id) or p.original_price
         if costo is None:
             raise HTTPException(422, f"Sin precio de compra para '{p.display_name}'.")
 
-        precio_u = _precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
+        precio_u = comercio_catalog.precio_comercio(costo, p.precio_mayorista_override, cfg, p.final_price)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})

@@ -1139,6 +1139,10 @@ class ProductService:
             product.custom_installment_price = data.custom_installment_price
         if 'stock_low_threshold' in data.model_fields_set:
             product.stock_low_threshold = data.stock_low_threshold
+        if 'unidades_por_bulto' in data.model_fields_set:
+            product.unidades_por_bulto = data.unidades_por_bulto
+        if 'cantidad_minima' in data.model_fields_set:
+            product.cantidad_minima = data.cantidad_minima
         if data.markup_percentage is not None:
             product.markup_percentage = data.markup_percentage
         if data.custom_name is not None:

@@ -9,6 +9,7 @@ export type PublicEventName =
   | 'subcategory_click'
   | 'product_click'
   | 'whatsapp_click'
+  | 'comercio_access_click'
   | 'initiate_checkout'
   | 'purchase';
 

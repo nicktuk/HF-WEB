@@ -43,6 +43,8 @@ class Product(Base):
     mostrar_codigo = Column(Boolean, default=False, nullable=False, comment="Mostrar código interno en el catálogo público")
     min_purchase_qty = Column(Integer, nullable=True, comment="Cantidad minima de compra")
     kit_content = Column(Text, nullable=True, comment="Contenido del kit/combo")
+    unidades_por_bulto = Column(Integer, nullable=True, comment="Unidades por bulto en el canal comercios (aún no usado en el catálogo — pendiente de retomar)")
+    cantidad_minima = Column(Integer, nullable=True, comment="Cantidad mínima de compra por producto en el canal comercios")
 
     # ConfiguraciÃ³n del revendedor
     enabled = Column(Boolean, default=False, nullable=False, index=True)

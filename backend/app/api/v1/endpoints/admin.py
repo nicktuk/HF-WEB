@@ -836,6 +836,8 @@ async def get_product_admin(
         mostrar_codigo=p.mostrar_codigo,
         min_purchase_qty=p.min_purchase_qty,
         kit_content=p.kit_content,
+        unidades_por_bulto=p.unidades_por_bulto,
+        cantidad_minima=p.cantidad_minima,
         category=p.category_ref.name if p.category_ref else None,
         category_id=p.category_id,
         subcategory=p.subcategory,
@@ -1250,6 +1252,8 @@ async def update_product(
         installments_3=product.installments_3,
         custom_installment_price=product.custom_installment_price,
         stock_low_threshold=product.stock_low_threshold,
+        unidades_por_bulto=product.unidades_por_bulto,
+        cantidad_minima=product.cantidad_minima,
         video_url=product.video_url,
         alias_bot=product.alias_bot,
         images=[{

@@ -2,6 +2,7 @@
 import logging
 import json
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 import bcrypt as _bcrypt
@@ -10,7 +11,9 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.models.comercio import Comercio
+from app.models.product import ProductImage
 from app.config import settings
+from app.services import comercio_catalog
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -42,6 +45,8 @@ class SolicitudCreate(BaseModel):
     email: str | None = None
     nombre_local: str
     ubicacion_local: str
+    rubro: str | None = None
+    rubros_interes: list[str] | None = None
     website: str = ""  # honeypot — debe llegar vacío
 
 
@@ -90,6 +95,8 @@ async def crear_solicitud(
         email=body.email,
         nombre_local=body.nombre_local.strip(),
         ubicacion_local=body.ubicacion_local.strip(),
+        rubro=body.rubro.strip() if body.rubro else None,
+        rubros_interes=body.rubros_interes or None,
         estado="pendiente",
     )
 
@@ -130,6 +137,40 @@ async def login_comercio(
     return comercio
 
 
+def _imagen_url(db: Session, product_id: int) -> Optional[str]:
+    img = db.query(ProductImage).filter(
+        ProductImage.product_id == product_id
+    ).order_by(ProductImage.display_order).first()
+    return img.url if img else None
+
+
+@router.get("/comercios/catalogo")
+async def get_catalogo_preview(db: Session = Depends(get_db)):
+    """Catálogo mayorista sin autenticar: vidriera visual sin precio ni stock.
+
+    Muestra foto, nombre, marca, categoría y cantidad mínima para que un
+    comercio nuevo pueda ver qué se vende antes de pedir acceso. No incluye
+    precio, costo ni stock — eso requiere iniciar sesión (ver /comercios/catalogo
+    en comercios_protected.py). `unidades_por_bulto` no se expone: esa lógica
+    está en pausa hasta retomarla.
+    """
+    cfg = comercio_catalog.get_config(db)
+    visibles = comercio_catalog.productos_visibles(db, cfg)
+    return {
+        "productos": [
+            {
+                "id": p.id,
+                "nombre": p.display_name,
+                "marca": p.brand,
+                "categoria": p.category,
+                "imagen_url": _imagen_url(db, p.id),
+                "cantidad_minima": p.cantidad_minima,
+            }
+            for p, _costo, _stock in visibles
+        ],
+    }
+
+
 @router.get("/comercios/{comercio_id}/estado")
 async def get_estado(
     comercio_id: int,
@@ -158,6 +199,8 @@ def _webhook_solicitud(comercio: Comercio) -> None:
         "email": comercio.email,
         "nombre_local": comercio.nombre_local,
         "ubicacion_local": comercio.ubicacion_local,
+        "rubro": comercio.rubro,
+        "rubros_interes": comercio.rubros_interes,
         "fecha": datetime.now(timezone.utc).isoformat(),
     }
     try:

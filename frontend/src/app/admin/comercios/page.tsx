@@ -6,7 +6,7 @@ import { useApiKey } from '@/hooks/useAuth'
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 const ESTADOS = {
-  pendiente:  { label: 'Pendiente',   color: 'bg-yellow-100 text-yellow-700' },
+  pendiente:  { label: 'Solicitado',  color: 'bg-yellow-100 text-yellow-700' },
   activo:     { label: 'Activo',      color: 'bg-green-100 text-green-700' },
   rechazado:  { label: 'Rechazado',   color: 'bg-red-100 text-red-700' },
   suspendido: { label: 'Suspendido',  color: 'bg-gray-100 text-gray-700' },
@@ -23,6 +23,8 @@ interface Comercio {
   email: string | null
   nombre_local: string
   ubicacion_local: string
+  rubro: string | null
+  rubros_interes: string[] | null
   estado: Estado
   vendedor_id: number | null
   vendedor_nombre: string | null
@@ -158,6 +160,14 @@ export default function ComerciosAdminPage() {
                     <td className="px-4 py-3">
                       <p className="text-gray-800">{m.nombre_local}</p>
                       <p className="text-xs text-gray-400">{m.ubicacion_local}</p>
+                      {m.rubro && (
+                        <p className="text-xs text-gray-400 mt-0.5">Rubro: {m.rubro}</p>
+                      )}
+                      {m.rubros_interes && m.rubros_interes.length > 0 && (
+                        <p className="text-xs text-gray-400">
+                          Le interesa: {m.rubros_interes.join(', ')}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${estadoInfo.color}`}>

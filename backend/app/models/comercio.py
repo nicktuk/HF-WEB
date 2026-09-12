@@ -5,6 +5,7 @@ Las tablas DB conservan sus nombres originales (mayoristas, pedidos_mayoristas, 
 import enum
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, Boolean, Numeric, ForeignKey, Text, DateTime, Enum
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -48,6 +49,8 @@ class Comercio(Base):
     email = Column(Text, nullable=True)
     nombre_local = Column(Text, nullable=False)
     ubicacion_local = Column(Text, nullable=False)
+    rubro = Column(Text, nullable=True, comment="Rubro del comercio (ej: Bazar, Ferretería)")
+    rubros_interes = Column(ARRAY(Text), nullable=True, comment="Categorías del catálogo que le interesaría comprar")
     estado = Column(
         Enum('pendiente', 'activo', 'rechazado', 'suspendido',
              name='estado_mayorista_enum', create_type=False),

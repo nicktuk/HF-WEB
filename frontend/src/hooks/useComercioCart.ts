@@ -9,6 +9,8 @@ export interface CartItem {
   imagen_url: string | null
   precio_comercio: number
   cantidad: number
+  unidades_por_bulto?: number | null
+  cantidad_minima?: number | null
 }
 
 interface CartStore {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
+import { ComercioFooterLink } from '@/components/public/ComercioAccessButton';
 import { trackPublicEvent } from '@/lib/analytics';
 
 export function Footer() {
@@ -112,6 +113,9 @@ export function Footer() {
                   <Link href="/devoluciones#boton-de-arrepentimiento" className="text-sm text-zinc-400 hover:text-white transition-colors">
                     Botón de arrepentimiento
                   </Link>
+                </li>
+                <li>
+                  <ComercioFooterLink />
                 </li>
                 <li>
                   <span className="text-sm text-zinc-500">
