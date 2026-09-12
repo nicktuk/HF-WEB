@@ -201,8 +201,8 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
 
           {/* Info */}
           <div
-            className="p-4 md:p-6 flex flex-col"
-            style={{ borderTop: `1.5px solid ${theme.cardBorder}` }}
+            className="p-4 md:p-6 flex flex-col border-t md:border-t-0"
+            style={{ borderColor: theme.cardBorder }}
           >
             <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
               {p.categoria && <span>{p.categoria}</span>}
