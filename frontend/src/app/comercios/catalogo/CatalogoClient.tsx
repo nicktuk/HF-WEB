@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Check, Star, Zap, Award } from 'lucide-react'
+import { ShoppingCart, Check, Star, Zap, Award, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
+
+const LIME = '#B4F42A'
 
 interface Producto {
   id: number
@@ -52,52 +54,137 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
     return matchSearch && matchCat
   })
 
-  return (
-    <div>
-      {montoMinimo > 0 && (
-        <div className="mb-5 rounded-xl bg-primary-50 border border-primary-100 px-4 py-2.5 text-sm text-primary-800">
-          Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
-        </div>
-      )}
+  const cardProps = { modoPrecio, redondeo, tramosDescuento, onAdd: add }
+  const buscando = search.trim() !== '' || categoria !== ''
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <input
-          type="text"
-          placeholder="Buscar producto..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border border-zinc-300 rounded-lg px-3 py-2 text-sm w-60 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
-        />
-        {categorias.length > 0 && (
-          <select
-            value={categoria}
-            onChange={e => setCategoria(e.target.value)}
-            className="border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
+  return (
+    <div className="relative" style={{ backgroundColor: '#0D1B2A', minHeight: '100vh' }}>
+      {/* Glow decorativo */}
+      <div
+        className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full opacity-25"
+        style={{ background: `radial-gradient(circle, ${LIME} 0%, transparent 68%)`, filter: 'blur(10px)' }}
+      />
+      <div
+        className="pointer-events-none absolute top-[420px] -left-40 w-[420px] h-[420px] rounded-full opacity-[0.12]"
+        style={{ background: `radial-gradient(circle, ${LIME} 0%, transparent 70%)`, filter: 'blur(10px)' }}
+      />
+
+      <div className="relative max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-8 lg:py-12">
+
+        {montoMinimo > 0 && (
+          <div
+            className="mb-6 rounded-2xl px-5 py-3 text-sm"
+            style={{ backgroundColor: 'rgba(180,244,42,0.1)', border: '1px solid rgba(180,244,42,0.25)', color: LIME }}
           >
-            <option value="">Todas las categorías</option>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+            Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
+          </div>
+        )}
+
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-3 mb-10 lg:mb-14">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'rgba(244,246,242,0.4)' }} />
+            <input
+              type="text"
+              placeholder="Buscar producto..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-3 text-sm rounded-full w-64 focus:outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#EFF3F8' }}
+            />
+          </div>
+          {categorias.length > 0 && (
+            <select
+              value={categoria}
+              onChange={e => setCategoria(e.target.value)}
+              className="px-4 py-3 text-sm rounded-full focus:outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#EFF3F8' }}
+            >
+              <option value="" style={{ color: '#111' }}>Todas las categorías</option>
+              {categorias.map(c => <option key={c} value={c} style={{ color: '#111' }}>{c}</option>)}
+            </select>
+          )}
+        </div>
+
+        {filtered.length === 0 && (
+          <p style={{ color: 'rgba(244,246,242,0.5)' }} className="text-sm">No hay productos que coincidan.</p>
+        )}
+
+        {buscando ? (
+          filtered.length > 0 && (
+            <CarouselRow title={categoria || 'Resultados'} productos={filtered} {...cardProps} />
+          )
+        ) : (
+          <div className="flex flex-col gap-12 lg:gap-16">
+            {categorias.map(cat => {
+              const items = productos.filter(p => p.categoria === cat)
+              if (items.length === 0) return null
+              return <CarouselRow key={cat} title={cat} productos={items} {...cardProps} />
+            })}
+            {(() => {
+              const sinCategoria = productos.filter(p => !p.categoria)
+              return sinCategoria.length > 0 ? (
+                <CarouselRow title="Otros productos" productos={sinCategoria} {...cardProps} />
+              ) : null
+            })()}
+          </div>
         )}
       </div>
+    </div>
+  )
+}
 
-      {filtered.length === 0 && (
-        <p className="text-zinc-500 text-sm">No hay productos que coincidan.</p>
-      )}
+function CarouselRow({
+  title,
+  productos,
+  onAdd,
+  modoPrecio,
+  redondeo,
+  tramosDescuento,
+}: {
+  title: string
+  productos: Producto[]
+  onAdd: (item: Omit<CartItem, 'cantidad'>, cantidad: number) => void
+  modoPrecio: 'markup' | 'descuento'
+  redondeo: number
+  tramosDescuento: TramoDescuento[]
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {filtered.map(p => (
-          <ProductCard
-            key={p.id}
-            producto={p}
-            onAdd={add}
-            modoPrecio={modoPrecio}
-            redondeo={redondeo}
-            tramosDescuento={tramosDescuento}
-          />
+  function scrollBy(amount: number) {
+    scrollerRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg lg:text-xl font-bold" style={{ color: '#EFF3F8' }}>{title}</h2>
+        <div className="hidden sm:flex items-center gap-2">
+          <button
+            onClick={() => scrollBy(-560)}
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#EFF3F8' }}
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => scrollBy(560)}
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#EFF3F8' }}
+            aria-label="Siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div ref={scrollerRef} className="flex gap-4 lg:gap-5 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
+        {productos.map(p => (
+          <ProductCard key={p.id} producto={p} onAdd={onAdd} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} />
         ))}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -142,59 +229,53 @@ function ProductCard({
   }
 
   return (
-    <div className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm card-lift overflow-hidden flex flex-col">
+    <div
+      className="shrink-0 w-[190px] lg:w-[220px] rounded-2xl overflow-hidden flex flex-col"
+      style={{ backgroundColor: '#132845', border: '1px solid rgba(180,244,42,0.14)' }}
+    >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
-        <div className="aspect-square bg-zinc-50 relative">
+        <div className="relative m-2.5 rounded-xl aspect-square" style={{ backgroundColor: '#F4F1E7' }}>
           {imgUrl ? (
-            <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-2" unoptimized />
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain p-3" unoptimized />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xs">Sin imagen</div>
+            <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: '#B7AF9C' }}>Sin imagen</div>
           )}
 
           {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
             <div className="absolute top-2 left-2 flex flex-col gap-1">
               {p.is_featured && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Star className="w-2.5 h-2.5 fill-current" />
-                  Nuevo
+                  <Star className="w-2.5 h-2.5 fill-current" />Nuevo
                 </span>
               )}
               {p.is_immediate_delivery && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Zap className="w-2.5 h-2.5 fill-current" />
-                  Inmediata
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Zap className="w-2.5 h-2.5 fill-current" />Inmediata
                 </span>
               )}
               {p.is_best_seller && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Award className="w-2.5 h-2.5" />
-                  Top
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Award className="w-2.5 h-2.5" />Top
                 </span>
               )}
             </div>
           )}
         </div>
 
-        <div className="px-3 pt-3 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between gap-2 min-h-[16px]">
-            {p.categoria && (
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 truncate">{p.categoria}</p>
-            )}
-            {p.marca && (
-              <p className="text-[10px] text-zinc-400 truncate text-right shrink-0">{p.marca}</p>
-            )}
-          </div>
-
-          <p className="text-sm text-zinc-800 font-semibold leading-snug line-clamp-2 hover:text-primary-700 transition-colors">{p.nombre}</p>
+        <div className="px-3.5 pt-1 flex flex-col gap-1.5">
+          {p.marca && (
+            <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: 'rgba(244,246,242,0.4)' }}>{p.marca}</p>
+          )}
+          <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: '#EFF3F8' }}>{p.nombre}</p>
 
           <div className="flex flex-wrap gap-1">
             {p.unidades_por_bulto && (
-              <span className="text-[10px] text-zinc-500 bg-zinc-100 rounded px-1.5 py-0.5">
+              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(244,246,242,0.6)' }}>
                 Bulto x{p.unidades_por_bulto}
               </span>
             )}
             {p.cantidad_minima && (
-              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5">
+              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: 'rgba(180,244,42,0.12)', color: LIME }}>
                 Mín. {p.cantidad_minima} u.
               </span>
             )}
@@ -202,85 +283,52 @@ function ProductCard({
 
           {enModoDescuento ? (
             <div className="mt-0.5">
-              <p className="text-lg font-extrabold text-zinc-900">
-                ${precioUnitario.toLocaleString('es-AR')}
-              </p>
-              <p className="text-[10px] text-zinc-400">
-                Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')}
-              </p>
+              <p className="text-lg font-extrabold" style={{ color: LIME }}>${precioUnitario.toLocaleString('es-AR')}</p>
+              <p className="text-[10px]" style={{ color: 'rgba(244,246,242,0.4)' }}>Lista ${(p.precio_venta as number).toLocaleString('es-AR')}</p>
             </div>
           ) : (
-            <p className="text-lg font-extrabold text-zinc-900 mt-0.5">
-              ${precioUnitario.toLocaleString('es-AR')}
-            </p>
+            <p className="text-lg font-extrabold mt-0.5" style={{ color: LIME }}>${precioUnitario.toLocaleString('es-AR')}</p>
           )}
 
           {!p.is_on_demand && (
-            <p className="text-xs text-zinc-500">Stock: <strong>{p.stock}</strong> u.</p>
+            <p className="text-xs" style={{ color: 'rgba(244,246,242,0.45)' }}>Stock: <strong style={{ color: '#EFF3F8' }}>{p.stock}</strong> u.</p>
           )}
         </div>
       </Link>
 
-      {enModoDescuento && tramosDescuento.length > 0 && (
-        <div className="mx-3 mt-1 rounded-lg bg-zinc-50 border border-zinc-100 overflow-hidden">
-          <table className="w-full text-[10px]">
-            <thead>
-              <tr className="text-zinc-400">
-                <th className="text-left font-medium px-2 py-1">Cant.</th>
-                <th className="text-left font-medium px-2 py-1">Desc.</th>
-                <th className="text-right font-medium px-2 py-1">Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tramosDescuento.map(t => (
-                <tr key={t.cantidad_minima} className="border-t border-zinc-100">
-                  <td className="px-2 py-1 text-zinc-600">{t.cantidad_minima}+</td>
-                  <td className="px-2 py-1 text-emerald-600 font-medium">{t.descuento_porcentaje}%</td>
-                  <td className="px-2 py-1 text-right font-semibold text-zinc-800">
-                    ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="px-3 pb-3 flex flex-col gap-1.5 flex-1">
-        <div className="flex items-center gap-1.5 mt-auto pt-2">
+      <div className="px-3.5 pb-3.5 pt-2 flex flex-col gap-1.5 mt-auto">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setCantidad(c => Math.max(1, c - 1))}
-            className="w-7 h-7 border border-zinc-300 rounded-lg text-sm font-medium hover:bg-zinc-50"
-          >
-            −
-          </button>
+            className="w-7 h-7 rounded-lg text-sm font-medium"
+            style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
+          >−</button>
           <input
             type="number"
             min={1}
             value={cantidad}
             onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-12 text-center border border-zinc-300 rounded-lg text-sm py-0.5 focus:outline-none"
+            className="w-12 text-center rounded-lg text-sm py-0.5 focus:outline-none"
+            style={{ backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
           />
           <button
             onClick={() => setCantidad(c => c + 1)}
-            className="w-7 h-7 border border-zinc-300 rounded-lg text-sm font-medium hover:bg-zinc-50"
-          >
-            +
-          </button>
+            className="w-7 h-7 rounded-lg text-sm font-medium"
+            style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
+          >+</button>
         </div>
 
         {faltan > 0 ? (
-          <p className="text-[11px] text-amber-600 font-medium text-center">
+          <p className="text-[11px] font-medium text-center" style={{ color: '#E8C15A' }}>
             Te faltan {faltan} u. para el mínimo de {p.cantidad_minima}
           </p>
         ) : (
           <button
             onClick={handleAdd}
-            className={`w-full flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold py-2 transition-colors ${
-              added
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                : 'border-primary-200 bg-primary-50 hover:bg-primary-100 text-primary-700'
-            }`}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold py-2.5 transition-colors"
+            style={added
+              ? { backgroundColor: 'rgba(180,244,42,0.15)', color: LIME, border: `1px solid ${LIME}` }
+              : { backgroundColor: LIME, color: '#0D1B2A' }}
           >
             {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
             {added ? 'Agregado' : 'Agregar al pedido'}

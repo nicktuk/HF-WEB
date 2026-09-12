@@ -58,7 +58,10 @@ export function ComercioHeader({ nombreLocal }: Props) {
         >
           <ShoppingCart className="h-4 w-4 text-white" />
           {itemCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white leading-none">
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold leading-none"
+              style={{ backgroundColor: '#B4F42A', color: '#0D1B2A' }}
+            >
               {itemCount}
             </span>
           )}

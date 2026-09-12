@@ -25,17 +25,15 @@ export default async function CatalogoPage() {
   const info = await infoRes.json()
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#0D1B2A' }}>
       <ComercioHeader nombreLocal={info.nombre_local} />
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <CatalogoClient
-          productos={productos}
-          montoMinimo={config.monto_minimo_pedido}
-          modoPrecio={config.modo_precio}
-          redondeo={config.redondeo}
-          tramosDescuento={config.tramos_descuento}
-        />
-      </main>
+      <CatalogoClient
+        productos={productos}
+        montoMinimo={config.monto_minimo_pedido}
+        modoPrecio={config.modo_precio}
+        redondeo={config.redondeo}
+        tramosDescuento={config.tramos_descuento}
+      />
     </div>
   )
 }
