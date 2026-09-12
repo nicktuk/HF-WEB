@@ -17,6 +17,12 @@ export interface ComercioTheme {
   buttonText: string
   buttonAddedBg: string
   glowOpacity: number
+  /** Verde — señal de "estás ahorrando" (descuento, precio final con rebaja). */
+  savings: string
+  savingsTint: (alpha: number) => string
+  /** Naranja/rojo — señal de urgencia (poco stock). */
+  urgency: string
+  urgencyTint: (alpha: number) => string
 }
 
 const DARK: ComercioTheme = {
@@ -36,6 +42,10 @@ const DARK: ComercioTheme = {
   buttonText: '#0D1B2A',
   buttonAddedBg: 'rgba(91,157,249,0.15)',
   glowOpacity: 1,
+  savings: '#34D399',
+  savingsTint: (a: number) => `rgba(52,211,153,${a})`,
+  urgency: '#FF7A50',
+  urgencyTint: (a: number) => `rgba(255,122,80,${a})`,
 }
 
 // Fondo claro: el contraste lo dan los bordes y el texto en azul, no rellenos oscuros.
@@ -56,6 +66,10 @@ const LIGHT: ComercioTheme = {
   buttonText: '#2F6FE0',
   buttonAddedBg: 'rgba(47,111,224,0.08)',
   glowOpacity: 0,
+  savings: '#0E9F6E',
+  savingsTint: (a: number) => `rgba(14,159,110,${a})`,
+  urgency: '#D6472A',
+  urgencyTint: (a: number) => `rgba(214,71,42,${a})`,
 }
 
 export function getComercioTheme(mode: ComercioThemeMode): ComercioTheme {

@@ -9,6 +9,7 @@ import { useComercioTheme } from '@/hooks/useComercioTheme'
 import { getComercioTheme, type ComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
+import { SavingsBar } from '../_components/SavingsBar'
 
 interface Producto {
   id: number
@@ -275,11 +276,22 @@ function ProductCard({
 
           {enModoDescuento ? (
             <div className="mt-0.5">
-              <p className="text-lg font-extrabold" style={{ color: theme.accent }}>${precioUnitario.toLocaleString('es-AR')}</p>
+              <p className="text-lg font-extrabold" style={{ color: theme.savings }}>${precioUnitario.toLocaleString('es-AR')}</p>
               <p className="text-[10px]" style={{ color: theme.textFaint }}>Lista ${(p.precio_venta as number).toLocaleString('es-AR')}</p>
             </div>
           ) : (
             <p className="text-lg font-extrabold mt-0.5" style={{ color: theme.accent }}>${precioUnitario.toLocaleString('es-AR')}</p>
+          )}
+
+          {enModoDescuento && tramosDescuento.length > 0 && (
+            <SavingsBar
+              precioVenta={p.precio_venta as number}
+              cantidad={cantidad}
+              tramos={tramosDescuento}
+              redondeo={redondeo}
+              theme={theme}
+              compact
+            />
           )}
 
           {enModoDescuento && tramosDescuento.length > 0 && (
@@ -293,9 +305,9 @@ function ProductCard({
                     const activo = cantidad >= t.cantidad_minima
                       && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                     return (
-                      <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.16) } : undefined}>
+                      <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.savingsTint(0.14) } : undefined}>
                         <td className="py-1.5 pl-2.5 font-semibold" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                        <td className="py-1.5 font-bold" style={{ color: activo ? theme.accent : theme.textMuted }}>−{t.descuento_porcentaje}%</td>
+                        <td className="py-1.5 font-bold" style={{ color: theme.savings }}>−{t.descuento_porcentaje}%</td>
                         <td className="py-1.5 pr-2.5 text-right font-bold" style={{ color: theme.textPrimary }}>
                           ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
                         </td>
@@ -308,7 +320,13 @@ function ProductCard({
           )}
 
           {!p.is_on_demand && (
-            <p className="text-xs" style={{ color: theme.textMuted }}>Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.</p>
+            p.stock <= 5 ? (
+              <p className="text-xs font-bold" style={{ color: theme.urgency }}>
+                ¡Últimas {p.stock} unidades!
+              </p>
+            ) : (
+              <p className="text-xs" style={{ color: theme.textMuted }}>Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.</p>
+            )
           )}
         </div>
       </Link>

@@ -9,6 +9,7 @@ import { useComercioTheme } from '@/hooks/useComercioTheme'
 import { getComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
+import { SavingsBar } from '../../_components/SavingsBar'
 
 interface Imagen {
   id: number
@@ -91,11 +92,19 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
     setTimeout(() => setAdded(false), 1500)
   }
 
-  const datosConcretos: { label: string; value: string }[] = []
+  const stockBajo = !p.is_on_demand && p.stock <= 5
+
+  const datosConcretos: { label: string; value: string; urgent?: boolean }[] = []
   if (p.sku) datosConcretos.push({ label: 'Código', value: p.sku })
   if (p.unidades_por_bulto) datosConcretos.push({ label: 'Bulto', value: `x${p.unidades_por_bulto} u.` })
   if (p.cantidad_minima) datosConcretos.push({ label: 'Compra mínima', value: `${p.cantidad_minima} u.` })
-  if (!p.is_on_demand) datosConcretos.push({ label: 'Stock disponible', value: `${p.stock} u.` })
+  if (!p.is_on_demand) {
+    datosConcretos.push({
+      label: 'Stock disponible',
+      value: stockBajo ? `¡Últimas ${p.stock}!` : `${p.stock} u.`,
+      urgent: stockBajo,
+    })
+  }
 
   return (
     <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
@@ -219,13 +228,22 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
 
             <div className="mb-4">
-              <p className="text-2xl font-extrabold" style={{ color: theme.accent }}>
+              <p className="text-2xl font-extrabold" style={{ color: enModoDescuento ? theme.savings : theme.accent }}>
                 ${precioUnitario.toLocaleString('es-AR')}
               </p>
               {enModoDescuento && (
                 <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
                   Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
                 </p>
+              )}
+              {enModoDescuento && p.tramos_descuento.length > 0 && (
+                <SavingsBar
+                  precioVenta={p.precio_venta as number}
+                  cantidad={cantidad}
+                  tramos={p.tramos_descuento}
+                  redondeo={p.redondeo}
+                  theme={theme}
+                />
               )}
             </div>
 
@@ -235,10 +253,12 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   <div
                     key={d.label}
                     className="rounded-lg px-3 py-2"
-                    style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                    style={d.urgent
+                      ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
+                      : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
                   >
-                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: theme.textFaint }}>{d.label}</p>
-                    <p className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{d.value}</p>
+                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
+                    <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
                   </div>
                 ))}
               </div>
@@ -268,9 +288,9 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                       const activo = cantidad >= t.cantidad_minima
                         && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                       return (
-                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.16) } : undefined}>
+                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.savingsTint(0.14) } : undefined}>
                           <td className="px-4 py-1.5 font-medium" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                          <td className="py-1.5 font-bold" style={{ color: activo ? theme.accent : theme.textMuted }}>−{t.descuento_porcentaje}%</td>
+                          <td className="py-1.5 font-bold" style={{ color: theme.savings }}>−{t.descuento_porcentaje}%</td>
                           <td className="px-4 py-1.5 text-right font-bold" style={{ color: theme.textPrimary }}>
                             ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
                           </td>
