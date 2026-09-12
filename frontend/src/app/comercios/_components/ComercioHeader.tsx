@@ -1,8 +1,9 @@
 ﻿'use client'
 
 import Link from 'next/link'
-import { ShoppingCart, LogOut, ClipboardList } from 'lucide-react'
+import { ShoppingCart, LogOut, ClipboardList, Sun, Moon } from 'lucide-react'
 import { useComercioCart } from '@/hooks/useComercioCart'
+import { useComercioTheme } from '@/hooks/useComercioTheme'
 
 interface Props {
   nombreLocal: string
@@ -10,6 +11,8 @@ interface Props {
 
 export function ComercioHeader({ nombreLocal }: Props) {
   const itemCount = useComercioCart(s => s.itemCount())
+  const themeMode = useComercioTheme(s => s.mode)
+  const toggleTheme = useComercioTheme(s => s.toggle)
 
   async function handleLogout() {
     await fetch('/api/comercios/auth/logout', { method: 'POST' })
@@ -66,6 +69,14 @@ export function ComercioHeader({ nombreLocal }: Props) {
             </span>
           )}
         </Link>
+        <button
+          onClick={toggleTheme}
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition-all text-white/80"
+          aria-label={themeMode === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+          title={themeMode === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+        >
+          {themeMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
         <button
           onClick={handleLogout}
           className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition-all text-white/70 hover:text-white"

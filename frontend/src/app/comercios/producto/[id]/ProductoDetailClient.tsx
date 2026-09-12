@@ -5,10 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Star, Zap, Award, Package } from 'lucide-react'
 import { useComercioCart } from '@/hooks/useComercioCart'
+import { useComercioTheme } from '@/hooks/useComercioTheme'
+import { getComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
-
-const ACCENT = '#5B9DF9'
 
 interface Imagen {
   id: number
@@ -42,6 +42,9 @@ interface ProductoDetalle {
 }
 
 export function ProductoDetailClient({ producto: p }: { producto: ProductoDetalle }) {
+  const themeMode = useComercioTheme(s => s.mode)
+  const theme = getComercioTheme(themeMode)
+
   const [index, setIndex] = useState(0)
   const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
   const [added, setAdded] = useState(false)
@@ -95,27 +98,27 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
   if (!p.is_on_demand) datosConcretos.push({ label: 'Stock disponible', value: `${p.stock} u.` })
 
   return (
-    <div className="relative overflow-x-hidden" style={{ backgroundColor: '#0D1B2A', minHeight: '100vh' }}>
-      {/* Glow decorativo */}
+    <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
+      {/* Glow decorativo — solo en tema oscuro */}
       <div
-        className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full opacity-25"
-        style={{ background: `radial-gradient(circle, ${ACCENT} 0%, transparent 68%)`, filter: 'blur(10px)' }}
+        className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full"
+        style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
 
       <div className="relative max-w-5xl mx-auto px-5 sm:px-8 py-8 lg:py-12">
-        <Link href="/comercios/catalogo" className="text-sm hover:underline" style={{ color: 'rgba(244,246,242,0.6)' }}>
+        <Link href="/comercios/catalogo" className="text-sm hover:underline" style={{ color: theme.textMuted }}>
           ← Catálogo
         </Link>
 
         <div
           className="mt-4 rounded-2xl grid md:grid-cols-2 gap-0 overflow-hidden"
-          style={{ backgroundColor: '#132845', border: '1px solid rgba(91,157,249,0.14)' }}
+          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}` }}
         >
           {/* Galería */}
           <div className="p-4 md:p-6 space-y-3">
             <div
               className="aspect-square relative rounded-xl overflow-hidden group"
-              style={{ backgroundColor: '#F4F1E7' }}
+              style={{ backgroundColor: theme.imagePlate }}
             >
               {actual ? (
                 <Image
@@ -156,7 +159,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                     key={img.id}
                     onClick={() => setIndex(i)}
                     className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors"
-                    style={{ borderColor: i === index ? ACCENT : 'rgba(255,255,255,0.15)', backgroundColor: '#F4F1E7' }}
+                    style={{ borderColor: i === index ? theme.accent : theme.inputBorder, backgroundColor: theme.imagePlate }}
                   >
                     <Image
                       src={resolveImageUrl(img.url) ?? img.url}
@@ -185,15 +188,15 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
           {/* Info */}
           <div
             className="p-4 md:p-6 flex flex-col"
-            style={{ borderTop: '1px solid rgba(91,157,249,0.14)' }}
+            style={{ borderTop: `1.5px solid ${theme.cardBorder}` }}
           >
-            <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: 'rgba(244,246,242,0.55)' }}>
+            <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
               {p.categoria && <span>{p.categoria}</span>}
               {p.categoria && p.marca && <span>•</span>}
-              {p.marca && <span className="font-medium" style={{ color: 'rgba(244,246,242,0.75)' }}>{p.marca}</span>}
+              {p.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{p.marca}</span>}
             </div>
 
-            <h1 className="text-xl font-bold mb-2" style={{ color: '#EFF3F8' }}>{p.nombre}</h1>
+            <h1 className="text-xl font-bold mb-2" style={{ color: theme.textPrimary }}>{p.nombre}</h1>
 
             {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
               <div className="flex flex-wrap gap-1.5 mb-3">
@@ -216,11 +219,11 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
 
             <div className="mb-4">
-              <p className="text-2xl font-extrabold" style={{ color: ACCENT }}>
+              <p className="text-2xl font-extrabold" style={{ color: theme.accent }}>
                 ${precioUnitario.toLocaleString('es-AR')}
               </p>
               {enModoDescuento && (
-                <p className="text-xs mt-0.5" style={{ color: 'rgba(244,246,242,0.45)' }}>
+                <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
                   Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
                 </p>
               )}
@@ -232,10 +235,10 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   <div
                     key={d.label}
                     className="rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
                   >
-                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'rgba(244,246,242,0.4)' }}>{d.label}</p>
-                    <p className="text-sm font-semibold" style={{ color: '#EFF3F8' }}>{d.value}</p>
+                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: theme.textFaint }}>{d.label}</p>
+                    <p className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{d.value}</p>
                   </div>
                 ))}
               </div>
@@ -244,19 +247,19 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             {p.kit_content && (
               <div
                 className="mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
               >
-                <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'rgba(244,246,242,0.5)' }} />
+                <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
                 <div>
-                  <p className="text-xs font-semibold mb-0.5" style={{ color: 'rgba(244,246,242,0.75)' }}>Contenido</p>
-                  <p className="text-sm whitespace-pre-line" style={{ color: 'rgba(244,246,242,0.6)' }}>{p.kit_content}</p>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
+                  <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{p.kit_content}</p>
                 </div>
               </div>
             )}
 
             {enModoDescuento && p.tramos_descuento.length > 0 && (
-              <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: 'rgba(91,157,249,0.08)', border: '1px solid rgba(91,157,249,0.3)' }}>
-                <p className="text-xs font-bold uppercase tracking-wide px-4 pt-3 pb-1" style={{ color: ACCENT }}>
+              <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.06), border: `1.5px solid ${theme.accentTint(0.35)}` }}>
+                <p className="text-xs font-bold uppercase tracking-wide px-4 pt-3 pb-1" style={{ color: theme.accent }}>
                   Descuento por cantidad
                 </p>
                 <table className="w-full text-sm">
@@ -265,10 +268,10 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                       const activo = cantidad >= t.cantidad_minima
                         && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                       return (
-                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: 'rgba(91,157,249,0.22)' } : undefined}>
-                          <td className="px-4 py-1.5 font-medium" style={{ color: activo ? '#FFFFFF' : 'rgba(244,246,242,0.6)' }}>{t.cantidad_minima}+ u.</td>
-                          <td className="py-1.5 font-bold" style={{ color: activo ? ACCENT : 'rgba(244,246,242,0.6)' }}>−{t.descuento_porcentaje}%</td>
-                          <td className="px-4 py-1.5 text-right font-bold" style={{ color: activo ? '#FFFFFF' : '#EFF3F8' }}>
+                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accentTint(0.16) } : undefined}>
+                          <td className="px-4 py-1.5 font-medium" style={{ color: activo ? theme.textPrimary : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                          <td className="py-1.5 font-bold" style={{ color: activo ? theme.accent : theme.textMuted }}>−{t.descuento_porcentaje}%</td>
+                          <td className="px-4 py-1.5 text-right font-bold" style={{ color: theme.textPrimary }}>
                             ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
                           </td>
                         </tr>
@@ -281,12 +284,12 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
 
             <div className="mt-auto pt-2 space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium" style={{ color: 'rgba(244,246,242,0.7)' }}>Cantidad</span>
+                <span className="text-sm font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setCantidad(c => Math.max(1, c - 1))}
                     className="w-8 h-8 rounded-lg text-sm font-medium"
-                    style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
+                    style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                   >−</button>
                   <input
                     type="number"
@@ -294,12 +297,12 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                     value={cantidad}
                     onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
-                    style={{ backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
+                    style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                   />
                   <button
                     onClick={() => setCantidad(c => c + 1)}
                     className="w-8 h-8 rounded-lg text-sm font-medium"
-                    style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#EFF3F8' }}
+                    style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                   >+</button>
                 </div>
               </div>
@@ -307,7 +310,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
               {faltan > 0 ? (
                 <p
                   className="text-sm font-medium text-center rounded-xl py-3"
-                  style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.1)', border: '1px solid rgba(232,193,90,0.3)' }}
+                  style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.1)', border: '1.5px solid rgba(232,193,90,0.3)' }}
                 >
                   Te faltan {faltan} u. para el mínimo de {p.cantidad_minima}
                 </p>
@@ -316,8 +319,8 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   onClick={handleAdd}
                   className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold py-3 transition-colors"
                   style={added
-                    ? { backgroundColor: 'rgba(91,157,249,0.15)', color: ACCENT, border: `1px solid ${ACCENT}` }
-                    : { backgroundColor: '#FFFFFF', color: '#0D1B2A' }}
+                    ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
+                    : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
                 >
                   {added ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
                   {added ? 'Agregado al pedido' : 'Agregar al pedido'}

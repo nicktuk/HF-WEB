@@ -25,7 +25,7 @@ export default async function CatalogoPage() {
   const info = await infoRes.json()
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0D1B2A' }}>
+    <div className="min-h-screen">
       <ComercioHeader nombreLocal={info.nombre_local} />
       <CatalogoClient
         productos={productos}
