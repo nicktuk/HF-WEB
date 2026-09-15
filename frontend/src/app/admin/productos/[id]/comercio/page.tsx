@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, X, Upload, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useApiKey } from '@/hooks/useAuth';
+import { useApiKey, useRole } from '@/hooks/useAuth';
 import { uploadImages, resolveImageUrl, aiApi } from '@/lib/api';
 import { useAdminProduct, useComercioConfig, useSetComercioConfig } from '@/hooks/useProducts';
 import { parseDescripcionConIconos } from '@/lib/comercio-icons';
@@ -18,6 +18,7 @@ export default function ProductComercioConfigPage() {
   const params = useParams();
   const productId = parseInt(params.id as string, 10);
   const apiKey = useApiKey() || '';
+  const isProductEditor = useRole() === 'product_editor';
 
   const { data: product, isLoading: isLoadingProduct } = useAdminProduct(apiKey, productId);
   const { data: config, isLoading: isLoadingConfig } = useComercioConfig(apiKey, productId);
@@ -166,6 +167,7 @@ export default function ProductComercioConfigPage() {
       </div>
 
       <div className="px-4 space-y-6 max-w-2xl">
+        {!isProductEditor && (
         <Card>
           <CardHeader>
             <h2 className="font-semibold">Visibilidad y precio</h2>
@@ -244,6 +246,7 @@ export default function ProductComercioConfigPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         <Card>
           <CardHeader>

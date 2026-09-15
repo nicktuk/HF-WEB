@@ -1351,13 +1351,22 @@ async def get_product_comercio_config(
 @router.patch(
     "/products/{product_id}/comercio",
     response_model=ProductComercioConfigResponse,
-    dependencies=[Depends(get_admin_user)],
 )
 async def update_product_comercio_config(
     product_id: int,
     data: ProductComercioConfigUpdate,
     service: ProductService = Depends(get_product_service),
+    current_user: AdminUserInfo = Depends(get_admin_user),
 ):
+    if current_user.is_product_editor:
+        # product_editor solo puede tocar descripción, íconos y fotos del canal comercios
+        current_config = service.get_comercio_config(product_id)
+        data = data.model_copy(update={
+            "es_mayorista": current_config.es_mayorista,
+            "precio_mayorista_override": current_config.precio_mayorista_override,
+            "unidades_por_bulto": current_config.unidades_por_bulto,
+            "cantidad_minima": current_config.cantidad_minima,
+        })
     config = service.set_comercio_config(product_id, data)
     images = service.get_comercio_images(product_id)
     return ProductComercioConfigResponse(
