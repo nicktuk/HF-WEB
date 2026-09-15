@@ -68,6 +68,9 @@ export default function ProductEditPage() {
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   const [customPrice, setCustomPrice] = useState('');
+  const [calcEnvio, setCalcEnvio] = useState('');
+  const [calcVendedorPct, setCalcVendedorPct] = useState('');
+  const [calcGananciaNetaPct, setCalcGananciaNetaPct] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [description, setDescription] = useState('');
@@ -496,6 +499,14 @@ export default function ProductEditPage() {
 
   const isManualProduct = product.source_website_name === 'Producto Manual';
   const canEnable = markup > 0 || (!!customPrice && parseFloat(customPrice) > 0) || (!!originalPrice && parseFloat(originalPrice) > 0);
+  const calcCosto = parseFloat(originalPrice) || 0;
+  const calcEnvioNum = parseFloat(calcEnvio) || 0;
+  const calcVendedorPctNum = parseFloat(calcVendedorPct) || 0;
+  const calcGananciaNetaPctNum = parseFloat(calcGananciaNetaPct) || 0;
+  const calcDenominador = 1 - (calcVendedorPctNum + calcGananciaNetaPctNum) / 100;
+  const precioSugerido = calcCosto > 0 && calcDenominador > 0
+    ? (calcCosto + calcEnvioNum) / calcDenominador
+    : null;
   const grossStock = (stockPurchases || []).reduce((acc, item) => acc + (item.quantity - item.out_quantity), 0);
   const reservedQty = Number(stockSummary?.items?.find(i => i.product_id === productId)?.reserved_qty || 0);
   const netStock = grossStock - reservedQty;
@@ -1512,6 +1523,44 @@ export default function ProductEditPage() {
                     placeholder="Precio del proveedor"
                     helperText="Precio de costo/proveedor"
                   />
+
+                  {/* Calculadora de precio sugerido — no se guarda, solo ayuda a decidir el precio */}
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Calculadora de precio sugerido</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        label="Envío"
+                        type="number"
+                        value={calcEnvio}
+                        onChange={(e) => setCalcEnvio(e.target.value)}
+                        placeholder="0"
+                      />
+                      <Input
+                        label="% Vendedor"
+                        type="number"
+                        value={calcVendedorPct}
+                        onChange={(e) => setCalcVendedorPct(e.target.value)}
+                        placeholder="0"
+                      />
+                      <Input
+                        label="% Ganancia neta"
+                        type="number"
+                        value={calcGananciaNetaPct}
+                        onChange={(e) => setCalcGananciaNetaPct(e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                    {calcCosto <= 0 ? (
+                      <p className="text-xs text-gray-500">Cargá el precio de origen para calcular.</p>
+                    ) : calcDenominador <= 0 ? (
+                      <p className="text-xs text-red-600">% Vendedor + % Ganancia neta no puede ser 100% o más.</p>
+                    ) : (
+                      <p className="text-sm text-gray-700">
+                        Precio de venta sugerido: <span className="font-semibold text-primary-700">{formatPrice(precioSugerido as number)}</span>
+                      </p>
+                    )}
+                  </div>
+
                   <Input
                     label="Precio fijo (opcional)"
                     type="number"
