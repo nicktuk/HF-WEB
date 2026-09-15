@@ -58,6 +58,7 @@ export default function VentasPage() {
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.deliveredFilter ?? 'all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.paidFilter ?? 'all');
   const [origenFilter, setOrigenFilter] = useState<'all' | 'web' | 'admin' | 'vendedor'>(() => getSavedFilters()?.origenFilter ?? 'all');
+  const [sellerFilter, setSellerFilter] = useState<string>(() => getSavedFilters()?.sellerFilter ?? 'all');
   const [showPartials, setShowPartials] = useState<boolean>(() => getSavedFilters()?.showPartials ?? false);
   const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
   const [stockShortageOnly, setStockShortageOnly] = useState<boolean>(() => getSavedFilters()?.stockShortageOnly ?? false);
@@ -81,9 +82,9 @@ export default function VentasPage() {
   // Persist filters to sessionStorage
   useEffect(() => {
     try {
-      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, origenFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo }));
+      sessionStorage.setItem(FILTER_KEY, JSON.stringify({ salesSearch, deliveredFilter, paidFilter, origenFilter, sellerFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo }));
     } catch { /* ignore */ }
-  }, [salesSearch, deliveredFilter, paidFilter, origenFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo]);
+  }, [salesSearch, deliveredFilter, paidFilter, origenFilter, sellerFilter, showPartials, stockShortageOnly, viewMode, dateFrom, dateTo]);
 
   useEffect(() => {
     const pendiente = searchParams.get('pendiente');
@@ -386,6 +387,7 @@ export default function VentasPage() {
     const EPS = 0.01;
     return salesData.filter((sale) => {
       if (origenFilter !== 'all' && sale.origen !== origenFilter) return false;
+      if (sellerFilter !== 'all' && sale.seller_id !== Number(sellerFilter)) return false;
       const total = Number(sale.total_amount || 0);
       const deliveredAmount = Number(sale.delivered_amount || 0);
       const paidAmount = Number(sale.paid_amount || 0);
@@ -432,7 +434,7 @@ export default function VentasPage() {
       }
       return true;
     });
-  }, [salesData, deliveredFilter, paidFilter, origenFilter, showPartials]);
+  }, [salesData, deliveredFilter, paidFilter, origenFilter, sellerFilter, showPartials]);
 
   const saleProductIds = useMemo(() => {
     const ids = new Set<number>();
@@ -1202,6 +1204,19 @@ export default function VentasPage() {
                 <option value="web">Web</option>
                 <option value="admin">Admin</option>
                 <option value="vendedor">Vendedor</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Vendedor</label>
+              <select
+                value={sellerFilter}
+                onChange={(e) => setSellerFilter(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">Todos</option>
+                {(sellers || []).map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
               </select>
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-700">
