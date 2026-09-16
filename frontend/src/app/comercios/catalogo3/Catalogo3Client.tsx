@@ -100,15 +100,25 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
 
   return (
     <div className="relative overflow-hidden" style={{ backgroundColor: '#000', height: 'calc(100vh - 60px)' }}>
-      {/* Imagen de fondo a pantalla completa */}
-      <div className="absolute inset-0" style={{ backgroundColor: theme.imagePlate }}>
+      {/* Fondo: versión desenfocada de la misma imagen, para llenar la pantalla sin recortar el producto */}
+      <div className="absolute inset-0 overflow-hidden">
         {imgUrl && (
-          <Image src={imgUrl} alt={p.nombre} fill className="object-cover" unoptimized priority />
+          <Image src={imgUrl} alt="" fill aria-hidden className="object-cover scale-125 blur-2xl opacity-60" unoptimized />
         )}
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }} />
+      </div>
+
+      {/* Foto completa del producto, centrada y sin cortar */}
+      <div className="absolute inset-0 flex items-center justify-center px-6" style={{ paddingTop: 190, paddingBottom: 168 }}>
+        <div className="relative w-full h-full">
+          {imgUrl && (
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain drop-shadow-2xl" unoptimized priority />
+          )}
+        </div>
       </div>
 
       {/* Scrim superior */}
-      <div className="pointer-events-none absolute top-0 left-0 right-0 h-32" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)' }} />
+      <div className="pointer-events-none absolute top-0 left-0 right-0 h-56" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0) 100%)' }} />
 
       {/* Barra de progreso tipo historia */}
       {productos.length > 1 && (
@@ -125,7 +135,6 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
         </div>
       )}
 
-      {/* Zonas táctiles prev/next */}
       {montoMinimo > 0 && (
         <div
           className="absolute top-8 left-3 right-3 rounded-xl px-3 py-2 text-xs text-center z-10"
@@ -134,6 +143,37 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
           Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
         </div>
       )}
+
+      {/* Identidad del producto: nombre y precio arriba, junto con los badges */}
+      <div className="absolute top-16 left-4 right-4 z-10 flex flex-col gap-2">
+        {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
+          <div className="flex flex-wrap gap-1.5">
+            {p.is_featured && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                <Star className="w-3 h-3 fill-current" />Nuevo
+              </span>
+            )}
+            {p.is_immediate_delivery && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                <Zap className="w-3 h-3 fill-current" />Inmediata
+              </span>
+            )}
+            {p.is_best_seller && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                <Award className="w-3 h-3" />Top
+              </span>
+            )}
+          </div>
+        )}
+
+        {p.marca && (
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.65)' }}>{p.marca}</p>
+        )}
+        <h1 className="text-xl font-bold leading-snug -mt-1" style={{ color: '#fff' }}>{p.nombre}</h1>
+        <span className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+          ${precioUnitario.toLocaleString('es-AR')}
+        </span>
+      </div>
 
       {productos.length > 1 && (
         <>
@@ -156,49 +196,17 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
         </>
       )}
 
-      {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-        <div className="absolute top-20 left-4 flex flex-col gap-1.5 z-10">
-          {p.is_featured && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-              <Star className="w-3 h-3 fill-current" />Nuevo
-            </span>
-          )}
-          {p.is_immediate_delivery && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-              <Zap className="w-3 h-3 fill-current" />Inmediata
-            </span>
-          )}
-          {p.is_best_seller && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-              <Award className="w-3 h-3" />Top
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Panel inferior */}
+      {/* Panel inferior: solo cantidad y agregar */}
       <div
-        className="absolute left-0 right-0 bottom-0 px-5 pt-24 pb-6 flex flex-col gap-3"
+        className="absolute left-0 right-0 bottom-0 px-5 pt-16 pb-6 flex flex-col gap-2.5"
         style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 28%, rgba(0,0,0,0.92) 60%, #000 100%)' }}
       >
-        <div>
-          {p.marca && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{p.marca}</p>
-          )}
-          <h1 className="text-xl font-bold" style={{ color: '#fff' }}>{p.nombre}</h1>
-        </div>
-
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
-            ${precioUnitario.toLocaleString('es-AR')}
-          </span>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            {p.unidades_por_bulto && `Bulto x${p.unidades_por_bulto}`}
-            {p.unidades_por_bulto && p.cantidad_minima && ' · '}
-            {p.cantidad_minima && `Mín. ${p.cantidad_minima} u.`}
-            {!p.is_on_demand && ` · Stock ${p.stock} u.`}
-          </span>
-        </div>
+        <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          {p.unidades_por_bulto && `Bulto x${p.unidades_por_bulto}`}
+          {p.unidades_por_bulto && p.cantidad_minima && ' · '}
+          {p.cantidad_minima && `Mín. ${p.cantidad_minima} u.`}
+          {!p.is_on_demand && ` · Stock ${p.stock} u.`}
+        </p>
 
         {faltan > 0 ? (
           <p
