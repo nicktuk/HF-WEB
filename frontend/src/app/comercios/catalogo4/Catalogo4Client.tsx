@@ -36,7 +36,7 @@ interface Props {
   tramosDescuento: TramoDescuento[]
 }
 
-export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, tramosDescuento }: Props) {
+export function Catalogo4Client({ productos, montoMinimo, modoPrecio, redondeo, tramosDescuento }: Props) {
   const themeMode = useComercioTheme(s => s.mode)
   const theme = getComercioTheme(themeMode)
 
@@ -49,17 +49,12 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
 
   return (
     <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
-      {/* Glow decorativo — solo en tema oscuro */}
       <div
         className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full opacity-25"
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
-      <div
-        className="pointer-events-none absolute top-[420px] -left-40 w-[420px] h-[420px] rounded-full"
-        style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`, filter: 'blur(10px)', opacity: 0.12 * theme.glowOpacity }}
-      />
 
-      <div className="relative w-full px-5 sm:px-8 lg:px-12 pt-4 pb-8 lg:pt-5 lg:pb-12">
+      <div className="relative w-full max-w-3xl mx-auto px-5 sm:px-8 pt-4 pb-8 lg:pt-6 lg:pb-12">
 
         {montoMinimo > 0 && (
           <div
@@ -75,7 +70,7 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
         {productos.length === 0 ? (
           <p style={{ color: theme.textMuted }} className="text-sm">Todavía no hay productos cargados.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
             {productos.map(p => (
               <ProductCard key={p.id} producto={p} onAdd={add} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} />
             ))}
@@ -146,20 +141,20 @@ function ProductCard({
           )}
 
           {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-            <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
               {p.is_featured && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Star className="w-2.5 h-2.5 fill-current" />Nuevo
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Star className="w-3 h-3 fill-current" />Nuevo
                 </span>
               )}
               {p.is_immediate_delivery && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Zap className="w-2.5 h-2.5 fill-current" />Inmediata
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Zap className="w-3 h-3 fill-current" />Inmediata
                 </span>
               )}
               {p.is_best_seller && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                  <Award className="w-2.5 h-2.5" />Top
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Award className="w-3 h-3" />Top
                 </span>
               )}
             </div>
@@ -167,7 +162,7 @@ function ProductCard({
 
           {maxDescuento > 0 && (
             <span
-              className="absolute top-2.5 right-2.5 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-md"
+              className="absolute top-3 right-3 rounded-full px-2.5 py-1 text-[10px] font-bold shadow-md"
               style={{ backgroundColor: theme.savings, color: '#fff' }}
             >
               Hasta −{maxDescuento}%
@@ -175,27 +170,27 @@ function ProductCard({
           )}
         </div>
 
-        <div className="px-4 pt-1 flex flex-col gap-1">
+        <div className="px-4 pt-1 flex flex-col gap-1.5">
           {p.marca && (
             <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: theme.textFaint }}>{p.marca}</p>
           )}
-          <p className="text-base font-semibold leading-snug line-clamp-2" style={{ color: theme.textPrimary }}>{p.nombre}</p>
+          <p className="text-lg font-semibold leading-snug line-clamp-2" style={{ color: theme.textPrimary }}>{p.nombre}</p>
 
-          <p className="text-xl font-extrabold mt-1" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+          <p className="text-2xl font-extrabold mt-1" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
             {!descuentoAplicado && (
-              <span className="text-[10px] font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
+              <span className="text-xs font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
             )}
             ${precioUnitario.toLocaleString('es-AR')}
           </p>
 
-          <div className="flex flex-wrap gap-1 mt-0.5">
+          <div className="flex flex-wrap gap-1.5 mt-0.5">
             {p.unidades_por_bulto && (
-              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: theme.accentTint(0.08), color: theme.textMuted }}>
+              <span className="text-xs rounded px-2 py-1" style={{ backgroundColor: theme.accentTint(0.08), color: theme.textMuted }}>
                 Bulto x{p.unidades_por_bulto}
               </span>
             )}
             {p.cantidad_minima && (
-              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: theme.accentTint(0.12), color: theme.accent }}>
+              <span className="text-xs rounded px-2 py-1" style={{ backgroundColor: theme.accentTint(0.12), color: theme.accent }}>
                 Mín. {p.cantidad_minima} u.
               </span>
             )}
@@ -204,26 +199,26 @@ function ProductCard({
       </Link>
 
       {!p.is_on_demand && (
-        <div className="flex items-center justify-center px-4 py-1.5 min-h-[24px]">
+        <div className="flex items-center justify-center px-4 py-2 min-h-[28px]">
           {p.stock <= 5 ? (
-            <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: theme.urgency }}>
-              <Package className="h-3.5 w-3.5" />
+            <p className="text-sm font-bold flex items-center gap-1.5" style={{ color: theme.urgency }}>
+              <Package className="h-4 w-4" />
               ¡Últimas {p.stock} unidades!
             </p>
           ) : (
-            <p className="text-xs flex items-center gap-1.5" style={{ color: theme.textMuted }}>
-              <Package className="h-3.5 w-3.5" />
+            <p className="text-sm flex items-center gap-1.5" style={{ color: theme.textMuted }}>
+              <Package className="h-4 w-4" />
               Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.
             </p>
           )}
         </div>
       )}
 
-      <div className="px-4 pb-4 pt-2 flex flex-col gap-1.5 mt-auto">
-        <div className="flex items-center justify-center gap-1.5">
+      <div className="px-4 pb-4 pt-2 flex flex-col gap-2 mt-auto">
+        <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => setCantidad(c => Math.max(1, c - 1))}
-            className="w-8 h-8 rounded-lg text-sm font-medium"
+            className="w-9 h-9 rounded-lg text-sm font-medium"
             style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           >−</button>
           <input
@@ -231,29 +226,29 @@ function ProductCard({
             min={1}
             value={cantidad}
             onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
+            className="w-16 text-center rounded-lg text-sm py-1.5 focus:outline-none"
             style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           />
           <button
             onClick={() => setCantidad(c => c + 1)}
-            className="w-8 h-8 rounded-lg text-sm font-medium"
+            className="w-9 h-9 rounded-lg text-sm font-medium"
             style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           >+</button>
         </div>
 
         {faltan > 0 ? (
-          <p className="text-[11px] font-medium text-center" style={{ color: '#E8C15A' }}>
+          <p className="text-xs font-medium text-center" style={{ color: '#E8C15A' }}>
             Te faltan {faltan} u. para el mínimo de {p.cantidad_minima}
           </p>
         ) : (
           <button
             onClick={handleAdd}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold py-2.5 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl text-sm font-bold py-3 transition-colors"
             style={added
               ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
               : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
           >
-            {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
+            {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
             {added ? 'Agregado' : 'Agregar al pedido'}
           </button>
         )}

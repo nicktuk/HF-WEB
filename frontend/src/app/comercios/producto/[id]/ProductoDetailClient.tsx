@@ -112,26 +112,28 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
   }
 
   return (
-    <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
+    <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: 'calc(100vh - 60px)' }}>
       {/* Glow decorativo — solo en tema oscuro */}
       <div
         className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full"
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-5 sm:px-8 py-8 lg:py-12">
-        <Link href="/comercios/catalogo" className="text-sm hover:underline" style={{ color: theme.textMuted }}>
-          ← Catálogo
-        </Link>
+      <div className="relative md:h-[calc(100vh-60px)] md:flex md:flex-col" style={{ backgroundColor: theme.cardBg }}>
+        <div className="px-5 sm:px-8 md:px-10 py-3 shrink-0">
+          <Link href="/comercios/catalogo" className="text-sm hover:underline" style={{ color: theme.textMuted }}>
+            ← Catálogo
+          </Link>
+        </div>
 
-        <div
-          className="mt-4 rounded-2xl grid md:grid-cols-2 gap-0 overflow-hidden"
-          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}` }}
-        >
-          {/* Galería */}
-          <div className="p-4 md:p-6 space-y-3">
+        <div className="md:flex-1 md:min-h-0 md:grid md:grid-cols-2">
+          {/* Galería — imagen grande a la izquierda */}
+          <div
+            className="flex flex-col gap-3 p-4 sm:p-6 md:p-8 md:h-full md:min-h-0 md:border-r"
+            style={{ borderColor: theme.cardBorder }}
+          >
             <div
-              className="aspect-square relative rounded-xl overflow-hidden group"
+              className="relative flex-1 min-h-[45vh] md:min-h-0 rounded-2xl overflow-hidden group"
               style={{ backgroundColor: theme.imagePlate }}
             >
               {actual ? (
@@ -139,7 +141,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   src={resolveImageUrl(actual.url) ?? actual.url}
                   alt={actual.alt_text || p.nombre}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   priority
                 />
               ) : (
@@ -167,7 +169,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             </div>
 
             {imagenes.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 shrink-0">
                 {imagenes.map((img, i) => (
                   <button
                     key={img.id}
@@ -188,7 +190,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
 
             {p.video_url && (
-              <div className="rounded-xl overflow-hidden bg-black aspect-video">
+              <div className="rounded-xl overflow-hidden bg-black aspect-video shrink-0">
                 <video
                   src={resolveImageUrl(p.video_url) ?? p.video_url}
                   controls
@@ -199,142 +201,141 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             )}
           </div>
 
-          {/* Info */}
-          <div
-            className="p-4 md:p-6 flex flex-col border-t md:border-t-0"
-            style={{ borderColor: theme.cardBorder }}
-          >
-            <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
-              {p.categoria && <span>{p.categoria}</span>}
-              {p.categoria && p.marca && <span>•</span>}
-              {p.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{p.marca}</span>}
-            </div>
+          {/* Info — descripción, matriz de precios y compra a la derecha */}
+          <div className="p-4 sm:p-6 md:p-8 md:h-full md:overflow-y-auto flex flex-col">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
+                {p.categoria && <span>{p.categoria}</span>}
+                {p.categoria && p.marca && <span>•</span>}
+                {p.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{p.marca}</span>}
+              </div>
 
-            <h1 className="text-xl font-bold mb-2" style={{ color: theme.textPrimary }}>{p.nombre}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.textPrimary }}>{p.nombre}</h1>
 
-            {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {p.is_featured && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                    <Star className="w-2.5 h-2.5 fill-current" /> Nuevo
-                  </span>
-                )}
-                {p.is_immediate_delivery && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                    <Zap className="w-2.5 h-2.5 fill-current" /> Inmediata
-                  </span>
-                )}
-                {p.is_best_seller && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                    <Award className="w-2.5 h-2.5" /> Top
-                  </span>
+              {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {p.is_featured && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                      <Star className="w-2.5 h-2.5 fill-current" /> Nuevo
+                    </span>
+                  )}
+                  {p.is_immediate_delivery && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                      <Zap className="w-2.5 h-2.5 fill-current" /> Inmediata
+                    </span>
+                  )}
+                  {p.is_best_seller && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                      <Award className="w-2.5 h-2.5" /> Top
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mb-4">
+                <p className="text-3xl md:text-4xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+                  ${precioUnitario.toLocaleString('es-AR')}
+                </p>
+                {enModoDescuento && (
+                  <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
+                    Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
+                  </p>
                 )}
               </div>
-            )}
 
-            <div className="mb-4">
-              <p className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
-                ${precioUnitario.toLocaleString('es-AR')}
-              </p>
-              {enModoDescuento && (
-                <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
-                  Precio de lista ${(p.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
-                </p>
+              {datosConcretos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {datosConcretos.map(d => (
+                    <div
+                      key={d.label}
+                      className="rounded-lg px-3 py-2"
+                      style={d.urgent
+                        ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
+                        : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                    >
+                      <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
+                      <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {p.descripcion && (
+                <div
+                  className="mb-4 rounded-xl px-4 py-3 space-y-2"
+                  style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                >
+                  {parseDescripcionConIconos(p.descripcion, p.iconos).map((line, index) =>
+                    line.isBullet ? (
+                      <div key={index} className="flex items-start gap-2">
+                        {line.icon ? (
+                          <line.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.accent }} />
+                        ) : (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full shrink-0 mt-[7px]"
+                            style={{ backgroundColor: theme.textMuted }}
+                          />
+                        )}
+                        <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
+                      </div>
+                    ) : (
+                      <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
+                    )
+                  )}
+                </div>
+              )}
+
+              {p.kit_content && (
+                <div
+                  className="mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
+                  style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                >
+                  <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
+                  <div>
+                    <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
+                    <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{p.kit_content}</p>
+                  </div>
+                </div>
+              )}
+
+              {enModoDescuento && p.tramos_descuento.length > 0 && (
+                <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
+                  <div className="px-4 pt-3 pb-2">
+                    <SavingsBar
+                      precioVenta={p.precio_venta as number}
+                      cantidad={cantidad}
+                      tramos={p.tramos_descuento}
+                      redondeo={p.redondeo}
+                      theme={theme}
+                    />
+                  </div>
+                  <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {(() => {
+                        const maxDescuento = Math.max(...p.tramos_descuento.map(t => t.descuento_porcentaje))
+                        return p.tramos_descuento.map(t => {
+                          const activo = cantidad >= t.cantidad_minima
+                            && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                          const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                          return (
+                            <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
+                              <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                              <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
+                              <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
+                                ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
-            {datosConcretos.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {datosConcretos.map(d => (
-                  <div
-                    key={d.label}
-                    className="rounded-lg px-3 py-2"
-                    style={d.urgent
-                      ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
-                      : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-                  >
-                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
-                    <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {p.descripcion && (
-              <div
-                className="mb-4 rounded-xl px-4 py-3 space-y-2"
-                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-              >
-                {parseDescripcionConIconos(p.descripcion, p.iconos).map((line, index) =>
-                  line.isBullet ? (
-                    <div key={index} className="flex items-start gap-2">
-                      {line.icon ? (
-                        <line.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.accent }} />
-                      ) : (
-                        <span
-                          className="h-1.5 w-1.5 rounded-full shrink-0 mt-[7px]"
-                          style={{ backgroundColor: theme.textMuted }}
-                        />
-                      )}
-                      <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
-                    </div>
-                  ) : (
-                    <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
-                  )
-                )}
-              </div>
-            )}
-
-            {p.kit_content && (
-              <div
-                className="mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-              >
-                <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
-                <div>
-                  <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
-                  <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{p.kit_content}</p>
-                </div>
-              </div>
-            )}
-
-            {enModoDescuento && p.tramos_descuento.length > 0 && (
-              <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
-                <div className="px-4 pt-3 pb-2">
-                  <SavingsBar
-                    precioVenta={p.precio_venta as number}
-                    cantidad={cantidad}
-                    tramos={p.tramos_descuento}
-                    redondeo={p.redondeo}
-                    theme={theme}
-                  />
-                </div>
-                <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
-                <table className="w-full text-sm">
-                  <tbody>
-                    {(() => {
-                      const maxDescuento = Math.max(...p.tramos_descuento.map(t => t.descuento_porcentaje))
-                      return p.tramos_descuento.map(t => {
-                        const activo = cantidad >= t.cantidad_minima
-                          && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                        const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
-                        return (
-                          <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
-                            <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                            <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
-                            <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
-                              ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, p.tramos_descuento, p.redondeo).toLocaleString('es-AR')}
-                            </td>
-                          </tr>
-                        )
-                      })
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="mt-auto pt-2 space-y-3">
+            <div className="shrink-0 pt-4 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
                 <div className="flex items-center gap-1.5">
