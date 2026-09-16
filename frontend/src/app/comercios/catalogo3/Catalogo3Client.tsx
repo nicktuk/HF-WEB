@@ -99,26 +99,21 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
   }
 
   return (
-    <div className="relative overflow-hidden" style={{ backgroundColor: '#000', height: 'calc(100vh - 60px)' }}>
-      {/* Fondo: versión desenfocada de la misma imagen, para llenar la pantalla sin recortar el producto */}
-      <div className="absolute inset-0 overflow-hidden">
-        {imgUrl && (
-          <Image src={imgUrl} alt="" fill aria-hidden className="object-cover scale-125 blur-2xl opacity-60" unoptimized />
-        )}
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }} />
-      </div>
+    <div className="relative overflow-hidden" style={{ backgroundColor: theme.pageBg, height: 'calc(100vh - 60px)' }}>
+      {/* Fondo neutro (mismo tono que usa el resto de la app para fotos de producto) */}
+      <div className="absolute inset-0" style={{ backgroundColor: theme.imagePlate }} />
 
       {/* Foto completa del producto, centrada y sin cortar */}
-      <div className="absolute inset-0 flex items-center justify-center px-6" style={{ paddingTop: 190, paddingBottom: 168 }}>
+      <div className="absolute inset-0 flex items-center justify-center px-6" style={{ paddingTop: 210, paddingBottom: 168 }}>
         <div className="relative w-full h-full">
           {imgUrl && (
-            <Image src={imgUrl} alt={p.nombre} fill className="object-contain drop-shadow-2xl" unoptimized priority />
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized priority />
           )}
         </div>
       </div>
 
-      {/* Scrim superior */}
-      <div className="pointer-events-none absolute top-0 left-0 right-0 h-56" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0) 100%)' }} />
+      {/* Scrim superior: se funde con el header y se aclara justo antes de la foto */}
+      <div className="pointer-events-none absolute top-0 left-0 right-0 h-60" style={{ background: `linear-gradient(180deg, ${theme.pageBg} 0%, ${theme.pageBg} 85%, transparent 100%)` }} />
 
       {/* Barra de progreso tipo historia */}
       {productos.length > 1 && (
@@ -129,7 +124,7 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
               onClick={() => setIndex(i)}
               aria-label={`Ir a ${prod.nombre}`}
               className="flex-1 h-[3px] rounded-full"
-              style={{ backgroundColor: i <= index ? theme.accent : 'rgba(255,255,255,0.3)' }}
+              style={{ backgroundColor: i <= index ? theme.accent : theme.accentTint(0.2) }}
             />
           ))}
         </div>
@@ -167,9 +162,9 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
         )}
 
         {p.marca && (
-          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.65)' }}>{p.marca}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: theme.textMuted }}>{p.marca}</p>
         )}
-        <h1 className="text-xl font-bold leading-snug -mt-1" style={{ color: '#fff' }}>{p.nombre}</h1>
+        <h1 className="text-xl font-bold leading-snug -mt-1" style={{ color: theme.textPrimary }}>{p.nombre}</h1>
         <span className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
           ${precioUnitario.toLocaleString('es-AR')}
         </span>
@@ -199,9 +194,9 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
       {/* Panel inferior: solo cantidad y agregar */}
       <div
         className="absolute left-0 right-0 bottom-0 px-5 pt-16 pb-6 flex flex-col gap-2.5"
-        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 28%, rgba(0,0,0,0.92) 60%, #000 100%)' }}
+        style={{ background: `linear-gradient(180deg, transparent 0%, ${theme.pageBg} 55%, ${theme.pageBg} 100%)` }}
       >
-        <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.65)' }}>
+        <p className="text-xs text-center" style={{ color: theme.textMuted }}>
           {p.unidades_por_bulto && `Bulto x${p.unidades_por_bulto}`}
           {p.unidades_por_bulto && p.cantidad_minima && ' · '}
           {p.cantidad_minima && `Mín. ${p.cantidad_minima} u.`}
@@ -221,18 +216,18 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
               <button
                 onClick={() => setCantidad(p.id, cantidad - 1)}
                 className="w-9 h-9 rounded-lg text-sm font-medium"
-                style={{ border: '1.5px solid rgba(255,255,255,0.25)', color: '#fff' }}
+                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
               >−</button>
               <div
                 className="w-10 h-9 rounded-lg flex items-center justify-center text-sm"
-                style={{ border: '1.5px solid rgba(255,255,255,0.25)', color: '#fff' }}
+                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
               >
                 {cantidad}
               </div>
               <button
                 onClick={() => setCantidad(p.id, cantidad + 1)}
                 className="w-9 h-9 rounded-lg text-sm font-medium"
-                style={{ border: '1.5px solid rgba(255,255,255,0.25)', color: '#fff' }}
+                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
               >+</button>
             </div>
             <button
@@ -240,7 +235,7 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
               className="flex-1 flex items-center justify-center gap-2 rounded-xl font-semibold py-2.5 text-sm transition-colors"
               style={added
                 ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
-                : { backgroundColor: '#fff', color: '#0D1B2A', border: '1.5px solid #fff' }}
+                : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
             >
               {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
               {added ? 'Agregado' : 'Agregar al pedido'}

@@ -114,10 +114,7 @@ export function Catalogo2Client({ productos, montoMinimo, modoPrecio, redondeo, 
         {/* Imagen con navegación */}
         <div className="relative rounded-2xl overflow-hidden aspect-[4/5] group" style={{ backgroundColor: theme.imagePlate }}>
           {imgUrl ? (
-            <>
-              <Image src={imgUrl} alt="" aria-hidden fill className="object-cover scale-125 blur-2xl opacity-60" unoptimized />
-              <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized priority />
-            </>
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized priority />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm" style={{ color: '#B7AF9C' }}>Sin imagen</div>
           )}

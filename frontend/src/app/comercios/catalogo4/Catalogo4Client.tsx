@@ -135,10 +135,7 @@ function ProductCard({
       <Link href={`/comercios/producto/${p.id}`} className="contents">
         <div className="relative m-3 rounded-xl aspect-[4/5] overflow-hidden" style={{ backgroundColor: theme.imagePlate }}>
           {imgUrl ? (
-            <>
-              <Image src={imgUrl} alt="" aria-hidden fill className="object-cover scale-125 blur-2xl opacity-60" unoptimized />
-              <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized />
-            </>
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: '#B7AF9C' }}>Sin imagen</div>
           )}
