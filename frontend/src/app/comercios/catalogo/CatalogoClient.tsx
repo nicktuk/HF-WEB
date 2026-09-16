@@ -1,15 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Check, Star, Zap, Award, ChevronLeft, ChevronRight, Search, Package } from 'lucide-react'
+import { ShoppingCart, Check, Star, Zap, Award, Package } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
-import { getComercioTheme, getTramoScaleColor, type ComercioTheme } from '@/lib/comercio-theme'
+import { getComercioTheme, type ComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
-import { SavingsBar } from '../_components/SavingsBar'
 
 interface Producto {
   id: number
@@ -41,25 +40,12 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
   const themeMode = useComercioTheme(s => s.mode)
   const theme = getComercioTheme(themeMode)
 
-  const [search, setSearch] = useState('')
-  const [categoria, setCategoria] = useState('')
   const add = useComercioCart(s => s.add)
   const setPricingConfig = useComercioCart(s => s.setPricingConfig)
 
   useEffect(() => {
     setPricingConfig({ modo_precio: modoPrecio, redondeo, tramos_descuento: tramosDescuento })
   }, [modoPrecio, redondeo, tramosDescuento, setPricingConfig])
-
-  const categorias = Array.from(new Set(productos.map(p => p.categoria).filter(Boolean))) as string[]
-
-  const filtered = productos.filter(p => {
-    const matchSearch = p.nombre.toLowerCase().includes(search.toLowerCase())
-    const matchCat = !categoria || p.categoria === categoria
-    return matchSearch && matchCat
-  })
-
-  const cardProps = { modoPrecio, redondeo, tramosDescuento, onAdd: add, theme }
-  const tituloCarousel = categoria || (search.trim() !== '' ? 'Resultados' : 'Catálogo')
 
   return (
     <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
@@ -84,96 +70,19 @@ export function CatalogoClient({ productos, montoMinimo, modoPrecio, redondeo, t
           </div>
         )}
 
-        {/* Filtros */}
-        <div className="flex flex-wrap gap-3 mb-4 lg:mb-6">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: theme.textFaint }} />
-            <input
-              type="text"
-              placeholder="Buscar producto..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-3 text-sm rounded-full w-64 focus:outline-none"
-              style={{ backgroundColor: theme.inputBg, border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-            />
+        <h1 className="text-lg lg:text-xl font-bold mb-4 lg:mb-6" style={{ color: theme.textPrimary }}>Catálogo</h1>
+
+        {productos.length === 0 ? (
+          <p style={{ color: theme.textMuted }} className="text-sm">Todavía no hay productos cargados.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+            {productos.map(p => (
+              <ProductCard key={p.id} producto={p} onAdd={add} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} />
+            ))}
           </div>
-          {categorias.length > 0 && (
-            <select
-              value={categoria}
-              onChange={e => setCategoria(e.target.value)}
-              className="px-4 py-3 text-sm rounded-full focus:outline-none"
-              style={{ backgroundColor: theme.inputBg, border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-            >
-              <option value="" style={{ color: '#111' }}>Todas las categorías</option>
-              {categorias.map(c => <option key={c} value={c} style={{ color: '#111' }}>{c}</option>)}
-            </select>
-          )}
-        </div>
-
-        {filtered.length === 0 && (
-          <p style={{ color: theme.textMuted }} className="text-sm">No hay productos que coincidan.</p>
-        )}
-
-        {filtered.length > 0 && (
-          <CarouselRow title={tituloCarousel} productos={filtered} {...cardProps} />
         )}
       </div>
     </div>
-  )
-}
-
-function CarouselRow({
-  title,
-  productos,
-  onAdd,
-  modoPrecio,
-  redondeo,
-  tramosDescuento,
-  theme,
-}: {
-  title: string
-  productos: Producto[]
-  onAdd: (item: Omit<CartItem, 'cantidad'>, cantidad: number) => void
-  modoPrecio: 'markup' | 'descuento'
-  redondeo: number
-  tramosDescuento: TramoDescuento[]
-  theme: ComercioTheme
-}) {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-
-  function scrollBy(amount: number) {
-    scrollerRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
-  }
-
-  return (
-    <section>
-      <h2 className="text-lg lg:text-xl font-bold mb-4" style={{ color: theme.textPrimary }}>{title}</h2>
-
-      <div className="relative">
-        <div ref={scrollerRef} className="flex gap-4 lg:gap-5 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
-          {productos.map(p => (
-            <ProductCard key={p.id} producto={p} onAdd={onAdd} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} />
-          ))}
-        </div>
-
-        <button
-          onClick={() => scrollBy(-560)}
-          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center shadow-lg opacity-90 hover:opacity-100 transition-opacity backdrop-blur-sm"
-          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}`, color: theme.textPrimary }}
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <button
-          onClick={() => scrollBy(560)}
-          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center shadow-lg opacity-90 hover:opacity-100 transition-opacity backdrop-blur-sm"
-          style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}`, color: theme.textPrimary }}
-          aria-label="Siguiente"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
-    </section>
   )
 }
 
@@ -192,7 +101,6 @@ function ProductCard({
   tramosDescuento: TramoDescuento[]
   theme: ComercioTheme
 }) {
-  const CARD_WIDTH = tramosDescuento.length > 0 && modoPrecio === 'descuento' ? 'w-[220px] lg:w-[260px]' : 'w-[190px] lg:w-[220px]'
   const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
   const [added, setAdded] = useState(false)
 
@@ -204,6 +112,9 @@ function ProductCard({
     ? calcularPrecioPorDescuento(p.precio_venta as number, cantidad, tramosDescuento, redondeo)
     : p.precio_comercio
   const descuentoAplicado = enModoDescuento && precioUnitario < (p.precio_venta as number)
+  const maxDescuento = enModoDescuento && tramosDescuento.length > 0
+    ? Math.max(...tramosDescuento.map(t => t.descuento_porcentaje))
+    : 0
 
   function handleAdd() {
     onAdd(
@@ -223,11 +134,11 @@ function ProductCard({
 
   return (
     <div
-      className={`shrink-0 ${CARD_WIDTH} rounded-2xl overflow-hidden flex flex-col`}
+      className="rounded-2xl overflow-hidden flex flex-col"
       style={{ backgroundColor: theme.cardBg, border: `1.5px solid ${theme.cardBorder}` }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
-        <div className="relative m-2.5 rounded-xl aspect-square" style={{ backgroundColor: theme.imagePlate }}>
+        <div className="relative m-3 rounded-xl aspect-[4/5]" style={{ backgroundColor: theme.imagePlate }}>
           {imgUrl ? (
             <Image src={imgUrl} alt={p.nombre} fill className="object-cover" unoptimized />
           ) : (
@@ -235,7 +146,7 @@ function ProductCard({
           )}
 
           {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
               {p.is_featured && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
                   <Star className="w-2.5 h-2.5 fill-current" />Nuevo
@@ -253,15 +164,31 @@ function ProductCard({
               )}
             </div>
           )}
+
+          {maxDescuento > 0 && (
+            <span
+              className="absolute top-2.5 right-2.5 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-md"
+              style={{ backgroundColor: theme.savings, color: '#fff' }}
+            >
+              Hasta −{maxDescuento}%
+            </span>
+          )}
         </div>
 
-        <div className="px-3.5 pt-1 flex flex-col gap-1.5">
+        <div className="px-4 pt-1 flex flex-col gap-1">
           {p.marca && (
             <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: theme.textFaint }}>{p.marca}</p>
           )}
-          <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: theme.textPrimary }}>{p.nombre}</p>
+          <p className="text-base font-semibold leading-snug line-clamp-2" style={{ color: theme.textPrimary }}>{p.nombre}</p>
 
-          <div className="flex flex-wrap gap-1">
+          <p className="text-xl font-extrabold mt-1" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+            {!descuentoAplicado && (
+              <span className="text-[10px] font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
+            )}
+            ${precioUnitario.toLocaleString('es-AR')}
+          </p>
+
+          <div className="flex flex-wrap gap-1 mt-0.5">
             {p.unidades_por_bulto && (
               <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: theme.accentTint(0.08), color: theme.textMuted }}>
                 Bulto x{p.unidades_por_bulto}
@@ -273,56 +200,11 @@ function ProductCard({
               </span>
             )}
           </div>
-
-          <p className="text-lg font-extrabold mt-0.5 text-center" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
-            {!descuentoAplicado && (
-              <span className="text-[10px] font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
-            )}
-            ${precioUnitario.toLocaleString('es-AR')}
-          </p>
-
-          {enModoDescuento && tramosDescuento.length > 0 && (
-            <div className="rounded-xl overflow-hidden mt-1" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
-              <div className="px-3 pt-2.5 pb-2">
-                <SavingsBar
-                  precioVenta={p.precio_venta as number}
-                  cantidad={cantidad}
-                  tramos={tramosDescuento}
-                  redondeo={redondeo}
-                  theme={theme}
-                  compact
-                />
-              </div>
-              <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
-              <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
-                <tbody>
-                  {(() => {
-                    const maxDescuento = Math.max(...tramosDescuento.map(t => t.descuento_porcentaje))
-                    return tramosDescuento.map(t => {
-                      const activo = cantidad >= t.cantidad_minima
-                        && !tramosDescuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                      const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
-                      return (
-                        <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
-                          <td className="py-2 pl-3 font-semibold" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                          <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
-                          <td className="py-2 pr-3 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
-                            ${calcularPrecioPorDescuento(p.precio_venta as number, t.cantidad_minima, tramosDescuento, redondeo).toLocaleString('es-AR')}
-                          </td>
-                        </tr>
-                      )
-                    })
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
-
         </div>
       </Link>
 
       {!p.is_on_demand && (
-        <div className="flex-1 flex items-center justify-center px-3.5 py-1 min-h-[24px]">
+        <div className="flex items-center justify-center px-4 py-1.5 min-h-[24px]">
           {p.stock <= 5 ? (
             <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: theme.urgency }}>
               <Package className="h-3.5 w-3.5" />
@@ -337,11 +219,11 @@ function ProductCard({
         </div>
       )}
 
-      <div className="px-3.5 pb-3.5 pt-2 flex flex-col gap-1.5 mt-auto">
+      <div className="px-4 pb-4 pt-2 flex flex-col gap-1.5 mt-auto">
         <div className="flex items-center justify-center gap-1.5">
           <button
             onClick={() => setCantidad(c => Math.max(1, c - 1))}
-            className="w-7 h-7 rounded-lg text-sm font-medium"
+            className="w-8 h-8 rounded-lg text-sm font-medium"
             style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           >−</button>
           <input
@@ -349,12 +231,12 @@ function ProductCard({
             min={1}
             value={cantidad}
             onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-12 text-center rounded-lg text-sm py-0.5 focus:outline-none"
+            className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
             style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           />
           <button
             onClick={() => setCantidad(c => c + 1)}
-            className="w-7 h-7 rounded-lg text-sm font-medium"
+            className="w-8 h-8 rounded-lg text-sm font-medium"
             style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
           >+</button>
         </div>
