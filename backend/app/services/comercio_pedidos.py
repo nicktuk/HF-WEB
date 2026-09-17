@@ -5,13 +5,20 @@ parcial, comisiones). No cablea reserva de stock al confirmar (Bloque 0,
 pendiente); la deducción física de stock ocurre recién al entregar, igual
 que hoy pasa con las ventas minoristas en SalesService._deduct_stock.
 """
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.comercio import Comercio, Comision, PedidoComercio, PedidoComercioItem
+from app.models.comercio import (
+    Comercio,
+    ConfiguracionComercio,
+    Comision,
+    PedidoComercio,
+    PedidoComercioItem,
+    VentaReportada,
+)
 from app.models.stock import StockPurchase
 
 TASA_COMISION_NUEVO = Decimal("0.15")
@@ -219,3 +226,67 @@ def autocancelar_vencidos(db: Session) -> list[int]:
 
     db.commit()
     return cancelados_ids
+
+
+def calcular_semaforo(
+    db: Session,
+    comercio: Comercio,
+    cfg: ConfiguracionComercio | None = None,
+) -> dict:
+    """Semáforo de actividad de recompra según días desde el último pedido
+    del comercio: verde (< semaforo_dias_amarillo), amarillo (>= amarillo y
+    < semaforo_dias_rojo), rojo (>= rojo, o si nunca hizo un pedido)."""
+    if cfg is None:
+        cfg = db.query(ConfiguracionComercio).first()
+    dias_amarillo = cfg.semaforo_dias_amarillo if cfg else 7
+    dias_rojo = cfg.semaforo_dias_rojo if cfg else 14
+
+    ultimo_pedido = (
+        db.query(PedidoComercio)
+        .filter(PedidoComercio.comercio_id == comercio.id)
+        .order_by(PedidoComercio.created_at.desc())
+        .first()
+    )
+    if ultimo_pedido is None:
+        return {"color": "rojo", "dias_desde_ultimo_pedido": None, "ultimo_pedido_at": None}
+
+    dias = (datetime.utcnow() - ultimo_pedido.created_at).days
+    if dias < dias_amarillo:
+        color = "verde"
+    elif dias < dias_rojo:
+        color = "amarillo"
+    else:
+        color = "rojo"
+    return {
+        "color": color,
+        "dias_desde_ultimo_pedido": dias,
+        "ultimo_pedido_at": ultimo_pedido.created_at.isoformat(),
+    }
+
+
+def registrar_venta_reportada(
+    db: Session,
+    comercio_id: int,
+    unidades_vendidas_desde_ultima: int,
+    fecha: date,
+    producto_id: int | None = None,
+) -> VentaReportada:
+    """Registra una venta de reventa reportada por el comercio/vendedor.
+    Es información complementaria (no participa del cálculo del semáforo,
+    que se basa en pedidos_mayoristas)."""
+    comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
+    if not comercio:
+        raise NotFoundError("Comercio", str(comercio_id))
+    if unidades_vendidas_desde_ultima < 0:
+        raise ValidationError("unidades_vendidas_desde_ultima debe ser >= 0")
+
+    venta = VentaReportada(
+        comercio_id=comercio_id,
+        producto_id=producto_id,
+        unidades_vendidas_desde_ultima=unidades_vendidas_desde_ultima,
+        fecha=fecha,
+    )
+    db.add(venta)
+    db.commit()
+    db.refresh(venta)
+    return venta

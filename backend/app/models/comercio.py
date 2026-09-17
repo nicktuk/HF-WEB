@@ -106,6 +106,10 @@ class ConfiguracionComercio(Base):
     # 'descuento': precio_comercio se calcula descontando un % (según comercio_descuento_tramos,
     # elegido por la cantidad pedida) sobre el precio minorista.
     modo_precio = Column(sa.String(10), nullable=False, default='markup')
+    # Semáforo de actividad de recompra, calculado por días desde el último pedido
+    # del comercio: verde (< amarillo), amarillo (>= amarillo y < rojo), rojo (>= rojo).
+    semaforo_dias_amarillo = Column(Integer, nullable=False, default=7)
+    semaforo_dias_rojo = Column(Integer, nullable=False, default=14)
 
 
 class DescuentoTramoComercio(Base):
@@ -196,3 +200,20 @@ class Comision(Base):
 
     vendedor = relationship("Vendedor")
     pedido = relationship("PedidoComercio", back_populates="comision")
+
+
+class VentaReportada(Base):
+    """Registro de ventas de reventa reportadas por el comercio (o su vendedor),
+    usado para medir actividad de recompra más allá de los pedidos a HEFA.
+    No participa en el cálculo del semáforo (que se basa en pedidos_mayoristas);
+    es información complementaria para el vendedor/admin.
+    """
+    __tablename__ = "venta_reportada"
+
+    id = Column(Integer, primary_key=True, index=True)
+    comercio_id = Column(Integer, ForeignKey("mayoristas.id", ondelete="CASCADE"), nullable=False, index=True)
+    producto_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    unidades_vendidas_desde_ultima = Column(Integer, nullable=False)
+    fecha = Column(sa.Date, nullable=False)
+
+    comercio = relationship("Comercio")

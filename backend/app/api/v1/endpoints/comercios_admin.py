@@ -1,6 +1,6 @@
 ﻿"""Admin endpoints for comercios: cuentas, vendedores, config y pedidos."""
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
@@ -29,8 +29,8 @@ _ESTADOS_PEDIDO = {"recibido", "confirmado", "preparando", "entregado", "entrega
 
 # ─── Comercios ────────────────────────────────────────────────────────────────
 
-def _comercio_dict(m: Comercio) -> dict:
-    return {
+def _comercio_dict(m: Comercio, db: Optional[Session] = None) -> dict:
+    d = {
         "id": m.id,
         "nombre": m.nombre,
         "apellido": m.apellido,
@@ -49,6 +49,9 @@ def _comercio_dict(m: Comercio) -> dict:
         "debe_cambiar_password": bool(m.debe_cambiar_password),
         "modalidad_pago": m.modalidad_pago,
     }
+    if db is not None:
+        d["semaforo"] = comercio_pedidos.calcular_semaforo(db, m)
+    return d
 
 
 @router.get("/comercios")
@@ -77,7 +80,7 @@ async def list_comercios(
         ))
     total = q.count()
     items = q.order_by(Comercio.id.desc()).offset((page - 1) * limit).limit(limit).all()
-    return {"total": total, "items": [_comercio_dict(m) for m in items]}
+    return {"total": total, "items": [_comercio_dict(m, db) for m in items]}
 
 
 @router.patch("/comercios/{comercio_id}/estado")
@@ -233,6 +236,8 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "tipo_markup": cfg.tipo_markup or 'fijo',
         "mostrar_todos_con_stock": bool(cfg.mostrar_todos_con_stock),
         "modo_precio": cfg.modo_precio or 'markup',
+        "semaforo_dias_amarillo": int(cfg.semaforo_dias_amarillo),
+        "semaforo_dias_rojo": int(cfg.semaforo_dias_rojo),
     }
 
 
@@ -278,6 +283,18 @@ async def update_comercio_config(
         cfg.redondeo = r
     if "monto_minimo_pedido" in body:
         cfg.monto_minimo_pedido = float(body["monto_minimo_pedido"])
+    if "semaforo_dias_amarillo" in body:
+        dias = int(body["semaforo_dias_amarillo"])
+        if dias < 1:
+            raise HTTPException(400, "semaforo_dias_amarillo debe ser >= 1")
+        cfg.semaforo_dias_amarillo = dias
+    if "semaforo_dias_rojo" in body:
+        dias = int(body["semaforo_dias_rojo"])
+        if dias < 1:
+            raise HTTPException(400, "semaforo_dias_rojo debe ser >= 1")
+        cfg.semaforo_dias_rojo = dias
+    if cfg.semaforo_dias_rojo <= cfg.semaforo_dias_amarillo:
+        raise HTTPException(400, "semaforo_dias_rojo debe ser mayor que semaforo_dias_amarillo")
     db.commit()
     db.refresh(cfg)
     return _config_dict(cfg)
@@ -477,3 +494,52 @@ async def autocancelar_pedidos_vencidos(
     dispare solo."""
     cancelados = comercio_pedidos.autocancelar_vencidos(db)
     return {"cancelados": cancelados}
+
+
+# ─── Semáforo y ventas reportadas ───────────────────────────────────────────────
+
+@router.get("/comercios/{comercio_id}/semaforo")
+async def get_comercio_semaforo(
+    comercio_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    m = db.query(Comercio).filter(Comercio.id == comercio_id).first()
+    if not m:
+        raise HTTPException(404, "Comercio no encontrado")
+    return comercio_pedidos.calcular_semaforo(db, m)
+
+
+@router.post("/comercios/{comercio_id}/venta-reportada")
+async def registrar_venta_reportada(
+    comercio_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Registra una venta de reventa reportada por el comercio/vendedor
+    (información complementaria; no participa del cálculo del semáforo)."""
+    try:
+        unidades = int(body.get("unidades_vendidas_desde_ultima"))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "unidades_vendidas_desde_ultima es obligatorio y debe ser un entero.")
+    fecha_raw = body.get("fecha")
+    try:
+        fecha = date.fromisoformat(fecha_raw) if fecha_raw else date.today()
+    except ValueError:
+        raise HTTPException(422, "fecha debe tener formato YYYY-MM-DD.")
+    producto_id = body.get("producto_id")
+
+    try:
+        venta = comercio_pedidos.registrar_venta_reportada(
+            db, comercio_id, unidades, fecha, producto_id=producto_id,
+        )
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+    return {
+        "id": venta.id,
+        "comercio_id": venta.comercio_id,
+        "producto_id": venta.producto_id,
+        "unidades_vendidas_desde_ultima": venta.unidades_vendidas_desde_ultima,
+        "fecha": venta.fecha.isoformat(),
+    }
