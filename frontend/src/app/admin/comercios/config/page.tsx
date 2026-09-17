@@ -29,6 +29,8 @@ export default function ConfigComercioPage() {
   const [comisionMayoristaNuevo, setComisionMayoristaNuevo] = useState('')
   const [comisionMayoristaRecompra, setComisionMayoristaRecompra] = useState('')
   const [comisionMinorista, setComisionMinorista] = useState('')
+  const [semaforoDiasAmarillo, setSemaforoDiasAmarillo] = useState('')
+  const [semaforoDiasRojo, setSemaforoDiasRojo] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -53,6 +55,8 @@ export default function ConfigComercioPage() {
         setComisionMayoristaNuevo(String(d.comision_mayorista_nuevo_porcentaje))
         setComisionMayoristaRecompra(String(d.comision_mayorista_recompra_porcentaje))
         setComisionMinorista(String(d.comision_minorista_porcentaje))
+        setSemaforoDiasAmarillo(String(d.semaforo_dias_amarillo))
+        setSemaforoDiasRojo(String(d.semaforo_dias_rojo))
       }
       setLoading(false)
     })
@@ -67,6 +71,10 @@ export default function ConfigComercioPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    if (parseInt(semaforoDiasRojo) <= parseInt(semaforoDiasAmarillo)) {
+      setError('Los días de rojo deben ser mayores que los de amarillo.')
+      return
+    }
     setSaving(true)
     const res = await apiFetch('/admin/comercios/config', apiKey, {
       method: 'PATCH',
@@ -80,6 +88,8 @@ export default function ConfigComercioPage() {
         comision_mayorista_nuevo_porcentaje: parseFloat(comisionMayoristaNuevo),
         comision_mayorista_recompra_porcentaje: parseFloat(comisionMayoristaRecompra),
         comision_minorista_porcentaje: parseFloat(comisionMinorista),
+        semaforo_dias_amarillo: parseInt(semaforoDiasAmarillo),
+        semaforo_dias_rojo: parseInt(semaforoDiasRojo),
       }),
     })
     if (res.ok) {
@@ -320,6 +330,40 @@ export default function ConfigComercioPage() {
                 max="100"
                 value={comisionMinorista}
                 onChange={e => setComisionMinorista(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">Semáforo de recompra</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Días sin pedir desde el último pedido para pasar de verde a amarillo, y de amarillo a rojo.
+            Se ve en Mi cartera y Mi día del portal de vendedores.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Días para amarillo</label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={semaforoDiasAmarillo}
+                onChange={e => setSemaforoDiasAmarillo(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Días para rojo</label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={semaforoDiasRojo}
+                onChange={e => setSemaforoDiasRojo(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 required
               />
