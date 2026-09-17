@@ -12,16 +12,10 @@ interface Vendedor {
   celular_wa: string
   email: string | null
   activo: boolean
+  es_mayorista: boolean
   usuario: string | null
   tiene_credenciales: boolean
   debe_cambiar_password: boolean
-  catalog_seller_id: number | null
-  catalog_seller_nombre: string | null
-}
-
-interface CatalogSeller {
-  id: number
-  nombre: string
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -39,12 +33,11 @@ function sugerirUsuario(nombre: string): string {
     .replace(/^\.+|\.+$/g, '')
 }
 
-const emptyForm = { nombre: '', celular_wa: '', email: '' }
+const emptyForm = { nombre: '', celular_wa: '', email: '', es_mayorista: false }
 
 export default function VendedoresAdminPage() {
   const apiKey = useApiKey() ?? ''
   const [vendedores, setVendedores] = useState<Vendedor[]>([])
-  const [catalogSellers, setCatalogSellers] = useState<CatalogSeller[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -62,21 +55,17 @@ export default function VendedoresAdminPage() {
   const fetchData = useCallback(async () => {
     if (!apiKey) return
     setLoading(true)
-    const [vendedoresRes, sellersRes] = await Promise.all([
-      apiFetch('/admin/vendedores', apiKey),
-      apiFetch('/admin/vendedores-catalogo', apiKey),
-    ])
-    if (vendedoresRes.ok) setVendedores(await vendedoresRes.json())
-    if (sellersRes.ok) setCatalogSellers(await sellersRes.json())
+    const res = await apiFetch('/admin/vendedores', apiKey)
+    if (res.ok) setVendedores(await res.json())
     setLoading(false)
   }, [apiKey])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  async function vincularCatalogSeller(v: Vendedor, catalogSellerId: string) {
+  async function toggleMayorista(v: Vendedor) {
     await apiFetch(`/admin/vendedores/${v.id}`, apiKey, {
       method: 'PATCH',
-      body: JSON.stringify({ catalog_seller_id: catalogSellerId ? parseInt(catalogSellerId) : null }),
+      body: JSON.stringify({ es_mayorista: !v.es_mayorista }),
     })
     await fetchData()
   }
@@ -90,7 +79,7 @@ export default function VendedoresAdminPage() {
 
   function startEdit(v: Vendedor) {
     setEditingId(v.id)
-    setForm({ nombre: v.nombre, celular_wa: v.celular_wa, email: v.email ?? '' })
+    setForm({ nombre: v.nombre, celular_wa: v.celular_wa, email: v.email ?? '', es_mayorista: v.es_mayorista })
     setError(null)
     setShowForm(true)
   }
@@ -105,7 +94,12 @@ export default function VendedoresAdminPage() {
     e.preventDefault()
     setError(null)
     setSaving(true)
-    const body = { nombre: form.nombre.trim(), celular_wa: form.celular_wa.trim(), email: form.email.trim() || null }
+    const body = {
+      nombre: form.nombre.trim(),
+      celular_wa: form.celular_wa.trim(),
+      email: form.email.trim() || null,
+      es_mayorista: form.es_mayorista,
+    }
     const res = editingId
       ? await apiFetch(`/admin/vendedores/${editingId}`, apiKey, { method: 'PATCH', body: JSON.stringify(body) })
       : await apiFetch('/admin/vendedores', apiKey, { method: 'POST', body: JSON.stringify(body) })
@@ -222,6 +216,18 @@ export default function VendedoresAdminPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  id="es_mayorista"
+                  type="checkbox"
+                  checked={form.es_mayorista}
+                  onChange={e => setForm(f => ({ ...f, es_mayorista: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label htmlFor="es_mayorista" className="text-sm text-gray-700">
+                  Es mayorista (portal de comercios: cartera, prospectos, comisiones)
+                </label>
+              </div>
             </div>
             {error && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
@@ -260,7 +266,7 @@ export default function VendedoresAdminPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">WhatsApp</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Portal</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Venta minorista</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Mayorista</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -293,16 +299,14 @@ export default function VendedoresAdminPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <select
-                      value={v.catalog_seller_id ?? ''}
-                      onChange={e => vincularCatalogSeller(v, e.target.value)}
-                      className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    <button
+                      onClick={() => toggleMayorista(v)}
+                      className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                        v.es_mayorista ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                      }`}
                     >
-                      <option value="">Sin vincular</option>
-                      {catalogSellers.map(s => (
-                        <option key={s.id} value={s.id}>{s.nombre}</option>
-                      ))}
-                    </select>
+                      {v.es_mayorista ? 'Sí' : 'No'}
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <button

@@ -42,7 +42,6 @@ interface MiPlata {
   comisiones_minoristas: ComisionMinorista[]
   total_pendiente: number
   total_liquidado: number
-  tiene_venta_minorista_vinculada: boolean
   ventas_sin_comision: VentaSinComision[]
 }
 
@@ -136,56 +135,44 @@ export default function MiPlataPage() {
               </div>
             )}
 
-            {!plata.tiene_venta_minorista_vinculada ? (
-              <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
-                <h2 className="text-sm font-semibold text-zinc-700 mb-1">Ventas minoristas</h2>
-                <p className="text-sm text-zinc-400">
-                  Todavía no tenés vinculado tu usuario de venta minorista — pedile a HEFA que te lo asocie desde{' '}
-                  <span className="font-mono text-xs">/admin/vendedores</span> para verlas acá.
-                </p>
-              </section>
-            ) : (
-              <>
-                <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
-                  <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones minoristas</h2>
-                  {plata.comisiones_minoristas.length === 0 ? (
-                    <p className="text-sm text-zinc-400">Todavía no tenés comisiones minoristas generadas.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {plata.comisiones_minoristas.map(c => (
-                        <div key={c.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
-                          <span className="text-zinc-600 truncate">
-                            {c.cliente_nombre ?? `Venta #${c.sale_id}`} · {(c.tasa * 100).toFixed(0)}%
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</span>
-                            <span className={`text-xs font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones minoristas</h2>
+              {plata.comisiones_minoristas.length === 0 ? (
+                <p className="text-sm text-zinc-400">Todavía no tenés comisiones minoristas generadas.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {plata.comisiones_minoristas.map(c => (
+                    <div key={c.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
+                      <span className="text-zinc-600 truncate">
+                        {c.cliente_nombre ?? `Venta #${c.sale_id}`} · {(c.tasa * 100).toFixed(0)}%
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</span>
+                        <span className={`text-xs font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </section>
+                  ))}
+                </div>
+              )}
+            </section>
 
-                {plata.ventas_sin_comision.length > 0 && (
-                  <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
-                    <h2 className="text-sm font-semibold text-zinc-700 mb-1">Ventas esperando comisión</h2>
-                    <p className="text-xs text-zinc-500 mb-3">
-                      Ya están pagadas — HEFA todavía tiene que generar la comisión de cada una.
-                    </p>
-                    <div className="space-y-1.5">
-                      {plata.ventas_sin_comision.map(v => (
-                        <div key={v.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
-                          <span className="text-zinc-600 truncate">{v.cliente_nombre ?? `Venta #${v.id}`}</span>
-                          <span className="font-medium text-zinc-800">${v.total.toLocaleString('es-AR')}</span>
-                        </div>
-                      ))}
+            {plata.ventas_sin_comision.length > 0 && (
+              <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+                <h2 className="text-sm font-semibold text-zinc-700 mb-1">Ventas esperando comisión</h2>
+                <p className="text-xs text-zinc-500 mb-3">
+                  Ya están pagadas — HEFA todavía tiene que generar la comisión de cada una.
+                </p>
+                <div className="space-y-1.5">
+                  {plata.ventas_sin_comision.map(v => (
+                    <div key={v.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
+                      <span className="text-zinc-600 truncate">{v.cliente_nombre ?? `Venta #${v.id}`}</span>
+                      <span className="font-medium text-zinc-800">${v.total.toLocaleString('es-AR')}</span>
                     </div>
-                  </section>
-                )}
-              </>
+                  ))}
+                </div>
+              </section>
             )}
           </>
         )}

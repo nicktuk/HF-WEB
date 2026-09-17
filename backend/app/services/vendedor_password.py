@@ -30,7 +30,7 @@ def enviar_alerta_sin_email(vendedor) -> None:
         f"<ul>"
         f"<li>Usuario: {vendedor.usuario}</li>"
         f"<li>Nombre: {vendedor.nombre}</li>"
-        f"<li>Celular: {vendedor.celular_wa or '(sin celular)'}</li>"
+        f"<li>Celular: {vendedor.celular or '(sin celular)'}</li>"
         f"</ul>"
         f"<p>No tiene email cargado, así que no se le pudo enviar un link de reset. "
         f"Contactalo y asignale una contraseña temporal desde /admin/vendedores.</p>"

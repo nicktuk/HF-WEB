@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.comercio import Vendedor
+from app.models.catalog_seller import CatalogSeller
 from app.config import settings
 from app.core.exceptions import AppException
 from app.services.comercio_auth import hash_password
@@ -35,7 +35,7 @@ async def get_vendedor_info(
     vendedor_id: int = Depends(get_vendedor_id),
     db: Session = Depends(get_db),
 ):
-    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "not_found")
     base_url = getattr(settings, "NEXT_PUBLIC_BASE_URL", "")
@@ -44,9 +44,8 @@ async def get_vendedor_info(
         "nombre": v.nombre,
         "usuario": v.usuario,
         "email": v.email,
-        "celular_wa": v.celular_wa,
+        "celular_wa": v.celular,
         "link_personal": f"{base_url}/comercios/catalogo?v={v.id}",
-        "tiene_venta_minorista_vinculada": bool(v.catalog_seller_id),
     }
 
 
@@ -66,7 +65,7 @@ async def set_password(
     if len(body.password) < 8:
         raise HTTPException(422, "La contraseña debe tener al menos 8 caracteres.")
 
-    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "not_found")
 

@@ -75,7 +75,9 @@ api_router.include_router(
     tags=["comercios-admin"]
 )
 
-# Catalog sellers (vendedores del canal catálogo, distinto de Vendedor mayorista)
+# Catalog sellers (CRUD simple sobre la misma tabla catalog_sellers, usado por
+# los dropdowns de ventas/pedidos/depósitos/compras; /admin/vendedores en
+# comercios_admin.py es la vista completa con el flag es_mayorista)
 api_router.include_router(
     catalog_sellers.router,
     prefix="/admin",

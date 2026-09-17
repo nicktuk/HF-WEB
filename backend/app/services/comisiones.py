@@ -11,7 +11,8 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.comercio import Comision, ConfiguracionComercio, Vendedor
+from app.models.comercio import Comision, ConfiguracionComercio
+from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale
 
 ESTADOS_COMISION = {"pendiente", "liquidada"}
@@ -60,33 +61,33 @@ def listar_comisiones(
 
 
 def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
-    """Ventas minoristas pagadas, con vendedor vinculado, que todavía no
-    tienen una comisión generada — para que el admin decida caso por caso."""
+    """Ventas minoristas pagadas que todavía no tienen una comisión generada
+    — para que el admin decida caso por caso. Cualquier vendedor de
+    catalog_sellers es atribuible (sea o no también mayorista): seller_id
+    en Sale ya identifica directamente a la fila de vendedor."""
     ventas = (
         db.query(Sale)
-        .join(Vendedor, Vendedor.catalog_seller_id == Sale.seller_id)
         .outerjoin(Comision, Comision.sale_id == Sale.id)
         .filter(Sale.paid.is_(True), Comision.id.is_(None))
         .order_by(Sale.id.desc())
         .all()
     )
-    resultado = []
-    for s in ventas:
-        vendedor = db.query(Vendedor).filter(Vendedor.catalog_seller_id == s.seller_id).first()
-        resultado.append({
+    return [
+        {
             "sale_id": s.id,
             "cliente_nombre": s.customer_name,
             "total": float(s.total_amount),
-            "vendedor_id": vendedor.id if vendedor else None,
-            "vendedor_nombre": vendedor.nombre if vendedor else None,
-        })
-    return resultado
+            "vendedor_id": s.seller_id,
+            "vendedor_nombre": s.seller.nombre if s.seller else None,
+        }
+        for s in ventas
+    ]
 
 
 def generar_comision_minorista(db: Session, sale_id: int) -> dict:
     """Genera (o devuelve, si ya existe) la comisión de una venta minorista
-    pagada, atribuida al vendedor vinculado a su catalog_seller. Idempotente
-    por el índice único en sale_id."""
+    pagada, atribuida directamente a Sale.seller_id (misma tabla que
+    vendedores). Idempotente por el índice único en sale_id."""
     existente = db.query(Comision).filter(Comision.sale_id == sale_id).first()
     if existente:
         return _comision_dict(existente)
@@ -97,10 +98,6 @@ def generar_comision_minorista(db: Session, sale_id: int) -> dict:
     if not sale.paid:
         raise ValidationError("La venta todavía no está pagada.")
 
-    vendedor = db.query(Vendedor).filter(Vendedor.catalog_seller_id == sale.seller_id).first()
-    if not vendedor:
-        raise ValidationError("Esta venta no tiene un vendedor vinculado (ver /admin/vendedores).")
-
     cfg = db.query(ConfiguracionComercio).first()
     porcentaje = cfg.comision_minorista_porcentaje if cfg else Decimal("0")
     tasa = Decimal(str(porcentaje)) / 100
@@ -109,7 +106,7 @@ def generar_comision_minorista(db: Session, sale_id: int) -> dict:
     monto = (base * tasa).quantize(Decimal("0.01"))
 
     comision = Comision(
-        vendedor_id=vendedor.id,
+        vendedor_id=sale.seller_id,
         sale_id=sale.id,
         base=base,
         tasa=tasa,

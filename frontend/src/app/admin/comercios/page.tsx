@@ -74,7 +74,7 @@ export default function ComerciosAdminPage() {
     if (filtroSearch) params.set('search', filtroSearch)
     const [resM, resV] = await Promise.all([
       apiFetch(`/admin/comercios?${params}`, apiKey),
-      apiFetch('/admin/vendedores?activo=true', apiKey),
+      apiFetch('/admin/vendedores?activo=true&es_mayorista=true', apiKey),
     ])
     if (resM.ok) {
       const d = await resM.json()

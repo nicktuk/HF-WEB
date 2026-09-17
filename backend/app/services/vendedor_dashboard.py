@@ -18,7 +18,6 @@ from app.models.comercio import (
     Comision,
     PedidoComercio,
     Prospecto,
-    Vendedor,
 )
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
 from app.models.sale import Sale
@@ -89,12 +88,10 @@ def _entregas_mayoristas_pendientes(db: Session, vendedor_id: int) -> list[dict]
     ]
 
 
-def _entregas_minoristas_pendientes(db: Session, vendedor: Vendedor) -> list[dict]:
-    if not vendedor.catalog_seller_id:
-        return []
+def _entregas_minoristas_pendientes(db: Session, vendedor_id: int) -> list[dict]:
     ventas = (
         db.query(Sale)
-        .filter(Sale.seller_id == vendedor.catalog_seller_id, Sale.delivered.is_(False))
+        .filter(Sale.seller_id == vendedor_id, Sale.delivered.is_(False))
         .order_by(Sale.created_at.asc())
         .all()
     )
@@ -115,10 +112,9 @@ def get_mi_dia(db: Session, vendedor_id: int) -> dict:
     """Recorrido del día: entregas primero (mayoristas y minoristas juntas),
     clientes a reactivar después, prospectos en los huecos (mismo orden que
     indica el manual del vendedor)."""
-    vendedor = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
-
-    entregas_pendientes = _entregas_mayoristas_pendientes(db, vendedor_id) + (
-        _entregas_minoristas_pendientes(db, vendedor) if vendedor else []
+    entregas_pendientes = (
+        _entregas_mayoristas_pendientes(db, vendedor_id)
+        + _entregas_minoristas_pendientes(db, vendedor_id)
     )
 
     cartera = get_mi_cartera(db, vendedor_id)
@@ -153,8 +149,6 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
     ya generadas (planas, una por venta) + ventas minoristas pagadas que
     todavía no tienen comisión generada (las genera un admin caso por caso,
     ver /admin/ventas-minoristas/pendientes-comision)."""
-    vendedor = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
-
     comisiones = (
         db.query(Comision)
         .filter(Comision.vendedor_id == vendedor_id)
@@ -203,27 +197,24 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         c["monto"] for c in comisiones_minoristas if c["estado"] == "liquidada"
     )
 
-    ventas_sin_comision = []
-    if vendedor and vendedor.catalog_seller_id:
-        sale_ids_con_comision = {c.sale_id for c in comisiones if c.sale_id is not None}
-        ventas = (
-            db.query(Sale)
-            .filter(Sale.seller_id == vendedor.catalog_seller_id, Sale.paid.is_(True))
-            .order_by(Sale.id.desc())
-            .limit(50)
-            .all()
-        )
-        ventas_sin_comision = [
-            {"id": s.id, "cliente_nombre": s.customer_name, "total": float(s.total_amount)}
-            for s in ventas if s.id not in sale_ids_con_comision
-        ]
+    sale_ids_con_comision = {c.sale_id for c in comisiones if c.sale_id is not None}
+    ventas = (
+        db.query(Sale)
+        .filter(Sale.seller_id == vendedor_id, Sale.paid.is_(True))
+        .order_by(Sale.id.desc())
+        .limit(50)
+        .all()
+    )
+    ventas_sin_comision = [
+        {"id": s.id, "cliente_nombre": s.customer_name, "total": float(s.total_amount)}
+        for s in ventas if s.id not in sale_ids_con_comision
+    ]
 
     return {
         "grupos": grupos_lista,
         "comisiones_minoristas": comisiones_minoristas,
         "total_pendiente": total_pendiente,
         "total_liquidado": total_liquidado,
-        "tiene_venta_minorista_vinculada": bool(vendedor and vendedor.catalog_seller_id),
         "ventas_sin_comision": ventas_sin_comision,
     }
 

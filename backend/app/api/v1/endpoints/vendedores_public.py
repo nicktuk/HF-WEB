@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.comercio import Vendedor
+from app.models.catalog_seller import CatalogSeller
 from app.services import comercio_password, vendedor_password
 from app.services.comercio_auth import DUMMY_HASH, hash_password, verify_password
 
@@ -40,8 +40,8 @@ async def login_vendedor(
     body: LoginRequest,
     db: Session = Depends(get_db),
 ):
-    vendedor = db.query(Vendedor).filter(
-        Vendedor.usuario == body.usuario.strip().lower()
+    vendedor = db.query(CatalogSeller).filter(
+        CatalogSeller.usuario == body.usuario.strip().lower()
     ).first()
 
     # Siempre correr bcrypt para evitar timing attacks, incluso sin password_hash.
@@ -50,6 +50,9 @@ async def login_vendedor(
 
     if not vendedor or not vendedor.password_hash or not password_ok:
         raise HTTPException(status_code=401, detail="credenciales_invalidas")
+
+    if not vendedor.es_mayorista:
+        raise HTTPException(status_code=403, detail="cuenta_inactiva")
 
     if not vendedor.activo:
         raise HTTPException(status_code=403, detail="cuenta_inactiva")
@@ -65,8 +68,8 @@ async def forgot_password(
 ):
     """Mismo patrón anti-enumeración que /public/comercios/forgot-password:
     la protección de fondo (mensaje genérico) vive en la capa Next.js."""
-    vendedor = db.query(Vendedor).filter(
-        Vendedor.usuario == body.usuario.strip().lower()
+    vendedor = db.query(CatalogSeller).filter(
+        CatalogSeller.usuario == body.usuario.strip().lower()
     ).first()
 
     if not vendedor:
@@ -96,7 +99,7 @@ async def reset_password(
         raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 8 caracteres.")
 
     token_hash = comercio_password.hash_token(body.token)
-    vendedor = db.query(Vendedor).filter(Vendedor.reset_token_hash == token_hash).first()
+    vendedor = db.query(CatalogSeller).filter(CatalogSeller.reset_token_hash == token_hash).first()
 
     now = datetime.now(timezone.utc)
     expira = vendedor.reset_token_expires_at if vendedor else None
@@ -120,8 +123,10 @@ async def get_estado(
     vendedor_id: int,
     db: Session = Depends(get_db),
 ):
-    """Consulta rápida de estado — usada por el middleware de Next.js para revalidar."""
-    vendedor = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    """Consulta rápida de estado — usada por el middleware de Next.js para revalidar.
+    Si se le desactiva es_mayorista después de loguearse, esto lo saca del
+    portal en la próxima revalidación aunque activo siga en True."""
+    vendedor = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not vendedor:
         raise HTTPException(status_code=404, detail="not_found")
-    return {"activo": bool(vendedor.activo)}
+    return {"activo": bool(vendedor.activo and vendedor.es_mayorista)}
