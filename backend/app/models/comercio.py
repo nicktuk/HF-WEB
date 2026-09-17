@@ -240,4 +240,20 @@ class Prospecto(Base):
     comercio_id = Column(Integer, ForeignKey("mayoristas.id", ondelete="SET NULL"), nullable=True)
 
     vendedor = relationship("CatalogSeller")
-    comercio = relationship("Comercio")
+
+
+class EstadoHistorial(Base):
+    """Bitácora de transiciones de estado, para poder mostrarle al vendedor
+    el flujo de fechas de un pedido/venta puntual (ver /vendedores/mis-ventas).
+    `referencia_id` es el id de PedidoComercio (canal='mayorista') o de Sale
+    (canal='minorista') — no hay FK porque apunta a una de dos tablas según
+    el canal. Se escribe desde comercio_pedidos.py y services/sales.py cada
+    vez que cambia el estado que le importa al vendedor; el punto de partida
+    (creado/recibido) no vive acá, se sintetiza a partir de created_at."""
+    __tablename__ = "estado_historial"
+
+    id = Column(Integer, primary_key=True, index=True)
+    canal = Column(sa.String(20), nullable=False, index=True)
+    referencia_id = Column(Integer, nullable=False, index=True)
+    estado = Column(Text, nullable=False)
+    fecha = Column(DateTime, nullable=False, server_default=sa.func.now())

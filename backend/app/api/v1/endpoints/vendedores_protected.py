@@ -103,6 +103,27 @@ async def get_mi_plata(
     return vendedor_dashboard.get_mi_plata(db, vendedor_id)
 
 
+@router.get("/mis-ventas")
+async def get_mis_ventas(
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    return vendedor_dashboard.get_mis_ventas(db, vendedor_id)
+
+
+@router.get("/mis-ventas/{canal}/{referencia_id}/historial")
+async def get_historial_venta(
+    canal: str,
+    referencia_id: int,
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vendedor_dashboard.get_historial_venta(db, vendedor_id, canal, referencia_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
 @router.get("/catalogo-demo")
 async def get_catalogo_demo(
     vendedor_id: int = Depends(get_vendedor_id),
