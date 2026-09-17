@@ -88,7 +88,7 @@ function Tarjeta({ item, onClick }: { item: VentaItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-left bg-zinc-50 border border-zinc-200 rounded-xl p-3 hover:border-zinc-400 hover:bg-white transition-colors"
+      className="text-left bg-white border-2 border-zinc-300 shadow-sm rounded-xl p-3 hover:border-primary-400 hover:shadow-md transition-all"
     >
       <p className="font-medium text-zinc-800 text-sm truncate">{item.cliente_nombre ?? `#${item.id}`}</p>
       <p className="text-xs text-zinc-500 mb-2">${item.total.toLocaleString('es-AR')} · {fechaCorta(item.created_at)}</p>
@@ -128,7 +128,7 @@ function SeccionCanal({
         <h2 className="text-sm font-semibold text-zinc-700 flex-1">{titulo}</h2>
         <span className="text-xs font-medium text-zinc-400 bg-zinc-100 rounded-full px-2 py-0.5">{items.length}</span>
       </div>
-      <div className="p-4">
+      <div className="p-4 bg-zinc-50">
         {items.length === 0 ? (
           <p className="text-sm text-zinc-400">No tenés ventas en este canal todavía.</p>
         ) : (
