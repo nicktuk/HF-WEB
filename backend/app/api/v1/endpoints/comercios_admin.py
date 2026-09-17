@@ -19,7 +19,7 @@ from app.models.comercio import (
 )
 from app.services import comercio_password
 from app.services.comercio_auth import hash_password
-from app.services import comercio_pedidos
+from app.services import comercio_pedidos, comisiones
 from app.core.exceptions import AppException
 
 router = APIRouter()
@@ -288,6 +288,9 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "modo_precio": cfg.modo_precio or 'markup',
         "semaforo_dias_amarillo": int(cfg.semaforo_dias_amarillo),
         "semaforo_dias_rojo": int(cfg.semaforo_dias_rojo),
+        "comision_mayorista_nuevo_porcentaje": float(cfg.comision_mayorista_nuevo_porcentaje),
+        "comision_mayorista_recompra_porcentaje": float(cfg.comision_mayorista_recompra_porcentaje),
+        "comision_minorista_porcentaje": float(cfg.comision_minorista_porcentaje),
     }
 
 
@@ -345,6 +348,16 @@ async def update_comercio_config(
         cfg.semaforo_dias_rojo = dias
     if cfg.semaforo_dias_rojo <= cfg.semaforo_dias_amarillo:
         raise HTTPException(400, "semaforo_dias_rojo debe ser mayor que semaforo_dias_amarillo")
+    for campo in (
+        "comision_mayorista_nuevo_porcentaje",
+        "comision_mayorista_recompra_porcentaje",
+        "comision_minorista_porcentaje",
+    ):
+        if campo in body:
+            val = float(body[campo])
+            if val < 0 or val > 100:
+                raise HTTPException(400, f"{campo} debe estar entre 0 y 100")
+            setattr(cfg, campo, val)
     db.commit()
     db.refresh(cfg)
     return _config_dict(cfg)
@@ -593,3 +606,53 @@ async def registrar_venta_reportada(
         "unidades_vendidas_desde_ultima": venta.unidades_vendidas_desde_ultima,
         "fecha": venta.fecha.isoformat(),
     }
+
+
+# ─── Comisiones (mayorista + minorista) ─────────────────────────────────────
+
+@router.get("/comisiones")
+async def list_comisiones(
+    vendedor_id: Optional[int] = Query(None),
+    estado: Optional[str] = Query(None),
+    canal: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    return comisiones.listar_comisiones(db, vendedor_id=vendedor_id, estado=estado, canal=canal)
+
+
+@router.patch("/comisiones/{comision_id}")
+async def update_comision(
+    comision_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Edición manual de una comisión puntual (cualquier canal): tasa, monto
+    y/o estado. Pensado para ajustar casos particulares caso por caso."""
+    try:
+        return comisiones.editar_comision(db, comision_id, body)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.get("/ventas-minoristas/pendientes-comision")
+async def list_ventas_minoristas_pendientes_comision(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Ventas minoristas pagadas, con vendedor vinculado, sin comisión
+    generada todavía — para decidir caso por caso si corresponde generarla."""
+    return comisiones.listar_ventas_minoristas_pendientes_comision(db)
+
+
+@router.post("/ventas-minoristas/{sale_id}/generar-comision")
+async def generar_comision_minorista(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    try:
+        return comisiones.generar_comision_minorista(db, sale_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)

@@ -81,6 +81,7 @@ const comerciosSubmenu = [
   { name: 'Cuentas', href: '/admin/comercios', icon: Users },
   { name: 'Pedidos', href: '/admin/comercios/pedidos', icon: ClipboardList },
   { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
+  { name: 'Comisiones', href: '/admin/comisiones', icon: DollarSign },
   { name: 'Configuración', href: '/admin/comercios/config', icon: Settings2 },
 ];
 

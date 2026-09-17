@@ -21,9 +21,6 @@ from app.models.comercio import (
 )
 from app.models.stock import StockPurchase
 
-TASA_COMISION_NUEVO = Decimal("0.15")
-TASA_COMISION_RECOMPRA = Decimal("0.10")
-
 VENTANA_RESERVA_HORAS = 48
 RECHAZOS_PARA_ANTICIPADO = 2
 
@@ -92,7 +89,8 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
 
 
 def _calcular_comision(db: Session, pedido: PedidoComercio) -> Comision | None:
-    """Crea la comisión del pedido, atribuida a la cartera del comercio.
+    """Crea la comisión del pedido, atribuida a la cartera del comercio, con
+    la tasa vigente en ConfiguracionComercio (editable desde el admin).
     Sin vendedor asignado no hay a quién atribuir: no se crea comisión.
     Idempotente por el índice único en pedido_id."""
     existente = db.query(Comision).filter(Comision.pedido_id == pedido.id).first()
@@ -113,7 +111,12 @@ def _calcular_comision(db: Session, pedido: PedidoComercio) -> Comision | None:
         .first()
         is not None
     )
-    tasa = TASA_COMISION_RECOMPRA if hubo_pedido_pagado_antes else TASA_COMISION_NUEVO
+    cfg = db.query(ConfiguracionComercio).first()
+    porcentaje = (
+        cfg.comision_mayorista_recompra_porcentaje if hubo_pedido_pagado_antes
+        else cfg.comision_mayorista_nuevo_porcentaje
+    ) if cfg else Decimal("0")
+    tasa = Decimal(str(porcentaje)) / 100
 
     base = Decimal(str(pedido.total))
     monto = (base * tasa).quantize(Decimal("0.01"))

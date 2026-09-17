@@ -149,10 +149,10 @@ def get_mi_dia(db: Session, vendedor_id: int) -> dict:
 
 def get_mi_plata(db: Session, vendedor_id: int) -> dict:
     """Comisiones mayoristas agrupadas por comercio (para poder mostrarlas
-    plegadas, con el detalle de pedidos al expandir). Si el vendedor tiene
-    vinculada una identidad de venta minorista, también se listan sus ventas
-    minoristas como referencia — todavía no tienen un % de comisión definido,
-    así que se muestran sin monto de comisión hasta que se defina la regla."""
+    plegadas, con el detalle de pedidos al expandir) + comisiones minoristas
+    ya generadas (planas, una por venta) + ventas minoristas pagadas que
+    todavía no tienen comisión generada (las genera un admin caso por caso,
+    ver /admin/ventas-minoristas/pendientes-comision)."""
     vendedor = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
 
     comisiones = (
@@ -163,59 +163,68 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
     )
 
     grupos: dict[int | None, dict] = {}
+    comisiones_minoristas = []
     for c in comisiones:
-        comercio = c.pedido.comercio if c.pedido else None
-        key = comercio.id if comercio else None
-        if key not in grupos:
-            grupos[key] = {
-                "comercio_id": key,
-                "comercio_nombre": comercio.nombre_local if comercio else "Comercio eliminado",
-                "comisiones": [],
-                "total_pendiente": 0.0,
-                "total_liquidado": 0.0,
-            }
         item = {
             "id": c.id,
-            "pedido_id": c.pedido_id,
             "base": float(c.base),
             "tasa": float(c.tasa),
             "monto": float(c.monto),
             "estado": c.estado,
         }
-        grupos[key]["comisiones"].append(item)
-        if c.estado == "liquidada":
-            grupos[key]["total_liquidado"] += float(c.monto)
+        if c.pedido_id is not None:
+            comercio = c.pedido.comercio if c.pedido else None
+            key = comercio.id if comercio else None
+            if key not in grupos:
+                grupos[key] = {
+                    "comercio_id": key,
+                    "comercio_nombre": comercio.nombre_local if comercio else "Comercio eliminado",
+                    "comisiones": [],
+                    "total_pendiente": 0.0,
+                    "total_liquidado": 0.0,
+                }
+            grupos[key]["comisiones"].append({**item, "pedido_id": c.pedido_id})
+            if c.estado == "liquidada":
+                grupos[key]["total_liquidado"] += float(c.monto)
+            else:
+                grupos[key]["total_pendiente"] += float(c.monto)
         else:
-            grupos[key]["total_pendiente"] += float(c.monto)
+            comisiones_minoristas.append({
+                **item,
+                "sale_id": c.sale_id,
+                "cliente_nombre": c.sale.customer_name if c.sale else None,
+            })
 
     grupos_lista = sorted(grupos.values(), key=lambda g: g["total_pendiente"], reverse=True)
+    total_pendiente = sum(g["total_pendiente"] for g in grupos_lista) + sum(
+        c["monto"] for c in comisiones_minoristas if c["estado"] == "pendiente"
+    )
+    total_liquidado = sum(g["total_liquidado"] for g in grupos_lista) + sum(
+        c["monto"] for c in comisiones_minoristas if c["estado"] == "liquidada"
+    )
 
-    ventas_minoristas = []
+    ventas_sin_comision = []
     if vendedor and vendedor.catalog_seller_id:
+        sale_ids_con_comision = {c.sale_id for c in comisiones if c.sale_id is not None}
         ventas = (
             db.query(Sale)
-            .filter(Sale.seller_id == vendedor.catalog_seller_id)
+            .filter(Sale.seller_id == vendedor.catalog_seller_id, Sale.paid.is_(True))
             .order_by(Sale.id.desc())
             .limit(50)
             .all()
         )
-        ventas_minoristas = [
-            {
-                "id": s.id,
-                "cliente_nombre": s.customer_name,
-                "total": float(s.total_amount),
-                "pagado": bool(s.paid),
-                "entregado": bool(s.delivered),
-            }
-            for s in ventas
+        ventas_sin_comision = [
+            {"id": s.id, "cliente_nombre": s.customer_name, "total": float(s.total_amount)}
+            for s in ventas if s.id not in sale_ids_con_comision
         ]
 
     return {
         "grupos": grupos_lista,
-        "total_pendiente": sum(g["total_pendiente"] for g in grupos_lista),
-        "total_liquidado": sum(g["total_liquidado"] for g in grupos_lista),
+        "comisiones_minoristas": comisiones_minoristas,
+        "total_pendiente": total_pendiente,
+        "total_liquidado": total_liquidado,
         "tiene_venta_minorista_vinculada": bool(vendedor and vendedor.catalog_seller_id),
-        "ventas_minoristas": ventas_minoristas,
+        "ventas_sin_comision": ventas_sin_comision,
     }
 
 

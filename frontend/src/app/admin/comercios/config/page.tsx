@@ -26,6 +26,9 @@ export default function ConfigComercioPage() {
   const [descuento, setDescuento] = useState('')
   const [redondeo, setRedondeo] = useState('')
   const [montoMinimo, setMontoMinimo] = useState('')
+  const [comisionMayoristaNuevo, setComisionMayoristaNuevo] = useState('')
+  const [comisionMayoristaRecompra, setComisionMayoristaRecompra] = useState('')
+  const [comisionMinorista, setComisionMinorista] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -47,6 +50,9 @@ export default function ConfigComercioPage() {
         setDescuento(String(d.descuento_porcentaje))
         setRedondeo(String(d.redondeo))
         setMontoMinimo(String(d.monto_minimo_pedido))
+        setComisionMayoristaNuevo(String(d.comision_mayorista_nuevo_porcentaje))
+        setComisionMayoristaRecompra(String(d.comision_mayorista_recompra_porcentaje))
+        setComisionMinorista(String(d.comision_minorista_porcentaje))
       }
       setLoading(false)
     })
@@ -71,6 +77,9 @@ export default function ConfigComercioPage() {
         descuento_porcentaje: parseFloat(descuento),
         redondeo: parseInt(redondeo),
         monto_minimo_pedido: parseFloat(montoMinimo),
+        comision_mayorista_nuevo_porcentaje: parseFloat(comisionMayoristaNuevo),
+        comision_mayorista_recompra_porcentaje: parseFloat(comisionMayoristaRecompra),
+        comision_minorista_porcentaje: parseFloat(comisionMinorista),
       }),
     })
     if (res.ok) {
@@ -267,6 +276,55 @@ export default function ConfigComercioPage() {
           <p className="text-xs text-gray-400 mt-1">
             Poner 0 para no tener mínimo.
           </p>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">Comisión de vendedores</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            % sobre el monto pagado que se atribuye al vendedor de la cartera. Se aplica desde el momento
+            en que se guarda — no afecta comisiones ya generadas (esas se editan una por una en /admin/comisiones).
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mayorista, cliente nuevo (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={comisionMayoristaNuevo}
+                onChange={e => setComisionMayoristaNuevo(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mayorista, recompra (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={comisionMayoristaRecompra}
+                onChange={e => setComisionMayoristaRecompra(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Minorista (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={comisionMinorista}
+                onChange={e => setComisionMinorista(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                required
+              />
+            </div>
+          </div>
         </div>
 
         {error && (

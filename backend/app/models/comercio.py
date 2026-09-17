@@ -130,6 +130,12 @@ class ConfiguracionComercio(Base):
     # del comercio: verde (< amarillo), amarillo (>= amarillo y < rojo), rojo (>= rojo).
     semaforo_dias_amarillo = Column(Integer, nullable=False, default=7)
     semaforo_dias_rojo = Column(Integer, nullable=False, default=14)
+    # Tasas de comisión del vendedor, configurables desde el admin (antes
+    # hardcodeadas). Mayorista distingue cliente nuevo vs. recompra; minorista
+    # es una sola tasa (default 0 = apagada hasta que se defina la regla).
+    comision_mayorista_nuevo_porcentaje = Column(Numeric(5, 2), nullable=False, default=15)
+    comision_mayorista_recompra_porcentaje = Column(Numeric(5, 2), nullable=False, default=10)
+    comision_minorista_porcentaje = Column(Numeric(5, 2), nullable=False, default=0)
 
 
 class DescuentoTramoComercio(Base):
@@ -198,17 +204,19 @@ class PedidoComercioItem(Base):
 
 
 class Comision(Base):
-    """Comisión del vendedor por un pedido mayorista pagado.
-
-    Se crea una única vez por pedido (índice único en pedido_id), al momento
-    en que estado_pago pasa a 'pagado'. Atribuida al vendedor de la cartera
-    del comercio (mayoristas.vendedor_id) al momento del pago.
-    """
+    """Comisión del vendedor por una venta pagada — mayorista (pedido_id) o
+    minorista (sale_id). Exactamente uno de los dos está seteado (se valida
+    en Python, no hay CHECK en DB). Se crea una única vez por pedido/venta
+    (índices únicos en cada columna). El monto/tasa se calcula con la
+    configuración vigente al momento del pago, pero un admin puede
+    editarlos después a mano para un caso puntual (ver
+    PATCH /admin/comisiones/{id})."""
     __tablename__ = "comisiones"
 
     id = Column(Integer, primary_key=True, index=True)
     vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="RESTRICT"), nullable=False, index=True)
-    pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=False, unique=True)
+    pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=True, unique=True)
+    sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=True, unique=True)
     base = Column(Numeric(12, 2), nullable=False)
     tasa = Column(Numeric(5, 4), nullable=False)
     monto = Column(Numeric(12, 2), nullable=False)
@@ -220,6 +228,7 @@ class Comision(Base):
 
     vendedor = relationship("Vendedor")
     pedido = relationship("PedidoComercio", back_populates="comision")
+    sale = relationship("Sale")
 
 
 class VentaReportada(Base):
