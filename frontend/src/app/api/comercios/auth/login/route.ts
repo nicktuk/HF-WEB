@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     comercio_id: comercio.id,
     estado: comercio.estado,
     debe_cambiar_password: Boolean(comercio.debe_cambiar_password),
+    vendedor_id: comercio.vendedor_id ?? null,
+    modalidad_pago: comercio.modalidad_pago ?? 'normal',
   })
 
   const response = NextResponse.json({ ok: true, comercio })

@@ -31,7 +31,13 @@ export async function GET(request: NextRequest) {
   // en vez de reiniciar el conteo a 24hs.
   if (estado !== payload.estado) {
     const newToken = await signComercioToken(
-      { comercio_id: payload.comercio_id, estado, debe_cambiar_password: payload.debe_cambiar_password },
+      {
+        comercio_id: payload.comercio_id,
+        estado,
+        debe_cambiar_password: payload.debe_cambiar_password,
+        vendedor_id: payload.vendedor_id ?? null,
+        modalidad_pago: payload.modalidad_pago ?? 'normal',
+      },
       payload.exp,
     )
     const remaining = Math.max(0, (payload.exp ?? 0) - Math.floor(Date.now() / 1000))

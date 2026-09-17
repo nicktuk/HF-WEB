@@ -36,6 +36,11 @@ class EstadoComision(str, enum.Enum):
     liquidada = 'liquidada'
 
 
+class ModalidadPagoComercio(str, enum.Enum):
+    normal = 'normal'
+    anticipado = 'anticipado'
+
+
 class Vendedor(Base):
     __tablename__ = "vendedores"
 
@@ -73,6 +78,13 @@ class Comercio(Base):
     reset_token_hash = Column(Text, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
     debe_cambiar_password = Column(Boolean, nullable=False, default=False)
+    # 'anticipado': tras 2 pedidos cancelados por vencimiento de la ventana de
+    # reserva (48hs sin pago), se le exige pagar por adelantado.
+    modalidad_pago = Column(
+        Enum('normal', 'anticipado', name='modalidad_pago_mayorista_enum', create_type=False),
+        nullable=False,
+        default='normal',
+    )
 
     vendedor = relationship("Vendedor", back_populates="comercios")
     pedidos = relationship("PedidoComercio", back_populates="comercio")
@@ -135,6 +147,10 @@ class PedidoComercio(Base):
     )
     metodo_pago = Column(Text, nullable=True)
     foto_entrega_url = Column(Text, nullable=True)
+    # Ventana de 48hs desde que se confirma: si sigue sin pago al vencer,
+    # el autocancelador lo pasa a 'cancelado' y marca cancelado_por_vencimiento.
+    fecha_reserva_hasta = Column(DateTime, nullable=True)
+    cancelado_por_vencimiento = Column(Boolean, nullable=False, default=False)
 
     comercio = relationship("Comercio", back_populates="pedidos")
     items = relationship("PedidoComercioItem", back_populates="pedido", cascade="all, delete-orphan")

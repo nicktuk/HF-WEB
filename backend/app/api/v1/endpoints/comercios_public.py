@@ -52,6 +52,7 @@ class ComercioPublic(BaseModel):
     email: str | None
     vendedor_id: int | None
     debe_cambiar_password: bool
+    modalidad_pago: str
 
     model_config = {"from_attributes": True}
 

@@ -5,16 +5,20 @@ parcial, comisiones). No cablea reserva de stock al confirmar (Bloque 0,
 pendiente); la deducción física de stock ocurre recién al entregar, igual
 que hoy pasa con las ventas minoristas en SalesService._deduct_stock.
 """
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.comercio import Comision, PedidoComercio, PedidoComercioItem
+from app.models.comercio import Comercio, Comision, PedidoComercio, PedidoComercioItem
 from app.models.stock import StockPurchase
 
 TASA_COMISION_NUEVO = Decimal("0.15")
 TASA_COMISION_RECOMPRA = Decimal("0.10")
+
+VENTANA_RESERVA_HORAS = 48
+RECHAZOS_PARA_ANTICIPADO = 2
 
 
 def _get_available_stock(db: Session, product_id: int) -> int:
@@ -160,3 +164,58 @@ def entregar_pedido(
     db.commit()
     db.refresh(pedido)
     return pedido
+
+
+def on_pedido_confirmado(pedido: PedidoComercio) -> None:
+    """Abre la ventana de reserva de 48hs. Se llama al pasar el pedido a
+    'confirmado'; no pisa una ventana ya abierta si se re-confirma."""
+    if pedido.fecha_reserva_hasta is None:
+        pedido.fecha_reserva_hasta = datetime.utcnow() + timedelta(hours=VENTANA_RESERVA_HORAS)
+
+
+def autocancelar_vencidos(db: Session) -> list[int]:
+    """Cancela los pedidos confirmados y sin pagar cuya ventana de reserva
+    venció. Pensado para ser llamado periódicamente (n8n/cron) contra
+    POST /admin/comercios/pedidos/autocancelar-vencidos — es idempotente:
+    correrlo de nuevo no vuelve a tocar lo que ya está cancelado.
+
+    Al 2º pedido cancelado por vencimiento de un mismo comercio, pasa a
+    modalidad_pago='anticipado' (regla de 2 rechazos).
+    """
+    ahora = datetime.utcnow()
+    vencidos = (
+        db.query(PedidoComercio)
+        .filter(
+            PedidoComercio.estado == "confirmado",
+            PedidoComercio.estado_pago == "pendiente",
+            PedidoComercio.fecha_reserva_hasta.isnot(None),
+            PedidoComercio.fecha_reserva_hasta < ahora,
+        )
+        .all()
+    )
+
+    cancelados_ids: list[int] = []
+    comercios_afectados: set[int] = set()
+    for pedido in vencidos:
+        pedido.estado = "cancelado"
+        pedido.cancelado_por_vencimiento = True
+        cancelados_ids.append(pedido.id)
+        comercios_afectados.add(pedido.comercio_id)
+
+    for comercio_id in comercios_afectados:
+        comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
+        if comercio is None or comercio.modalidad_pago == "anticipado":
+            continue
+        rechazos = (
+            db.query(PedidoComercio)
+            .filter(
+                PedidoComercio.comercio_id == comercio_id,
+                PedidoComercio.cancelado_por_vencimiento.is_(True),
+            )
+            .count()
+        )
+        if rechazos >= RECHAZOS_PARA_ANTICIPADO:
+            comercio.modalidad_pago = "anticipado"
+
+    db.commit()
+    return cancelados_ids

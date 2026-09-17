@@ -47,6 +47,7 @@ def _comercio_dict(m: Comercio) -> dict:
         "activado_at": m.activado_at.isoformat() if m.activado_at else None,
         "created_at": m.created_at.isoformat() if m.created_at else None,
         "debe_cambiar_password": bool(m.debe_cambiar_password),
+        "modalidad_pago": m.modalidad_pago,
     }
 
 
@@ -343,6 +344,8 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
         "estado_pago": p.estado_pago,
         "metodo_pago": p.metodo_pago,
         "foto_entrega_url": p.foto_entrega_url,
+        "fecha_reserva_hasta": p.fecha_reserva_hasta.isoformat() if p.fecha_reserva_hasta else None,
+        "cancelado_por_vencimiento": bool(p.cancelado_por_vencimiento),
         "comision": (
             {
                 "monto": float(p.comision.monto),
@@ -413,6 +416,8 @@ async def update_pedido_estado(
     if nuevo not in _ESTADOS_PEDIDO:
         raise HTTPException(400, "Estado inválido")
     p.estado = nuevo
+    if nuevo == "confirmado":
+        comercio_pedidos.on_pedido_confirmado(p)
     db.commit()
     db.refresh(p)
     return _pedido_dict(p)
@@ -458,3 +463,17 @@ async def entregar_pedido(
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
     return _pedido_dict(pedido, with_items=True)
+
+
+@router.post("/comercios/pedidos/autocancelar-vencidos")
+async def autocancelar_pedidos_vencidos(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Cancela los pedidos confirmados y sin pagar cuya ventana de reserva de
+    48hs venció, y aplica la regla de 2 rechazos (modalidad_pago=anticipado).
+    Idempotente — pensado para que un workflow de n8n (o cualquier scheduler
+    externo) lo llame periódicamente; hoy no hay nada en el backend que lo
+    dispare solo."""
+    cancelados = comercio_pedidos.autocancelar_vencidos(db)
+    return {"cancelados": cancelados}

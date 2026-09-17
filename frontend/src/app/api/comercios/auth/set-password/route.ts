@@ -33,7 +33,13 @@ export async function POST(request: NextRequest) {
   }
 
   const newToken = await signComercioToken(
-    { comercio_id: payload.comercio_id, estado: payload.estado, debe_cambiar_password: false },
+    {
+      comercio_id: payload.comercio_id,
+      estado: payload.estado,
+      debe_cambiar_password: false,
+      vendedor_id: payload.vendedor_id ?? null,
+      modalidad_pago: payload.modalidad_pago ?? 'normal',
+    },
     payload.exp,
   )
 
