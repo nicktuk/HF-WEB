@@ -72,12 +72,12 @@ const COLOR_POR_ESTADO_GENERICO: Record<string, string> = {
 
 type Familia = 'zinc' | 'blue' | 'amber' | 'emerald' | 'red'
 
-const CARD_POR_FAMILIA: Record<Familia, string> = {
-  zinc: 'bg-white border-zinc-300',
-  blue: 'bg-blue-50 border-blue-300',
-  amber: 'bg-amber-50 border-amber-300',
-  emerald: 'bg-emerald-50 border-emerald-300',
-  red: 'bg-red-50 border-red-300',
+const BARRA_POR_FAMILIA: Record<Familia, string> = {
+  zinc: 'bg-zinc-300',
+  blue: 'bg-blue-400',
+  amber: 'bg-amber-400',
+  emerald: 'bg-emerald-400',
+  red: 'bg-red-400',
 }
 
 const FAMILIA_POR_ESTADO_PEDIDO: Record<string, Familia> = {
@@ -98,6 +98,13 @@ function familiaDe(item: VentaItem): Familia {
   return 'zinc'
 }
 
+function pendienteDeAccion(item: VentaItem): boolean {
+  if (item.canal === 'mayorista') {
+    return !item.cancelado && (item.entrega_estado !== 'completo' || item.pago_estado !== 'completo')
+  }
+  return item.entrega_estado !== 'completo' || item.pago_estado !== 'completo'
+}
+
 function fechaCorta(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
@@ -112,28 +119,40 @@ function Badge({ label, color }: { label: string; color: string }) {
   return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${color}`}>{label}</span>
 }
 
-function Tarjeta({ item, onClick }: { item: VentaItem; onClick: () => void }) {
+function StatTile({ label, valor, color }: { label: string; valor: number; color: string }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className={`text-xl font-bold ${color}`}>{valor}</p>
+    </div>
+  )
+}
+
+function ItemLista({ item, onClick }: { item: VentaItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`text-left border-2 shadow-sm rounded-xl p-3 hover:shadow-md hover:brightness-95 transition-all ${CARD_POR_FAMILIA[familiaDe(item)]}`}
+      className="flex items-stretch gap-2 text-left border border-zinc-200 rounded-lg p-2.5 hover:border-zinc-300 hover:bg-zinc-50 transition-colors"
     >
-      <p className="font-medium text-zinc-800 text-sm truncate">{item.cliente_nombre ?? `#${item.id}`}</p>
-      <p className="text-xs text-zinc-500 mb-2">${item.total.toLocaleString('es-AR')} · {fechaCorta(item.created_at)}</p>
-      <div className="flex flex-wrap gap-1.5">
-        {item.canal === 'mayorista' ? (
-          <>
-            <Badge label={LABEL_ESTADO_PEDIDO[item.estado ?? ''] ?? item.estado ?? ''} color={COLOR_ESTADO_PEDIDO[item.estado ?? ''] ?? 'bg-zinc-100 text-zinc-600'} />
-            {!item.cancelado && (
+      <span className={`w-1 rounded-full shrink-0 ${BARRA_POR_FAMILIA[familiaDe(item)]}`} />
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="font-medium text-zinc-800 text-sm truncate">{item.cliente_nombre ?? `#${item.id}`}</p>
+        <p className="text-xs text-zinc-500">${item.total.toLocaleString('es-AR')} · {fechaCorta(item.created_at)}</p>
+        <div className="flex flex-wrap gap-1">
+          {item.canal === 'mayorista' ? (
+            <>
+              <Badge label={LABEL_ESTADO_PEDIDO[item.estado ?? ''] ?? item.estado ?? ''} color={COLOR_ESTADO_PEDIDO[item.estado ?? ''] ?? 'bg-zinc-100 text-zinc-600'} />
+              {!item.cancelado && (
+                <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
+              )}
+            </>
+          ) : (
+            <>
+              <Badge label={LABEL_ENTREGA[item.entrega_estado]} color={COLOR_POR_ESTADO_GENERICO[item.entrega_estado]} />
               <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
-            )}
-          </>
-        ) : (
-          <>
-            <Badge label={LABEL_ENTREGA[item.entrega_estado]} color={COLOR_POR_ESTADO_GENERICO[item.entrega_estado]} />
-            <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </button>
   )
@@ -160,9 +179,9 @@ function SeccionCanal({
         {items.length === 0 ? (
           <p className="text-sm text-zinc-400">No tenés ventas en este canal todavía.</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map(item => (
-              <Tarjeta key={item.id} item={item} onClick={() => onClickItem(item)} />
+              <ItemLista key={item.id} item={item} onClick={() => onClickItem(item)} />
             ))}
           </div>
         )}
@@ -216,12 +235,14 @@ export default function MisVentasPage() {
 
   const mayoristas = ventas?.filter(v => v.canal === 'mayorista') ?? []
   const minoristas = ventas?.filter(v => v.canal === 'minorista') ?? []
+  const pendientes = ventas?.filter(pendienteDeAccion).length ?? 0
+  const cancelados = mayoristas.filter(v => v.cancelado).length
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader nombre={info?.nombre} />
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mis ventas</h1>
           <p className="text-sm text-zinc-500">Tocá una para ver cuándo pasó por cada etapa.</p>
@@ -231,6 +252,13 @@ export default function MisVentasPage() {
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (
           <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatTile label="Pedidos mayoristas" valor={mayoristas.length} color="text-zinc-800" />
+              <StatTile label="Ventas minoristas" valor={minoristas.length} color="text-zinc-800" />
+              <StatTile label="Pendientes de acción" valor={pendientes} color="text-amber-600" />
+              <StatTile label="Cancelados" valor={cancelados} color="text-red-600" />
+            </div>
+
             <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirHistorial} />
             <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" items={minoristas} onClickItem={abrirHistorial} />
           </>
