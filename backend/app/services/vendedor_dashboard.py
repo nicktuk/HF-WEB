@@ -222,18 +222,36 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
 
 # ─── Mis ventas ─────────────────────────────────────────────────────────────
 
-def _estado_venta_minorista(s: Sale) -> str:
+def _entrega_estado_pedido(estado: str) -> str:
+    if estado == "entregado":
+        return "completo"
+    if estado == "entrega_parcial":
+        return "parcial"
+    return "pendiente"
+
+
+def _entrega_estado_venta(s: Sale) -> str:
     if s.delivered:
-        return "entregada"
+        return "completo"
+    if float(s.delivered_amount or 0) > 0:
+        return "parcial"
+    return "pendiente"
+
+
+def _pago_estado_venta(s: Sale) -> str:
     if s.paid:
-        return "pagada"
-    return "pendiente_pago"
+        return "completo"
+    if float(s.paid_amount or 0) > 0:
+        return "parcial"
+    return "pendiente"
 
 
 def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
     """Pedidos mayoristas de la cartera + ventas minoristas propias, en una
-    sola lista plana (cada item lleva su canal) para que el frontend arme
-    las grillas colapsables por canal+estado."""
+    sola lista plana (cada item lleva su canal) para que el frontend las
+    liste sin agrupar. Entrega y pago van por separado (cada uno puede estar
+    'pendiente'/'parcial'/'completo') en vez de un único estado combinado,
+    porque una venta puede estar pagada pero no entregada o viceversa."""
     pedidos = (
         db.query(PedidoComercio)
         .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
@@ -254,6 +272,9 @@ def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
             "id": p.id,
             "cliente_nombre": p.comercio.nombre_local if p.comercio else None,
             "estado": p.estado,
+            "cancelado": p.estado == "cancelado",
+            "entrega_estado": _entrega_estado_pedido(p.estado),
+            "pago_estado": "completo" if p.estado_pago == "pagado" else "pendiente",
             "total": float(p.total),
             "created_at": p.created_at.isoformat(),
         }
@@ -263,7 +284,10 @@ def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
             "canal": "minorista",
             "id": s.id,
             "cliente_nombre": s.customer_name,
-            "estado": _estado_venta_minorista(s),
+            "estado": None,
+            "cancelado": False,
+            "entrega_estado": _entrega_estado_venta(s),
+            "pago_estado": _pago_estado_venta(s),
             "total": float(s.total_amount),
             "created_at": s.created_at.isoformat(),
         }
