@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { VendedorHeader } from '../_components/VendedorHeader'
-import { ClienteForm, type ClienteFormData } from '../_components/ClienteForm'
+import { ClienteForm, type ClienteFormData, type ClienteFormResult } from '../_components/ClienteForm'
 import { Modal, ModalContent } from '@/components/ui/modal'
 
 interface Prospecto {
   id: number
   comercio_nombre: string
-  whatsapp: string
+  whatsapp: string | null
   direccion: string | null
   estado: string
   fecha_proximo_contacto: string | null
@@ -32,6 +32,8 @@ export default function ProspectosPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [convirtiendo, setConvirtiendo] = useState<Prospecto | null>(null)
+  const [otpConvertido, setOtpConvertido] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
 
   const fetchData = useCallback(async () => {
     const res = await fetch('/api/vendedores/prospectos')
@@ -69,18 +71,33 @@ export default function ProspectosPage() {
     await fetchData()
   }
 
-  async function handleConvertir(datos: ClienteFormData): Promise<string | null> {
-    if (!convirtiendo) return 'Error interno.'
+  async function handleConvertir(datos: ClienteFormData): Promise<ClienteFormResult> {
+    if (!convirtiendo) return { ok: false, error: 'Error interno.' }
     const res = await fetch(`/api/vendedores/prospectos/${convirtiendo.id}/convertir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos),
     })
-    const data = await res.json() as { detail?: string }
-    if (!res.ok) return data.detail ?? 'No se pudo convertir el prospecto.'
+    const data = await res.json() as { detail?: string; otp?: string }
+    if (!res.ok || !data.otp) return { ok: false, error: data.detail ?? 'No se pudo convertir el prospecto.' }
+    return { ok: true, otp: data.otp }
+  }
+
+  function handleConvertirExito(otp: string) {
     setConvirtiendo(null)
-    await fetchData()
-    return null
+    setOtpConvertido(otp)
+    fetchData()
+  }
+
+  async function copiarOtp() {
+    if (!otpConvertido) return
+    try {
+      await navigator.clipboard.writeText(otpConvertido)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // Sin permiso de clipboard: el usuario igual puede seleccionar el texto del input.
+    }
   }
 
   return (
@@ -100,6 +117,12 @@ export default function ProspectosPage() {
           </button>
         </div>
 
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 text-xs text-blue-800">
+          Un prospecto es solo tu registro de seguimiento (todavía no tiene cuenta ni ve precios).
+          <strong> Convertir a cliente</strong> es lo que realmente da de alta la cuenta — con usuario y
+          contraseña — y la manda a aprobación de HEFA, igual que una alta directa.
+        </div>
+
         {showForm && (
           <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
             <form onSubmit={handleCrear} className="space-y-3">
@@ -114,11 +137,11 @@ export default function ProspectosPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-700 mb-1">WhatsApp *</label>
+                  <label className="block text-xs font-medium text-zinc-700 mb-1">WhatsApp</label>
                   <input
                     value={form.whatsapp}
                     onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
-                    required
+                    placeholder="Si todavía no lo tenés, dejalo vacío"
                     className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   />
                 </div>
@@ -193,14 +216,16 @@ export default function ProspectosPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-zinc-100">
-                  <a
-                    href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-green-600 hover:underline"
-                  >
-                    WhatsApp
-                  </a>
+                  {p.whatsapp && (
+                    <a
+                      href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-green-600 hover:underline"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
                   {p.estado !== 'convertido' && (
                     <>
                       {p.estado !== 'lo_pienso' && (
@@ -238,10 +263,39 @@ export default function ProspectosPage() {
           {convirtiendo && (
             <ClienteForm
               submitLabel="Cargar alta"
-              initial={{ nombre_local: convirtiendo.comercio_nombre, celular: convirtiendo.whatsapp }}
+              initial={{ nombre_local: convirtiendo.comercio_nombre, celular: convirtiendo.whatsapp ?? '' }}
               onSubmit={handleConvertir}
+              onSuccess={handleConvertirExito}
             />
           )}
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={otpConvertido !== null}
+        onClose={() => setOtpConvertido(null)}
+        title="Cliente convertido ✓"
+        size="sm"
+      >
+        <ModalContent className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Pasale esta contraseña temporal por WhatsApp — no se vuelve a mostrar.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={otpConvertido ?? ''}
+              onFocus={e => e.target.select()}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider text-center"
+            />
+            <button
+              onClick={copiarOtp}
+              className="px-3 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700"
+            >
+              {copiado ? 'Copiado ✓' : 'Copiar'}
+            </button>
+          </div>
         </ModalContent>
       </Modal>
     </main>

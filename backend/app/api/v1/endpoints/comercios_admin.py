@@ -161,6 +161,8 @@ def _vendedor_dict(v: Vendedor) -> dict:
         "usuario": v.usuario,
         "tiene_credenciales": bool(v.usuario and v.password_hash),
         "debe_cambiar_password": bool(v.debe_cambiar_password),
+        "catalog_seller_id": v.catalog_seller_id,
+        "catalog_seller_nombre": v.catalog_seller.nombre if v.catalog_seller else None,
     }
 
 
@@ -211,6 +213,14 @@ async def update_vendedor(
         v.email = body["email"] or None
     if "activo" in body:
         v.activo = bool(body["activo"])
+    if "catalog_seller_id" in body:
+        catalog_seller_id = body["catalog_seller_id"]
+        if catalog_seller_id is not None:
+            from app.models.catalog_seller import CatalogSeller
+            seller = db.query(CatalogSeller).filter(CatalogSeller.id == catalog_seller_id).first()
+            if not seller:
+                raise HTTPException(404, "Vendedor de venta minorista no encontrado")
+        v.catalog_seller_id = catalog_seller_id
     db.commit()
     db.refresh(v)
     return _vendedor_dict(v)

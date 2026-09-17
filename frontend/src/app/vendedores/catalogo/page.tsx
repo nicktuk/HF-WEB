@@ -44,6 +44,12 @@ export default function CatalogoDemoPage() {
           </p>
         </div>
 
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
+          Los precios los define HEFA con la matriz de descuento por cantidad — no se pueden editar
+          desde acá a propósito: si un cliente pide algo fuera de la matriz, se escala a administración
+          en vez de negociarlo en el momento.
+        </div>
+
         {!productos ? (
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (

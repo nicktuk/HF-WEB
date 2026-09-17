@@ -44,7 +44,9 @@ async def get_vendedor_info(
         "nombre": v.nombre,
         "usuario": v.usuario,
         "email": v.email,
+        "celular_wa": v.celular_wa,
         "link_personal": f"{base_url}/comercios/catalogo?v={v.id}",
+        "tiene_venta_minorista_vinculada": bool(v.catalog_seller_id),
     }
 
 
@@ -91,7 +93,7 @@ async def get_mi_cartera(
     vendedor_id: int = Depends(get_vendedor_id),
     db: Session = Depends(get_db),
 ):
-    return vendedor_dashboard.get_mi_cartera(db, vendedor_id)
+    return vendedor_dashboard.get_mi_cartera_view(db, vendedor_id)
 
 
 @router.get("/mi-plata")
@@ -114,7 +116,7 @@ async def get_catalogo_demo(
 
 class ProspectoCreate(BaseModel):
     comercio_nombre: str
-    whatsapp: str
+    whatsapp: str | None = None
     direccion: str | None = None
     fecha_proximo_contacto: date | None = None
     notas: str | None = None
@@ -125,6 +127,7 @@ class ProspectoUpdate(BaseModel):
     fecha_proximo_contacto: date | None = None
     notas: str | None = None
     direccion: str | None = None
+    whatsapp: str | None = None
 
 
 @router.get("/prospectos")
@@ -169,7 +172,6 @@ class ClienteCreate(BaseModel):
     nombre: str
     apellido: str
     usuario: str
-    password: str
     celular: str | None = None
     email: str | None = None
     nombre_local: str
@@ -185,10 +187,10 @@ async def convertir_prospecto(
     db: Session = Depends(get_db),
 ):
     try:
-        comercio = vendedor_dashboard.convertir_prospecto(db, vendedor_id, prospecto_id, body.model_dump())
+        comercio, otp = vendedor_dashboard.convertir_prospecto(db, vendedor_id, prospecto_id, body.model_dump())
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
-    return {"ok": True, "comercio_id": comercio.id}
+    return {"ok": True, "comercio_id": comercio.id, "otp": otp}
 
 
 @router.post("/clientes")
@@ -197,9 +199,11 @@ async def crear_cliente(
     vendedor_id: int = Depends(get_vendedor_id),
     db: Session = Depends(get_db),
 ):
-    """Alta directa de cliente desde la tablet, sin prospecto previo."""
+    """Alta directa de cliente desde la tablet, sin prospecto previo. La
+    cuenta se crea con una OTP generada en el momento (no hace falta que el
+    vendedor invente una contraseña frente al cliente)."""
     try:
-        comercio = vendedor_dashboard.crear_cliente_desde_vendedor(db, vendedor_id, body.model_dump())
+        comercio, otp = vendedor_dashboard.crear_cliente_desde_vendedor(db, vendedor_id, body.model_dump())
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
-    return {"ok": True, "comercio_id": comercio.id}
+    return {"ok": True, "comercio_id": comercio.id, "otp": otp}

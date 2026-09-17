@@ -64,8 +64,13 @@ class Vendedor(Base):
     reset_token_hash = Column(Text, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
     debe_cambiar_password = Column(Boolean, nullable=False, default=False)
+    # Vínculo opcional con su identidad de venta minorista (canal catálogo/WhatsApp,
+    # tabla catalog_sellers — entidad separada e histórica). Permite que "Mi plata"
+    # y "Mi día" del portal de vendedores también reflejen su actividad minorista.
+    catalog_seller_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="SET NULL"), nullable=True, index=True)
 
     comercios = relationship("Comercio", back_populates="vendedor")
+    catalog_seller = relationship("CatalogSeller")
 
 
 class Comercio(Base):
@@ -243,7 +248,7 @@ class Prospecto(Base):
     id = Column(Integer, primary_key=True, index=True)
     vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="CASCADE"), nullable=False, index=True)
     comercio_nombre = Column(Text, nullable=False)
-    whatsapp = Column(Text, nullable=False)
+    whatsapp = Column(Text, nullable=True)
     direccion = Column(Text, nullable=True)
     estado = Column(sa.String(20), nullable=False, default='interesado', index=True)
     fecha_proximo_contacto = Column(sa.Date, nullable=True)

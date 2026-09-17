@@ -6,7 +6,6 @@ export interface ClienteFormData {
   nombre: string
   apellido: string
   usuario: string
-  password: string
   celular: string
   email: string
   nombre_local: string
@@ -14,18 +13,21 @@ export interface ClienteFormData {
   rubro: string
 }
 
+export type ClienteFormResult = { ok: true; otp: string } | { ok: false; error: string }
+
 interface Props {
   initial?: Partial<ClienteFormData>
   submitLabel: string
-  onSubmit: (datos: ClienteFormData) => Promise<string | null>
+  onSubmit: (datos: ClienteFormData) => Promise<ClienteFormResult>
+  onSuccess: (otp: string) => void
 }
 
 const EMPTY: ClienteFormData = {
-  nombre: '', apellido: '', usuario: '', password: '', celular: '',
+  nombre: '', apellido: '', usuario: '', celular: '',
   email: '', nombre_local: '', ubicacion_local: '', rubro: '',
 }
 
-export function ClienteForm({ initial, submitLabel, onSubmit }: Props) {
+export function ClienteForm({ initial, submitLabel, onSubmit, onSuccess }: Props) {
   const [form, setForm] = useState<ClienteFormData>({ ...EMPTY, ...initial })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -36,19 +38,19 @@ export function ClienteForm({ initial, submitLabel, onSubmit }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (form.password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.')
-      return
-    }
     if (!form.celular && !form.email) {
       setError('Ingresá al menos un celular o email.')
       return
     }
     setError(null)
     setLoading(true)
-    const err = await onSubmit(form)
+    const result = await onSubmit(form)
     setLoading(false)
-    if (err) setError(err)
+    if (result.ok) {
+      onSuccess(result.otp)
+    } else {
+      setError(result.error)
+    }
   }
 
   const inputClass = 'w-full border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400'
@@ -87,16 +89,13 @@ export function ClienteForm({ initial, submitLabel, onSubmit }: Props) {
         <label className="block text-xs font-medium text-zinc-700 mb-1">Rubro</label>
         <input value={form.rubro} onChange={set('rubro')} className={inputClass} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-zinc-700 mb-1">Usuario *</label>
-          <input value={form.usuario} onChange={set('usuario')} required className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-zinc-700 mb-1">Contraseña *</label>
-          <input type="password" value={form.password} onChange={set('password')} required minLength={8} className={inputClass} />
-        </div>
+      <div>
+        <label className="block text-xs font-medium text-zinc-700 mb-1">Usuario *</label>
+        <input value={form.usuario} onChange={set('usuario')} required className={inputClass} />
       </div>
+      <p className="text-xs text-zinc-400">
+        La contraseña temporal se genera sola al guardar — se la pasás por WhatsApp y la cambia en su primer ingreso.
+      </p>
 
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>

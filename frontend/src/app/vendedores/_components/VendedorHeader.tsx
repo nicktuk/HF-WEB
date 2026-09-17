@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/vendedores/catalogo', label: 'Catálogo' },
   { href: '/vendedores/plata', label: 'Mi plata' },
   { href: '/vendedores/prospectos', label: 'Prospectos' },
+  { href: '/vendedores/perfil', label: 'Mi perfil' },
 ]
 
 interface Props {

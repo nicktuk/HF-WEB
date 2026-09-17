@@ -15,6 +15,13 @@ interface Vendedor {
   usuario: string | null
   tiene_credenciales: boolean
   debe_cambiar_password: boolean
+  catalog_seller_id: number | null
+  catalog_seller_nombre: string | null
+}
+
+interface CatalogSeller {
+  id: number
+  nombre: string
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -37,6 +44,7 @@ const emptyForm = { nombre: '', celular_wa: '', email: '' }
 export default function VendedoresAdminPage() {
   const apiKey = useApiKey() ?? ''
   const [vendedores, setVendedores] = useState<Vendedor[]>([])
+  const [catalogSellers, setCatalogSellers] = useState<CatalogSeller[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -54,12 +62,24 @@ export default function VendedoresAdminPage() {
   const fetchData = useCallback(async () => {
     if (!apiKey) return
     setLoading(true)
-    const res = await apiFetch('/admin/vendedores', apiKey)
-    if (res.ok) setVendedores(await res.json())
+    const [vendedoresRes, sellersRes] = await Promise.all([
+      apiFetch('/admin/vendedores', apiKey),
+      apiFetch('/admin/vendedores-catalogo', apiKey),
+    ])
+    if (vendedoresRes.ok) setVendedores(await vendedoresRes.json())
+    if (sellersRes.ok) setCatalogSellers(await sellersRes.json())
     setLoading(false)
   }, [apiKey])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  async function vincularCatalogSeller(v: Vendedor, catalogSellerId: string) {
+    await apiFetch(`/admin/vendedores/${v.id}`, apiKey, {
+      method: 'PATCH',
+      body: JSON.stringify({ catalog_seller_id: catalogSellerId ? parseInt(catalogSellerId) : null }),
+    })
+    await fetchData()
+  }
 
   function startAdd() {
     setEditingId(null)
@@ -240,6 +260,7 @@ export default function VendedoresAdminPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">WhatsApp</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Portal</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Venta minorista</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -270,6 +291,18 @@ export default function VendedoresAdminPage() {
                     ) : (
                       <span className="text-gray-400">Sin acceso</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={v.catalog_seller_id ?? ''}
+                      onChange={e => vincularCatalogSeller(v, e.target.value)}
+                      className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    >
+                      <option value="">Sin vincular</option>
+                      {catalogSellers.map(s => (
+                        <option key={s.id} value={s.id}>{s.nombre}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3">
                     <button
