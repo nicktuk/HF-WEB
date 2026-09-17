@@ -16,6 +16,7 @@ from app.models.comercio import (
     Comercio,
     ConfiguracionComercio,
     Comision,
+    EstadoHistorial,
     PedidoComercio,
     Prospecto,
 )
@@ -217,6 +218,99 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         "total_liquidado": total_liquidado,
         "ventas_sin_comision": ventas_sin_comision,
     }
+
+
+# ─── Mis ventas ─────────────────────────────────────────────────────────────
+
+def _estado_venta_minorista(s: Sale) -> str:
+    if s.delivered:
+        return "entregada"
+    if s.paid:
+        return "pagada"
+    return "pendiente_pago"
+
+
+def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
+    """Pedidos mayoristas de la cartera + ventas minoristas propias, en una
+    sola lista plana (cada item lleva su canal) para que el frontend arme
+    las grillas colapsables por canal+estado."""
+    pedidos = (
+        db.query(PedidoComercio)
+        .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
+        .filter(Comercio.vendedor_id == vendedor_id)
+        .order_by(PedidoComercio.created_at.desc())
+        .all()
+    )
+    ventas = (
+        db.query(Sale)
+        .filter(Sale.seller_id == vendedor_id)
+        .order_by(Sale.created_at.desc())
+        .all()
+    )
+
+    items = [
+        {
+            "canal": "mayorista",
+            "id": p.id,
+            "cliente_nombre": p.comercio.nombre_local if p.comercio else None,
+            "estado": p.estado,
+            "total": float(p.total),
+            "created_at": p.created_at.isoformat(),
+        }
+        for p in pedidos
+    ] + [
+        {
+            "canal": "minorista",
+            "id": s.id,
+            "cliente_nombre": s.customer_name,
+            "estado": _estado_venta_minorista(s),
+            "total": float(s.total_amount),
+            "created_at": s.created_at.isoformat(),
+        }
+        for s in ventas
+    ]
+    return {"ventas": items}
+
+
+def get_historial_venta(db: Session, vendedor_id: int, canal: str, referencia_id: int) -> list[dict]:
+    """Timeline de fechas por estado de un pedido/venta puntual. El primer
+    punto (recibido/pendiente_pago) se sintetiza a partir de created_at —
+    nunca se escribe en estado_historial porque es el estado de arranque,
+    no una transición. Valida que la venta sea del vendedor antes de
+    devolver nada."""
+    if canal == "mayorista":
+        pedido = (
+            db.query(PedidoComercio)
+            .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
+            .filter(PedidoComercio.id == referencia_id, Comercio.vendedor_id == vendedor_id)
+            .first()
+        )
+        if not pedido:
+            raise NotFoundError("PedidoComercio", str(referencia_id))
+        creado_en = pedido.created_at
+        estado_inicial = "recibido"
+    elif canal == "minorista":
+        venta = (
+            db.query(Sale)
+            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id)
+            .first()
+        )
+        if not venta:
+            raise NotFoundError("Sale", str(referencia_id))
+        creado_en = venta.created_at
+        estado_inicial = "pendiente_pago"
+    else:
+        raise ValidationError("canal debe ser 'mayorista' o 'minorista'")
+
+    historial = (
+        db.query(EstadoHistorial)
+        .filter(EstadoHistorial.canal == canal, EstadoHistorial.referencia_id == referencia_id)
+        .order_by(EstadoHistorial.fecha.asc(), EstadoHistorial.id.asc())
+        .all()
+    )
+    return [{"estado": estado_inicial, "fecha": creado_en.isoformat()}] + [
+        {"estado": h.estado, "fecha": h.fecha.isoformat()} for h in historial
+    ]
 
 
 # ─── Catálogo demo ──────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/vendedores/inicio', label: 'Mi día' },
   { href: '/vendedores/cartera', label: 'Mi cartera' },
   { href: '/vendedores/catalogo', label: 'Catálogo' },
+  { href: '/vendedores/ventas', label: 'Mis ventas' },
   { href: '/vendedores/plata', label: 'Mi plata' },
   { href: '/vendedores/prospectos', label: 'Prospectos' },
   { href: '/vendedores/perfil', label: 'Mi perfil' },

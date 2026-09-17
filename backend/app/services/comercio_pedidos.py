@@ -15,6 +15,7 @@ from app.models.comercio import (
     Comercio,
     ConfiguracionComercio,
     Comision,
+    EstadoHistorial,
     PedidoComercio,
     PedidoComercioItem,
     VentaReportada,
@@ -23,6 +24,13 @@ from app.models.stock import StockPurchase
 
 VENTANA_RESERVA_HORAS = 48
 RECHAZOS_PARA_ANTICIPADO = 2
+
+
+def registrar_estado_historial(db: Session, canal: str, referencia_id: int, estado: str) -> None:
+    """Anota una transición para el timeline de Mis ventas del vendedor. No
+    hace commit — queda dentro de la misma transacción que el cambio de
+    estado que la origina."""
+    db.add(EstadoHistorial(canal=canal, referencia_id=referencia_id, estado=estado))
 
 
 def _get_available_stock(db: Session, product_id: int) -> int:
@@ -169,7 +177,10 @@ def entregar_pedido(
     pedido.foto_entrega_url = foto_entrega_url
     todo_entregado = all(item.cantidad_entregada >= item.cantidad for item in pedido.items)
     algo_entregado = any(item.cantidad_entregada > 0 for item in pedido.items)
+    estado_anterior = pedido.estado
     pedido.estado = "entregado" if todo_entregado else ("entrega_parcial" if algo_entregado else pedido.estado)
+    if pedido.estado != estado_anterior:
+        registrar_estado_historial(db, "mayorista", pedido.id, pedido.estado)
 
     db.commit()
     db.refresh(pedido)
@@ -209,6 +220,7 @@ def autocancelar_vencidos(db: Session) -> list[int]:
     for pedido in vencidos:
         pedido.estado = "cancelado"
         pedido.cancelado_por_vencimiento = True
+        registrar_estado_historial(db, "mayorista", pedido.id, "cancelado")
         cancelados_ids.append(pedido.id)
         comercios_afectados.add(pedido.comercio_id)
 

@@ -9,6 +9,7 @@ from app.models.sale import Sale, SaleItem, SaleInstallment
 from app.models.product import Product, ProductColorStock, ProductDepositStock
 from app.models.stock import StockPurchase
 from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
+from app.models.comercio import EstadoHistorial
 from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
 from app.services.app_settings import get_shipping_config, SHIPPING_ZONE_LABELS
@@ -246,6 +247,9 @@ class SalesService:
         return items, total_amount.quantize(Decimal("0.01"))
 
     def _sync_sale_state(self, sale: Sale) -> None:
+        era_paid = bool(sale.paid)
+        era_delivered = bool(sale.delivered)
+
         delivered_amount = Decimal("0.00")
         delivered_all = True
         has_items = bool(sale.items)
@@ -278,6 +282,16 @@ class SalesService:
                     paid_amount += Decimal(str(item.total_price or 0)).quantize(Decimal("0.01"))
             sale.paid_amount = paid_amount.quantize(Decimal("0.01"))
             sale.paid = has_items and paid_all
+
+        # Historial para Mis ventas del vendedor: sólo el paso hacia adelante
+        # (false -> true) es un hito que le importa ver en el timeline; un
+        # ajuste que vuelve una venta a "no pagada"/"no entregada" es una
+        # corrección administrativa, no una transición del flujo de venta.
+        if sale.id is not None:
+            if sale.paid and not era_paid:
+                self.db.add(EstadoHistorial(canal="minorista", referencia_id=sale.id, estado="pagada"))
+            if sale.delivered and not era_delivered:
+                self.db.add(EstadoHistorial(canal="minorista", referencia_id=sale.id, estado="entregada"))
 
     def _apply_item_states(
         self,

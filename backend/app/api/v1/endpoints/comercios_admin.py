@@ -517,6 +517,8 @@ async def update_pedido_estado(
     nuevo = body.get("estado")
     if nuevo not in _ESTADOS_PEDIDO:
         raise HTTPException(400, "Estado inválido")
+    if nuevo != p.estado:
+        comercio_pedidos.registrar_estado_historial(db, "mayorista", p.id, nuevo)
     p.estado = nuevo
     if nuevo == "confirmado":
         comercio_pedidos.on_pedido_confirmado(p)
