@@ -41,6 +41,13 @@ class ModalidadPagoComercio(str, enum.Enum):
     anticipado = 'anticipado'
 
 
+class EstadoProspecto(str, enum.Enum):
+    interesado = 'interesado'
+    lo_pienso = 'lo_pienso'
+    no_va = 'no_va'
+    convertido = 'convertido'
+
+
 class Vendedor(Base):
     __tablename__ = "vendedores"
 
@@ -224,4 +231,24 @@ class VentaReportada(Base):
     unidades_vendidas_desde_ultima = Column(Integer, nullable=False)
     fecha = Column(sa.Date, nullable=False)
 
+    comercio = relationship("Comercio")
+
+
+class Prospecto(Base):
+    """Cartera de prospección de un vendedor: comercios visitados que todavía
+    no son clientes. Al convertir, se crea el Comercio real y se linkea acá
+    (comercio_id) para no perder el historial de contacto."""
+    __tablename__ = "prospectos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="CASCADE"), nullable=False, index=True)
+    comercio_nombre = Column(Text, nullable=False)
+    whatsapp = Column(Text, nullable=False)
+    direccion = Column(Text, nullable=True)
+    estado = Column(sa.String(20), nullable=False, default='interesado', index=True)
+    fecha_proximo_contacto = Column(sa.Date, nullable=True)
+    notas = Column(Text, nullable=True)
+    comercio_id = Column(Integer, ForeignKey("mayoristas.id", ondelete="SET NULL"), nullable=True)
+
+    vendedor = relationship("Vendedor")
     comercio = relationship("Comercio")

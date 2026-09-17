@@ -1,5 +1,6 @@
 ﻿import { mayoristFetch } from '@/lib/comercio-fetch'
 import { ComercioHeader } from '../_components/ComercioHeader'
+import { CapturarVendedorRef } from '../_components/CapturarVendedorRef'
 import { CatalogoClient } from './CatalogoClient'
 import { CatalogoPreview } from './CatalogoPreview'
 
@@ -18,7 +19,12 @@ export default async function CatalogoPage() {
   if (!catalogoRes.ok || !infoRes.ok) {
     const previewRes = await fetch(`${API}/public/comercios/catalogo`, { cache: 'no-store' })
     const data = previewRes.ok ? await previewRes.json() : { productos: [] }
-    return <CatalogoPreview productos={data.productos} />
+    return (
+      <>
+        <CapturarVendedorRef />
+        <CatalogoPreview productos={data.productos} />
+      </>
+    )
   }
 
   const { productos, config } = await catalogoRes.json()
@@ -26,6 +32,7 @@ export default async function CatalogoPage() {
 
   return (
     <div className="min-h-screen">
+      <CapturarVendedorRef />
       <ComercioHeader nombreLocal={info.nombre_local} />
       <CatalogoClient
         productos={productos}

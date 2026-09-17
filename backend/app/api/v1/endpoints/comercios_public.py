@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
-from app.models.comercio import Comercio
+from app.models.comercio import Comercio, Vendedor
 from app.models.product_comercio import ProductComercioImage
 from app.config import settings
 from app.services import comercio_catalog, comercio_password
@@ -32,6 +32,7 @@ class SolicitudCreate(BaseModel):
     ubicacion_local: str
     rubro: str | None = None
     rubros_interes: list[str] | None = None
+    vendedor_id: int | None = None  # atribución de cartera vía link/QR personal del vendedor
     website: str = ""  # honeypot — debe llegar vacío
 
 
@@ -81,6 +82,14 @@ async def crear_solicitud(
     if not body.celular and not body.email:
         raise HTTPException(status_code=422, detail="Ingresá al menos un celular o email.")
 
+    vendedor_id = None
+    if body.vendedor_id is not None:
+        vendedor = db.query(Vendedor).filter(
+            Vendedor.id == body.vendedor_id, Vendedor.activo.is_(True)
+        ).first()
+        if vendedor:
+            vendedor_id = vendedor.id
+
     password_hash = hash_password(body.password)
     comercio = Comercio(
         nombre=body.nombre.strip(),
@@ -94,6 +103,7 @@ async def crear_solicitud(
         rubro=body.rubro.strip() if body.rubro else None,
         rubros_interes=body.rubros_interes or None,
         estado="pendiente",
+        vendedor_id=vendedor_id,
     )
 
     try:

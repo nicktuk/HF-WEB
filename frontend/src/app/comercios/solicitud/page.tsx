@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useCategories } from '@/hooks/useProducts'
+import { obtenerVendedorRef } from '@/lib/vendedor-ref'
 
 export default function SolicitudComercioPage() {
   const [form, setForm] = useState({
@@ -52,7 +53,7 @@ export default function SolicitudComercioPage() {
       const res = await fetch('/api/comercios/solicitud', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, rubros_interes: rubrosInteres }),
+        body: JSON.stringify({ ...payload, rubros_interes: rubrosInteres, vendedor_id: obtenerVendedorRef() }),
       })
       const data = await res.json() as { error?: string; detail?: string }
 

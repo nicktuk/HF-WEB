@@ -8,6 +8,12 @@ const COMERCIO_CAMBIAR_PASSWORD = '/comercios/cambiar-password'
 const VENDEDOR_COOKIE = 'hefa_vendedor_session'
 const VENDEDOR_LOGIN = '/vendedores'
 const VENDEDOR_CAMBIAR_PASSWORD = '/vendedores/cambiar-password'
+// Únicas rutas de /vendedores/* que no requieren sesión.
+const VENDEDOR_RUTAS_PUBLICAS = new Set([
+  '/vendedores',
+  '/vendedores/olvide-password',
+  '/vendedores/reset-password',
+])
 
 function getComercioSecret() {
   return new TextEncoder().encode(process.env.COMERCIO_JWT_SECRET ?? '')
@@ -80,6 +86,9 @@ async function middlewareVendedor(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/vendedores')) {
+    if (VENDEDOR_RUTAS_PUBLICAS.has(request.nextUrl.pathname)) {
+      return NextResponse.next()
+    }
     return middlewareVendedor(request)
   }
   return middlewareComercio(request)
@@ -94,9 +103,11 @@ export const config = {
     '/comercios/pedido/:path*',
     '/comercios/producto/:path*',
     '/comercios/cambiar-password',
-    // Portal de vendedores: todo bajo /vendedores requiere sesión propia,
-    // salvo login y recupero de contraseña.
-    '/vendedores/inicio/:path*',
-    '/vendedores/cambiar-password',
+    // Portal de vendedores: todo bajo /vendedores pasa por acá; las rutas
+    // públicas (login, recupero) se excluyen dentro de middlewareVendedor
+    // vía VENDEDOR_RUTAS_PUBLICAS, así las pantallas nuevas (cartera,
+    // catálogo, plata, prospectos, clientes) quedan protegidas sin tener
+    // que listar cada subruta acá.
+    '/vendedores/:path*',
   ],
 }

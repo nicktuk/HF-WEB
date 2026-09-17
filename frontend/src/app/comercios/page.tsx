@@ -1,8 +1,9 @@
 ﻿'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Percent, Headphones, Zap } from 'lucide-react'
+import { capturarVendedorRef } from '@/lib/vendedor-ref'
 
 const BENEFICIOS = [
   {
@@ -27,6 +28,10 @@ export default function ComerciosLanding() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    capturarVendedorRef()
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
