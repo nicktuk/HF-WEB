@@ -1,7 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers, bot_vendedores, codigos_amba
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -38,6 +38,20 @@ api_router.include_router(
     comercios_protected.router,
     prefix="/comercios",
     tags=["comercios"]
+)
+
+# Vendedor public endpoints (login, recupero, estado)
+api_router.include_router(
+    vendedores_public.router,
+    prefix="/public",
+    tags=["vendedores-public"]
+)
+
+# Vendedor protected endpoints (info, set-password — requieren JWT propio)
+api_router.include_router(
+    vendedores_protected.router,
+    prefix="/vendedores",
+    tags=["vendedores"]
 )
 
 # Mercado Pago Checkout Bricks

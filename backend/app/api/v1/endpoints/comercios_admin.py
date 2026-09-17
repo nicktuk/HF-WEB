@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.core.security import verify_admin
@@ -157,6 +158,9 @@ def _vendedor_dict(v: Vendedor) -> dict:
         "celular_wa": v.celular_wa,
         "email": v.email,
         "activo": v.activo,
+        "usuario": v.usuario,
+        "tiene_credenciales": bool(v.usuario and v.password_hash),
+        "debe_cambiar_password": bool(v.debe_cambiar_password),
     }
 
 
@@ -224,6 +228,42 @@ async def deactivate_vendedor(
     v.activo = False
     db.commit()
     return {"ok": True}
+
+
+@router.post("/vendedores/{vendedor_id}/asignar-credenciales")
+async def asignar_credenciales_vendedor(
+    vendedor_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Asigna (o reasigna) el usuario y una contraseña temporal (OTP) para que
+    el vendedor pueda entrar al portal por primera vez. Se devuelve la OTP en
+    texto plano una sola vez para que el admin se la comunique por WhatsApp;
+    el vendedor queda forzado a cambiarla en su próximo login. Si ya tenía un
+    usuario asignado y no se manda uno nuevo, conserva el actual."""
+    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    if not v:
+        raise HTTPException(404, "Vendedor no encontrado")
+
+    usuario = (body.get("usuario") or v.usuario or "").strip().lower()
+    if not usuario:
+        raise HTTPException(400, "usuario es obligatorio")
+
+    v.usuario = usuario
+    otp = comercio_password.generar_otp()
+    v.password_hash = hash_password(otp)
+    v.debe_cambiar_password = True
+    v.reset_token_hash = None
+    v.reset_token_expires_at = None
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Ese usuario ya está en uso. Elegí otro.")
+
+    return {"ok": True, "usuario": usuario, "otp": otp}
 
 
 # ─── Configuración ─────────────────────────────────────────────────────────────

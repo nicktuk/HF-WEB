@@ -49,6 +49,14 @@ class Vendedor(Base):
     celular_wa = Column(Text, nullable=False)
     email = Column(Text, nullable=True)
     activo = Column(Boolean, nullable=False, default=True)
+    # Credenciales de acceso al portal de vendedores. Nulas hasta que un admin
+    # le asigna usuario + OTP inicial (ver comercio_pedidos-style asignar-otp);
+    # hasta entonces el vendedor no puede loguearse.
+    usuario = Column(Text, nullable=True, unique=True, index=True)
+    password_hash = Column(Text, nullable=True)
+    reset_token_hash = Column(Text, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
+    debe_cambiar_password = Column(Boolean, nullable=False, default=False)
 
     comercios = relationship("Comercio", back_populates="vendedor")
 

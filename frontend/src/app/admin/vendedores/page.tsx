@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useApiKey } from '@/hooks/useAuth'
+import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
@@ -11,6 +12,9 @@ interface Vendedor {
   celular_wa: string
   email: string | null
   activo: boolean
+  usuario: string | null
+  tiene_credenciales: boolean
+  debe_cambiar_password: boolean
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -18,6 +22,14 @@ function apiFetch(path: string, apiKey: string, options?: RequestInit) {
     ...options,
     headers: { 'X-Admin-API-Key': apiKey, 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
   })
+}
+
+function sugerirUsuario(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
 }
 
 const emptyForm = { nombre: '', celular_wa: '', email: '' }
@@ -31,6 +43,13 @@ export default function VendedoresAdminPage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [credencialesTarget, setCredencialesTarget] = useState<Vendedor | null>(null)
+  const [usuarioInput, setUsuarioInput] = useState('')
+  const [credencialesError, setCredencialesError] = useState<string | null>(null)
+  const [credencialesResult, setCredencialesResult] = useState<{ usuario: string; otp: string } | null>(null)
+  const [copiado, setCopiado] = useState(false)
+  const [asignando, setAsignando] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!apiKey) return
@@ -86,6 +105,48 @@ export default function VendedoresAdminPage() {
       body: JSON.stringify({ activo: !v.activo }),
     })
     await fetchData()
+  }
+
+  function abrirCredenciales(v: Vendedor) {
+    setCredencialesTarget(v)
+    setUsuarioInput(v.usuario ?? sugerirUsuario(v.nombre))
+    setCredencialesError(null)
+    setCredencialesResult(null)
+    setCopiado(false)
+  }
+
+  async function confirmarCredenciales() {
+    if (!credencialesTarget) return
+    const usuario = usuarioInput.trim().toLowerCase()
+    if (!usuario) {
+      setCredencialesError('El usuario es obligatorio.')
+      return
+    }
+    setAsignando(true)
+    setCredencialesError(null)
+    const res = await apiFetch(`/admin/vendedores/${credencialesTarget.id}/asignar-credenciales`, apiKey, {
+      method: 'POST',
+      body: JSON.stringify({ usuario }),
+    })
+    if (res.ok) {
+      const data = await res.json() as { usuario: string; otp: string }
+      setCredencialesResult(data)
+      await fetchData()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setCredencialesError(d.detail ?? 'No se pudo asignar el usuario/contraseña.')
+    }
+    setAsignando(false)
+  }
+
+  async function copiarOtp(otp: string) {
+    try {
+      await navigator.clipboard.writeText(otp)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // Sin permiso de clipboard: el usuario igual puede seleccionar el texto del input.
+    }
   }
 
   return (
@@ -178,6 +239,7 @@ export default function VendedoresAdminPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">WhatsApp</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Portal</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -197,6 +259,18 @@ export default function VendedoresAdminPage() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{v.email ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {v.tiene_credenciales ? (
+                      <div className="flex flex-col">
+                        <span className="text-gray-700">{v.usuario}</span>
+                        {v.debe_cambiar_password && (
+                          <span className="text-xs text-amber-600">Pendiente 1er login</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">Sin acceso</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActivo(v)}
@@ -207,7 +281,13 @@ export default function VendedoresAdminPage() {
                       {v.activo ? 'Activo' : 'Inactivo'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+                    <button
+                      onClick={() => abrirCredenciales(v)}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {v.tiene_credenciales ? 'Resetear acceso' : 'Asignar acceso'}
+                    </button>
                     <button
                       onClick={() => startEdit(v)}
                       className="text-xs text-gray-500 hover:text-gray-900 underline"
@@ -221,6 +301,84 @@ export default function VendedoresAdminPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        isOpen={credencialesTarget !== null}
+        onClose={() => setCredencialesTarget(null)}
+        title={credencialesResult ? 'Contraseña temporal asignada' : `Asignar acceso al portal — ${credencialesTarget?.nombre ?? ''}`}
+        size="sm"
+      >
+        <ModalContent className="space-y-3">
+          {credencialesResult ? (
+            <>
+              <p className="text-sm text-gray-600">
+                Comunicásela a <strong>{credencialesTarget?.nombre}</strong> por WhatsApp — no se vuelve a mostrar.
+                Usuario: <strong>{credencialesResult.usuario}</strong>
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={credencialesResult.otp}
+                  onFocus={e => e.target.select()}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider text-center focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <button
+                  onClick={() => copiarOtp(credencialesResult.otp)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  {copiado ? 'Copiado ✓' : 'Copiar'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                Elegí el usuario con el que va a entrar a <code>/vendedores</code>. Se le genera una
+                contraseña temporal que deberá cambiar en su primer login.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                <input
+                  type="text"
+                  value={usuarioInput}
+                  onChange={e => setUsuarioInput(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              {credencialesError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{credencialesError}</p>
+              )}
+            </>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          {credencialesResult ? (
+            <button
+              onClick={() => setCredencialesTarget(null)}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+            >
+              Cerrar
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setCredencialesTarget(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarCredenciales}
+                disabled={asignando}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {asignando ? 'Generando...' : 'Generar contraseña temporal'}
+              </button>
+            </>
+          )}
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
