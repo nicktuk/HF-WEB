@@ -1,19 +1,27 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useApiKey } from '@/hooks/useAuth'
+import { uploadImages, resolveImageUrl } from '@/lib/api'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 const ESTADOS = {
-  recibido:   { label: 'Recibido',        color: 'bg-blue-100 text-blue-700' },
-  confirmado: { label: 'Confirmado',      color: 'bg-indigo-100 text-indigo-700' },
-  preparando: { label: 'En preparación',  color: 'bg-yellow-100 text-yellow-700' },
-  entregado:  { label: 'Entregado',       color: 'bg-green-100 text-green-700' },
-  cancelado:  { label: 'Cancelado',       color: 'bg-red-100 text-red-700' },
+  recibido:        { label: 'Recibido',        color: 'bg-blue-100 text-blue-700' },
+  confirmado:      { label: 'Confirmado',      color: 'bg-indigo-100 text-indigo-700' },
+  preparando:      { label: 'En preparación',  color: 'bg-yellow-100 text-yellow-700' },
+  entregado:       { label: 'Entregado',       color: 'bg-green-100 text-green-700' },
+  entrega_parcial: { label: 'Entrega parcial', color: 'bg-orange-100 text-orange-700' },
+  cancelado:       { label: 'Cancelado',       color: 'bg-red-100 text-red-700' },
 } as const
 
 type EstadoPedido = keyof typeof ESTADOS
+
+interface Comision {
+  monto: number
+  tasa: number
+  estado: string
+}
 
 interface Pedido {
   id: number
@@ -22,6 +30,10 @@ interface Pedido {
   comercio_local: string | null
   vendedor_nombre: string | null
   estado: EstadoPedido
+  estado_pago: 'pendiente' | 'pagado'
+  metodo_pago: string | null
+  foto_entrega_url: string | null
+  comision: Comision | null
   total: number
   notas: string | null
   created_at: string | null
@@ -32,6 +44,7 @@ interface PedidoDetalle extends Pedido {
     id: number
     nombre_producto: string
     cantidad: number
+    cantidad_entregada: number
     precio_unitario: number
     precio_original: number | null
     subtotal: number
@@ -71,6 +84,11 @@ export default function PedidosComercioAdminPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  async function refreshDetalle(id: number) {
+    const res = await apiFetch(`/admin/comercios/pedidos/${id}`, apiKey)
+    if (res.ok) setDetalle(await res.json())
+  }
+
   async function toggleDetalle(id: number) {
     if (expandedId === id) {
       setExpandedId(null)
@@ -78,8 +96,7 @@ export default function PedidosComercioAdminPage() {
       return
     }
     setExpandedId(id)
-    const res = await apiFetch(`/admin/comercios/pedidos/${id}`, apiKey)
-    if (res.ok) setDetalle(await res.json())
+    await refreshDetalle(id)
   }
 
   async function cambiarEstado(id: number, estado: string) {
@@ -89,10 +106,29 @@ export default function PedidosComercioAdminPage() {
       body: JSON.stringify({ estado }),
     })
     await fetchData()
-    if (expandedId === id) {
-      const res = await apiFetch(`/admin/comercios/pedidos/${id}`, apiKey)
-      if (res.ok) setDetalle(await res.json())
-    }
+    if (expandedId === id) await refreshDetalle(id)
+    setUpdatingId(null)
+  }
+
+  async function registrarPago(id: number, metodoPago: string) {
+    setUpdatingId(id)
+    await apiFetch(`/admin/comercios/pedidos/${id}/pago`, apiKey, {
+      method: 'POST',
+      body: JSON.stringify({ metodo_pago: metodoPago }),
+    })
+    await fetchData()
+    await refreshDetalle(id)
+    setUpdatingId(null)
+  }
+
+  async function entregarPedido(id: number, fotoUrl: string, entregas: Record<number, number>) {
+    setUpdatingId(id)
+    await apiFetch(`/admin/comercios/pedidos/${id}/entregar`, apiKey, {
+      method: 'POST',
+      body: JSON.stringify({ foto_entrega_url: fotoUrl, entregas }),
+    })
+    await fetchData()
+    await refreshDetalle(id)
     setUpdatingId(null)
   }
 
@@ -131,6 +167,7 @@ export default function PedidosComercioAdminPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Comercio</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Vendedor</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Pago</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fecha</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cambiar estado</th>
@@ -159,6 +196,11 @@ export default function PedidosComercioAdminPage() {
                           {estadoInfo.label}
                         </span>
                       </td>
+                      <td className="px-4 py-3" onClick={() => toggleDetalle(p.id)}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {p.estado_pago === 'pagado' ? `Pagado${p.metodo_pago ? ` (${p.metodo_pago})` : ''}` : 'Pendiente'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right font-semibold text-gray-900" onClick={() => toggleDetalle(p.id)}>
                         ${p.total.toLocaleString('es-AR')}
                       </td>
@@ -180,13 +222,14 @@ export default function PedidosComercioAdminPage() {
                     </tr>
                     {isExpanded && detalle && detalle.id === p.id && (
                       <tr key={`${p.id}-detail`}>
-                        <td colSpan={7} className="px-4 pb-4 pt-0 bg-gray-50">
+                        <td colSpan={8} className="px-4 pb-4 pt-0 bg-gray-50">
                           <div className="border border-gray-200 rounded-lg overflow-hidden mt-1">
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="bg-gray-100">
                                   <th className="text-left px-3 py-2 text-gray-500">Producto</th>
                                   <th className="text-right px-3 py-2 text-gray-500">Cant.</th>
+                                  <th className="text-right px-3 py-2 text-gray-500">Entregado</th>
                                   <th className="text-right px-3 py-2 text-gray-500">P. unit.</th>
                                   <th className="text-right px-3 py-2 text-gray-500">Subtotal</th>
                                 </tr>
@@ -196,6 +239,7 @@ export default function PedidosComercioAdminPage() {
                                   <tr key={i.id}>
                                     <td className="px-3 py-2 text-gray-800">{i.nombre_producto}</td>
                                     <td className="px-3 py-2 text-right text-gray-600">{i.cantidad}</td>
+                                    <td className="px-3 py-2 text-right text-gray-600">{i.cantidad_entregada}</td>
                                     <td className="px-3 py-2 text-right text-gray-600">${i.precio_unitario.toLocaleString('es-AR')}</td>
                                     <td className="px-3 py-2 text-right font-medium text-gray-900">${i.subtotal.toLocaleString('es-AR')}</td>
                                   </tr>
@@ -208,6 +252,20 @@ export default function PedidosComercioAdminPage() {
                               </div>
                             )}
                           </div>
+
+                          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                            <PagoPanel
+                              pedido={detalle}
+                              disabled={isUpdating}
+                              onRegistrarPago={metodo => registrarPago(p.id, metodo)}
+                            />
+                            <EntregaPanel
+                              pedido={detalle}
+                              apiKey={apiKey}
+                              disabled={isUpdating}
+                              onEntregar={(fotoUrl, entregas) => entregarPedido(p.id, fotoUrl, entregas)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -218,6 +276,143 @@ export default function PedidosComercioAdminPage() {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function PagoPanel({
+  pedido,
+  disabled,
+  onRegistrarPago,
+}: {
+  pedido: PedidoDetalle
+  disabled: boolean
+  onRegistrarPago: (metodo: string) => void
+}) {
+  const [metodo, setMetodo] = useState('efectivo')
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3">Pago</h3>
+      {pedido.estado_pago === 'pagado' ? (
+        <div className="text-sm text-gray-600">
+          <p>Pagado por <strong>{pedido.metodo_pago}</strong>.</p>
+          {pedido.comision && (
+            <p className="mt-1 text-xs text-gray-400">
+              Comisión: ${pedido.comision.monto.toLocaleString('es-AR')} ({(pedido.comision.tasa * 100).toFixed(0)}%, {pedido.comision.estado})
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <select
+            value={metodo}
+            onChange={e => setMetodo(e.target.value)}
+            disabled={disabled}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50"
+          >
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+          <button
+            onClick={() => onRegistrarPago(metodo)}
+            disabled={disabled}
+            className="bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+          >
+            Registrar pago
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EntregaPanel({
+  pedido,
+  apiKey,
+  disabled,
+  onEntregar,
+}: {
+  pedido: PedidoDetalle
+  apiKey: string
+  disabled: boolean
+  onEntregar: (fotoUrl: string, entregas: Record<number, number>) => void
+}) {
+  const [cantidades, setCantidades] = useState<Record<number, number>>(() =>
+    Object.fromEntries(pedido.items.map(i => [i.id, i.cantidad]))
+  )
+  const [fotoUrl, setFotoUrl] = useState(pedido.foto_entrega_url ?? '')
+  const [uploading, setUploading] = useState(false)
+  const yaEntregado = pedido.estado === 'entregado'
+
+  async function handleFile(file: File) {
+    setUploading(true)
+    try {
+      const [url] = await uploadImages(apiKey, [file])
+      setFotoUrl(url)
+    } catch {
+      // el fetch ya deja fotoUrl vacío; el botón de entregar queda deshabilitado
+    }
+    setUploading(false)
+  }
+
+  function handleSubmit() {
+    onEntregar(fotoUrl, cantidades)
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3">Entrega</h3>
+
+      <div className="space-y-2 mb-3">
+        {pedido.items.map(item => (
+          <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+            <span className="text-gray-600 truncate">{item.nombre_producto}</span>
+            <input
+              type="number"
+              min={0}
+              max={item.cantidad}
+              value={cantidades[item.id] ?? item.cantidad_entregada}
+              onChange={e => setCantidades(c => ({ ...c, [item.id]: parseInt(e.target.value) || 0 }))}
+              disabled={disabled}
+              className="w-16 border border-gray-300 rounded px-2 py-1 text-right focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:opacity-50"
+            />
+            <span className="text-gray-400">/ {item.cantidad}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        {fotoUrl ? (
+          <img src={resolveImageUrl(fotoUrl) ?? fotoUrl} alt="Foto de entrega" className="h-14 w-14 object-cover rounded-lg border border-gray-200" />
+        ) : (
+          <div className="h-14 w-14 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400 text-center px-1">
+            Sin foto
+          </div>
+        )}
+        <label className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50">
+          {uploading ? 'Subiendo...' : 'Subir foto'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={disabled || uploading}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={disabled || uploading || !fotoUrl}
+        className="w-full bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+      >
+        {yaEntregado ? 'Actualizar entrega' : 'Confirmar entrega'}
+      </button>
+      {!fotoUrl && <p className="text-[11px] text-gray-400 mt-1.5">La foto de entrega es obligatoria.</p>}
     </div>
   )
 }

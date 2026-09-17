@@ -27,8 +27,11 @@ from app.models.comercio import (
     DescuentoTramoComercio,
     PedidoComercio,
     PedidoComercioItem,
+    Comision,
     EstadoComercio,
     EstadoPedidoComercio,
+    EstadoPagoPedidoComercio,
+    EstadoComision,
 )
 from app.models.import_scorer import (
     ImportRubroTemplate,

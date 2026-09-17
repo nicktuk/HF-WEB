@@ -22,7 +22,18 @@ class EstadoPedidoComercio(str, enum.Enum):
     confirmado = 'confirmado'
     preparando = 'preparando'
     entregado = 'entregado'
+    entrega_parcial = 'entrega_parcial'
     cancelado = 'cancelado'
+
+
+class EstadoPagoPedidoComercio(str, enum.Enum):
+    pendiente = 'pendiente'
+    pagado = 'pagado'
+
+
+class EstadoComision(str, enum.Enum):
+    pendiente = 'pendiente'
+    liquidada = 'liquidada'
 
 
 class Vendedor(Base):
@@ -108,7 +119,7 @@ class PedidoComercio(Base):
     vendedor_nombre = Column(Text, nullable=True)
     vendedor_celular_wa = Column(Text, nullable=True)
     estado = Column(
-        Enum('recibido', 'confirmado', 'preparando', 'entregado', 'cancelado',
+        Enum('recibido', 'confirmado', 'preparando', 'entregado', 'entrega_parcial', 'cancelado',
              name='estado_pedido_mayorista_enum', create_type=False),
         nullable=False,
         default='recibido',
@@ -117,9 +128,17 @@ class PedidoComercio(Base):
     notas = Column(Text, nullable=True)
     modificado_at = Column(DateTime, nullable=True)
     modificado_por = Column(Text, nullable=True)
+    estado_pago = Column(
+        Enum('pendiente', 'pagado', name='estado_pago_pedido_mayorista_enum', create_type=False),
+        nullable=False,
+        default='pendiente',
+    )
+    metodo_pago = Column(Text, nullable=True)
+    foto_entrega_url = Column(Text, nullable=True)
 
     comercio = relationship("Comercio", back_populates="pedidos")
     items = relationship("PedidoComercioItem", back_populates="pedido", cascade="all, delete-orphan")
+    comision = relationship("Comision", back_populates="pedido", uselist=False)
 
 
 class PedidoComercioItem(Base):
@@ -133,5 +152,31 @@ class PedidoComercioItem(Base):
     precio_unitario = Column(Numeric(12, 2), nullable=False)
     precio_original = Column(Numeric(12, 2), nullable=True)
     subtotal = Column(Numeric(12, 2), nullable=False)
+    cantidad_entregada = Column(Integer, nullable=False, default=0)
 
     pedido = relationship("PedidoComercio", back_populates="items")
+
+
+class Comision(Base):
+    """Comisión del vendedor por un pedido mayorista pagado.
+
+    Se crea una única vez por pedido (índice único en pedido_id), al momento
+    en que estado_pago pasa a 'pagado'. Atribuida al vendedor de la cartera
+    del comercio (mayoristas.vendedor_id) al momento del pago.
+    """
+    __tablename__ = "comisiones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="RESTRICT"), nullable=False, index=True)
+    pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=False, unique=True)
+    base = Column(Numeric(12, 2), nullable=False)
+    tasa = Column(Numeric(5, 4), nullable=False)
+    monto = Column(Numeric(12, 2), nullable=False)
+    estado = Column(
+        Enum('pendiente', 'liquidada', name='estado_comision_enum', create_type=False),
+        nullable=False,
+        default='pendiente',
+    )
+
+    vendedor = relationship("Vendedor")
+    pedido = relationship("PedidoComercio", back_populates="comision")

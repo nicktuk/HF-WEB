@@ -18,11 +18,13 @@ from app.models.comercio import (
 )
 from app.services import comercio_password
 from app.services.comercio_auth import hash_password
+from app.services import comercio_pedidos
+from app.core.exceptions import AppException
 
 router = APIRouter()
 
 _ESTADOS_COMERCIO = {"activo", "rechazado", "suspendido", "pendiente"}
-_ESTADOS_PEDIDO = {"recibido", "confirmado", "preparando", "entregado", "cancelado"}
+_ESTADOS_PEDIDO = {"recibido", "confirmado", "preparando", "entregado", "entrega_parcial", "cancelado"}
 
 
 # ─── Comercios ────────────────────────────────────────────────────────────────
@@ -338,6 +340,17 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
         "total": float(p.total),
         "notas": p.notas,
         "created_at": p.created_at.isoformat() if p.created_at else None,
+        "estado_pago": p.estado_pago,
+        "metodo_pago": p.metodo_pago,
+        "foto_entrega_url": p.foto_entrega_url,
+        "comision": (
+            {
+                "monto": float(p.comision.monto),
+                "tasa": float(p.comision.tasa),
+                "estado": p.comision.estado,
+            }
+            if p.comision else None
+        ),
     }
     if with_items:
         d["items"] = [
@@ -345,6 +358,7 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
                 "id": i.id,
                 "nombre_producto": i.nombre_producto,
                 "cantidad": i.cantidad,
+                "cantidad_entregada": i.cantidad_entregada,
                 "precio_unitario": float(i.precio_unitario),
                 "precio_original": float(i.precio_original) if i.precio_original else None,
                 "subtotal": float(i.subtotal),
@@ -402,3 +416,45 @@ async def update_pedido_estado(
     db.commit()
     db.refresh(p)
     return _pedido_dict(p)
+
+
+@router.post("/comercios/pedidos/{pedido_id}/pago")
+async def registrar_pago_pedido(
+    pedido_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Registra el pago del pedido (efectivo|transferencia) y dispara el
+    cálculo de la comisión del vendedor de la cartera."""
+    metodo_pago = body.get("metodo_pago")
+    try:
+        pedido = comercio_pedidos.registrar_pago(db, pedido_id, metodo_pago)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+    return _pedido_dict(pedido, with_items=True)
+
+
+@router.post("/comercios/pedidos/{pedido_id}/entregar")
+async def entregar_pedido(
+    pedido_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Registra una entrega total o parcial. Body:
+    { foto_entrega_url: str, entregas: { "<item_id>": cantidad_entregada_acumulada } }
+    La foto es obligatoria. Descuenta stock físico por la diferencia contra
+    lo ya entregado antes."""
+    foto_entrega_url = body.get("foto_entrega_url")
+    entregas_raw = body.get("entregas") or {}
+    try:
+        entregas = {int(k): int(v) for k, v in entregas_raw.items()}
+    except (TypeError, ValueError):
+        raise HTTPException(422, "'entregas' debe mapear item_id a cantidad entregada.")
+
+    try:
+        pedido = comercio_pedidos.entregar_pedido(db, pedido_id, foto_entrega_url, entregas)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+    return _pedido_dict(pedido, with_items=True)
