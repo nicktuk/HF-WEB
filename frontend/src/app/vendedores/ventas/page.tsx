@@ -70,6 +70,34 @@ const COLOR_POR_ESTADO_GENERICO: Record<string, string> = {
   completo: 'bg-emerald-100 text-emerald-700',
 }
 
+type Familia = 'zinc' | 'blue' | 'amber' | 'emerald' | 'red'
+
+const CARD_POR_FAMILIA: Record<Familia, string> = {
+  zinc: 'bg-white border-zinc-300',
+  blue: 'bg-blue-50 border-blue-300',
+  amber: 'bg-amber-50 border-amber-300',
+  emerald: 'bg-emerald-50 border-emerald-300',
+  red: 'bg-red-50 border-red-300',
+}
+
+const FAMILIA_POR_ESTADO_PEDIDO: Record<string, Familia> = {
+  recibido: 'zinc',
+  confirmado: 'blue',
+  preparando: 'amber',
+  entrega_parcial: 'amber',
+  entregado: 'emerald',
+  cancelado: 'red',
+}
+
+function familiaDe(item: VentaItem): Familia {
+  if (item.canal === 'mayorista') {
+    return FAMILIA_POR_ESTADO_PEDIDO[item.estado ?? ''] ?? 'zinc'
+  }
+  if (item.entrega_estado === 'completo') return 'emerald'
+  if (item.entrega_estado === 'parcial' || item.pago_estado !== 'pendiente') return 'amber'
+  return 'zinc'
+}
+
 function fechaCorta(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
@@ -88,7 +116,7 @@ function Tarjeta({ item, onClick }: { item: VentaItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-left bg-white border-2 border-zinc-300 shadow-sm rounded-xl p-3 hover:border-primary-400 hover:shadow-md transition-all"
+      className={`text-left border-2 shadow-sm rounded-xl p-3 hover:shadow-md hover:brightness-95 transition-all ${CARD_POR_FAMILIA[familiaDe(item)]}`}
     >
       <p className="font-medium text-zinc-800 text-sm truncate">{item.cliente_nombre ?? `#${item.id}`}</p>
       <p className="text-xs text-zinc-500 mb-2">${item.total.toLocaleString('es-AR')} · {fechaCorta(item.created_at)}</p>
@@ -132,7 +160,7 @@ function SeccionCanal({
         {items.length === 0 ? (
           <p className="text-sm text-zinc-400">No tenés ventas en este canal todavía.</p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map(item => (
               <Tarjeta key={item.id} item={item} onClick={() => onClickItem(item)} />
             ))}
@@ -193,7 +221,7 @@ export default function MisVentasPage() {
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader nombre={info?.nombre} />
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mis ventas</h1>
           <p className="text-sm text-zinc-500">Tocá una para ver cuándo pasó por cada etapa.</p>
