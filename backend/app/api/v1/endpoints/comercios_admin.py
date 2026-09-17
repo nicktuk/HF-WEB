@@ -9,14 +9,15 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.core.security import verify_admin
+from app.core.phone import normalizar_celular
 from app.models.comercio import (
     Comercio,
-    Vendedor,
     ConfiguracionComercio,
     DescuentoTramoComercio,
     PedidoComercio,
     PedidoComercioItem,
 )
+from app.models.catalog_seller import CatalogSeller
 from app.services import comercio_password
 from app.services.comercio_auth import hash_password
 from app.services import comercio_pedidos, comisiones
@@ -117,9 +118,13 @@ async def assign_vendedor_to_comercio(
         raise HTTPException(404, "Comercio no encontrado")
     vendedor_id = body.get("vendedor_id")
     if vendedor_id is not None:
-        v = db.query(Vendedor).filter(Vendedor.id == vendedor_id, Vendedor.activo.is_(True)).first()
+        v = db.query(CatalogSeller).filter(
+            CatalogSeller.id == vendedor_id,
+            CatalogSeller.activo.is_(True),
+            CatalogSeller.es_mayorista.is_(True),
+        ).first()
         if not v:
-            raise HTTPException(404, "Vendedor no encontrado o inactivo")
+            raise HTTPException(404, "Vendedor no encontrado, inactivo o no es mayorista")
     m.vendedor_id = vendedor_id
     db.commit()
     db.refresh(m)
@@ -150,32 +155,41 @@ async def asignar_otp(
 
 
 # ─── Vendedores ─────────────────────────────────────────────────────────────────
+# Tabla única (catalog_sellers, ver models/catalog_seller.py): un vendedor de
+# venta minorista y uno mayorista son la misma entidad. `es_mayorista=True`
+# habilita todo lo de acá abajo (login al portal, cartera, comisiones) sobre
+# la misma fila — no hay una segunda tabla ni un link manual entre ambas.
+# El endpoint /admin/vendedores-catalogo (catalog_sellers.py) sigue existiendo
+# tal cual para los dropdowns de ventas/pedidos/depósitos/compras: son la
+# misma tabla, así que un vendedor creado acá ya aparece ahí también.
 
-def _vendedor_dict(v: Vendedor) -> dict:
+def _vendedor_dict(v: CatalogSeller) -> dict:
     return {
         "id": v.id,
         "nombre": v.nombre,
-        "celular_wa": v.celular_wa,
+        "celular_wa": v.celular,
         "email": v.email,
         "activo": v.activo,
+        "es_mayorista": bool(v.es_mayorista),
         "usuario": v.usuario,
         "tiene_credenciales": bool(v.usuario and v.password_hash),
         "debe_cambiar_password": bool(v.debe_cambiar_password),
-        "catalog_seller_id": v.catalog_seller_id,
-        "catalog_seller_nombre": v.catalog_seller.nombre if v.catalog_seller else None,
     }
 
 
 @router.get("/vendedores")
 async def list_vendedores(
     activo: Optional[bool] = Query(None),
+    es_mayorista: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    q = db.query(Vendedor)
+    q = db.query(CatalogSeller).filter(CatalogSeller.nombre != "Web")
     if activo is not None:
-        q = q.filter(Vendedor.activo.is_(activo))
-    return [_vendedor_dict(v) for v in q.order_by(Vendedor.nombre).all()]
+        q = q.filter(CatalogSeller.activo.is_(activo))
+    if es_mayorista is not None:
+        q = q.filter(CatalogSeller.es_mayorista.is_(es_mayorista))
+    return [_vendedor_dict(v) for v in q.order_by(CatalogSeller.nombre).all()]
 
 
 @router.post("/vendedores")
@@ -185,10 +199,20 @@ async def create_vendedor(
     _: bool = Depends(verify_admin),
 ):
     nombre = (body.get("nombre") or "").strip()
-    celular_wa = (body.get("celular_wa") or "").strip()
-    if not nombre or not celular_wa:
-        raise HTTPException(400, "nombre y celular_wa son obligatorios")
-    v = Vendedor(nombre=nombre, celular_wa=celular_wa, email=body.get("email") or None, activo=True)
+    if not nombre:
+        raise HTTPException(400, "nombre es obligatorio")
+    if db.query(CatalogSeller).filter(CatalogSeller.nombre == nombre).first():
+        raise HTTPException(409, "Ya existe un vendedor con ese nombre")
+    celular = (body.get("celular_wa") or "").strip() or None
+    v = CatalogSeller(
+        nombre=nombre,
+        celular=celular,
+        celular_normalizado=normalizar_celular(celular) if celular else None,
+        email=body.get("email") or None,
+        es_mayorista=bool(body.get("es_mayorista")),
+        bot_habilitado=True,
+        activo=True,
+    )
     db.add(v)
     db.commit()
     db.refresh(v)
@@ -202,25 +226,21 @@ async def update_vendedor(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "Vendedor no encontrado")
     if body.get("nombre"):
         v.nombre = body["nombre"].strip()
     if body.get("celular_wa"):
-        v.celular_wa = body["celular_wa"].strip()
+        celular = body["celular_wa"].strip()
+        v.celular = celular
+        v.celular_normalizado = normalizar_celular(celular) if celular else None
     if "email" in body:
         v.email = body["email"] or None
     if "activo" in body:
         v.activo = bool(body["activo"])
-    if "catalog_seller_id" in body:
-        catalog_seller_id = body["catalog_seller_id"]
-        if catalog_seller_id is not None:
-            from app.models.catalog_seller import CatalogSeller
-            seller = db.query(CatalogSeller).filter(CatalogSeller.id == catalog_seller_id).first()
-            if not seller:
-                raise HTTPException(404, "Vendedor de venta minorista no encontrado")
-        v.catalog_seller_id = catalog_seller_id
+    if "es_mayorista" in body:
+        v.es_mayorista = bool(body["es_mayorista"])
     db.commit()
     db.refresh(v)
     return _vendedor_dict(v)
@@ -232,7 +252,7 @@ async def deactivate_vendedor(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "Vendedor no encontrado")
     v.activo = False
@@ -251,10 +271,12 @@ async def asignar_credenciales_vendedor(
     el vendedor pueda entrar al portal por primera vez. Se devuelve la OTP en
     texto plano una sola vez para que el admin se la comunique por WhatsApp;
     el vendedor queda forzado a cambiarla en su próximo login. Si ya tenía un
-    usuario asignado y no se manda uno nuevo, conserva el actual."""
-    v = db.query(Vendedor).filter(Vendedor.id == vendedor_id).first()
+    usuario asignado y no se manda uno nuevo, conserva el actual. Marca
+    es_mayorista=True de paso, si todavía no lo estaba."""
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "Vendedor no encontrado")
+    v.es_mayorista = True
 
     usuario = (body.get("usuario") or v.usuario or "").strip().lower()
     if not usuario:

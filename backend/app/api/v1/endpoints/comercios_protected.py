@@ -281,7 +281,7 @@ async def crear_pedido(
     pedido = PedidoComercio(
         comercio_id=comercio_id,
         vendedor_nombre=vendedor.nombre if vendedor else None,
-        vendedor_celular_wa=vendedor.celular_wa if vendedor else None,
+        vendedor_celular_wa=vendedor.celular if vendedor else None,
         estado="recibido",
         total=total,
         notas=body.notas or None,
@@ -380,7 +380,7 @@ def _webhook_pedido(pedido, comercio, vendedor, items_built) -> None:
         },
         "vendedor": {
             "nombre": vendedor.nombre if vendedor else None,
-            "celular_wa": vendedor.celular_wa if vendedor else None,
+            "celular_wa": vendedor.celular if vendedor else None,
         } if vendedor else None,
         "items": [
             {

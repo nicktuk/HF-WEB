@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
-from app.models.comercio import Comercio, Vendedor
+from app.models.comercio import Comercio
+from app.models.catalog_seller import CatalogSeller
 from app.models.product_comercio import ProductComercioImage
 from app.config import settings
 from app.services import comercio_catalog, comercio_password
@@ -84,8 +85,10 @@ async def crear_solicitud(
 
     vendedor_id = None
     if body.vendedor_id is not None:
-        vendedor = db.query(Vendedor).filter(
-            Vendedor.id == body.vendedor_id, Vendedor.activo.is_(True)
+        vendedor = db.query(CatalogSeller).filter(
+            CatalogSeller.id == body.vendedor_id,
+            CatalogSeller.activo.is_(True),
+            CatalogSeller.es_mayorista.is_(True),
         ).first()
         if vendedor:
             vendedor_id = vendedor.id

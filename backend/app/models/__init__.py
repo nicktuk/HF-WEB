@@ -21,7 +21,6 @@ from app.models.expense import Expense
 from app.models.mp_pending_order import MpPendingOrder
 from app.models.codigo_amba import CodigoAmba
 from app.models.comercio import (
-    Vendedor,
     Comercio,
     ConfiguracionComercio,
     DescuentoTramoComercio,
@@ -83,7 +82,6 @@ __all__ = [
     "Expense",
     "MpPendingOrder",
     "CodigoAmba",
-    "Vendedor",
     "Comercio",
     "ConfiguracionComercio",
     "DescuentoTramoComercio",

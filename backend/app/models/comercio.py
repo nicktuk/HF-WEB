@@ -48,31 +48,6 @@ class EstadoProspecto(str, enum.Enum):
     convertido = 'convertido'
 
 
-class Vendedor(Base):
-    __tablename__ = "vendedores"
-
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(Text, nullable=False)
-    celular_wa = Column(Text, nullable=False)
-    email = Column(Text, nullable=True)
-    activo = Column(Boolean, nullable=False, default=True)
-    # Credenciales de acceso al portal de vendedores. Nulas hasta que un admin
-    # le asigna usuario + OTP inicial (ver comercio_pedidos-style asignar-otp);
-    # hasta entonces el vendedor no puede loguearse.
-    usuario = Column(Text, nullable=True, unique=True, index=True)
-    password_hash = Column(Text, nullable=True)
-    reset_token_hash = Column(Text, nullable=True)
-    reset_token_expires_at = Column(DateTime, nullable=True)
-    debe_cambiar_password = Column(Boolean, nullable=False, default=False)
-    # Vínculo opcional con su identidad de venta minorista (canal catálogo/WhatsApp,
-    # tabla catalog_sellers — entidad separada e histórica). Permite que "Mi plata"
-    # y "Mi día" del portal de vendedores también reflejen su actividad minorista.
-    catalog_seller_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="SET NULL"), nullable=True, index=True)
-
-    comercios = relationship("Comercio", back_populates="vendedor")
-    catalog_seller = relationship("CatalogSeller")
-
-
 class Comercio(Base):
     __tablename__ = "mayoristas"
 
@@ -93,7 +68,7 @@ class Comercio(Base):
         nullable=False,
         default='pendiente',
     )
-    vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="SET NULL"), nullable=True)
+    vendedor_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="SET NULL"), nullable=True)
     activado_at = Column(DateTime, nullable=True)
     reset_token_hash = Column(Text, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
@@ -106,7 +81,7 @@ class Comercio(Base):
         default='normal',
     )
 
-    vendedor = relationship("Vendedor", back_populates="comercios")
+    vendedor = relationship("CatalogSeller", back_populates="comercios")
     pedidos = relationship("PedidoComercio", back_populates="comercio")
 
 
@@ -214,7 +189,7 @@ class Comision(Base):
     __tablename__ = "comisiones"
 
     id = Column(Integer, primary_key=True, index=True)
-    vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="RESTRICT"), nullable=False, index=True)
+    vendedor_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="RESTRICT"), nullable=False, index=True)
     pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=True, unique=True)
     sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=True, unique=True)
     base = Column(Numeric(12, 2), nullable=False)
@@ -226,7 +201,7 @@ class Comision(Base):
         default='pendiente',
     )
 
-    vendedor = relationship("Vendedor")
+    vendedor = relationship("CatalogSeller")
     pedido = relationship("PedidoComercio", back_populates="comision")
     sale = relationship("Sale")
 
@@ -255,7 +230,7 @@ class Prospecto(Base):
     __tablename__ = "prospectos"
 
     id = Column(Integer, primary_key=True, index=True)
-    vendedor_id = Column(Integer, ForeignKey("vendedores.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendedor_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="CASCADE"), nullable=False, index=True)
     comercio_nombre = Column(Text, nullable=False)
     whatsapp = Column(Text, nullable=True)
     direccion = Column(Text, nullable=True)
@@ -264,5 +239,5 @@ class Prospecto(Base):
     notas = Column(Text, nullable=True)
     comercio_id = Column(Integer, ForeignKey("mayoristas.id", ondelete="SET NULL"), nullable=True)
 
-    vendedor = relationship("Vendedor")
+    vendedor = relationship("CatalogSeller")
     comercio = relationship("Comercio")

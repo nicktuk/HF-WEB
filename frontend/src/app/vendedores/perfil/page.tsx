@@ -11,7 +11,6 @@ interface VendedorInfo {
   email: string | null
   celular_wa: string
   link_personal: string
-  tiene_venta_minorista_vinculada: boolean
 }
 
 export default function MiPerfilPage() {
@@ -55,14 +54,6 @@ export default function MiPerfilPage() {
                   <p className="text-sm font-medium text-zinc-800">{info.email}</p>
                 </div>
               )}
-              <div>
-                <p className="text-xs text-zinc-500">Ventas minoristas</p>
-                <p className="text-sm font-medium text-zinc-800">
-                  {info.tiene_venta_minorista_vinculada
-                    ? 'Vinculadas — aparecen en Mi día y Mi plata'
-                    : 'Sin vincular — pedile a HEFA que te asocie tu usuario de venta minorista'}
-                </p>
-              </div>
             </div>
 
             <LinkPersonal link={info.link_personal} />

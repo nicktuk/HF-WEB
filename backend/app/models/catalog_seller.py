@@ -1,6 +1,13 @@
-"""Catalog seller model - vendedores del canal catálogo (ventas propias)."""
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import Session
+"""Vendedor — tabla única para vendedores de venta minorista (canal
+catálogo/WhatsApp) y mayorista (canal comercios). Conserva el nombre físico
+histórico `catalog_sellers` (Sale.seller_id y Order.seller_id ya apuntan
+acá) pero es LA tabla de vendedores: `es_mayorista`, activado, habilita
+todo lo que usa el canal comercios (login al portal /vendedores, cartera,
+prospectos, comisiones) sobre la misma fila — no hay una segunda tabla ni
+un link manual entre "vendedor" y "vendedor minorista", son la misma persona.
+"""
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from sqlalchemy.orm import Session, relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
 
@@ -16,6 +23,17 @@ class CatalogSeller(Base):
     activo = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # ── Canal mayorista (comercios) — solo relevante si es_mayorista=True ──
+    es_mayorista = Column(Boolean, nullable=False, default=False)
+    email = Column(Text, nullable=True)
+    usuario = Column(Text, nullable=True, unique=True, index=True)
+    password_hash = Column(Text, nullable=True)
+    reset_token_hash = Column(Text, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
+    debe_cambiar_password = Column(Boolean, nullable=False, default=False)
+
+    comercios = relationship("Comercio", back_populates="vendedor")
 
 
 def require_active_catalog_seller(db: Session, seller_id: int) -> "CatalogSeller":
