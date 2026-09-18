@@ -53,55 +53,62 @@ export default function CatalogoDemoPage() {
         {!productos ? (
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (
-          <div className="space-y-3">
-            {productos.map(p => {
-              const imagenUrl = resolveImageUrl(p.imagen_url)
-              return (
-              <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  {imagenUrl && (
-                    <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-zinc-50 relative">
-                      <Image src={imagenUrl} alt={p.nombre} fill className="object-contain" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-medium text-zinc-800 truncate">{p.nombre}</p>
-                    {p.marca && <p className="text-xs text-zinc-500">{p.marca}</p>}
-                    <p className="text-xs text-zinc-400">Stock: {p.stock}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                  <div className="bg-zinc-50 rounded-lg px-3 py-2">
-                    <p className="text-xs text-zinc-500">Precio mayorista</p>
-                    <p className="font-semibold text-zinc-800">${p.precio_comercio.toLocaleString('es-AR')}</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-lg px-3 py-2">
-                    <p className="text-xs text-zinc-500">Precio público</p>
-                    <p className="font-semibold text-zinc-800">
-                      {p.precio_venta != null ? `$${p.precio_venta.toLocaleString('es-AR')}` : '—'}
-                    </p>
-                  </div>
-                </div>
-
-                {p.escalones.length > 1 && (
-                  <div className="border-t border-zinc-100 pt-3">
-                    <p className="text-xs font-medium text-zinc-500 mb-2">Ganancia por unidad según cantidad</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {p.escalones.map(e => (
-                        <div key={e.cantidad_minima} className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5 text-center">
-                          <p className="text-xs text-emerald-700">{e.cantidad_minima}+ un.</p>
-                          <p className="text-sm font-semibold text-emerald-800">
-                            {e.ganancia_unitaria != null ? `+$${e.ganancia_unitaria.toLocaleString('es-AR')}` : '—'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              )
-            })}
+          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100">
+                    <th className="pl-1" />
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Producto</th>
+                    <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Stock</th>
+                    <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">P. mayorista</th>
+                    <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">P. público</th>
+                    <th className="text-left py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Ganancia por cantidad</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {productos.map(p => {
+                    const imagenUrl = resolveImageUrl(p.imagen_url)
+                    return (
+                      <tr key={p.id}>
+                        <td className="py-2 pl-1">
+                          {imagenUrl && (
+                            <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-50 relative">
+                              <Image src={imagenUrl} alt={p.nombre} fill className="object-contain" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2 pr-2">
+                          <p className="font-medium text-zinc-800 truncate max-w-[160px]">{p.nombre}</p>
+                          {p.marca && <p className="text-xs text-zinc-500">{p.marca}</p>}
+                        </td>
+                        <td className="py-2 pr-2 text-right text-zinc-500">{p.stock}</td>
+                        <td className="py-2 pr-2 text-right font-semibold text-zinc-800 whitespace-nowrap">
+                          ${p.precio_comercio.toLocaleString('es-AR')}
+                        </td>
+                        <td className="py-2 pr-2 text-right font-semibold text-zinc-800 whitespace-nowrap">
+                          {p.precio_venta != null ? `$${p.precio_venta.toLocaleString('es-AR')}` : '—'}
+                        </td>
+                        <td className="py-2 pl-2">
+                          {p.escalones.length > 1 && (
+                            <div className="flex gap-1.5 flex-wrap">
+                              {p.escalones.map(e => (
+                                <div key={e.cantidad_minima} className="bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1 text-center whitespace-nowrap">
+                                  <span className="text-[10px] text-emerald-700">{e.cantidad_minima}+ un. </span>
+                                  <span className="text-xs font-semibold text-emerald-800">
+                                    {e.ganancia_unitaria != null ? `+$${e.ganancia_unitaria.toLocaleString('es-AR')}` : '—'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

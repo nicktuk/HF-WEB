@@ -174,6 +174,9 @@ def _vendedor_dict(v: CatalogSeller) -> dict:
         "usuario": v.usuario,
         "tiene_credenciales": bool(v.usuario and v.password_hash),
         "debe_cambiar_password": bool(v.debe_cambiar_password),
+        "comision_mayorista_nuevo_porcentaje": float(v.comision_mayorista_nuevo_porcentaje) if v.comision_mayorista_nuevo_porcentaje is not None else None,
+        "comision_mayorista_recompra_porcentaje": float(v.comision_mayorista_recompra_porcentaje) if v.comision_mayorista_recompra_porcentaje is not None else None,
+        "comision_minorista_porcentaje": float(v.comision_minorista_porcentaje) if v.comision_minorista_porcentaje is not None else None,
     }
 
 
@@ -212,6 +215,9 @@ async def create_vendedor(
         es_mayorista=bool(body.get("es_mayorista")),
         bot_habilitado=True,
         activo=True,
+        comision_mayorista_nuevo_porcentaje=body.get("comision_mayorista_nuevo_porcentaje"),
+        comision_mayorista_recompra_porcentaje=body.get("comision_mayorista_recompra_porcentaje"),
+        comision_minorista_porcentaje=body.get("comision_minorista_porcentaje"),
     )
     db.add(v)
     db.commit()
@@ -241,6 +247,12 @@ async def update_vendedor(
         v.activo = bool(body["activo"])
     if "es_mayorista" in body:
         v.es_mayorista = bool(body["es_mayorista"])
+    if "comision_mayorista_nuevo_porcentaje" in body:
+        v.comision_mayorista_nuevo_porcentaje = body["comision_mayorista_nuevo_porcentaje"]
+    if "comision_mayorista_recompra_porcentaje" in body:
+        v.comision_mayorista_recompra_porcentaje = body["comision_mayorista_recompra_porcentaje"]
+    if "comision_minorista_porcentaje" in body:
+        v.comision_minorista_porcentaje = body["comision_minorista_porcentaje"]
     db.commit()
     db.refresh(v)
     return _vendedor_dict(v)

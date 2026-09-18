@@ -99,14 +99,15 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
 
 def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision | None:
     """Crea (o recalcula, si sigue pendiente) la comisión del pedido,
-    atribuida a la cartera del comercio, con la tasa vigente en
-    ConfiguracionComercio (nuevo/recompra) — pisada por el override manual
-    del pedido si lo hay (comision_porcentaje_manual / comision_monto_manual,
-    ver services/comisiones.py). Sin vendedor asignado no hay a quién
-    atribuir: no se crea comisión. Sólo tiene efecto si el pedido ya está
-    pagado; se llama al registrar el pago y también cuando se edita el
-    override manual de un pedido ya pagado. Idempotente por el índice único
-    en pedido_id; una comisión ya liquidada no se toca acá."""
+    atribuida a la cartera del comercio, con la tasa nuevo/recompra propia
+    del vendedor si la tiene cargada, si no la general de ConfiguracionComercio
+    — pisada por el override manual del pedido si lo hay
+    (comision_porcentaje_manual / comision_monto_manual, ver
+    services/comisiones.py). Sin vendedor asignado no hay a quién atribuir:
+    no se crea comisión. Sólo tiene efecto si el pedido ya está pagado; se
+    llama al registrar el pago y también cuando se edita el override manual
+    de un pedido ya pagado. Idempotente por el índice único en pedido_id;
+    una comisión ya liquidada no se toca acá."""
     if pedido.estado_pago != "pagado":
         return None
 
@@ -129,10 +130,17 @@ def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision
         is not None
     )
     cfg = db.query(ConfiguracionComercio).first()
-    porcentaje_default = (
-        cfg.comision_mayorista_recompra_porcentaje if hubo_pedido_pagado_antes
-        else cfg.comision_mayorista_nuevo_porcentaje
-    ) if cfg else Decimal("0")
+    vendedor = comercio.vendedor
+    if hubo_pedido_pagado_antes:
+        porcentaje_default = comisiones.porcentaje_vigente(
+            vendedor.comision_mayorista_recompra_porcentaje if vendedor else None,
+            cfg.comision_mayorista_recompra_porcentaje if cfg else None,
+        )
+    else:
+        porcentaje_default = comisiones.porcentaje_vigente(
+            vendedor.comision_mayorista_nuevo_porcentaje if vendedor else None,
+            cfg.comision_mayorista_nuevo_porcentaje if cfg else None,
+        )
 
     base = Decimal(str(pedido.total))
     tasa, monto = comisiones.resolver_tasa_monto(

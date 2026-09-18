@@ -107,20 +107,35 @@ export default function MiDiaPage() {
               {!dia?.entregas_pendientes.length ? (
                 <p className="text-sm text-zinc-400">No tenés entregas pendientes.</p>
               ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {dia.entregas_pendientes.map(e => (
-                    <div key={`${e.canal}-${e.id}`} className="border border-zinc-100 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-zinc-800 text-sm truncate">{e.cliente_nombre ?? `#${e.id}`}</p>
-                        <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
-                          e.canal === 'mayorista' ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700'
-                        }`}>
-                          {e.canal === 'mayorista' ? 'Mayorista' : 'Minorista'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-500">{e.estado} · ${e.total.toLocaleString('es-AR')}</p>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Canal</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {dia.entregas_pendientes.map(e => (
+                        <tr key={`${e.canal}-${e.id}`}>
+                          <td className="py-2 pr-2 text-zinc-400">#{e.id}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{e.cliente_nombre ?? '—'}</td>
+                          <td className="py-2 pr-2">
+                            <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                              e.canal === 'mayorista' ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700'
+                            }`}>
+                              {e.canal === 'mayorista' ? 'Mayorista' : 'Minorista'}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-2 text-zinc-500">{e.estado}</td>
+                          <td className="py-2 pl-2 text-right text-zinc-700">${e.total.toLocaleString('es-AR')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </SectionCard>
@@ -129,18 +144,31 @@ export default function MiDiaPage() {
               {!dia?.reactivar.length ? (
                 <p className="text-sm text-zinc-400">Ningún cliente necesita reactivación hoy.</p>
               ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {dia.reactivar.map(c => (
-                    <div key={c.id} className="border border-zinc-100 rounded-xl p-3 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium text-zinc-800 text-sm truncate">{c.nombre_local}</p>
-                        <p className="text-xs text-zinc-500 truncate">{c.ubicacion_local}</p>
-                      </div>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${COLOR_SEMAFORO[c.semaforo.color]}`}>
-                        {c.semaforo.dias_desde_ultimo_pedido !== null ? `${c.semaforo.dias_desde_ultimo_pedido}d` : 'Nunca'}
-                      </span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Comercio</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Ubicación</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Últ. pedido</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {dia.reactivar.map(c => (
+                        <tr key={c.id}>
+                          <td className="py-2 pr-2 text-zinc-400">#{c.id}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{c.nombre_local}</td>
+                          <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px]">{c.ubicacion_local}</td>
+                          <td className="py-2 pl-2 text-right">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COLOR_SEMAFORO[c.semaforo.color]}`}>
+                              {c.semaforo.dias_desde_ultimo_pedido !== null ? `${c.semaforo.dias_desde_ultimo_pedido}d` : 'Nunca'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </SectionCard>
@@ -149,28 +177,39 @@ export default function MiDiaPage() {
               {!dia?.prospectos.length ? (
                 <p className="text-sm text-zinc-400">No tenés prospectos cargados todavía.</p>
               ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {dia.prospectos.map(p => (
-                    <div key={p.id} className="border border-zinc-100 rounded-xl p-3 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium text-zinc-800 text-sm truncate">{p.comercio_nombre}</p>
-                        <p className="text-xs text-zinc-400">
-                          {p.fecha_proximo_contacto ? `Contacto: ${p.fecha_proximo_contacto}` : 'Sin fecha'}
-                        </p>
-                      </div>
-                      {p.whatsapp && (
-                        <a
-                          href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-green-600 shrink-0"
-                          aria-label="WhatsApp"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Comercio</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Próximo contacto</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">WhatsApp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {dia.prospectos.map(p => (
+                        <tr key={p.id}>
+                          <td className="py-2 pr-2 text-zinc-400">#{p.id}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{p.comercio_nombre}</td>
+                          <td className="py-2 pr-2 text-zinc-500">{p.fecha_proximo_contacto ?? 'Sin fecha'}</td>
+                          <td className="py-2 pl-2 text-right">
+                            {p.whatsapp && (
+                              <a
+                                href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 inline-flex"
+                                aria-label="WhatsApp"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
               <Link href="/vendedores/prospectos" className="inline-block mt-3 text-xs text-primary-600 hover:underline">

@@ -128,33 +128,29 @@ function StatTile({ label, valor, color }: { label: string; valor: number; color
   )
 }
 
-function ItemLista({ item, onClick }: { item: VentaItem; onClick: () => void }) {
+function FilaVenta({ item, onClick }: { item: VentaItem; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-stretch gap-2 text-left border border-zinc-200 rounded-lg p-2.5 hover:border-zinc-300 hover:bg-zinc-50 transition-colors"
-    >
-      <span className={`w-1 rounded-full shrink-0 ${BARRA_POR_FAMILIA[familiaDe(item)]}`} />
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="font-medium text-zinc-800 text-sm truncate">{item.cliente_nombre ?? `#${item.id}`}</p>
-        <p className="text-xs text-zinc-500">${item.total.toLocaleString('es-AR')} · {fechaCorta(item.created_at)}</p>
-        <div className="flex flex-wrap gap-1">
-          {item.canal === 'mayorista' ? (
-            <>
-              <Badge label={LABEL_ESTADO_PEDIDO[item.estado ?? ''] ?? item.estado ?? ''} color={COLOR_ESTADO_PEDIDO[item.estado ?? ''] ?? 'bg-zinc-100 text-zinc-600'} />
-              {!item.cancelado && (
-                <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
-              )}
-            </>
-          ) : (
-            <>
-              <Badge label={LABEL_ENTREGA[item.entrega_estado]} color={COLOR_POR_ESTADO_GENERICO[item.entrega_estado]} />
-              <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
-            </>
-          )}
-        </div>
-      </div>
-    </button>
+    <tr onClick={onClick} className="cursor-pointer hover:bg-zinc-50 transition-colors">
+      <td className="py-2 pl-2 pr-2">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full ${BARRA_POR_FAMILIA[familiaDe(item)]}`} />
+      </td>
+      <td className="py-2 pr-2 text-zinc-400">#{item.id}</td>
+      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[180px]">{item.cliente_nombre ?? '—'}</td>
+      <td className="py-2 pr-2 text-zinc-600 whitespace-nowrap">${item.total.toLocaleString('es-AR')}</td>
+      <td className="py-2 pr-2 text-zinc-500 whitespace-nowrap">{fechaCorta(item.created_at)}</td>
+      <td className="py-2 pr-2">
+        {item.canal === 'mayorista' ? (
+          <Badge label={LABEL_ESTADO_PEDIDO[item.estado ?? ''] ?? item.estado ?? ''} color={COLOR_ESTADO_PEDIDO[item.estado ?? ''] ?? 'bg-zinc-100 text-zinc-600'} />
+        ) : (
+          <Badge label={LABEL_ENTREGA[item.entrega_estado]} color={COLOR_POR_ESTADO_GENERICO[item.entrega_estado]} />
+        )}
+      </td>
+      <td className="py-2 pr-2">
+        {(item.canal === 'minorista' || !item.cancelado) && (
+          <Badge label={LABEL_PAGO[item.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[item.pago_estado]} />
+        )}
+      </td>
+    </tr>
   )
 }
 
@@ -175,14 +171,29 @@ function SeccionCanal({
         <h2 className="text-sm font-semibold text-zinc-700 flex-1">{titulo}</h2>
         <span className="text-xs font-medium text-zinc-400 bg-zinc-100 rounded-full px-2 py-0.5">{items.length}</span>
       </div>
-      <div className="p-4 bg-zinc-50">
+      <div className="p-4">
         {items.length === 0 ? (
           <p className="text-sm text-zinc-400">No tenés ventas en este canal todavía.</p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map(item => (
-              <ItemLista key={item.id} item={item} onClick={() => onClickItem(item)} />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  <th className="pl-2" />
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Fecha</th>
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
+                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pago</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {items.map(item => (
+                  <FilaVenta key={item.id} item={item} onClick={() => onClickItem(item)} />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -268,7 +279,7 @@ export default function MisVentasPage() {
       <Modal
         isOpen={seleccion !== null}
         onClose={() => setSeleccion(null)}
-        title={seleccion?.cliente_nombre ?? (seleccion ? `#${seleccion.id}` : '')}
+        title={seleccion ? `${seleccion.cliente_nombre ?? 'Venta'} · #${seleccion.id}` : ''}
         size="sm"
       >
         <ModalContent>
