@@ -124,6 +124,58 @@ async def get_historial_venta(
         raise HTTPException(e.status_code, e.message)
 
 
+@router.get("/mis-ventas/{canal}/{referencia_id}/detalle")
+async def get_detalle_venta(
+    canal: str,
+    referencia_id: int,
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vendedor_dashboard.get_detalle_venta(db, vendedor_id, canal, referencia_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/mis-ventas/{canal}/{referencia_id}/items/{item_id}/entregar")
+async def marcar_item_entregado(
+    canal: str,
+    referencia_id: int,
+    item_id: int,
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vendedor_dashboard.marcar_item_entregado(db, vendedor_id, canal, referencia_id, item_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/mis-ventas/minorista/{referencia_id}/items/{item_id}/pagar")
+async def marcar_item_pagado(
+    referencia_id: int,
+    item_id: int,
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vendedor_dashboard.marcar_item_pagado(db, vendedor_id, referencia_id, item_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/mis-ventas/mayorista/{referencia_id}/pagar")
+async def marcar_pedido_pagado(
+    referencia_id: int,
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vendedor_dashboard.marcar_pedido_pagado(db, vendedor_id, referencia_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
 @router.get("/catalogo-demo")
 async def get_catalogo_demo(
     vendedor_id: int = Depends(get_vendedor_id),
