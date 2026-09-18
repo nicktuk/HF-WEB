@@ -289,9 +289,10 @@ export default function ConfigComercioPage() {
         </div>
 
         <div className="border-t border-gray-100 pt-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-1">Comisión de vendedores</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">Comisión de vendedores (default general)</h2>
           <p className="text-xs text-gray-500 mb-3">
-            % sobre el monto pagado que se atribuye al vendedor de la cartera. Se aplica desde el momento
+            % sobre el monto pagado que se atribuye al vendedor de la cartera. Se usa para los vendedores que
+            no tienen su propio % cargado (en /admin/vendedores, editando cada uno). Se aplica desde el momento
             en que se guarda — no afecta comisiones ya generadas (esas se editan una por una en /admin/comisiones).
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

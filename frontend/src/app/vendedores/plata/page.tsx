@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { VendedorHeader } from '../_components/VendedorHeader'
 
@@ -83,77 +83,110 @@ export default function MiPlataPage() {
               </div>
             </div>
 
-            {plata.grupos.length === 0 ? (
-              <p className="text-sm text-zinc-400">Todavía no tenés comisiones mayoristas registradas.</p>
-            ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 divide-y divide-zinc-100">
-                {plata.grupos.map(g => {
-                  const key = g.comercio_id ?? -1
-                  const abiertoAca = abierto === key
-                  return (
-                    <div key={key}>
-                      <button
-                        onClick={() => toggle(key)}
-                        className="w-full p-4 flex items-center justify-between gap-3 text-left hover:bg-zinc-50 transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium text-zinc-800 truncate">{g.comercio_nombre}</p>
-                          <p className="text-xs text-zinc-500">{g.comisiones.length} pedido(s) pagado(s)</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-right">
-                            <p className="font-semibold text-zinc-800">
-                              ${(g.total_pendiente + g.total_liquidado).toLocaleString('es-AR')}
-                            </p>
-                            {g.total_pendiente > 0 && (
-                              <p className="text-xs text-amber-600">${g.total_pendiente.toLocaleString('es-AR')} pendiente</p>
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones mayoristas por comercio</h2>
+              {plata.grupos.length === 0 ? (
+                <p className="text-sm text-zinc-400">Todavía no tenés comisiones mayoristas registradas.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="pl-1" />
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Comercio</th>
+                        <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pedidos</th>
+                        <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pendiente</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {plata.grupos.map(g => {
+                        const key = g.comercio_id ?? -1
+                        const abiertoAca = abierto === key
+                        return (
+                          <Fragment key={key}>
+                            <tr onClick={() => toggle(key)} className="cursor-pointer hover:bg-zinc-50 transition-colors">
+                              <td className="py-2 pl-1 text-zinc-400">
+                                {abiertoAca ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                              </td>
+                              <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{g.comercio_nombre}</td>
+                              <td className="py-2 pr-2 text-right text-zinc-500">{g.comisiones.length}</td>
+                              <td className="py-2 pr-2 text-right font-semibold text-zinc-800">
+                                ${(g.total_pendiente + g.total_liquidado).toLocaleString('es-AR')}
+                              </td>
+                              <td className="py-2 pl-2 text-right text-amber-600">
+                                {g.total_pendiente > 0 ? `$${g.total_pendiente.toLocaleString('es-AR')}` : '—'}
+                              </td>
+                            </tr>
+                            {abiertoAca && (
+                              <tr>
+                                <td colSpan={5} className="pb-3">
+                                  <table className="w-full text-xs bg-zinc-50 rounded-lg">
+                                    <thead>
+                                      <tr className="text-zinc-400">
+                                        <th className="text-left py-1.5 pl-3">Pedido</th>
+                                        <th className="text-left py-1.5">Tasa</th>
+                                        <th className="text-right py-1.5">Base</th>
+                                        <th className="text-right py-1.5">Monto</th>
+                                        <th className="text-right py-1.5 pr-3">Estado</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {g.comisiones.map(c => (
+                                        <tr key={c.id}>
+                                          <td className="py-1.5 pl-3 text-zinc-600">#{c.pedido_id}</td>
+                                          <td className="py-1.5 text-zinc-600">{(c.tasa * 100).toFixed(0)}%</td>
+                                          <td className="py-1.5 text-right text-zinc-600">${c.base.toLocaleString('es-AR')}</td>
+                                          <td className="py-1.5 text-right font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</td>
+                                          <td className={`py-1.5 pr-3 text-right font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </td>
+                              </tr>
                             )}
-                          </div>
-                          {abiertoAca ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-                        </div>
-                      </button>
-                      {abiertoAca && (
-                        <div className="px-4 pb-4 space-y-1.5">
-                          {g.comisiones.map(c => (
-                            <div key={c.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
-                              <span className="text-zinc-600">
-                                Pedido #{c.pedido_id} · {(c.tasa * 100).toFixed(0)}% sobre ${c.base.toLocaleString('es-AR')}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</span>
-                                <span className={`text-xs font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                  {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                          </Fragment>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
               <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones minoristas</h2>
               {plata.comisiones_minoristas.length === 0 ? (
                 <p className="text-sm text-zinc-400">Todavía no tenés comisiones minoristas generadas.</p>
               ) : (
-                <div className="space-y-1.5">
-                  {plata.comisiones_minoristas.map(c => (
-                    <div key={c.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
-                      <span className="text-zinc-600 truncate">
-                        {c.cliente_nombre ?? `Venta #${c.sale_id}`} · {(c.tasa * 100).toFixed(0)}%
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</span>
-                        <span className={`text-xs font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
+                        <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Tasa</th>
+                        <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Monto</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {plata.comisiones_minoristas.map(c => (
+                        <tr key={c.id}>
+                          <td className="py-2 pr-2 text-zinc-400">#{c.sale_id}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{c.cliente_nombre ?? '—'}</td>
+                          <td className="py-2 pr-2 text-right text-zinc-500">{(c.tasa * 100).toFixed(0)}%</td>
+                          <td className="py-2 pr-2 text-right font-medium text-zinc-800">${c.monto.toLocaleString('es-AR')}</td>
+                          <td className={`py-2 pl-2 text-right font-medium ${c.estado === 'liquidada' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {c.estado === 'liquidada' ? 'Liquidada' : 'Pendiente'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </section>
@@ -164,13 +197,25 @@ export default function MiPlataPage() {
                 <p className="text-xs text-zinc-500 mb-3">
                   Ya están pagadas — HEFA todavía tiene que generar la comisión de cada una.
                 </p>
-                <div className="space-y-1.5">
-                  {plata.ventas_sin_comision.map(v => (
-                    <div key={v.id} className="flex items-center justify-between text-sm bg-zinc-50 rounded-lg px-3 py-2">
-                      <span className="text-zinc-600 truncate">{v.cliente_nombre ?? `Venta #${v.id}`}</span>
-                      <span className="font-medium text-zinc-800">${v.total.toLocaleString('es-AR')}</span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {plata.ventas_sin_comision.map(v => (
+                        <tr key={v.id}>
+                          <td className="py-2 pr-2 text-zinc-400">#{v.id}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{v.cliente_nombre ?? '—'}</td>
+                          <td className="py-2 pl-2 text-right text-zinc-700">${v.total.toLocaleString('es-AR')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             )}

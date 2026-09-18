@@ -4,13 +4,16 @@ pedido_id, minorista vía sale_id — ver Comision en models/comercio.py).
 El cálculo automático corre en dos puntos: comercio_pedidos.sincronizar_comision_pedido
 (se dispara al pagar un pedido mayorista, y al editar su override manual) y
 sincronizar_comision_minorista de acá (se dispara cada vez que se guarda una
-venta minorista pagada, desde SalesService). Ambos resuelven tasa/monto con
-resolver_tasa_monto: si la venta/pedido tiene un override manual cargado
-(comision_porcentaje_manual o comision_monto_manual), ese gana sobre la tasa
-configurada en el admin (ConfiguracionComercio); si no, se usa la tasa
-configurada. Mientras la comisión siga "pendiente" se recalcula en cada
-guardado (por si cambió el total o el override); una vez "liquidada" queda
-fija y sólo se toca a mano vía editar_comision/PATCH /admin/comisiones/{id}.
+venta minorista pagada, desde SalesService). Ambos resuelven la tasa en dos
+pasos: primero porcentaje_vigente elige la tasa "base" — la propia del
+vendedor (CatalogSeller.comision_*_porcentaje) si la tiene cargada, si no la
+general configurada en el admin (ConfiguracionComercio) — y después
+resolver_tasa_monto le aplica el override manual puntual de la venta/pedido
+(comision_porcentaje_manual o comision_monto_manual) si lo hay, que gana
+sobre cualquiera de las dos. Mientras la comisión siga "pendiente" se
+recalcula en cada guardado (por si cambió el total, la tasa del vendedor o
+el override); una vez "liquidada" queda fija y sólo se toca a mano vía
+editar_comision/PATCH /admin/comisiones/{id}.
 """
 from decimal import Decimal
 
@@ -22,6 +25,15 @@ from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale
 
 ESTADOS_COMISION = {"pendiente", "liquidada"}
+
+
+def porcentaje_vigente(vendedor_porcentaje: Decimal | None, config_porcentaje: Decimal | None) -> Decimal:
+    """Tasa base antes de cualquier override manual puntual: la propia del
+    vendedor si la tiene cargada (CatalogSeller.comision_*_porcentaje),
+    si no la general configurada en el admin (ConfiguracionComercio)."""
+    if vendedor_porcentaje is not None:
+        return Decimal(str(vendedor_porcentaje))
+    return Decimal(str(config_porcentaje)) if config_porcentaje is not None else Decimal("0")
 
 
 def resolver_tasa_monto(
@@ -125,7 +137,10 @@ def sincronizar_comision_minorista(db: Session, sale: Sale) -> Comision | None:
         return None
 
     cfg = db.query(ConfiguracionComercio).first()
-    porcentaje_default = cfg.comision_minorista_porcentaje if cfg else Decimal("0")
+    porcentaje_default = porcentaje_vigente(
+        sale.seller.comision_minorista_porcentaje if sale.seller else None,
+        cfg.comision_minorista_porcentaje if cfg else None,
+    )
     base = Decimal(str(sale.total_amount))
     tasa, monto = resolver_tasa_monto(
         base, porcentaje_default, sale.comision_porcentaje_manual, sale.comision_monto_manual

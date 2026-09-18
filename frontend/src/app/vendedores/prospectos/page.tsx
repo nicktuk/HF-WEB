@@ -200,55 +200,70 @@ export default function ProspectosPage() {
         ) : prospectos.length === 0 ? (
           <p className="text-sm text-zinc-400">No cargaste prospectos todavía.</p>
         ) : (
-          <div className="space-y-2">
-            {prospectos.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-zinc-800 truncate">{p.comercio_nombre}</p>
-                    <p className="text-xs text-zinc-500">{p.direccion}</p>
-                    {p.fecha_proximo_contacto && (
-                      <p className="text-xs text-zinc-400">Próximo contacto: {p.fecha_proximo_contacto}</p>
-                    )}
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${ESTADOS[p.estado].color}`}>
-                    {ESTADOS[p.estado].label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-zinc-100">
-                  {p.whatsapp && (
-                    <a
-                      href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-green-600 hover:underline"
-                    >
-                      WhatsApp
-                    </a>
-                  )}
-                  {p.estado !== 'convertido' && (
-                    <>
-                      {p.estado !== 'lo_pienso' && (
-                        <button onClick={() => cambiarEstado(p, 'lo_pienso')} className="text-xs text-amber-600 hover:underline">
-                          Lo piensa
-                        </button>
-                      )}
-                      {p.estado !== 'no_va' && (
-                        <button onClick={() => cambiarEstado(p, 'no_va')} className="text-xs text-zinc-500 hover:underline">
-                          No va
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setConvirtiendo(p)}
-                        className="text-xs text-emerald-600 hover:underline font-medium ml-auto"
-                      >
-                        Convertir a cliente
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100">
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Comercio</th>
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Dirección</th>
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Próximo contacto</th>
+                    <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
+                    <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {prospectos.map(p => (
+                    <tr key={p.id}>
+                      <td className="py-2 pr-2 text-zinc-400">#{p.id}</td>
+                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[140px]">{p.comercio_nombre}</td>
+                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[140px]">{p.direccion ?? '—'}</td>
+                      <td className="py-2 pr-2 text-zinc-500 whitespace-nowrap">{p.fecha_proximo_contacto ?? '—'}</td>
+                      <td className="py-2 pr-2">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ESTADOS[p.estado].color}`}>
+                          {ESTADOS[p.estado].label}
+                        </span>
+                      </td>
+                      <td className="py-2 pl-2">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                          {p.whatsapp && (
+                            <a
+                              href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-green-600 hover:underline"
+                            >
+                              WhatsApp
+                            </a>
+                          )}
+                          {p.estado !== 'convertido' && (
+                            <>
+                              {p.estado !== 'lo_pienso' && (
+                                <button onClick={() => cambiarEstado(p, 'lo_pienso')} className="text-xs text-amber-600 hover:underline">
+                                  Lo piensa
+                                </button>
+                              )}
+                              {p.estado !== 'no_va' && (
+                                <button onClick={() => cambiarEstado(p, 'no_va')} className="text-xs text-zinc-500 hover:underline">
+                                  No va
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setConvirtiendo(p)}
+                                className="text-xs text-emerald-600 hover:underline font-medium"
+                              >
+                                Convertir
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

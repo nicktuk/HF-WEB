@@ -6,7 +6,7 @@ todo lo que usa el canal comercios (login al portal /vendedores, cartera,
 prospectos, comisiones) sobre la misma fila — no hay una segunda tabla ni
 un link manual entre "vendedor" y "vendedor minorista", son la misma persona.
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, Numeric, String, Text, Boolean, DateTime
 from sqlalchemy.orm import Session, relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
@@ -32,6 +32,13 @@ class CatalogSeller(Base):
     reset_token_hash = Column(Text, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
     debe_cambiar_password = Column(Boolean, nullable=False, default=False)
+
+    # Tasas de comisión propias del vendedor — pisan el % general de
+    # ConfiguracionComercio cuando están cargadas; en null, se usa el
+    # general (ver services/comisiones.py y services/comercio_pedidos.py).
+    comision_mayorista_nuevo_porcentaje = Column(Numeric(5, 2), nullable=True)
+    comision_mayorista_recompra_porcentaje = Column(Numeric(5, 2), nullable=True)
+    comision_minorista_porcentaje = Column(Numeric(5, 2), nullable=True)
 
     comercios = relationship("Comercio", back_populates="vendedor")
 
