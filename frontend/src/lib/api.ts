@@ -886,6 +886,9 @@ export const adminApi = {
       shipping_province?: string;
       shipping_postal_code?: string;
       shipping_reference?: string;
+      comision_porcentaje?: number;
+      comision_monto?: number;
+      comision_automatica?: boolean;
     }
   ): Promise<Sale> {
     return fetchAPI(`/admin/sales/${saleId}`, {

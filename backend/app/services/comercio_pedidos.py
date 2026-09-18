@@ -21,6 +21,7 @@ from app.models.comercio import (
     VentaReportada,
 )
 from app.models.stock import StockPurchase
+from app.services import comisiones
 
 VENTANA_RESERVA_HORAS = 48
 RECHAZOS_PARA_ANTICIPADO = 2
@@ -89,25 +90,33 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
     pedido.estado_pago = "pagado"
     pedido.metodo_pago = metodo_pago
 
-    _calcular_comision(db, pedido)
+    sincronizar_comision_pedido(db, pedido)
 
     db.commit()
     db.refresh(pedido)
     return pedido
 
 
-def _calcular_comision(db: Session, pedido: PedidoComercio) -> Comision | None:
-    """Crea la comisión del pedido, atribuida a la cartera del comercio, con
-    la tasa vigente en ConfiguracionComercio (editable desde el admin).
-    Sin vendedor asignado no hay a quién atribuir: no se crea comisión.
-    Idempotente por el índice único en pedido_id."""
-    existente = db.query(Comision).filter(Comision.pedido_id == pedido.id).first()
-    if existente:
-        return existente
+def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision | None:
+    """Crea (o recalcula, si sigue pendiente) la comisión del pedido,
+    atribuida a la cartera del comercio, con la tasa vigente en
+    ConfiguracionComercio (nuevo/recompra) — pisada por el override manual
+    del pedido si lo hay (comision_porcentaje_manual / comision_monto_manual,
+    ver services/comisiones.py). Sin vendedor asignado no hay a quién
+    atribuir: no se crea comisión. Sólo tiene efecto si el pedido ya está
+    pagado; se llama al registrar el pago y también cuando se edita el
+    override manual de un pedido ya pagado. Idempotente por el índice único
+    en pedido_id; una comisión ya liquidada no se toca acá."""
+    if pedido.estado_pago != "pagado":
+        return None
 
     comercio = pedido.comercio
     if comercio is None or comercio.vendedor_id is None:
         return None
+
+    existente = db.query(Comision).filter(Comision.pedido_id == pedido.id).first()
+    if existente is not None and existente.estado != "pendiente":
+        return existente
 
     hubo_pedido_pagado_antes = (
         db.query(PedidoComercio)
@@ -120,14 +129,21 @@ def _calcular_comision(db: Session, pedido: PedidoComercio) -> Comision | None:
         is not None
     )
     cfg = db.query(ConfiguracionComercio).first()
-    porcentaje = (
+    porcentaje_default = (
         cfg.comision_mayorista_recompra_porcentaje if hubo_pedido_pagado_antes
         else cfg.comision_mayorista_nuevo_porcentaje
     ) if cfg else Decimal("0")
-    tasa = Decimal(str(porcentaje)) / 100
 
     base = Decimal(str(pedido.total))
-    monto = (base * tasa).quantize(Decimal("0.01"))
+    tasa, monto = comisiones.resolver_tasa_monto(
+        base, porcentaje_default, pedido.comision_porcentaje_manual, pedido.comision_monto_manual
+    )
+
+    if existente is not None:
+        existente.base = base
+        existente.tasa = tasa
+        existente.monto = monto
+        return existente
 
     comision = Comision(
         vendedor_id=comercio.vendedor_id,

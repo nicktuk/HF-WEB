@@ -2250,6 +2250,9 @@ async def update_sale(
         shipping_province=data.shipping_province,
         shipping_postal_code=data.shipping_postal_code,
         shipping_reference=data.shipping_reference,
+        comision_porcentaje=data.comision_porcentaje,
+        comision_monto=data.comision_monto,
+        comision_automatica=data.comision_automatica,
     )
 
 

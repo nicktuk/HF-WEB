@@ -81,6 +81,8 @@ export default function SaleDetailPage() {
   const [editShippingReference, setEditShippingReference] = useState('');
   const [editInstallments, setEditInstallments] = useState('');
   const [editSellerId, setEditSellerId] = useState<number | ''>('');
+  const [editComisionModo, setEditComisionModo] = useState<'auto' | 'porcentaje' | 'monto'>('auto');
+  const [editComisionValor, setEditComisionValor] = useState('');
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
 
@@ -124,6 +126,16 @@ export default function SaleDetailPage() {
     setEditShippingReference(sale.shipping_reference || '');
     setEditInstallments(sale.installments != null ? String(sale.installments) : '');
     setEditSellerId(sale.seller_id);
+    if (sale.comision_monto_manual != null) {
+      setEditComisionModo('monto');
+      setEditComisionValor(String(sale.comision_monto_manual));
+    } else if (sale.comision_porcentaje_manual != null) {
+      setEditComisionModo('porcentaje');
+      setEditComisionValor(String(sale.comision_porcentaje_manual));
+    } else {
+      setEditComisionModo('auto');
+      setEditComisionValor('');
+    }
     setEditItems(
       sale.items.map((item) => ({
         line_id: `sale-item-${item.id}`,
@@ -272,6 +284,11 @@ export default function SaleDetailPage() {
         shipping_postal_code: editShippingPostalCode || undefined,
         shipping_reference: editShippingReference || undefined,
       } : {}),
+      ...(editComisionModo === 'auto'
+        ? { comision_automatica: true }
+        : editComisionModo === 'monto'
+        ? { comision_monto: editComisionValor ? Number(editComisionValor) : undefined }
+        : { comision_porcentaje: editComisionValor ? Number(editComisionValor) : undefined }),
     };
 
     try {
@@ -643,6 +660,41 @@ export default function SaleDetailPage() {
                   {sale.seller_nombre === 'Web' && (
                     <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full uppercase">Pedido web</span>
                   )}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Comisión vendedor</span>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden text-xs">
+                    {(['auto', 'porcentaje', 'monto'] as const).map((modo) => (
+                      <button
+                        key={modo}
+                        type="button"
+                        onClick={() => { setEditComisionModo(modo); if (modo === 'auto') setEditComisionValor(''); }}
+                        className={`px-2.5 py-1.5 ${editComisionModo === modo ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {modo === 'auto' ? 'Auto' : modo === 'porcentaje' ? '%' : '$'}
+                      </button>
+                    ))}
+                  </div>
+                  {editComisionModo !== 'auto' && (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editComisionValor}
+                      onChange={(e) => setEditComisionValor(e.target.value)}
+                      className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  )}
+                </div>
+              ) : (
+                <span className="font-medium">
+                  {sale.comision_monto != null
+                    ? `${formatPrice(sale.comision_monto)} (${((sale.comision_tasa ?? 0) * 100).toFixed(1)}%, ${sale.comision_estado})`
+                    : sale.paid ? 'Sin vendedor asignado' : 'Se genera al cobrar'}
                 </span>
               )}
             </div>

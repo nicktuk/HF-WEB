@@ -31,6 +31,11 @@ class Sale(Base):
     total_amount = Column(Numeric(12, 2), nullable=False, default=0)
     delivered_amount = Column(Numeric(12, 2), nullable=False, default=0)
     paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    # Override manual de la comisión del vendedor para esta venta puntual —
+    # a lo sumo uno de los dos, pisa la tasa configurada en el admin
+    # (ConfiguracionComercio.comision_minorista_porcentaje). Ver services/comisiones.py.
+    comision_porcentaje_manual = Column(Numeric(5, 2), nullable=True)
+    comision_monto_manual = Column(Numeric(12, 2), nullable=True)
 
     seller = relationship("CatalogSeller")
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
@@ -40,10 +45,23 @@ class Sale(Base):
         cascade="all, delete-orphan",
         order_by="SaleInstallment.number",
     )
+    comision = relationship("Comision", back_populates="sale", uselist=False)
 
     @property
     def seller_nombre(self) -> str:
         return self.seller.nombre
+
+    @property
+    def comision_tasa(self):
+        return self.comision.tasa if self.comision else None
+
+    @property
+    def comision_monto(self):
+        return self.comision.monto if self.comision else None
+
+    @property
+    def comision_estado(self) -> str | None:
+        return self.comision.estado if self.comision else None
 
 
 class SaleInstallment(Base):

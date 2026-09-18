@@ -156,6 +156,11 @@ class PedidoComercio(Base):
     # el autocancelador lo pasa a 'cancelado' y marca cancelado_por_vencimiento.
     fecha_reserva_hasta = Column(DateTime, nullable=True)
     cancelado_por_vencimiento = Column(Boolean, nullable=False, default=False)
+    # Override manual de la comisión del vendedor para este pedido puntual —
+    # a lo sumo uno de los dos, pisa la tasa configurada en el admin
+    # (nuevo/recompra). Ver services/comisiones.py.
+    comision_porcentaje_manual = Column(Numeric(5, 2), nullable=True)
+    comision_monto_manual = Column(Numeric(12, 2), nullable=True)
 
     comercio = relationship("Comercio", back_populates="pedidos")
     items = relationship("PedidoComercioItem", back_populates="pedido", cascade="all, delete-orphan")
@@ -203,7 +208,7 @@ class Comision(Base):
 
     vendedor = relationship("CatalogSeller")
     pedido = relationship("PedidoComercio", back_populates="comision")
-    sale = relationship("Sale")
+    sale = relationship("Sale", back_populates="comision")
 
 
 class VentaReportada(Base):

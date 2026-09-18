@@ -480,6 +480,8 @@ export interface SaleCreateForm {
   installment_amounts?: number[];
   seller_id: number;
   items: SaleItemCreate[];
+  comision_porcentaje?: number;
+  comision_monto?: number;
 }
 
 export interface SaleItem {
@@ -530,6 +532,11 @@ export interface Sale {
   items: SaleItem[];
   installment_list: SaleInstallment[];
   created_at?: string;
+  comision_porcentaje_manual?: number | null;
+  comision_monto_manual?: number | null;
+  comision_tasa?: number | null;
+  comision_monto?: number | null;
+  comision_estado?: string | null;
 }
 
 export interface PaymentMethodConfig {

@@ -34,6 +34,8 @@ interface Pedido {
   metodo_pago: string | null
   foto_entrega_url: string | null
   comision: Comision | null
+  comision_porcentaje_manual: number | null
+  comision_monto_manual: number | null
   total: number
   notas: string | null
   created_at: string | null
@@ -126,6 +128,17 @@ export default function PedidosComercioAdminPage() {
     await apiFetch(`/admin/comercios/pedidos/${id}/entregar`, apiKey, {
       method: 'POST',
       body: JSON.stringify({ foto_entrega_url: fotoUrl, entregas }),
+    })
+    await fetchData()
+    await refreshDetalle(id)
+    setUpdatingId(null)
+  }
+
+  async function setComisionManual(id: number, body: { porcentaje?: number; monto?: number; automatica?: boolean }) {
+    setUpdatingId(id)
+    await apiFetch(`/admin/comercios/pedidos/${id}/comision-manual`, apiKey, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
     })
     await fetchData()
     await refreshDetalle(id)
@@ -253,7 +266,7 @@ export default function PedidosComercioAdminPage() {
                             )}
                           </div>
 
-                          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                          <div className="grid sm:grid-cols-3 gap-4 mt-4">
                             <PagoPanel
                               pedido={detalle}
                               disabled={isUpdating}
@@ -264,6 +277,11 @@ export default function PedidosComercioAdminPage() {
                               apiKey={apiKey}
                               disabled={isUpdating}
                               onEntregar={(fotoUrl, entregas) => entregarPedido(p.id, fotoUrl, entregas)}
+                            />
+                            <ComisionPanel
+                              pedido={detalle}
+                              disabled={isUpdating}
+                              onGuardar={body => setComisionManual(p.id, body)}
                             />
                           </div>
                         </td>
@@ -321,6 +339,95 @@ function PagoPanel({
           >
             Registrar pago
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ComisionPanel({
+  pedido,
+  disabled,
+  onGuardar,
+}: {
+  pedido: PedidoDetalle
+  disabled: boolean
+  onGuardar: (body: { porcentaje?: number; monto?: number; automatica?: boolean }) => void
+}) {
+  const modoInicial: 'auto' | 'porcentaje' | 'monto' =
+    pedido.comision_monto_manual != null ? 'monto' : pedido.comision_porcentaje_manual != null ? 'porcentaje' : 'auto'
+  const [editando, setEditando] = useState(false)
+  const [modo, setModo] = useState<'auto' | 'porcentaje' | 'monto'>(modoInicial)
+  const [valor, setValor] = useState(String(pedido.comision_monto_manual ?? pedido.comision_porcentaje_manual ?? ''))
+
+  function guardar() {
+    if (modo === 'auto') {
+      onGuardar({ automatica: true })
+    } else if (modo === 'monto') {
+      onGuardar({ monto: Number(valor) })
+    } else {
+      onGuardar({ porcentaje: Number(valor) })
+    }
+    setEditando(false)
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3">Comisión</h3>
+      {pedido.comision ? (
+        <p className="text-sm text-gray-600">
+          ${pedido.comision.monto.toLocaleString('es-AR')} ({(pedido.comision.tasa * 100).toFixed(1)}%, {pedido.comision.estado})
+        </p>
+      ) : (
+        <p className="text-sm text-gray-400">
+          {pedido.estado_pago === 'pagado' ? 'Sin vendedor asignado a la cartera.' : 'Se genera al registrar el pago.'}
+        </p>
+      )}
+
+      {!editando ? (
+        <button
+          onClick={() => setEditando(true)}
+          disabled={disabled}
+          className="mt-2 text-xs font-medium text-primary-600 hover:underline disabled:opacity-50"
+        >
+          {pedido.comision_monto_manual != null || pedido.comision_porcentaje_manual != null ? 'Editar override manual' : 'Cargar override manual'}
+        </button>
+      ) : (
+        <div className="mt-2 space-y-2">
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden text-xs">
+            {(['auto', 'porcentaje', 'monto'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setModo(m)}
+                className={`px-2.5 py-1 ${modo === m ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                {m === 'auto' ? 'Automática' : m === 'porcentaje' ? '%' : '$'}
+              </button>
+            ))}
+          </div>
+          {modo !== 'auto' && (
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={valor}
+              onChange={e => setValor(e.target.value)}
+              className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
+            />
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={guardar}
+              disabled={disabled || (modo !== 'auto' && !valor)}
+              className="text-xs font-medium bg-gray-900 text-white rounded px-3 py-1.5 hover:bg-gray-800 disabled:opacity-50"
+            >
+              Guardar
+            </button>
+            <button onClick={() => setEditando(false)} className="text-xs text-gray-500 hover:underline">
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
