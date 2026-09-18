@@ -734,3 +734,13 @@ async def generar_comision_minorista(
         return comisiones.generar_comision_minorista(db, sale_id)
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/ventas-minoristas/generar-comisiones-pendientes")
+async def generar_comisiones_pendientes(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Backfill masivo: genera de una la comisión de todas las ventas
+    minoristas pagadas que todavía no la tienen."""
+    return comisiones.generar_comisiones_pendientes(db)
