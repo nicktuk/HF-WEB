@@ -124,7 +124,7 @@ export default function ProspectosPage() {
         </div>
 
         {showForm && (
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+          <div className="bg-white rounded-2xl vendedor-card p-4">
             <form onSubmit={handleCrear} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-zinc-700 mb-1">Nombre del comercio *</label>
@@ -200,7 +200,7 @@ export default function ProspectosPage() {
         ) : prospectos.length === 0 ? (
           <p className="text-sm text-zinc-400">No cargaste prospectos todavía.</p>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+          <div className="bg-white rounded-2xl vendedor-card p-4">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

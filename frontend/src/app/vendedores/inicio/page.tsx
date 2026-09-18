@@ -58,7 +58,7 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 overflow-hidden">
+    <section className="bg-white rounded-2xl vendedor-card overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
         <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${iconBg}`}>
           <Icon className={`h-4 w-4 ${iconColor}`} />

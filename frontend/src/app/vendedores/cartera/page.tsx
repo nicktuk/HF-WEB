@@ -70,7 +70,7 @@ export default function MiCarteraPage() {
         )}
 
         {!!cartera?.clientes.length && (
-          <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+          <section className="bg-white rounded-2xl vendedor-card p-4">
             <h2 className="text-sm font-semibold text-zinc-700 mb-2">Clientes ({cartera.clientes.length})</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -116,7 +116,7 @@ export default function MiCarteraPage() {
         )}
 
         {!!cartera?.prospectos.length && (
-          <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+          <section className="bg-white rounded-2xl vendedor-card p-4">
             <h2 className="text-sm font-semibold text-zinc-700 mb-2">Prospectos ({cartera.prospectos.length})</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

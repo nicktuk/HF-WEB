@@ -140,7 +140,7 @@ function Badge({ label, color }: { label: string; color: string }) {
 
 function StatTile({ label, valor, color }: { label: string; valor: number; color: string }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+    <div className="bg-white rounded-2xl vendedor-card p-4">
       <p className="text-xs text-zinc-500">{label}</p>
       <p className={`text-xl font-bold ${color}`}>{valor}</p>
     </div>
@@ -182,7 +182,7 @@ function SeccionCanal({
   onClickItem: (item: VentaItem) => void
 }) {
   return (
-    <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 overflow-hidden">
+    <section className="bg-white rounded-2xl vendedor-card overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
         <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-zinc-100">
           <Icon className="h-4 w-4 text-zinc-600" />

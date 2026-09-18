@@ -53,7 +53,7 @@ export default function CatalogoDemoPage() {
         {!productos ? (
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+          <div className="bg-white rounded-2xl vendedor-card p-4">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

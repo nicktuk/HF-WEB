@@ -35,7 +35,7 @@ export default function NuevoClientePage() {
       <VendedorHeader />
       <div className="max-w-md mx-auto px-4 py-6">
         {otp ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-5 space-y-3">
+          <div className="bg-white rounded-2xl vendedor-card p-5 space-y-3">
             <h1 className="text-lg font-semibold text-zinc-800">Cliente cargado ✓</h1>
             <p className="text-sm text-zinc-500">
               Pasale esta contraseña temporal por WhatsApp — no se vuelve a mostrar. Queda pendiente hasta que HEFA lo apruebe.
@@ -70,7 +70,7 @@ export default function NuevoClientePage() {
                 Cargalo ahora, con los datos que te dicta el comerciante. Queda pendiente hasta que HEFA lo apruebe.
               </p>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-5">
+            <div className="bg-white rounded-2xl vendedor-card p-5">
               <ClienteForm submitLabel="Cargar alta" onSubmit={handleSubmit} onSuccess={setOtp} />
             </div>
           </>

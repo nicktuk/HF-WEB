@@ -35,7 +35,7 @@ export default function MiPerfilPage() {
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (
           <>
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4 space-y-3">
+            <div className="bg-white rounded-2xl vendedor-card p-4 space-y-3">
               <div>
                 <p className="text-xs text-zinc-500">Nombre</p>
                 <p className="text-sm font-medium text-zinc-800">{info.nombre}</p>

@@ -20,7 +20,7 @@ export function LinkPersonal({ link }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+    <div className="bg-white rounded-2xl vendedor-card p-4">
       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Tu link personal</p>
       <p className="text-sm text-zinc-500 mb-3">
         Compartilo por WhatsApp o imprimilo como QR. Todo el que entre por acá y pida el alta queda en tu cartera.

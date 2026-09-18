@@ -73,17 +73,17 @@ export default function MiPlataPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <div className="bg-white rounded-2xl vendedor-card p-4">
                 <p className="text-xs text-zinc-500">Pendiente</p>
                 <p className="text-xl font-bold text-amber-600">${plata.total_pendiente.toLocaleString('es-AR')}</p>
               </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <div className="bg-white rounded-2xl vendedor-card p-4">
                 <p className="text-xs text-zinc-500">Liquidado</p>
                 <p className="text-xl font-bold text-emerald-600">${plata.total_liquidado.toLocaleString('es-AR')}</p>
               </div>
             </div>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+            <section className="bg-white rounded-2xl vendedor-card p-4">
               <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones mayoristas por comercio</h2>
               {plata.grupos.length === 0 ? (
                 <p className="text-sm text-zinc-400">Todavía no tenés comisiones mayoristas registradas.</p>
@@ -157,7 +157,7 @@ export default function MiPlataPage() {
               )}
             </section>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+            <section className="bg-white rounded-2xl vendedor-card p-4">
               <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones minoristas</h2>
               {plata.comisiones_minoristas.length === 0 ? (
                 <p className="text-sm text-zinc-400">Todavía no tenés comisiones minoristas generadas.</p>
@@ -192,7 +192,7 @@ export default function MiPlataPage() {
             </section>
 
             {plata.ventas_sin_comision.length > 0 && (
-              <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <section className="bg-white rounded-2xl vendedor-card p-4">
                 <h2 className="text-sm font-semibold text-zinc-700 mb-1">Ventas esperando comisión</h2>
                 <p className="text-xs text-zinc-500 mb-3">
                   Ya están pagadas — HEFA todavía tiene que generar la comisión de cada una.
