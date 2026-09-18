@@ -33,6 +33,7 @@ import {
   Users,
   Store,
   MapPin,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -80,6 +81,7 @@ const configSubmenu = [
 const comerciosSubmenu = [
   { name: 'Cuentas', href: '/admin/comercios', icon: Users },
   { name: 'Pedidos', href: '/admin/comercios/pedidos', icon: ClipboardList },
+  { name: 'Prospectos', href: '/admin/prospectos', icon: UserPlus },
   { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
   { name: 'Comisiones', href: '/admin/comisiones', icon: DollarSign },
   { name: 'Configuración', href: '/admin/comercios/config', icon: Settings2 },

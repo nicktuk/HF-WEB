@@ -20,7 +20,7 @@ from app.models.comercio import (
 from app.models.catalog_seller import CatalogSeller
 from app.services import comercio_password
 from app.services.comercio_auth import hash_password
-from app.services import comercio_pedidos, comisiones
+from app.services import comercio_pedidos, comisiones, vendedor_dashboard
 from app.core.exceptions import AppException
 
 router = APIRouter()
@@ -296,6 +296,20 @@ async def asignar_credenciales_vendedor(
         raise HTTPException(409, "Ese usuario ya está en uso. Elegí otro.")
 
     return {"ok": True, "usuario": usuario, "otp": otp}
+
+
+# ─── Prospectos ──────────────────────────────────────────────────────────────
+
+@router.get("/prospectos")
+async def list_prospectos(
+    vendedor_id: Optional[int] = Query(None),
+    estado: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Cartera de prospección de todos los vendedores (comercios visitados
+    que todavía no son clientes), para verla sin depender de cada vendedor."""
+    return vendedor_dashboard.listar_prospectos_admin(db, vendedor_id=vendedor_id, estado=estado)
 
 
 # ─── Configuración ─────────────────────────────────────────────────────────────

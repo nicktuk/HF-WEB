@@ -417,6 +417,26 @@ def listar_prospectos(db: Session, vendedor_id: int) -> list[dict]:
     return [_prospecto_dict(p) for p in prospectos]
 
 
+def listar_prospectos_admin(
+    db: Session,
+    vendedor_id: int | None = None,
+    estado: str | None = None,
+) -> list[dict]:
+    """Vista admin: la cartera de prospección de todos los vendedores junta,
+    para ver qué están levantando en la calle sin tener que pedirle a cada
+    uno que comparta pantalla."""
+    q = db.query(Prospecto)
+    if vendedor_id is not None:
+        q = q.filter(Prospecto.vendedor_id == vendedor_id)
+    if estado is not None:
+        q = q.filter(Prospecto.estado == estado)
+    prospectos = q.order_by(Prospecto.id.desc()).all()
+    return [
+        {**_prospecto_dict(p), "vendedor_id": p.vendedor_id, "vendedor_nombre": p.vendedor.nombre if p.vendedor else None}
+        for p in prospectos
+    ]
+
+
 def crear_prospecto(
     db: Session,
     vendedor_id: int,
