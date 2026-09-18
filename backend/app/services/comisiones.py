@@ -1,10 +1,16 @@
-"""Gestión admin de comisiones de vendedor, cruzando ambos canales
-(mayorista vía pedido_id, minorista vía sale_id — ver Comision en
-models/comercio.py). El cálculo automático de la comisión mayorista vive en
-comercio_pedidos._calcular_comision (se dispara al pagar un pedido); acá
-vive lo que es explícitamente admin-driven: generar la comisión minorista
-(no hay un trigger automático wireado en el flujo de ventas todavía) y
-editar cualquier comisión ya creada, de cualquier canal, caso por caso.
+"""Gestión de comisiones de vendedor, cruzando ambos canales (mayorista vía
+pedido_id, minorista vía sale_id — ver Comision en models/comercio.py).
+
+El cálculo automático corre en dos puntos: comercio_pedidos.sincronizar_comision_pedido
+(se dispara al pagar un pedido mayorista, y al editar su override manual) y
+sincronizar_comision_minorista de acá (se dispara cada vez que se guarda una
+venta minorista pagada, desde SalesService). Ambos resuelven tasa/monto con
+resolver_tasa_monto: si la venta/pedido tiene un override manual cargado
+(comision_porcentaje_manual o comision_monto_manual), ese gana sobre la tasa
+configurada en el admin (ConfiguracionComercio); si no, se usa la tasa
+configurada. Mientras la comisión siga "pendiente" se recalcula en cada
+guardado (por si cambió el total o el override); una vez "liquidada" queda
+fija y sólo se toca a mano vía editar_comision/PATCH /admin/comisiones/{id}.
 """
 from decimal import Decimal
 
@@ -16,6 +22,28 @@ from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale
 
 ESTADOS_COMISION = {"pendiente", "liquidada"}
+
+
+def resolver_tasa_monto(
+    base: Decimal,
+    porcentaje_default: Decimal,
+    porcentaje_manual: Decimal | None,
+    monto_manual: Decimal | None,
+) -> tuple[Decimal, Decimal]:
+    """Resuelve (tasa, monto) de una comisión a partir de la base de cálculo
+    (total de la venta/pedido) y la tasa configurada en el admin, pisada por
+    un override manual si lo hay: `monto_manual` gana si está presente (la
+    tasa se deriva de vuelta para dejar el registro consistente); si no,
+    `porcentaje_manual` reemplaza a `porcentaje_default`."""
+    if monto_manual is not None:
+        monto = Decimal(str(monto_manual)).quantize(Decimal("0.01"))
+        tasa = (monto / base).quantize(Decimal("0.0001")) if base else Decimal("0")
+        return tasa, monto
+
+    porcentaje = Decimal(str(porcentaje_manual)) if porcentaje_manual is not None else Decimal(str(porcentaje_default))
+    tasa = porcentaje / 100
+    monto = (base * tasa).quantize(Decimal("0.01"))
+    return tasa, monto
 
 
 def _comision_dict(c: Comision) -> dict:
@@ -61,10 +89,11 @@ def listar_comisiones(
 
 
 def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
-    """Ventas minoristas pagadas que todavía no tienen una comisión generada
-    — para que el admin decida caso por caso. Cualquier vendedor de
-    catalog_sellers es atribuible (sea o no también mayorista): seller_id
-    en Sale ya identifica directamente a la fila de vendedor."""
+    """Ventas minoristas pagadas que todavía no tienen una comisión generada.
+    Desde que sincronizar_comision_minorista corre automáticamente al pagar
+    una venta, esta lista debería quedar vacía salvo para ventas que ya
+    estaban pagadas antes de que ese trigger existiera — es la vía de
+    backfill/generación manual para esos casos puntuales."""
     ventas = (
         db.query(Sale)
         .outerjoin(Comision, Comision.sale_id == Sale.id)
@@ -84,36 +113,54 @@ def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
     ]
 
 
-def generar_comision_minorista(db: Session, sale_id: int) -> dict:
-    """Genera (o devuelve, si ya existe) la comisión de una venta minorista
-    pagada, atribuida directamente a Sale.seller_id (misma tabla que
-    vendedores). Idempotente por el índice único en sale_id."""
-    existente = db.query(Comision).filter(Comision.sale_id == sale_id).first()
-    if existente:
-        return _comision_dict(existente)
+def sincronizar_comision_minorista(db: Session, sale: Sale) -> Comision | None:
+    """Crea (o recalcula, si sigue pendiente) la comisión de una venta
+    minorista pagada, atribuida directamente a Sale.seller_id. No hace
+    commit — se llama desde SalesService dentro de la misma transacción que
+    guarda la venta, tanto en la transición no-pagada -> pagada como en
+    cualquier guardado posterior de una venta ya pagada (por si cambió el
+    total o el override manual). Si la venta no está pagada, no hace nada.
+    Una comisión ya liquidada no se recalcula acá."""
+    if not sale.paid:
+        return None
 
+    cfg = db.query(ConfiguracionComercio).first()
+    porcentaje_default = cfg.comision_minorista_porcentaje if cfg else Decimal("0")
+    base = Decimal(str(sale.total_amount))
+    tasa, monto = resolver_tasa_monto(
+        base, porcentaje_default, sale.comision_porcentaje_manual, sale.comision_monto_manual
+    )
+
+    comision = db.query(Comision).filter(Comision.sale_id == sale.id).first()
+    if comision is None:
+        comision = Comision(
+            vendedor_id=sale.seller_id,
+            sale_id=sale.id,
+            base=base,
+            tasa=tasa,
+            monto=monto,
+            estado="pendiente",
+        )
+        db.add(comision)
+    elif comision.estado == "pendiente":
+        comision.base = base
+        comision.tasa = tasa
+        comision.monto = monto
+    return comision
+
+
+def generar_comision_minorista(db: Session, sale_id: int) -> dict:
+    """Generación manual de la comisión de una venta minorista pagada —
+    pensada como backfill para ventas que quedaron pagadas antes de que el
+    trigger automático (sincronizar_comision_minorista) existiera. Idempotente
+    por el índice único en sale_id."""
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
         raise NotFoundError("Sale", str(sale_id))
     if not sale.paid:
         raise ValidationError("La venta todavía no está pagada.")
 
-    cfg = db.query(ConfiguracionComercio).first()
-    porcentaje = cfg.comision_minorista_porcentaje if cfg else Decimal("0")
-    tasa = Decimal(str(porcentaje)) / 100
-
-    base = Decimal(str(sale.total_amount))
-    monto = (base * tasa).quantize(Decimal("0.01"))
-
-    comision = Comision(
-        vendedor_id=sale.seller_id,
-        sale_id=sale.id,
-        base=base,
-        tasa=tasa,
-        monto=monto,
-        estado="pendiente",
-    )
-    db.add(comision)
+    comision = sincronizar_comision_minorista(db, sale)
     db.commit()
     db.refresh(comision)
     return _comision_dict(comision)

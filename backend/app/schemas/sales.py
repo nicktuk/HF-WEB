@@ -2,7 +2,7 @@
 from typing import List, Literal, Optional
 from decimal import Decimal
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SaleItemCreate(BaseModel):
@@ -28,6 +28,16 @@ class SaleCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     items: List[SaleItemCreate]
+    # Override manual de la comisión: a lo sumo uno de los dos. Si no se manda
+    # ninguno, se usa la tasa configurada en el admin (comisión automática).
+    comision_porcentaje: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    comision_monto: Optional[Decimal] = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _check_comision_exclusiva(self):
+        if self.comision_porcentaje is not None and self.comision_monto is not None:
+            raise ValueError("La comisión se carga por % o por monto, no ambos")
+        return self
 
 
 class SaleUpdate(BaseModel):
@@ -51,6 +61,17 @@ class SaleUpdate(BaseModel):
     shipping_province: Optional[str] = None
     shipping_postal_code: Optional[str] = None
     shipping_reference: Optional[str] = None
+    # Override manual de la comisión: a lo sumo uno de los dos.
+    # comision_automatica=true vuelve a usar la tasa configurada en el admin.
+    comision_porcentaje: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    comision_monto: Optional[Decimal] = Field(default=None, ge=0)
+    comision_automatica: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def _check_comision_exclusiva(self):
+        if self.comision_porcentaje is not None and self.comision_monto is not None:
+            raise ValueError("La comisión se carga por % o por monto, no ambos")
+        return self
 
 
 class SaleInstallmentUpdate(BaseModel):
@@ -112,6 +133,13 @@ class SaleResponse(BaseModel):
     items: List[SaleItemResponse]
     installment_list: List[SaleInstallmentResponse] = []
     created_at: Optional[datetime] = None
+    # Override manual cargado en la venta (si lo hay) y la comisión ya
+    # generada para esta venta (si está pagada); ver services/comisiones.py.
+    comision_porcentaje_manual: Optional[Decimal] = None
+    comision_monto_manual: Optional[Decimal] = None
+    comision_tasa: Optional[Decimal] = None
+    comision_monto: Optional[Decimal] = None
+    comision_estado: Optional[str] = None
 
     class Config:
         from_attributes = True

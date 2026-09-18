@@ -48,7 +48,9 @@ export default function ComisionesAdminPage() {
   const [filtroCanal, setFiltroCanal] = useState<'' | 'mayorista' | 'minorista'>('')
   const [filtroEstado, setFiltroEstado] = useState<'' | 'pendiente' | 'liquidada'>('')
   const [editando, setEditando] = useState<number | null>(null)
+  const [editModo, setEditModo] = useState<'monto' | 'tasa'>('monto')
   const [montoInput, setMontoInput] = useState('')
+  const [tasaInput, setTasaInput] = useState('')
   const [generando, setGenerando] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -79,17 +81,35 @@ export default function ComisionesAdminPage() {
 
   function startEditMonto(c: ComisionRow) {
     setEditando(c.id)
+    setEditModo('monto')
     setMontoInput(String(c.monto))
   }
 
-  async function guardarMonto(c: ComisionRow) {
-    const monto = parseFloat(montoInput)
-    if (!isNaN(monto)) {
-      await apiFetch(`/admin/comisiones/${c.id}`, apiKey, {
-        method: 'PATCH',
-        body: JSON.stringify({ monto }),
-      })
-      await fetchData()
+  function startEditTasa(c: ComisionRow) {
+    setEditando(c.id)
+    setEditModo('tasa')
+    setTasaInput((c.tasa * 100).toFixed(2))
+  }
+
+  async function guardarEdicion(c: ComisionRow) {
+    if (editModo === 'monto') {
+      const monto = parseFloat(montoInput)
+      if (!isNaN(monto)) {
+        await apiFetch(`/admin/comisiones/${c.id}`, apiKey, {
+          method: 'PATCH',
+          body: JSON.stringify({ monto }),
+        })
+        await fetchData()
+      }
+    } else {
+      const porcentaje = parseFloat(tasaInput)
+      if (!isNaN(porcentaje)) {
+        await apiFetch(`/admin/comisiones/${c.id}`, apiKey, {
+          method: 'PATCH',
+          body: JSON.stringify({ tasa: porcentaje / 100 }),
+        })
+        await fetchData()
+      }
     }
     setEditando(null)
   }
@@ -198,17 +218,34 @@ export default function ComisionesAdminPage() {
                   <td className="px-4 py-3 text-gray-700">{c.vendedor_nombre ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{c.cliente_nombre ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-500">${c.base.toLocaleString('es-AR')}</td>
-                  <td className="px-4 py-3 text-gray-500">{(c.tasa * 100).toFixed(1)}%</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {editando === c.id && editModo === 'tasa' ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        autoFocus
+                        value={tasaInput}
+                        onChange={e => setTasaInput(e.target.value)}
+                        onBlur={() => guardarEdicion(c)}
+                        onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(c) }}
+                        className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                      />
+                    ) : (
+                      <button onClick={() => startEditTasa(c)} className="hover:underline">
+                        {(c.tasa * 100).toFixed(1)}%
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900">
-                    {editando === c.id ? (
+                    {editando === c.id && editModo === 'monto' ? (
                       <input
                         type="number"
                         step="0.01"
                         autoFocus
                         value={montoInput}
                         onChange={e => setMontoInput(e.target.value)}
-                        onBlur={() => guardarMonto(c)}
-                        onKeyDown={e => { if (e.key === 'Enter') guardarMonto(c) }}
+                        onBlur={() => guardarEdicion(c)}
+                        onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(c) }}
                         className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
                       />
                     ) : (

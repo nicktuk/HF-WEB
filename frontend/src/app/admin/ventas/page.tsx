@@ -67,6 +67,8 @@ export default function VentasPage() {
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('');
   const [sellerId, setSellerId] = useState<number | ''>('');
+  const [comisionModo, setComisionModo] = useState<'auto' | 'porcentaje' | 'monto'>('auto');
+  const [comisionValor, setComisionValor] = useState('');
   const [previewProduct, setPreviewProduct] = useState<ProductAdmin | null>(null);
   const [manualProductName, setManualProductName] = useState('');
   const [manualProductPrice, setManualProductPrice] = useState('');
@@ -344,6 +346,8 @@ export default function VentasPage() {
       installment_amounts: parsedAmounts,
       seller_id: sellerId as number,
       items,
+      comision_porcentaje: comisionModo === 'porcentaje' && comisionValor ? Number(comisionValor) : undefined,
+      comision_monto: comisionModo === 'monto' && comisionValor ? Number(comisionValor) : undefined,
     });
 
     setCartItems([]);
@@ -351,6 +355,8 @@ export default function VentasPage() {
     setNotes('');
     setInstallments('');
     setInstallmentAmounts([]);
+    setComisionModo('auto');
+    setComisionValor('');
     setShowCreateSaleModal(false);
   };
 
@@ -770,6 +776,42 @@ export default function VentasPage() {
                 </select>
               </div>
               <div />
+            </div>
+
+            <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Comisión del vendedor</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+                  {(['auto', 'porcentaje', 'monto'] as const).map((modo) => (
+                    <button
+                      key={modo}
+                      type="button"
+                      onClick={() => { setComisionModo(modo); if (modo === 'auto') setComisionValor(''); }}
+                      className={`px-3 py-1.5 ${comisionModo === modo ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {modo === 'auto' ? 'Automática' : modo === 'porcentaje' ? '%' : '$'}
+                    </button>
+                  ))}
+                </div>
+                {comisionModo !== 'auto' && (
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={comisionValor}
+                    onChange={(e) => setComisionValor(e.target.value)}
+                    placeholder={comisionModo === 'porcentaje' ? 'Ej: 10' : 'Ej: 5000'}
+                    className="w-32 rounded border px-2 py-1.5 text-sm"
+                  />
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                {comisionModo === 'auto'
+                  ? 'Se calcula con el % configurado en Comercios → Configuración.'
+                  : comisionModo === 'porcentaje'
+                    ? 'Reemplaza la tasa configurada para esta venta puntual.'
+                    : 'Monto fijo de comisión para esta venta puntual, sin importar el %.'}
+              </p>
             </div>
 
             <div className="border rounded-lg p-3 bg-gray-50 space-y-3">

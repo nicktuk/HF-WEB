@@ -448,6 +448,8 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
         "foto_entrega_url": p.foto_entrega_url,
         "fecha_reserva_hasta": p.fecha_reserva_hasta.isoformat() if p.fecha_reserva_hasta else None,
         "cancelado_por_vencimiento": bool(p.cancelado_por_vencimiento),
+        "comision_porcentaje_manual": float(p.comision_porcentaje_manual) if p.comision_porcentaje_manual is not None else None,
+        "comision_monto_manual": float(p.comision_monto_manual) if p.comision_monto_manual is not None else None,
         "comision": (
             {
                 "monto": float(p.comision.monto),
@@ -542,6 +544,44 @@ async def registrar_pago_pedido(
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
     return _pedido_dict(pedido, with_items=True)
+
+
+@router.patch("/comercios/pedidos/{pedido_id}/comision-manual")
+async def set_comision_manual_pedido(
+    pedido_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Carga (o quita) el override manual de comisión de un pedido: por %
+    (`porcentaje`), por monto fijo (`monto`) o `automatica: true` para volver
+    a la tasa configurada en el admin. A lo sumo uno de porcentaje/monto.
+    Si el pedido ya está pagado, recalcula la comisión al toque (mientras
+    siga pendiente)."""
+    p = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
+    if not p:
+        raise HTTPException(404, "Pedido no encontrado")
+
+    porcentaje = body.get("porcentaje")
+    monto = body.get("monto")
+    automatica = body.get("automatica")
+    if porcentaje is not None and monto is not None:
+        raise HTTPException(422, "La comisión se carga por % o por monto, no ambos")
+
+    if automatica:
+        p.comision_porcentaje_manual = None
+        p.comision_monto_manual = None
+    elif monto is not None:
+        p.comision_monto_manual = monto
+        p.comision_porcentaje_manual = None
+    elif porcentaje is not None:
+        p.comision_porcentaje_manual = porcentaje
+        p.comision_monto_manual = None
+
+    comercio_pedidos.sincronizar_comision_pedido(db, p)
+    db.commit()
+    db.refresh(p)
+    return _pedido_dict(p, with_items=True)
 
 
 @router.post("/comercios/pedidos/{pedido_id}/entregar")

@@ -14,6 +14,7 @@ from sqlalchemy import or_
 from app.core.exceptions import NotFoundError, ValidationError
 from app.services.app_settings import get_shipping_config, SHIPPING_ZONE_LABELS
 from app.services.codigo_amba import classify_shipping_zone
+from app.services import comisiones
 
 
 class SalesService:
@@ -292,6 +293,10 @@ class SalesService:
                 self.db.add(EstadoHistorial(canal="minorista", referencia_id=sale.id, estado="pagada"))
             if sale.delivered and not era_delivered:
                 self.db.add(EstadoHistorial(canal="minorista", referencia_id=sale.id, estado="entregada"))
+            # Comisión automática: se crea al quedar pagada, y se recalcula en
+            # cada guardado posterior mientras siga pendiente (por si cambió
+            # el total o el override manual de %/monto de la venta).
+            comisiones.sincronizar_comision_minorista(self.db, sale)
 
     def _apply_item_states(
         self,
@@ -372,6 +377,8 @@ class SalesService:
             total_amount=total_amount,
             delivered_amount=Decimal("0.00"),
             paid_amount=Decimal("0.00"),
+            comision_porcentaje_manual=getattr(data, 'comision_porcentaje', None),
+            comision_monto_manual=getattr(data, 'comision_monto', None),
         )
         self.db.add(sale)
         self.db.flush()
@@ -550,6 +557,7 @@ class SalesService:
         query = self.db.query(Sale).options(
             selectinload(Sale.items).selectinload(SaleItem.product),
             selectinload(Sale.installment_list),
+            selectinload(Sale.comision),
         )
 
         if origen:
@@ -622,10 +630,23 @@ class SalesService:
         shipping_province: str | None = None,
         shipping_postal_code: str | None = None,
         shipping_reference: str | None = None,
+        comision_porcentaje: Decimal | None = None,
+        comision_monto: Decimal | None = None,
+        comision_automatica: bool | None = None,
     ) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
+
+        if comision_automatica:
+            sale.comision_porcentaje_manual = None
+            sale.comision_monto_manual = None
+        elif comision_monto is not None:
+            sale.comision_monto_manual = comision_monto
+            sale.comision_porcentaje_manual = None
+        elif comision_porcentaje is not None:
+            sale.comision_porcentaje_manual = comision_porcentaje
+            sale.comision_monto_manual = None
 
         if customer_name is not None:
             sale.customer_name = customer_name
@@ -771,6 +792,7 @@ class SalesService:
             .options(
                 selectinload(Sale.items).selectinload(SaleItem.product),
                 selectinload(Sale.installment_list),
+                selectinload(Sale.comision),
             )
             .filter(Sale.id == sale_id)
             .first()
