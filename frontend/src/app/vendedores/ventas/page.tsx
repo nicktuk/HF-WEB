@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Store, ShoppingBag } from 'lucide-react'
 import { VendedorHeader } from '../_components/VendedorHeader'
 import { Modal, ModalContent } from '@/components/ui/modal'
@@ -68,6 +68,44 @@ const COLOR_POR_ESTADO_GENERICO: Record<string, string> = {
   pendiente: 'bg-zinc-100 text-zinc-600',
   parcial: 'bg-amber-100 text-amber-700',
   completo: 'bg-emerald-100 text-emerald-700',
+}
+
+// Minorista no tiene un único campo "estado" (tiene entrega + pago por
+// separado) — para poder agruparla igual que a mayorista, se sintetiza un
+// estado combinado de 3 valores.
+type EstadoMinorista = 'pendiente' | 'en_proceso' | 'completo'
+
+const ORDEN_ESTADO_MAYORISTA = ['recibido', 'confirmado', 'preparando', 'entrega_parcial', 'entregado', 'cancelado']
+const ORDEN_ESTADO_MINORISTA: EstadoMinorista[] = ['pendiente', 'en_proceso', 'completo']
+
+const LABEL_ESTADO_MINORISTA: Record<EstadoMinorista, string> = {
+  pendiente: 'Sin iniciar',
+  en_proceso: 'En proceso',
+  completo: 'Completa',
+}
+
+const COLOR_ESTADO_MINORISTA: Record<EstadoMinorista, string> = {
+  pendiente: 'bg-zinc-100 text-zinc-600',
+  en_proceso: 'bg-amber-100 text-amber-700',
+  completo: 'bg-emerald-100 text-emerald-700',
+}
+
+function estadoMinoristaDe(item: VentaItem): EstadoMinorista {
+  if (item.entrega_estado === 'completo' && item.pago_estado === 'completo') return 'completo'
+  if (item.entrega_estado === 'pendiente' && item.pago_estado === 'pendiente') return 'pendiente'
+  return 'en_proceso'
+}
+
+function estadoKeyDe(item: VentaItem): string {
+  return item.canal === 'mayorista' ? (item.estado ?? '') : estadoMinoristaDe(item)
+}
+
+function estadoLabelDe(canal: 'mayorista' | 'minorista', key: string): string {
+  return canal === 'mayorista' ? (LABEL_ESTADO_PEDIDO[key] ?? key) : LABEL_ESTADO_MINORISTA[key as EstadoMinorista]
+}
+
+function estadoColorDe(canal: 'mayorista' | 'minorista', key: string): string {
+  return canal === 'mayorista' ? (COLOR_ESTADO_PEDIDO[key] ?? 'bg-zinc-100 text-zinc-600') : COLOR_ESTADO_MINORISTA[key as EstadoMinorista]
 }
 
 type Familia = 'zinc' | 'blue' | 'amber' | 'emerald' | 'red'
@@ -154,14 +192,64 @@ function FilaVenta({ item, onClick }: { item: VentaItem; onClick: () => void }) 
   )
 }
 
+function GrupoEstadoCards({
+  canal, items, activo, onSelect,
+}: {
+  canal: 'mayorista' | 'minorista'
+  items: VentaItem[]
+  activo: string | null
+  onSelect: (estado: string) => void
+}) {
+  const orden = canal === 'mayorista' ? ORDEN_ESTADO_MAYORISTA : ORDEN_ESTADO_MINORISTA
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    const key = estadoKeyDe(item)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  const grupos = orden.filter(key => (counts.get(key) ?? 0) > 0)
+  if (grupos.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-3">
+      {grupos.map(key => {
+        const seleccionado = activo === key
+        return (
+          <button
+            key={key}
+            onClick={() => onSelect(key)}
+            className={`text-left rounded-xl border px-3 py-2 transition-colors ${
+              seleccionado ? 'border-primary-400 bg-primary-50' : 'border-zinc-200 bg-white hover:border-zinc-300'
+            }`}
+          >
+            <Badge label={estadoLabelDe(canal, key)} color={estadoColorDe(canal, key)} />
+            <p className="text-lg font-bold text-zinc-800 mt-1">{counts.get(key)}</p>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function SeccionCanal({
-  icon: Icon, titulo, items, onClickItem,
+  icon: Icon, titulo, canal, items, onClickItem,
 }: {
   icon: React.ElementType
   titulo: string
+  canal: 'mayorista' | 'minorista'
   items: VentaItem[]
   onClickItem: (item: VentaItem) => void
 }) {
+  const [filtro, setFiltro] = useState<string | null>(null)
+  const tablaRef = useRef<HTMLDivElement>(null)
+
+  function seleccionarGrupo(estado: string) {
+    setFiltro(prev => (prev === estado ? null : estado))
+    // Las tarjetas de arriba te llevan a la grilla filtrada de abajo.
+    tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
+  const itemsFiltrados = filtro === null ? items : items.filter(item => estadoKeyDe(item) === filtro)
+
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-100">
@@ -175,26 +263,33 @@ function SeccionCanal({
         {items.length === 0 ? (
           <p className="text-sm text-zinc-400">No tenés ventas en este canal todavía.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100">
-                  <th className="pl-2" />
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Fecha</th>
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
-                  <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pago</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {items.map(item => (
-                  <FilaVenta key={item.id} item={item} onClick={() => onClickItem(item)} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <GrupoEstadoCards canal={canal} items={items} activo={filtro} onSelect={seleccionarGrupo} />
+            <div ref={tablaRef} className="overflow-x-auto scroll-mt-4">
+              {filtro !== null && itemsFiltrados.length === 0 ? (
+                <p className="text-sm text-zinc-400 py-2">Nada en este estado.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-100">
+                      <th className="pl-2" />
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Fecha</th>
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
+                      <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pago</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {itemsFiltrados.map(item => (
+                      <FilaVenta key={item.id} item={item} onClick={() => onClickItem(item)} />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
         )}
       </div>
     </section>
@@ -270,8 +365,8 @@ export default function MisVentasPage() {
               <StatTile label="Cancelados" valor={cancelados} color="text-red-600" />
             </div>
 
-            <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirHistorial} />
-            <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" items={minoristas} onClickItem={abrirHistorial} />
+            <SeccionCanal icon={Store} titulo="Pedidos mayoristas" canal="mayorista" items={mayoristas} onClickItem={abrirHistorial} />
+            <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" canal="minorista" items={minoristas} onClickItem={abrirHistorial} />
           </>
         )}
       </div>

@@ -114,7 +114,6 @@ export default function MiDiaPage() {
                         <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">#</th>
                         <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente</th>
                         <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Canal</th>
-                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Estado</th>
                         <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
                       </tr>
                     </thead>
@@ -130,7 +129,6 @@ export default function MiDiaPage() {
                               {e.canal === 'mayorista' ? 'Mayorista' : 'Minorista'}
                             </span>
                           </td>
-                          <td className="py-2 pr-2 text-zinc-500">{e.estado}</td>
                           <td className="py-2 pl-2 text-right text-zinc-700">${e.total.toLocaleString('es-AR')}</td>
                         </tr>
                       ))}
