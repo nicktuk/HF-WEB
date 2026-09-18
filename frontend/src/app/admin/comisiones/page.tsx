@@ -52,6 +52,7 @@ export default function ComisionesAdminPage() {
   const [montoInput, setMontoInput] = useState('')
   const [tasaInput, setTasaInput] = useState('')
   const [generando, setGenerando] = useState<number | null>(null)
+  const [generandoTodas, setGenerandoTodas] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!apiKey) return
@@ -121,6 +122,13 @@ export default function ComisionesAdminPage() {
     setGenerando(null)
   }
 
+  async function generarTodasLasPendientes() {
+    setGenerandoTodas(true)
+    await apiFetch('/admin/ventas-minoristas/generar-comisiones-pendientes', apiKey, { method: 'POST' })
+    await fetchData()
+    setGenerandoTodas(false)
+  }
+
   const totalPendiente = comisiones.filter(c => c.estado === 'pendiente').reduce((s, c) => s + c.monto, 0)
   const totalLiquidado = comisiones.filter(c => c.estado === 'liquidada').reduce((s, c) => s + c.monto, 0)
 
@@ -144,9 +152,18 @@ export default function ComisionesAdminPage() {
 
       {pendientes.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-amber-900 mb-2">
-            Ventas minoristas pagadas sin comisión generada ({pendientes.length})
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-amber-900">
+              Ventas minoristas pagadas sin comisión generada ({pendientes.length})
+            </h2>
+            <button
+              onClick={generarTodasLasPendientes}
+              disabled={generandoTodas || generando !== null}
+              className="text-xs font-medium bg-amber-700 text-white rounded-lg px-3 py-1.5 hover:bg-amber-800 disabled:opacity-50"
+            >
+              {generandoTodas ? 'Generando...' : 'Generar todas'}
+            </button>
+          </div>
           <div className="space-y-2">
             {pendientes.map(v => (
               <div key={v.sale_id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-sm">

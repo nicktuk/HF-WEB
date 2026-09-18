@@ -16,7 +16,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import AppException, NotFoundError, ValidationError
 from app.models.comercio import Comision, ConfiguracionComercio
 from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale
@@ -164,6 +164,30 @@ def generar_comision_minorista(db: Session, sale_id: int) -> dict:
     db.commit()
     db.refresh(comision)
     return _comision_dict(comision)
+
+
+def generar_comisiones_pendientes(db: Session) -> dict:
+    """Backfill masivo: genera la comisión de todas las ventas minoristas
+    pagadas que todavía no la tienen (ver listar_ventas_minoristas_pendientes_comision),
+    en un solo click en vez de una por una. Un commit por venta, para que un
+    error puntual no tire abajo el resto del lote."""
+    sale_ids = [
+        s.id for s in db.query(Sale.id)
+        .outerjoin(Comision, Comision.sale_id == Sale.id)
+        .filter(Sale.paid.is_(True), Comision.id.is_(None))
+        .all()
+    ]
+
+    generadas: list[dict] = []
+    errores: list[dict] = []
+    for sale_id in sale_ids:
+        try:
+            generadas.append(generar_comision_minorista(db, sale_id))
+        except AppException as e:
+            db.rollback()
+            errores.append({"sale_id": sale_id, "error": e.message})
+
+    return {"generadas": len(generadas), "comisiones": generadas, "errores": errores}
 
 
 def editar_comision(db: Session, comision_id: int, cambios: dict) -> dict:
