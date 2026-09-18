@@ -18,13 +18,15 @@ from app.models.comercio import (
     Comision,
     EstadoHistorial,
     PedidoComercio,
+    PedidoComercioItem,
     Prospecto,
 )
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
-from app.models.sale import Sale
+from app.models.sale import Sale, SaleItem
 from app.services import comercio_catalog, comercio_pedidos
 
 ESTADOS_PROSPECTO = {"interesado", "lo_pienso", "no_va", "convertido"}
+MERCADOPAGO_HEFA_LABEL = "Mercado Pago HEFA"
 
 
 # ─── Mi cartera ─────────────────────────────────────────────────────────────
@@ -335,6 +337,120 @@ def get_historial_venta(db: Session, vendedor_id: int, canal: str, referencia_id
     return [{"estado": estado_inicial, "fecha": creado_en.isoformat()}] + [
         {"estado": h.estado, "fecha": h.fecha.isoformat()} for h in historial
     ]
+
+
+def _item_dict_pedido(item: PedidoComercioItem) -> dict:
+    return {
+        "id": item.id,
+        "nombre": item.nombre_producto,
+        "cantidad": item.cantidad,
+        "cantidad_entregada": item.cantidad_entregada,
+        "entregado": item.cantidad_entregada >= item.cantidad,
+        "precio_unitario": float(item.precio_unitario),
+        "subtotal": float(item.subtotal),
+    }
+
+
+def _item_dict_venta(item: SaleItem) -> dict:
+    return {
+        "id": item.id,
+        "nombre": item.product_name,
+        "cantidad": item.quantity,
+        "cantidad_entregada": item.delivered_quantity or 0,
+        "entregado": item.delivered,
+        "pagado": item.paid,
+        "precio_unitario": float(item.unit_price),
+        "subtotal": float(item.total_price),
+    }
+
+
+def get_detalle_venta(db: Session, vendedor_id: int, canal: str, referencia_id: int) -> dict:
+    """Ítems de un pedido/venta puntual, para el modal de 'Mis ventas' donde
+    el vendedor marca entrega/pago por producto. En mayorista el pago es a
+    nivel de todo el pedido (pedidos_mayoristas_items no tiene columna de
+    pago por ítem); en minorista sí es por ítem."""
+    if canal == "mayorista":
+        pedido = (
+            db.query(PedidoComercio)
+            .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
+            .filter(PedidoComercio.id == referencia_id, Comercio.vendedor_id == vendedor_id)
+            .first()
+        )
+        if not pedido:
+            raise NotFoundError("PedidoComercio", str(referencia_id))
+        return {
+            "cancelado": pedido.estado == "cancelado",
+            "pago_estado": "completo" if pedido.estado_pago == "pagado" else "pendiente",
+            "pago_por_item": False,
+            "items": [_item_dict_pedido(i) for i in pedido.items],
+        }
+    if canal == "minorista":
+        venta = (
+            db.query(Sale)
+            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id)
+            .first()
+        )
+        if not venta:
+            raise NotFoundError("Sale", str(referencia_id))
+        return {
+            "cancelado": False,
+            "pago_estado": _pago_estado_venta(venta),
+            "pago_por_item": True,
+            "items": [_item_dict_venta(i) for i in venta.items],
+        }
+    raise ValidationError("canal debe ser 'mayorista' o 'minorista'")
+
+
+def marcar_item_entregado(db: Session, vendedor_id: int, canal: str, referencia_id: int, item_id: int) -> dict:
+    if canal == "mayorista":
+        pedido = (
+            db.query(PedidoComercio)
+            .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
+            .filter(PedidoComercio.id == referencia_id, Comercio.vendedor_id == vendedor_id)
+            .first()
+        )
+        if not pedido:
+            raise NotFoundError("PedidoComercio", str(referencia_id))
+        if pedido.estado == "cancelado":
+            raise ValidationError("El pedido está cancelado.")
+        comercio_pedidos.entregar_item_pedido(db, referencia_id, item_id)
+    elif canal == "minorista":
+        venta = db.query(Sale).filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id).first()
+        if not venta:
+            raise NotFoundError("Sale", str(referencia_id))
+        from app.services.sales import SalesService
+        SalesService(db).mark_item_delivered(referencia_id, item_id)
+    else:
+        raise ValidationError("canal debe ser 'mayorista' o 'minorista'")
+    return get_detalle_venta(db, vendedor_id, canal, referencia_id)
+
+
+def marcar_item_pagado(db: Session, vendedor_id: int, referencia_id: int, item_id: int) -> dict:
+    """Sólo canal minorista: en mayorista el pago es de todo el pedido a la
+    vez (ver marcar_pedido_pagado)."""
+    venta = db.query(Sale).filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id).first()
+    if not venta:
+        raise NotFoundError("Sale", str(referencia_id))
+    from app.services.sales import SalesService
+    SalesService(db).mark_item_paid(referencia_id, item_id, MERCADOPAGO_HEFA_LABEL)
+    return get_detalle_venta(db, vendedor_id, "minorista", referencia_id)
+
+
+def marcar_pedido_pagado(db: Session, vendedor_id: int, pedido_id: int) -> dict:
+    """Sólo canal mayorista: pago de todo el pedido, siempre atribuido a
+    Mercado Pago HEFA (el vendedor cobra con el link/QR de HEFA)."""
+    pedido = (
+        db.query(PedidoComercio)
+        .join(Comercio, Comercio.id == PedidoComercio.comercio_id)
+        .filter(PedidoComercio.id == pedido_id, Comercio.vendedor_id == vendedor_id)
+        .first()
+    )
+    if not pedido:
+        raise NotFoundError("PedidoComercio", str(pedido_id))
+    if pedido.estado == "cancelado":
+        raise ValidationError("El pedido está cancelado.")
+    comercio_pedidos.registrar_pago(db, pedido_id, "mercadopago_hefa")
+    return get_detalle_venta(db, vendedor_id, "mayorista", pedido_id)
 
 
 # ─── Catálogo demo ──────────────────────────────────────────────────────────

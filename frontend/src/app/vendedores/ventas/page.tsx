@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Store, ShoppingBag } from 'lucide-react'
 import { VendedorHeader } from '../_components/VendedorHeader'
 import { Modal, ModalContent } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
 
 interface VendedorInfo {
   id: number
@@ -25,6 +26,24 @@ interface VentaItem {
 interface PuntoHistorial {
   estado: string
   fecha: string
+}
+
+interface VentaDetalleItem {
+  id: number
+  nombre: string | null
+  cantidad: number
+  cantidad_entregada: number
+  entregado: boolean
+  pagado?: boolean
+  precio_unitario: number
+  subtotal: number
+}
+
+interface VentaDetalle {
+  cancelado: boolean
+  pago_estado: 'pendiente' | 'parcial' | 'completo'
+  pago_por_item: boolean
+  items: VentaDetalleItem[]
 }
 
 const LABEL_ESTADO_PEDIDO: Record<string, string> = {
@@ -65,7 +84,7 @@ const LABEL_PAGO: Record<string, string> = {
 }
 
 const COLOR_POR_ESTADO_GENERICO: Record<string, string> = {
-  pendiente: 'bg-zinc-100 text-zinc-600',
+  pendiente: 'bg-red-100 text-red-700',
   parcial: 'bg-amber-100 text-amber-700',
   completo: 'bg-emerald-100 text-emerald-700',
 }
@@ -95,7 +114,7 @@ function familiaDe(item: VentaItem): Familia {
   }
   if (item.entrega_estado === 'completo') return 'emerald'
   if (item.entrega_estado === 'parcial' || item.pago_estado !== 'pendiente') return 'amber'
-  return 'zinc'
+  return 'red'
 }
 
 function pendienteDeAccion(item: VentaItem): boolean {
@@ -201,6 +220,79 @@ function SeccionCanal({
   )
 }
 
+function PanelProductos({
+  detalle, accionando, onEntregarItem, onPagarItem, onPagarPedido,
+}: {
+  detalle: VentaDetalle
+  accionando: string | null
+  onEntregarItem: (itemId: number) => void
+  onPagarItem: (itemId: number) => void
+  onPagarPedido: () => void
+}) {
+  if (detalle.cancelado) {
+    return <p className="text-sm text-zinc-400">Este pedido está cancelado.</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      {!detalle.pago_por_item && (
+        <div className="flex items-center justify-between bg-zinc-50 rounded-lg px-3 py-2">
+          <div>
+            <p className="text-sm font-medium text-zinc-700">Pago del pedido</p>
+            <Badge label={LABEL_PAGO[detalle.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[detalle.pago_estado]} />
+          </div>
+          {detalle.pago_estado !== 'completo' && (
+            <Button size="sm" onClick={onPagarPedido} isLoading={accionando === 'pagar-pedido'} disabled={accionando !== null}>
+              Pagado
+            </Button>
+          )}
+        </div>
+      )}
+
+      <ul className="divide-y divide-zinc-100">
+        {detalle.items.map(item => (
+          <li key={item.id} className="py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-zinc-800 truncate">{item.nombre ?? '—'}</p>
+              <p className="text-xs text-zinc-500">
+                {item.cantidad_entregada}/{item.cantidad} entregado · ${item.subtotal.toLocaleString('es-AR')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {item.entregado ? (
+                <Badge label="Entregado" color={COLOR_POR_ESTADO_GENERICO.completo} />
+              ) : (
+                <Button
+                  size="sm" variant="outline"
+                  onClick={() => onEntregarItem(item.id)}
+                  isLoading={accionando === `entregar-${item.id}`}
+                  disabled={accionando !== null}
+                >
+                  Entregado
+                </Button>
+              )}
+              {detalle.pago_por_item && (
+                item.pagado ? (
+                  <Badge label="Pagado" color={COLOR_POR_ESTADO_GENERICO.completo} />
+                ) : (
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => onPagarItem(item.id)}
+                    isLoading={accionando === `pagar-${item.id}`}
+                    disabled={accionando !== null}
+                  >
+                    Pagado
+                  </Button>
+                )
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function Timeline({ puntos }: { puntos: PuntoHistorial[] }) {
   return (
     <div className="space-y-0">
@@ -225,6 +317,15 @@ export default function MisVentasPage() {
   const [ventas, setVentas] = useState<VentaItem[] | null>(null)
   const [seleccion, setSeleccion] = useState<VentaItem | null>(null)
   const [historial, setHistorial] = useState<PuntoHistorial[] | null>(null)
+  const [detalle, setDetalle] = useState<VentaDetalle | null>(null)
+  const [tab, setTab] = useState<'productos' | 'historial'>('productos')
+  const [accionando, setAccionando] = useState<string | null>(null)
+
+  function recargarVentas() {
+    return fetch('/api/vendedores/mis-ventas')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => setVentas(data?.ventas ?? []))
+  }
 
   useEffect(() => {
     Promise.all([
@@ -236,12 +337,47 @@ export default function MisVentasPage() {
     })
   }, [])
 
-  function abrirHistorial(item: VentaItem) {
+  function fetchDetalle(item: VentaItem) {
+    return fetch(`/api/vendedores/mis-ventas/${item.canal}/${item.id}/detalle`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(setDetalle)
+  }
+
+  function abrirVenta(item: VentaItem) {
     setSeleccion(item)
+    setTab('productos')
     setHistorial(null)
+    setDetalle(null)
+    fetchDetalle(item)
     fetch(`/api/vendedores/mis-ventas/${item.canal}/${item.id}/historial`)
       .then(res => (res.ok ? res.json() : []))
       .then(setHistorial)
+  }
+
+  async function ejecutarAccion(accionKey: string, url: string) {
+    if (!seleccion) return
+    setAccionando(accionKey)
+    try {
+      await fetch(url, { method: 'POST' })
+      await Promise.all([fetchDetalle(seleccion), recargarVentas()])
+    } finally {
+      setAccionando(null)
+    }
+  }
+
+  function entregarItem(itemId: number) {
+    if (!seleccion) return
+    ejecutarAccion(`entregar-${itemId}`, `/api/vendedores/mis-ventas/${seleccion.canal}/${seleccion.id}/items/${itemId}/entregar`)
+  }
+
+  function pagarItem(itemId: number) {
+    if (!seleccion) return
+    ejecutarAccion(`pagar-${itemId}`, `/api/vendedores/mis-ventas/minorista/${seleccion.id}/items/${itemId}/pagar`)
+  }
+
+  function pagarPedido() {
+    if (!seleccion) return
+    ejecutarAccion('pagar-pedido', `/api/vendedores/mis-ventas/mayorista/${seleccion.id}/pagar`)
   }
 
   const mayoristas = ventas?.filter(v => v.canal === 'mayorista') ?? []
@@ -270,8 +406,8 @@ export default function MisVentasPage() {
               <StatTile label="Cancelados" valor={cancelados} color="text-red-600" />
             </div>
 
-            <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirHistorial} />
-            <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" items={minoristas} onClickItem={abrirHistorial} />
+            <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirVenta} />
+            <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" items={minoristas} onClickItem={abrirVenta} />
           </>
         )}
       </div>
@@ -283,7 +419,34 @@ export default function MisVentasPage() {
         size="sm"
       >
         <ModalContent>
-          {historial === null ? (
+          <div className="flex gap-4 border-b border-zinc-100 mb-4">
+            <button
+              className={`pb-2 text-sm font-medium border-b-2 -mb-px ${tab === 'productos' ? 'border-primary-600 text-primary-700' : 'border-transparent text-zinc-400'}`}
+              onClick={() => setTab('productos')}
+            >
+              Productos
+            </button>
+            <button
+              className={`pb-2 text-sm font-medium border-b-2 -mb-px ${tab === 'historial' ? 'border-primary-600 text-primary-700' : 'border-transparent text-zinc-400'}`}
+              onClick={() => setTab('historial')}
+            >
+              Historial
+            </button>
+          </div>
+
+          {tab === 'productos' ? (
+            detalle === null ? (
+              <p className="text-sm text-zinc-400">Cargando...</p>
+            ) : (
+              <PanelProductos
+                detalle={detalle}
+                accionando={accionando}
+                onEntregarItem={entregarItem}
+                onPagarItem={pagarItem}
+                onPagarPedido={pagarPedido}
+              />
+            )
+          ) : historial === null ? (
             <p className="text-sm text-zinc-400">Cargando...</p>
           ) : (
             <Timeline puntos={historial} />

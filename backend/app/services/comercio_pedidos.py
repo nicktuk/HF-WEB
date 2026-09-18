@@ -77,8 +77,8 @@ def _deduct_stock_fifo(db: Session, product_id: int | None, quantity: int) -> No
 
 
 def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComercio:
-    if metodo_pago not in ("efectivo", "transferencia"):
-        raise ValidationError("metodo_pago debe ser 'efectivo' o 'transferencia'")
+    if metodo_pago not in ("efectivo", "transferencia", "mercadopago_hefa"):
+        raise ValidationError("metodo_pago debe ser 'efectivo', 'transferencia' o 'mercadopago_hefa'")
 
     pedido = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
     if not pedido:
@@ -201,6 +201,36 @@ def entregar_pedido(
     pedido.foto_entrega_url = foto_entrega_url
     todo_entregado = all(item.cantidad_entregada >= item.cantidad for item in pedido.items)
     algo_entregado = any(item.cantidad_entregada > 0 for item in pedido.items)
+    estado_anterior = pedido.estado
+    pedido.estado = "entregado" if todo_entregado else ("entrega_parcial" if algo_entregado else pedido.estado)
+    if pedido.estado != estado_anterior:
+        registrar_estado_historial(db, "mayorista", pedido.id, pedido.estado)
+
+    db.commit()
+    db.refresh(pedido)
+    return pedido
+
+
+def entregar_item_pedido(db: Session, pedido_id: int, item_id: int) -> PedidoComercio:
+    """Marca un ítem puntual de un pedido mayorista como entregado por
+    completo. Variante de entregar_pedido() sin exigir foto — usada por el
+    vendedor desde 'Mis ventas'. Descuenta stock físico por la diferencia
+    contra lo ya entregado antes."""
+    pedido = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
+    if not pedido:
+        raise NotFoundError("PedidoComercio", str(pedido_id))
+
+    item = next((i for i in pedido.items if i.id == item_id), None)
+    if not item:
+        raise NotFoundError("PedidoComercioItem", str(item_id))
+
+    delta = item.cantidad - item.cantidad_entregada
+    if delta > 0:
+        _deduct_stock_fifo(db, item.producto_id, delta)
+    item.cantidad_entregada = item.cantidad
+
+    todo_entregado = all(i.cantidad_entregada >= i.cantidad for i in pedido.items)
+    algo_entregado = any(i.cantidad_entregada > 0 for i in pedido.items)
     estado_anterior = pedido.estado
     pedido.estado = "entregado" if todo_entregado else ("entrega_parcial" if algo_entregado else pedido.estado)
     if pedido.estado != estado_anterior:

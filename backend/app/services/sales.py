@@ -786,6 +786,35 @@ class SalesService:
         self.db.refresh(sale)
         return sale
 
+    def _item_ref(self, item: SaleItem) -> str:
+        return (
+            f"product:{item.product_id}:{(item.color or '').lower()}"
+            if item.product_id is not None
+            else f"manual:{(item.manual_product_name or '').strip().lower()}"
+        )
+
+    def mark_item_delivered(self, sale_id: int, item_id: int) -> Sale:
+        sale = self.get_sale(sale_id)
+        item = next((i for i in sale.items if i.id == item_id), None)
+        if not item:
+            raise NotFoundError("SaleItem", str(item_id))
+        self._apply_item_states(sale, {self._item_ref(item): True}, None)
+        self.db.commit()
+        self.db.refresh(sale)
+        return sale
+
+    def mark_item_paid(self, sale_id: int, item_id: int, payment_method: str) -> Sale:
+        sale = self.get_sale(sale_id)
+        item = next((i for i in sale.items if i.id == item_id), None)
+        if not item:
+            raise NotFoundError("SaleItem", str(item_id))
+        if not sale.payment_method:
+            sale.payment_method = payment_method
+        self._apply_item_states(sale, None, {self._item_ref(item): True})
+        self.db.commit()
+        self.db.refresh(sale)
+        return sale
+
     def get_sale(self, sale_id: int) -> Sale:
         sale = (
             self.db.query(Sale)
