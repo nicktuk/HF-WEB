@@ -76,7 +76,7 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
         {productos.length === 0 ? (
           <p style={{ color: theme.textMuted }} className="text-sm">Todavía no hay productos cargados.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 pb-4">
+          <div className="grid grid-cols-1 gap-8 lg:gap-10 max-w-md mx-auto pb-4">
             {productos.map(p => (
               <ProductCard key={p.id} producto={p} onAdd={add} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} isDark={isDark} />
             ))}
@@ -137,14 +137,18 @@ function ProductCard({
 
   return (
     <div
-      className="card-3d overflow-hidden flex flex-col"
+      className="card-3d"
+      style={{
+        ...({
+          '--shadow-color': isDark ? 'rgba(0,0,0,0.6)' : 'rgba(13,27,42,0.22)',
+          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.4)' : 'rgba(13,27,42,0.12)',
+        } as React.CSSProperties),
+      }}
+    >
+    <div
+      className="rounded-[1.75rem] overflow-hidden flex flex-col h-full"
       style={{
         backgroundColor: theme.cardBg,
-        border: `1px solid ${theme.cardBorder}`,
-        ...({
-          '--shadow-color': isDark ? 'rgba(0,0,0,0.45)' : 'rgba(13,27,42,0.16)',
-          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.25)' : 'rgba(13,27,42,0.08)',
-        } as React.CSSProperties),
       }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
@@ -268,6 +272,7 @@ function ProductCard({
           </button>
         )}
       </div>
+    </div>
     </div>
   )
 }
