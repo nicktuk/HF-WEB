@@ -151,7 +151,7 @@ function ProductCard({
         backgroundColor: theme.cardBg,
       }}
     >
-      <Link href={`/comercios/producto/${p.id}`} className="contents">
+      <Link href={`/comercios/detalle2/${p.id}`} className="contents">
         <div className="relative m-3 rounded-2xl aspect-[4/5] overflow-hidden" style={{ backgroundColor: theme.imagePlate }}>
           {imgUrl ? (
             <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized />
