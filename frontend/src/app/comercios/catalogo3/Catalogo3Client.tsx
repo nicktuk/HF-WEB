@@ -76,7 +76,7 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
         {productos.length === 0 ? (
           <p style={{ color: theme.textMuted }} className="text-sm">Todavía no hay productos cargados.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 pb-4">
+          <div className="grid grid-cols-1 gap-8 lg:gap-10 max-w-md mx-auto pb-4">
             {productos.map(p => (
               <ProductCard key={p.id} producto={p} onAdd={add} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} isDark={isDark} />
             ))}
