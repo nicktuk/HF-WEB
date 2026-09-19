@@ -10,9 +10,10 @@ interface Props {
   redondeo: number
   theme: ComercioTheme
   compact?: boolean
+  colorScale?: (t: number) => string
 }
 
-export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, compact }: Props) {
+export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, compact, colorScale }: Props) {
   if (tramos.length === 0) return null
 
   const ordenados = [...tramos].sort((a, b) => a.cantidad_minima - b.cantidad_minima)
@@ -25,7 +26,7 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
 
   const proximoTramo = ordenados.find(t => t.cantidad_minima > cantidad)
 
-  const fill = getTramoScaleColor(progreso)
+  const fill = (colorScale ?? getTramoScaleColor)(progreso)
 
   return (
     <div className={compact ? 'mt-0.5' : 'mt-1'}>

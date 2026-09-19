@@ -97,3 +97,16 @@ export function getTramoScaleColor(t: number): string {
   if (clamped <= 0.5) return mezclarRGB(ESCALA_ROJO, ESCALA_NARANJA, clamped / 0.5)
   return mezclarRGB(ESCALA_NARANJA, ESCALA_VERDE, (clamped - 0.5) / 0.5)
 }
+
+// Variante con un tramo amarillo extra (mismo tono que el aviso "te faltan
+// X u.") entre el naranja y el verde. Usada solo en detalle2 (barra de
+// ahorro + matriz), sin afectar getTramoScaleColor de arriba.
+const ESCALA_AMARILLO: RGB = [232, 193, 90]
+
+/** t en [0,1]: 0 = rojo, 1/3 = naranja, 2/3 = amarillo, 1 = verde. */
+export function getTramoScaleColorV2(t: number): string {
+  const clamped = Math.min(1, Math.max(0, t))
+  if (clamped <= 1 / 3) return mezclarRGB(ESCALA_ROJO, ESCALA_NARANJA, clamped / (1 / 3))
+  if (clamped <= 2 / 3) return mezclarRGB(ESCALA_NARANJA, ESCALA_AMARILLO, (clamped - 1 / 3) / (1 / 3))
+  return mezclarRGB(ESCALA_AMARILLO, ESCALA_VERDE, (clamped - 2 / 3) / (1 / 3))
+}
