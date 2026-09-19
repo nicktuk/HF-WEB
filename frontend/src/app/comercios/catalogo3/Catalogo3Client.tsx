@@ -149,7 +149,6 @@ function ProductCard({
       className="rounded-[1.75rem] overflow-hidden flex flex-col h-full"
       style={{
         backgroundColor: theme.cardBg,
-        border: `1px solid ${theme.cardBorder}`,
       }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
