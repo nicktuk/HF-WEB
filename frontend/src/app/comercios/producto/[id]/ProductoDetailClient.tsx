@@ -120,6 +120,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
 
+      <div className="px-4 sm:px-6 lg:px-8">
       <div
         className="card-3d relative mx-auto my-4 sm:my-6 lg:my-8 max-w-6xl"
         style={{
@@ -390,6 +391,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             </div>
           </div>
         </div>
+      </div>
       </div>
       </div>
     </div>
