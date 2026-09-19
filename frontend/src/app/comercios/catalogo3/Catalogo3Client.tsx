@@ -137,14 +137,19 @@ function ProductCard({
 
   return (
     <div
-      className="card-3d overflow-hidden flex flex-col"
+      className="card-3d"
+      style={{
+        ...({
+          '--shadow-color': isDark ? 'rgba(0,0,0,0.6)' : 'rgba(13,27,42,0.22)',
+          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.4)' : 'rgba(13,27,42,0.12)',
+        } as React.CSSProperties),
+      }}
+    >
+    <div
+      className="rounded-[1.75rem] overflow-hidden flex flex-col h-full"
       style={{
         backgroundColor: theme.cardBg,
         border: `1px solid ${theme.cardBorder}`,
-        ...({
-          '--shadow-color': isDark ? 'rgba(0,0,0,0.45)' : 'rgba(13,27,42,0.16)',
-          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.25)' : 'rgba(13,27,42,0.08)',
-        } as React.CSSProperties),
       }}
     >
       <Link href={`/comercios/producto/${p.id}`} className="contents">
@@ -268,6 +273,7 @@ function ProductCard({
           </button>
         )}
       </div>
+    </div>
     </div>
   )
 }
