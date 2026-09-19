@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Star, Zap, Award, Package } from 'lucide-react'
 import { useComercioCart } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
-import { getComercioTheme, getTramoScaleColor } from '@/lib/comercio-theme'
+import { getComercioTheme, getTramoScaleColorV2 } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 import { parseDescripcionConIconos } from '@/lib/comercio-icons'
@@ -341,6 +341,7 @@ export function Detalle2Client({ producto: p, prevProductoId, nextProductoId }: 
                       tramos={p.tramos_descuento}
                       redondeo={p.redondeo}
                       theme={theme}
+                      colorScale={getTramoScaleColorV2}
                     />
                   </div>
                   <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
@@ -351,7 +352,7 @@ export function Detalle2Client({ producto: p, prevProductoId, nextProductoId }: 
                         return p.tramos_descuento.map(t => {
                           const activo = cantidad >= t.cantidad_minima
                             && !p.tramos_descuento.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                          const colorTramo = getTramoScaleColor(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                          const colorTramo = getTramoScaleColorV2(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
                           return (
                             <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
                               <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
