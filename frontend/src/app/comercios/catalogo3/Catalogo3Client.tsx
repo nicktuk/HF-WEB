@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, ShoppingCart, Check, Star, Zap, Award } from 'lucide-react'
+import Link from 'next/link'
+import { ShoppingCart, Check, Star, Zap, Award, Package } from 'lucide-react'
 import { useComercioCart, CartItem } from '@/hooks/useComercioCart'
 import { useComercioTheme } from '@/hooks/useComercioTheme'
-import { getComercioTheme } from '@/lib/comercio-theme'
+import { getComercioTheme, type ComercioTheme } from '@/lib/comercio-theme'
 import { resolveImageUrl } from '@/lib/api'
 import { calcularPrecioPorDescuento, type TramoDescuento } from '@/lib/precios-comercio'
 
@@ -38,6 +39,7 @@ interface Props {
 export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, tramosDescuento }: Props) {
   const themeMode = useComercioTheme(s => s.mode)
   const theme = getComercioTheme(themeMode)
+  const isDark = themeMode === 'dark'
 
   const add = useComercioCart(s => s.add)
   const setPricingConfig = useComercioCart(s => s.setPricingConfig)
@@ -46,31 +48,64 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
     setPricingConfig({ modo_precio: modoPrecio, redondeo, tramos_descuento: tramosDescuento })
   }, [modoPrecio, redondeo, tramosDescuento, setPricingConfig])
 
-  const [index, setIndex] = useState(0)
-  const [cantidades, setCantidades] = useState<Record<number, number>>({})
-  const [addedId, setAddedId] = useState<number | null>(null)
+  return (
+    <div className="relative overflow-x-hidden" style={{ backgroundColor: theme.pageBg, minHeight: '100vh' }}>
+      {/* Glow decorativo — solo en tema oscuro */}
+      <div
+        className="pointer-events-none absolute -top-24 -right-32 w-[520px] h-[520px] rounded-full opacity-25"
+        style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
+      />
+      <div
+        className="pointer-events-none absolute top-[420px] -left-40 w-[420px] h-[420px] rounded-full"
+        style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`, filter: 'blur(10px)', opacity: 0.12 * theme.glowOpacity }}
+      />
 
-  const p = productos[index]
-  const cantidad = p ? (cantidades[p.id] ?? p.cantidad_minima ?? 1) : 1
+      <div className="relative w-full px-5 sm:px-8 lg:px-12 pt-4 pb-8 lg:pt-5 lg:pb-12">
 
-  function setCantidad(id: number, value: number) {
-    setCantidades(c => ({ ...c, [id]: Math.max(1, value) }))
-  }
+        {montoMinimo > 0 && (
+          <div
+            className="mb-4 rounded-2xl px-5 py-3 text-sm"
+            style={{ backgroundColor: theme.accentTint(0.1), border: `1.5px solid ${theme.accentTint(0.3)}`, color: theme.accent }}
+          >
+            Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
+          </div>
+        )}
 
-  function goPrev() {
-    setIndex(i => (i - 1 + productos.length) % productos.length)
-  }
-  function goNext() {
-    setIndex(i => (i + 1) % productos.length)
-  }
+        <h1 className="text-lg lg:text-xl font-bold mb-4 lg:mb-6" style={{ color: theme.textPrimary }}>Catálogo</h1>
 
-  if (productos.length === 0) {
-    return (
-      <div style={{ backgroundColor: theme.pageBg, minHeight: 'calc(100vh - 60px)' }}>
-        <p className="p-8 text-sm" style={{ color: theme.textMuted }}>Todavía no hay productos cargados.</p>
+        {productos.length === 0 ? (
+          <p style={{ color: theme.textMuted }} className="text-sm">Todavía no hay productos cargados.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 pb-4">
+            {productos.map(p => (
+              <ProductCard key={p.id} producto={p} onAdd={add} modoPrecio={modoPrecio} redondeo={redondeo} tramosDescuento={tramosDescuento} theme={theme} isDark={isDark} />
+            ))}
+          </div>
+        )}
       </div>
-    )
-  }
+    </div>
+  )
+}
+
+function ProductCard({
+  producto: p,
+  onAdd,
+  modoPrecio,
+  redondeo,
+  tramosDescuento,
+  theme,
+  isDark,
+}: {
+  producto: Producto
+  onAdd: (item: Omit<CartItem, 'cantidad'>, cantidad: number) => void
+  modoPrecio: 'markup' | 'descuento'
+  redondeo: number
+  tramosDescuento: TramoDescuento[]
+  theme: ComercioTheme
+  isDark: boolean
+}) {
+  const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
+  const [added, setAdded] = useState(false)
 
   const imgUrl = resolveImageUrl(p.imagen_url)
   const faltan = p.cantidad_minima ? Math.max(0, p.cantidad_minima - cantidad) : 0
@@ -80,10 +115,12 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
     ? calcularPrecioPorDescuento(p.precio_venta as number, cantidad, tramosDescuento, redondeo)
     : p.precio_comercio
   const descuentoAplicado = enModoDescuento && precioUnitario < (p.precio_venta as number)
-  const added = addedId === p.id
+  const maxDescuento = enModoDescuento && tramosDescuento.length > 0
+    ? Math.max(...tramosDescuento.map(t => t.descuento_porcentaje))
+    : 0
 
   function handleAdd() {
-    add(
+    onAdd(
       {
         producto_id: p.id,
         nombre: p.nombre,
@@ -94,153 +131,141 @@ export function Catalogo3Client({ productos, montoMinimo, modoPrecio, redondeo, 
       },
       cantidad,
     )
-    setAddedId(p.id)
-    setTimeout(() => setAddedId(null), 1500)
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1500)
   }
 
   return (
-    <div className="relative overflow-hidden" style={{ backgroundColor: theme.pageBg, height: 'calc(100vh - 60px)' }}>
-      {/* Fondo neutro (mismo tono que usa el resto de la app para fotos de producto) */}
-      <div className="absolute inset-0" style={{ backgroundColor: theme.imagePlate }} />
+    <div
+      className="card-3d overflow-hidden flex flex-col"
+      style={{
+        backgroundColor: theme.cardBg,
+        border: `1px solid ${theme.cardBorder}`,
+        ...({
+          '--shadow-color': isDark ? 'rgba(0,0,0,0.45)' : 'rgba(13,27,42,0.16)',
+          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.25)' : 'rgba(13,27,42,0.08)',
+        } as React.CSSProperties),
+      }}
+    >
+      <Link href={`/comercios/producto/${p.id}`} className="contents">
+        <div className="relative m-3 rounded-2xl aspect-[4/5] overflow-hidden" style={{ backgroundColor: theme.imagePlate }}>
+          {imgUrl ? (
+            <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: '#B7AF9C' }}>Sin imagen</div>
+          )}
 
-      {/* Foto completa del producto, centrada y sin cortar */}
-      <div className="absolute inset-0 flex items-center justify-center px-6" style={{ paddingTop: 210, paddingBottom: 168 }}>
-        <div className="relative w-full h-full">
-          {imgUrl && (
-            <Image src={imgUrl} alt={p.nombre} fill className="object-contain" unoptimized priority />
+          {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
+            <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+              {p.is_featured && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Star className="w-2.5 h-2.5 fill-current" />Nuevo
+                </span>
+              )}
+              {p.is_immediate_delivery && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Zap className="w-2.5 h-2.5 fill-current" />Inmediata
+                </span>
+              )}
+              {p.is_best_seller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                  <Award className="w-2.5 h-2.5" />Top
+                </span>
+              )}
+            </div>
+          )}
+
+          {maxDescuento > 0 && (
+            <span
+              className="absolute top-2.5 right-2.5 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-md"
+              style={{ backgroundColor: theme.savings, color: '#fff' }}
+            >
+              Hasta −{maxDescuento}%
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Scrim superior: se funde con el header y se aclara justo antes de la foto */}
-      <div className="pointer-events-none absolute top-0 left-0 right-0 h-60" style={{ background: `linear-gradient(180deg, ${theme.pageBg} 0%, ${theme.pageBg} 85%, transparent 100%)` }} />
+        <div className="px-4 pt-1 flex flex-col gap-1">
+          {p.marca && (
+            <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: theme.textFaint }}>{p.marca}</p>
+          )}
+          <p className="text-base font-semibold leading-snug line-clamp-2" style={{ color: theme.textPrimary }}>{p.nombre}</p>
 
-      {/* Barra de progreso tipo historia */}
-      {productos.length > 1 && (
-        <div className="absolute top-3 left-3 right-3 flex gap-1 z-10">
-          {productos.map((prod, i) => (
-            <button
-              key={prod.id}
-              onClick={() => setIndex(i)}
-              aria-label={`Ir a ${prod.nombre}`}
-              className="flex-1 h-[3px] rounded-full"
-              style={{ backgroundColor: i <= index ? theme.accent : theme.accentTint(0.2) }}
-            />
-          ))}
-        </div>
-      )}
+          <p className="text-xl font-extrabold mt-1" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+            {!descuentoAplicado && (
+              <span className="text-[10px] font-normal mr-1" style={{ color: theme.textFaint }}>Minorista:</span>
+            )}
+            ${precioUnitario.toLocaleString('es-AR')}
+          </p>
 
-      {montoMinimo > 0 && (
-        <div
-          className="absolute top-8 left-3 right-3 rounded-xl px-3 py-2 text-xs text-center z-10"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)', color: '#fff' }}
-        >
-          Pedido mínimo: <strong>${montoMinimo.toLocaleString('es-AR')}</strong>
-        </div>
-      )}
-
-      {/* Identidad del producto: nombre y precio arriba, junto con los badges */}
-      <div className="absolute top-16 left-4 right-4 z-10 flex flex-col gap-2">
-        {(p.is_featured || p.is_immediate_delivery || p.is_best_seller) && (
-          <div className="flex flex-wrap gap-1.5">
-            {p.is_featured && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Star className="w-3 h-3 fill-current" />Nuevo
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {p.unidades_por_bulto && (
+              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: theme.accentTint(0.08), color: theme.textMuted }}>
+                Bulto x{p.unidades_por_bulto}
               </span>
             )}
-            {p.is_immediate_delivery && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Zap className="w-3 h-3 fill-current" />Inmediata
-              </span>
-            )}
-            {p.is_best_seller && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
-                <Award className="w-3 h-3" />Top
+            {p.cantidad_minima && (
+              <span className="text-[10px] rounded px-1.5 py-0.5" style={{ backgroundColor: theme.accentTint(0.12), color: theme.accent }}>
+                Mín. {p.cantidad_minima} u.
               </span>
             )}
           </div>
-        )}
+        </div>
+      </Link>
 
-        {p.marca && (
-          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: theme.textMuted }}>{p.marca}</p>
-        )}
-        <h1 className="text-xl font-bold leading-snug -mt-1" style={{ color: theme.textPrimary }}>{p.nombre}</h1>
-        <span className="text-2xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
-          ${precioUnitario.toLocaleString('es-AR')}
-        </span>
-      </div>
-
-      {productos.length > 1 && (
-        <>
-          <button
-            onClick={goPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full z-10"
-            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-            aria-label="Producto anterior"
-          >
-            <ChevronLeft className="h-6 w-6 text-white" />
-          </button>
-          <button
-            onClick={goNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full z-10"
-            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-            aria-label="Producto siguiente"
-          >
-            <ChevronRight className="h-6 w-6 text-white" />
-          </button>
-        </>
+      {!p.is_on_demand && (
+        <div className="flex items-center justify-center px-4 py-1.5 min-h-[24px]">
+          {p.stock <= 5 ? (
+            <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: theme.urgency }}>
+              <Package className="h-3.5 w-3.5" />
+              ¡Últimas {p.stock} unidades!
+            </p>
+          ) : (
+            <p className="text-xs flex items-center gap-1.5" style={{ color: theme.textMuted }}>
+              <Package className="h-3.5 w-3.5" />
+              Stock: <strong style={{ color: theme.textPrimary }}>{p.stock}</strong> u.
+            </p>
+          )}
+        </div>
       )}
 
-      {/* Panel inferior: solo cantidad y agregar */}
-      <div
-        className="absolute left-0 right-0 bottom-0 px-5 pt-16 pb-6 flex flex-col gap-2.5"
-        style={{ background: `linear-gradient(180deg, transparent 0%, ${theme.pageBg} 55%, ${theme.pageBg} 100%)` }}
-      >
-        <p className="text-xs text-center" style={{ color: theme.textMuted }}>
-          {p.unidades_por_bulto && `Bulto x${p.unidades_por_bulto}`}
-          {p.unidades_por_bulto && p.cantidad_minima && ' · '}
-          {p.cantidad_minima && `Mín. ${p.cantidad_minima} u.`}
-          {!p.is_on_demand && ` · Stock ${p.stock} u.`}
-        </p>
+      <div className="px-4 pb-4 pt-2 flex flex-col gap-1.5 mt-auto">
+        <div className="flex items-center justify-center gap-1.5">
+          <button
+            onClick={() => setCantidad(c => Math.max(1, c - 1))}
+            className="w-8 h-8 rounded-lg text-sm font-medium"
+            style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+          >−</button>
+          <input
+            type="number"
+            min={1}
+            value={cantidad}
+            onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
+            style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+          />
+          <button
+            onClick={() => setCantidad(c => c + 1)}
+            className="w-8 h-8 rounded-lg text-sm font-medium"
+            style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+          >+</button>
+        </div>
 
         {faltan > 0 ? (
-          <p
-            className="text-sm font-medium text-center rounded-xl py-2.5"
-            style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.15)', border: '1.5px solid rgba(232,193,90,0.35)' }}
-          >
+          <p className="text-[11px] font-medium text-center" style={{ color: '#E8C15A' }}>
             Te faltan {faltan} u. para el mínimo de {p.cantidad_minima}
           </p>
         ) : (
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setCantidad(p.id, cantidad - 1)}
-                className="w-9 h-9 rounded-lg text-sm font-medium"
-                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-              >−</button>
-              <div
-                className="w-10 h-9 rounded-lg flex items-center justify-center text-sm"
-                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-              >
-                {cantidad}
-              </div>
-              <button
-                onClick={() => setCantidad(p.id, cantidad + 1)}
-                className="w-9 h-9 rounded-lg text-sm font-medium"
-                style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-              >+</button>
-            </div>
-            <button
-              onClick={handleAdd}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl font-semibold py-2.5 text-sm transition-colors"
-              style={added
-                ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
-                : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
-            >
-              {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-              {added ? 'Agregado' : 'Agregar al pedido'}
-            </button>
-          </div>
+          <button
+            onClick={handleAdd}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold py-2.5 transition-colors"
+            style={added
+              ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
+              : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
+          >
+            {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
+            {added ? 'Agregado' : 'Agregar al pedido'}
+          </button>
         )}
       </div>
     </div>

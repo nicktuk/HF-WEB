@@ -116,6 +116,24 @@
     animation: fade-in-right 0.45s ease 0.3s both;
   }
 
+  /* 3D-style product cards: rounded corners, layered elevation, lift on hover.
+     --shadow-color / --shadow-color-soft are set inline per theme. */
+  .card-3d {
+    border-radius: 1.5rem;
+    box-shadow:
+      0 2px 6px var(--shadow-color-soft, rgba(13, 27, 42, 0.08)),
+      0 16px 32px -12px var(--shadow-color, rgba(13, 27, 42, 0.16)),
+      0 32px 56px -20px var(--shadow-color, rgba(13, 27, 42, 0.16));
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .card-3d:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 4px 10px var(--shadow-color-soft, rgba(13, 27, 42, 0.08)),
+      0 24px 40px -12px var(--shadow-color, rgba(13, 27, 42, 0.16)),
+      0 40px 72px -20px var(--shadow-color, rgba(13, 27, 42, 0.16));
+  }
+
   /* Filter bar glass effect */
   .filter-bar-glass {
     background: rgba(255, 255, 255, 0.97);
