@@ -167,10 +167,7 @@ export function Detalle2Client({ producto: p, prevProductoId, nextProductoId }: 
           {/* Galería — mismo tamaño de imagen que la tarjeta del catálogo */}
           <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-md mx-auto">
-              <div
-                className="relative aspect-[4/5] rounded-2xl overflow-hidden group"
-                style={{ backgroundColor: theme.imagePlate }}
-              >
+              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden group">
                 {actual ? (
                   <Image
                     src={resolveImageUrl(actual.url) ?? actual.url}
@@ -210,7 +207,7 @@ export function Detalle2Client({ producto: p, prevProductoId, nextProductoId }: 
                       key={img.id}
                       onClick={() => setIndex(i)}
                       className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors"
-                      style={{ borderColor: i === index ? theme.accent : theme.inputBorder, backgroundColor: theme.imagePlate }}
+                      style={{ borderColor: i === index ? theme.accent : theme.inputBorder }}
                     >
                       <Image
                         src={resolveImageUrl(img.url) ?? img.url}
