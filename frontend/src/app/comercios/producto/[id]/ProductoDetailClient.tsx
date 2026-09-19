@@ -49,6 +49,7 @@ interface ProductoDetalle {
 export function ProductoDetailClient({ producto: p }: { producto: ProductoDetalle }) {
   const themeMode = useComercioTheme(s => s.mode)
   const theme = getComercioTheme(themeMode)
+  const isDark = themeMode === 'dark'
 
   const [index, setIndex] = useState(0)
   const [cantidad, setCantidad] = useState(p.cantidad_minima || 1)
@@ -119,21 +120,27 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
 
-      <div className="relative md:h-[calc(100vh-60px)] md:flex md:flex-col" style={{ backgroundColor: theme.cardBg }}>
+      <div
+        className="card-3d relative mx-auto my-4 sm:my-6 lg:my-8 max-w-6xl"
+        style={{
+          ...({
+            '--shadow-color': isDark ? 'rgba(0,0,0,0.6)' : 'rgba(13,27,42,0.22)',
+            '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.4)' : 'rgba(13,27,42,0.12)',
+          } as React.CSSProperties),
+        }}
+      >
+      <div className="rounded-[1.75rem] overflow-hidden md:flex md:flex-col" style={{ backgroundColor: theme.cardBg }}>
         <div className="px-5 sm:px-8 md:px-10 py-3 shrink-0">
           <Link href="/comercios/catalogo" className="text-sm hover:underline" style={{ color: theme.textMuted }}>
             ← Catálogo
           </Link>
         </div>
 
-        <div className="md:flex-1 md:min-h-0 md:grid md:grid-cols-2">
-          {/* Galería — imagen grande a la izquierda */}
-          <div
-            className="flex flex-col gap-3 p-4 sm:p-6 md:p-8 md:h-full md:min-h-0 md:border-r"
-            style={{ borderColor: theme.cardBorder }}
-          >
+        <div className="md:grid md:grid-cols-2 md:items-start">
+          {/* Galería — imagen grande a la izquierda, características debajo */}
+          <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
             <div
-              className="relative flex-1 min-h-[45vh] md:min-h-0 rounded-2xl overflow-hidden group"
+              className="relative flex-1 min-h-[45vh] rounded-2xl overflow-hidden group"
               style={{ backgroundColor: theme.imagePlate }}
             >
               {actual ? (
@@ -199,10 +206,66 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                 />
               </div>
             )}
+
+            {/* Características: datos concretos, descripción y contenido del kit */}
+            {datosConcretos.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {datosConcretos.map(d => (
+                  <div
+                    key={d.label}
+                    className="rounded-lg px-3 py-2"
+                    style={d.urgent
+                      ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
+                      : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+                  >
+                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
+                    <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {p.descripcion && (
+              <div
+                className="rounded-xl px-4 py-3 space-y-2"
+                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+              >
+                {parseDescripcionConIconos(p.descripcion, p.iconos).map((line, index) =>
+                  line.isBullet ? (
+                    <div key={index} className="flex items-start gap-2">
+                      {line.icon ? (
+                        <line.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.accent }} />
+                      ) : (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full shrink-0 mt-[7px]"
+                          style={{ backgroundColor: theme.textMuted }}
+                        />
+                      )}
+                      <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
+                    </div>
+                  ) : (
+                    <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
+                  )
+                )}
+              </div>
+            )}
+
+            {p.kit_content && (
+              <div
+                className="rounded-xl px-4 py-3 flex items-start gap-2.5"
+                style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
+              >
+                <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
+                  <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{p.kit_content}</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Info — descripción, matriz de precios y compra a la derecha */}
-          <div className="p-4 sm:p-6 md:p-8 md:h-full md:overflow-y-auto flex flex-col">
+          {/* Info — título, precio, matriz de descuentos y compra a la derecha */}
+          <div className="p-4 sm:p-6 md:p-8 flex flex-col">
             <div className="flex-1">
               <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
                 {p.categoria && <span>{p.categoria}</span>}
@@ -242,61 +305,6 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
                   </p>
                 )}
               </div>
-
-              {datosConcretos.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {datosConcretos.map(d => (
-                    <div
-                      key={d.label}
-                      className="rounded-lg px-3 py-2"
-                      style={d.urgent
-                        ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
-                        : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-                    >
-                      <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
-                      <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {p.descripcion && (
-                <div
-                  className="mb-4 rounded-xl px-4 py-3 space-y-2"
-                  style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-                >
-                  {parseDescripcionConIconos(p.descripcion, p.iconos).map((line, index) =>
-                    line.isBullet ? (
-                      <div key={index} className="flex items-start gap-2">
-                        {line.icon ? (
-                          <line.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.accent }} />
-                        ) : (
-                          <span
-                            className="h-1.5 w-1.5 rounded-full shrink-0 mt-[7px]"
-                            style={{ backgroundColor: theme.textMuted }}
-                          />
-                        )}
-                        <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
-                      </div>
-                    ) : (
-                      <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
-                    )
-                  )}
-                </div>
-              )}
-
-              {p.kit_content && (
-                <div
-                  className="mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-                  style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
-                >
-                  <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
-                  <div>
-                    <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
-                    <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{p.kit_content}</p>
-                  </div>
-                </div>
-              )}
 
               {enModoDescuento && p.tramos_descuento.length > 0 && (
                 <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
@@ -382,6 +390,7 @@ export function ProductoDetailClient({ producto: p }: { producto: ProductoDetall
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
