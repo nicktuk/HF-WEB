@@ -1,46 +1,35 @@
-﻿import { mayoristFetch } from '@/lib/comercio-fetch'
-import { ComercioHeader } from '../_components/ComercioHeader'
+import { redirect } from 'next/navigation'
+import { mayoristFetch } from '@/lib/comercio-fetch'
 import { CapturarVendedorRef } from '../_components/CapturarVendedorRef'
-import { CatalogoClient } from './CatalogoClient'
-import { CatalogoPreview } from './CatalogoPreview'
+import { PublicComercioHeader } from '../_components/PublicComercioHeader'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 export const metadata = { robots: 'noindex, nofollow' }
 
-export default async function CatalogoPage() {
-  const [catalogoRes, infoRes] = await Promise.all([
-    mayoristFetch('/catalogo'),
-    mayoristFetch('/info'),
-  ])
-
-  // Sin sesión válida (o token expirado): preview sin precios ni stock,
-  // en vez de redirigir — el catálogo ahora es de acceso público.
-  if (!catalogoRes.ok || !infoRes.ok) {
+/**
+ * El catálogo ya no es una grilla: es el primer producto en
+ * /comercios/catalogo/[id], desde donde se navega de producto en producto
+ * con las flechas. Esta página solo redirige ahí (con o sin sesión).
+ */
+export default async function CatalogoIndexPage() {
+  const catalogoRes = await mayoristFetch('/catalogo')
+  if (catalogoRes.ok) {
+    const { productos } = await catalogoRes.json() as { productos: { id: number }[] }
+    if (productos.length > 0) redirect(`/comercios/catalogo/${productos[0].id}`)
+  } else {
     const previewRes = await fetch(`${API}/public/comercios/catalogo`, { cache: 'no-store' })
-    const data = previewRes.ok ? await previewRes.json() : { productos: [] }
-    return (
-      <>
-        <CapturarVendedorRef />
-        <CatalogoPreview productos={data.productos} />
-      </>
-    )
+    if (previewRes.ok) {
+      const { productos } = await previewRes.json() as { productos: { id: number }[] }
+      if (productos.length > 0) redirect(`/comercios/catalogo/${productos[0].id}`)
+    }
   }
-
-  const { productos, config } = await catalogoRes.json()
-  const info = await infoRes.json()
 
   return (
     <div className="min-h-screen">
       <CapturarVendedorRef />
-      <ComercioHeader nombreLocal={info.nombre_local} />
-      <CatalogoClient
-        productos={productos}
-        montoMinimo={config.monto_minimo_pedido}
-        modoPrecio={config.modo_precio}
-        redondeo={config.redondeo}
-        tramosDescuento={config.tramos_descuento}
-      />
+      <PublicComercioHeader />
+      <p className="text-center text-sm text-zinc-500 py-16">Todavía no hay productos cargados.</p>
     </div>
   )
 }

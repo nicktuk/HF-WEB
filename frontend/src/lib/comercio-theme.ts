@@ -99,7 +99,7 @@ export function getTramoScaleColor(t: number): string {
 }
 
 // Variante con un tramo amarillo extra (mismo tono que el aviso "te faltan
-// X u.") entre el naranja y el verde. Usada solo en detalle2 (barra de
+// X u.") entre el naranja y el verde. Usada en el catálogo (barra de
 // ahorro + matriz), sin afectar getTramoScaleColor de arriba.
 const ESCALA_AMARILLO: RGB = [232, 193, 90]
 

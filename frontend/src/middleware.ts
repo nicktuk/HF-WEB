@@ -96,12 +96,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // /comercios/catalogo queda fuera: sin sesión muestra un preview sin
-    // precios/stock en vez de redirigir (ver app/comercios/catalogo/page.tsx).
+    // /comercios/catalogo (y /comercios/catalogo/[id]) quedan fuera: sin
+    // sesión muestran un preview sin precios/stock en vez de redirigir
+    // (ver app/comercios/catalogo/[id]/page.tsx).
     '/comercios/carrito/:path*',
     '/comercios/pedidos/:path*',
     '/comercios/pedido/:path*',
-    '/comercios/producto/:path*',
     '/comercios/cambiar-password',
     // Portal de vendedores: todo bajo /vendedores pasa por acá; las rutas
     // públicas (login, recupero) se excluyen dentro de middlewareVendedor
