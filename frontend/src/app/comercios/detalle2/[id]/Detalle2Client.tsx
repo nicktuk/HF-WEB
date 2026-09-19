@@ -46,7 +46,13 @@ interface ProductoDetalle {
   override: boolean
 }
 
-export function Detalle2Client({ producto: p }: { producto: ProductoDetalle }) {
+interface Props {
+  producto: ProductoDetalle
+  prevProductoId: number | null
+  nextProductoId: number | null
+}
+
+export function Detalle2Client({ producto: p, prevProductoId, nextProductoId }: Props) {
   const themeMode = useComercioTheme(s => s.mode)
   const theme = getComercioTheme(themeMode)
   const isDark = themeMode === 'dark'
@@ -120,6 +126,26 @@ export function Detalle2Client({ producto: p }: { producto: ProductoDetalle }) {
         style={{ background: `radial-gradient(circle, ${theme.accent} 0%, transparent 68%)`, filter: 'blur(10px)', opacity: 0.25 * theme.glowOpacity }}
       />
 
+      {/* Flechas flotantes fijas al centro de la pantalla — navegan al producto anterior/siguiente */}
+      {prevProductoId != null && (
+        <Link
+          href={`/comercios/detalle2/${prevProductoId}`}
+          className="fixed left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg hover:bg-white transition-colors"
+          aria-label="Producto anterior"
+        >
+          <ChevronLeft className="h-6 w-6" style={{ color: '#0D1B2A' }} />
+        </Link>
+      )}
+      {nextProductoId != null && (
+        <Link
+          href={`/comercios/detalle2/${nextProductoId}`}
+          className="fixed right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg hover:bg-white transition-colors"
+          aria-label="Producto siguiente"
+        >
+          <ChevronRight className="h-6 w-6" style={{ color: '#0D1B2A' }} />
+        </Link>
+      )}
+
       <div className="px-4 sm:px-6 lg:px-8">
       <div
         className="card-3d relative mx-auto my-4 sm:my-6 lg:my-8 max-w-6xl"
@@ -138,11 +164,11 @@ export function Detalle2Client({ producto: p }: { producto: ProductoDetalle }) {
         </div>
 
         <div className="md:grid md:grid-cols-2 md:items-start">
-          {/* Galería tipo carousel — mismo tamaño de imagen que la tarjeta del catálogo */}
+          {/* Galería — mismo tamaño de imagen que la tarjeta del catálogo */}
           <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
-            <div className="relative w-full max-w-md mx-auto">
+            <div className="w-full max-w-md mx-auto">
               <div
-                className="relative aspect-[4/5] rounded-2xl overflow-hidden"
+                className="relative aspect-[4/5] rounded-2xl overflow-hidden group"
                 style={{ backgroundColor: theme.imagePlate }}
               >
                 {actual ? (
@@ -156,45 +182,48 @@ export function Detalle2Client({ producto: p }: { producto: ProductoDetalle }) {
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-sm" style={{ color: '#B7AF9C' }}>Sin imagen</div>
                 )}
+
+                {imagenes.length > 1 && (
+                  <>
+                    <button
+                      onClick={goToPrev}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                      aria-label="Imagen anterior"
+                    >
+                      <ChevronLeft className="h-4 w-4" style={{ color: '#0D1B2A' }} />
+                    </button>
+                    <button
+                      onClick={goToNext}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                      aria-label="Imagen siguiente"
+                    >
+                      <ChevronRight className="h-4 w-4" style={{ color: '#0D1B2A' }} />
+                    </button>
+                  </>
+                )}
               </div>
 
               {imagenes.length > 1 && (
-                <>
-                  <button
-                    onClick={goToPrev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
-                    aria-label="Imagen anterior"
-                  >
-                    <ChevronLeft className="h-5 w-5" style={{ color: '#0D1B2A' }} />
-                  </button>
-                  <button
-                    onClick={goToNext}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
-                    aria-label="Imagen siguiente"
-                  >
-                    <ChevronRight className="h-5 w-5" style={{ color: '#0D1B2A' }} />
-                  </button>
-                </>
+                <div className="flex gap-2 overflow-x-auto pb-1 mt-3">
+                  {imagenes.map((img, i) => (
+                    <button
+                      key={img.id}
+                      onClick={() => setIndex(i)}
+                      className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors"
+                      style={{ borderColor: i === index ? theme.accent : theme.inputBorder, backgroundColor: theme.imagePlate }}
+                    >
+                      <Image
+                        src={resolveImageUrl(img.url) ?? img.url}
+                        alt={img.alt_text || `${p.nombre} - ${i + 1}`}
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-
-            {imagenes.length > 1 && (
-              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                {imagenes.map((img, i) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setIndex(i)}
-                    aria-label={`Ir a la imagen ${i + 1}`}
-                    className="rounded-full transition-all"
-                    style={{
-                      width: i === index ? 18 : 6,
-                      height: 6,
-                      backgroundColor: i === index ? theme.accent : theme.accentTint(0.25),
-                    }}
-                  />
-                ))}
-              </div>
-            )}
 
             {p.video_url && (
               <div className="rounded-xl overflow-hidden bg-black aspect-video shrink-0">
