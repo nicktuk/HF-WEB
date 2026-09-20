@@ -185,7 +185,7 @@ export function CatalogoClient(props: Props) {
           {/* Galería — mismo tamaño de imagen que la tarjeta del catálogo */}
           <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-md mx-auto">
-              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden group">
+              <div className="relative aspect-square rounded-2xl overflow-hidden group">
                 {actual ? (
                   <Image
                     src={resolveImageUrl(actual.url) ?? actual.url}
