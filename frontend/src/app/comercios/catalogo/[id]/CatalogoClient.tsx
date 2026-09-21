@@ -191,7 +191,7 @@ export function CatalogoClient(props: Props) {
 
       <div className="relative px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-4 sm:py-6 lg:py-8">
         {/* Nombre del producto: arriba de todo, antes de cualquier tarjeta */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-3 sm:mb-4">
           <div className="flex items-center gap-2 text-sm mb-1.5" style={{ color: theme.textMuted }}>
             {props.producto.categoria && <span>{props.producto.categoria}</span>}
             {props.producto.categoria && props.producto.marca && <span>•</span>}
@@ -221,11 +221,11 @@ export function CatalogoClient(props: Props) {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
           {/* Columna izquierda: fotos + características, cada una en su tarjeta */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
           <Card3D cardBg={theme.cardBg} isDark={isDark}>
-          <div className="flex flex-col gap-3 p-4 sm:p-6">
+          <div className="flex flex-col gap-3 p-3 sm:p-4">
             <div className="w-full max-w-md mx-auto">
               <div className="relative aspect-square rounded-2xl overflow-hidden group">
                 {actual ? (
@@ -287,7 +287,7 @@ export function CatalogoClient(props: Props) {
           {/* Características: datos concretos, descripción, contenido del kit y video — su propia tarjeta */}
           {(datosConcretos.length > 0 || full?.producto.descripcion || full?.producto.kit_content || full?.producto.video_url || !full) && (
           <Card3D cardBg={theme.cardBg} isDark={isDark}>
-          <div className="flex flex-col gap-3 p-4 sm:p-6">
+          <div className="flex flex-col gap-3 p-3 sm:p-4">
             {full?.producto.video_url && (
               <div className="rounded-xl overflow-hidden bg-black aspect-video shrink-0">
                 <video
@@ -365,9 +365,9 @@ export function CatalogoClient(props: Props) {
           </div>
 
           {/* Columna derecha: precio, matriz y cantidad+botón, todo en una sola tarjeta */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
           <Card3D cardBg={theme.cardBg} isDark={isDark}>
-          <div className="p-4 sm:p-6">
+          <div className="p-3 sm:p-4">
             {full ? (
               <>
                 <p className="text-4xl md:text-5xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
@@ -434,7 +434,7 @@ export function CatalogoClient(props: Props) {
           )}
 
           <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
-          <div className="p-4 sm:p-6 space-y-3">
+          <div className="p-3 sm:p-4 space-y-3">
             {full ? (
               <>
                 <div className="flex items-center gap-2">
