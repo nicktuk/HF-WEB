@@ -364,7 +364,7 @@ export function CatalogoClient(props: Props) {
           )}
           </div>
 
-          {/* Columna derecha: precio, matriz y cantidad+botón, cada una en su tarjeta */}
+          {/* Columna derecha: precio, matriz y cantidad+botón, todo en una sola tarjeta */}
           <div className="flex flex-col gap-6">
           <Card3D cardBg={theme.cardBg} isDark={isDark}>
           <div className="p-4 sm:p-6">
@@ -389,10 +389,10 @@ export function CatalogoClient(props: Props) {
               </div>
             )}
           </div>
-          </Card3D>
 
           {full && enModoDescuento && full.producto.tramos_descuento.length > 0 && (
-          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <>
+          <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
           <div className="px-4 pt-3 pb-2">
             <SavingsBar
               precioVenta={full.producto.precio_venta as number}
@@ -426,10 +426,10 @@ export function CatalogoClient(props: Props) {
               })()}
             </tbody>
           </table>
-          </Card3D>
+          </>
           )}
 
-          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
           <div className="p-4 sm:p-6 space-y-3">
             {full ? (
               <>
