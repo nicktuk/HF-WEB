@@ -26,7 +26,13 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
 
   const proximoTramo = ordenados.find(t => t.cantidad_minima > cantidad)
 
-  const fill = (colorScale ?? getTramoScaleColor)(progreso)
+  // El color se basa en la posición del tramo alcanzado (1º rojo, 2º naranja,
+  // 3º amarillo, último verde), no en el % de descuento — con porcentajes
+  // reales (25/50/75/100%) el % casi nunca cae justo en el naranja puro y
+  // termina viéndose como una mezcla ambigua.
+  const tierIndex = ordenados.filter(t => descuentoActual >= t.descuento_porcentaje).length - 1
+  const colorProgreso = tierIndex < 0 ? 0 : (ordenados.length > 1 ? tierIndex / (ordenados.length - 1) : 1)
+  const fill = (colorScale ?? getTramoScaleColor)(colorProgreso)
 
   return (
     <div className={compact ? 'mt-0.5' : 'mt-1'}>
