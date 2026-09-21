@@ -408,11 +408,15 @@ export function CatalogoClient(props: Props) {
             <tbody>
               {(() => {
                 const tramos = full.producto.tramos_descuento
-                const maxDescuento = Math.max(...tramos.map(t => t.descuento_porcentaje))
-                return tramos.map(t => {
+                // Orden ascendente por cantidad_minima: el índice de cada tramo en esta
+                // lista define su color (1º rojo, 2º naranja, 3º amarillo, último verde),
+                // en vez de su % de descuento — así cada fila tiene un color distinto y
+                // reconocible sin depender de qué porcentajes puntuales se hayan cargado.
+                const ordenados = [...tramos].sort((a, b) => a.cantidad_minima - b.cantidad_minima)
+                return ordenados.map((t, i) => {
                   const activo = cantidad >= t.cantidad_minima
                     && !tramos.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                  const colorTramo = getTramoScaleColorV2(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                  const colorTramo = getTramoScaleColorV2(ordenados.length > 1 ? i / (ordenados.length - 1) : 1)
                   return (
                     <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
                       <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
