@@ -7,7 +7,6 @@ import { Search, Star, Zap, Lightbulb, Package, Menu, X, ShoppingCart, Tag } fro
 import { useCart } from '@/context/CartContext';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
-import { ComercioHeaderButton, FloatingComercioButton } from '@/components/public/ComercioAccessButton';
 import { useCategories, useSubcategories } from '@/hooks/useProducts';
 import { fetchPublicCatalogSettings } from '@/lib/api';
 import { trackPublicEvent } from '@/lib/analytics';
@@ -180,7 +179,6 @@ function PublicHeaderInner() {
                   <Lightbulb className="h-3.5 w-3.5 text-yellow-300" />
                   <span className="hidden sm:inline">¿Cómo funciona?</span>
                 </button>
-                <ComercioHeaderButton />
               </div>
             </div>
 
@@ -492,7 +490,6 @@ function PublicHeaderInner() {
       )}
 
       <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
-      <FloatingComercioButton />
     </>
   );
 }
