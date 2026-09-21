@@ -58,6 +58,7 @@ class ProductService:
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None,
+        on_sale: Optional[bool] = None,
         hide_out_of_stock: bool = False,
     ) -> Tuple[List[ProductPublicResponse], int]:
         """
@@ -66,6 +67,7 @@ class ProductService:
         Returns tuple of (products, total_count).
         Use featured=True to get only featured products (Novedades).
         Use immediate_delivery=True to get only products with immediate delivery.
+        Use on_sale=True to get only products with an active offer price.
         """
         skip = (page - 1) * limit
 
@@ -73,13 +75,13 @@ class ProductService:
         sort_new_first = get_setting(self.db, "SORT_NEW_FIRST") == "true"
 
         # Try cache first
-        cache_key = f"catalog:{page}:{limit}:{category}:{subcategory}:{search}:{featured}:{immediate_delivery}:{hide_out_of_stock}:{sort_new_first}"
+        cache_key = f"catalog:{page}:{limit}:{category}:{subcategory}:{search}:{featured}:{immediate_delivery}:{on_sale}:{hide_out_of_stock}:{sort_new_first}"
         cached_result = cache.get_product(cache_key)
         if cached_result:
             return cached_result
 
-        products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock, sort_new_first)
-        total = self.repo.count_enabled(category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
+        products = self.repo.get_enabled_products(skip, limit, category, subcategory, search, featured, immediate_delivery, on_sale, hide_out_of_stock, sort_new_first)
+        total = self.repo.count_enabled(category, subcategory, search, featured, immediate_delivery, on_sale, hide_out_of_stock)
 
         product_ids = [p.id for p in products]
 
@@ -294,6 +296,9 @@ class ProductService:
             slug=product.slug,
             name=product.display_name_with_code,
             price=product.final_price,
+            sale_price=product.sale_price if product.is_on_sale else None,
+            is_on_sale=product.is_on_sale,
+            discount_percentage=product.discount_percentage,
             currency=product.original_currency,
             short_description=product.short_description,
             brand=product.brand,
@@ -1212,6 +1217,10 @@ class ProductService:
             product.original_price = data.original_price if data.original_price and data.original_price > 0 else None
         if 'custom_price' in data.model_fields_set:
             product.custom_price = data.custom_price if data.custom_price and data.custom_price > 0 else None
+        if 'sale_price' in data.model_fields_set:
+            product.sale_price = data.sale_price if data.sale_price and data.sale_price > 0 else None
+        if 'sale_price_ends_at' in data.model_fields_set:
+            product.sale_price_ends_at = data.sale_price_ends_at
         if data.display_order is not None:
             product.display_order = data.display_order
         if data.category is not None:
@@ -1264,6 +1273,14 @@ class ProductService:
                         alt_text=alt_text or None,
                     )
                     self.db.add(image)
+
+        if product.sale_price is not None:
+            fp = product.final_price
+            if fp is None or float(product.sale_price) >= fp:
+                from app.core.exceptions import ValidationError
+                raise ValidationError(
+                    "El precio de oferta debe ser menor al precio final del producto."
+                )
 
         self.db.commit()
         self.db.refresh(product)

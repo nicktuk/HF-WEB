@@ -116,6 +116,7 @@ export const publicApi = {
     search?: string;
     featured?: boolean;
     immediate_delivery?: boolean;
+    on_sale?: boolean;
   } = {}): Promise<PaginatedResponse<ProductPublic>> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', params.page.toString());
@@ -127,6 +128,7 @@ export const publicApi = {
     if (params.immediate_delivery !== undefined) {
       searchParams.set('immediate_delivery', params.immediate_delivery.toString());
     }
+    if (params.on_sale !== undefined) searchParams.set('on_sale', params.on_sale.toString());
 
     const query = searchParams.toString();
     return fetchAPI(`/public/products${query ? `?${query}` : ''}`);

@@ -196,6 +196,8 @@ async def get_products_admin(
             markup_percentage=None if hide_prices else p.markup_percentage,
             wholesale_markup_percentage=None if hide_prices else p.wholesale_markup_percentage,
             custom_price=p.custom_price,
+            sale_price=p.sale_price,
+            sale_price_ends_at=p.sale_price_ends_at,
             description=p.description,
             short_description=p.short_description,
             brand=p.brand,
@@ -829,6 +831,8 @@ async def get_product_admin(
         markup_percentage=None if hide_prices else p.markup_percentage,
         wholesale_markup_percentage=None if hide_prices else p.wholesale_markup_percentage,
         custom_price=p.custom_price,
+        sale_price=p.sale_price,
+        sale_price_ends_at=p.sale_price_ends_at,
         description=p.description,
         short_description=p.short_description,
         brand=p.brand,
@@ -908,6 +912,8 @@ async def create_product(
         markup_percentage=product.markup_percentage,
         wholesale_markup_percentage=product.wholesale_markup_percentage,
         custom_price=product.custom_price,
+        sale_price=product.sale_price,
+        sale_price_ends_at=product.sale_price_ends_at,
         description=product.description,
         short_description=product.short_description,
         brand=product.brand,
@@ -975,6 +981,8 @@ async def create_product_manual(
         original_price=product.original_price,
         markup_percentage=product.markup_percentage,
         custom_price=product.custom_price,
+        sale_price=product.sale_price,
+        sale_price_ends_at=product.sale_price_ends_at,
         description=product.description,
         short_description=product.short_description,
         brand=product.brand,
@@ -1210,14 +1218,22 @@ async def update_product(
     Can update: enabled, markup_percentage, custom_name, custom_price, category, display_order
     """
     if current_user.is_product_editor:
-        # Strip price-sensitive fields — product_editor cannot touch cost or pricing
-        data = data.model_copy(update={
+        # Strip price-sensitive fields — product_editor cannot touch cost or pricing.
+        # sale_price/sale_price_ends_at are only nulled if the request actually tried
+        # to set them — otherwise model_copy would mark them as "set" and the service
+        # would wipe out any existing offer price on every unrelated edit.
+        strip_update = {
             "markup_percentage": None,
             "original_price": None,
             "wholesale_markup_percentage": None,
             "installments_3": None,
             "custom_installment_price": None,
-        })
+        }
+        if "sale_price" in data.model_fields_set:
+            strip_update["sale_price"] = None
+        if "sale_price_ends_at" in data.model_fields_set:
+            strip_update["sale_price_ends_at"] = None
+        data = data.model_copy(update=strip_update)
     product = service.update(product_id, data)
 
     stats = product.market_price_stats
@@ -1232,6 +1248,8 @@ async def update_product(
         markup_percentage=None if hide_prices else product.markup_percentage,
         wholesale_markup_percentage=None if hide_prices else product.wholesale_markup_percentage,
         custom_price=product.custom_price,
+        sale_price=product.sale_price,
+        sale_price_ends_at=product.sale_price_ends_at,
         description=product.description,
         short_description=product.short_description,
         brand=product.brand,

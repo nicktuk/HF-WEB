@@ -45,6 +45,7 @@ async def get_products(
     search: Optional[str] = Query(default=None, max_length=100),
     featured: Optional[bool] = Query(default=None),
     immediate_delivery: Optional[bool] = Query(default=None),
+    on_sale: Optional[bool] = Query(default=None),
     service: ProductService = Depends(get_product_service),
     db: Session = Depends(get_db),
 ):
@@ -54,11 +55,12 @@ async def get_products(
     Returns only enabled products with calculated final prices.
     Use featured=true to get only featured products (Novedades).
     Use immediate_delivery=true to get only products with immediate delivery.
+    Use on_sale=true to get only products with an active offer price (OFERTAS).
     """
     show_out_of_stock_str = get_setting(db, "SHOW_OUT_OF_STOCK")
     show_out_of_stock = show_out_of_stock_str != "false" if show_out_of_stock_str is not None else True
     hide_out_of_stock = not show_out_of_stock
-    products, total = service.get_public_catalog(page, limit, category, subcategory, search, featured, immediate_delivery, hide_out_of_stock)
+    products, total = service.get_public_catalog(page, limit, category, subcategory, search, featured, immediate_delivery, on_sale, hide_out_of_stock)
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
     return PaginatedResponse(

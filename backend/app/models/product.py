@@ -60,6 +60,8 @@ class Product(Base):
     wholesale_markup_percentage = Column(Numeric(5, 2), default=0, nullable=False, comment="Markup mayorista en porcentaje")
     custom_name = Column(String(500), nullable=True, comment="Nombre personalizado (sobrescribe original)")
     custom_price = Column(Numeric(10, 2), nullable=True, comment="Precio fijo personalizado (ignora markup si estÃ¡ definido)")
+    sale_price = Column(Numeric(10, 2), nullable=True, comment="Precio de oferta minorista (menor al precio final)")
+    sale_price_ends_at = Column(DateTime, nullable=True, comment="Vigencia de la oferta; NULL = no vence")
     display_order = Column(Integer, default=0, nullable=False, comment="Orden de visualizaciÃ³n en catÃ¡logo")
     stock_low_threshold = Column(Integer, nullable=True, comment="Umbral de stock bajo por producto (override del global)")
     alias_bot = Column(String(40), nullable=True, comment="Nombre corto para el bot de vendedores por WhatsApp")
@@ -106,6 +108,29 @@ class Product(Base):
             price = float(self.original_price) * (1 + float(self.markup_percentage) / 100)
             return math.ceil(price)
         return None
+
+    @property
+    def is_on_sale(self) -> bool:
+        """True si hay un precio de oferta vigente, válido y menor al precio final."""
+        if self.sale_price is None or float(self.sale_price) <= 0:
+            return False
+        fp = self.final_price
+        if fp is None or float(self.sale_price) >= fp:
+            return False
+        if self.sale_price_ends_at is not None:
+            from datetime import datetime
+            if self.sale_price_ends_at <= datetime.utcnow():
+                return False
+        return True
+
+    @property
+    def discount_percentage(self) -> int | None:
+        """% de descuento entre precio final y precio de oferta, si la oferta está vigente."""
+        import math
+        if not self.is_on_sale:
+            return None
+        fp = self.final_price
+        return math.floor((1 - float(self.sale_price) / fp) * 100)
 
     @property
     def installment_price(self) -> int | None:

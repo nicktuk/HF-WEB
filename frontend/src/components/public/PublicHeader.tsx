@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Search, Star, Zap, Lightbulb, Package, Menu, X, ShoppingCart } from 'lucide-react';
+import { Search, Star, Zap, Lightbulb, Package, Menu, X, ShoppingCart, Tag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { Input } from '@/components/ui/input';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
@@ -28,6 +28,7 @@ function PublicHeaderInner() {
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const showOnDemand = searchParams.get('on_demand') === 'true';
+  const showOnSale = searchParams.get('on_sale') === 'true';
   const sortParam = searchParams.get('sort') || '';
 
   // Local state
@@ -211,9 +212,9 @@ function PublicHeaderInner() {
             {/* Fila 1: filtros fijos — siempre visibles, se envuelven si no caben */}
             <div className="flex flex-wrap items-center gap-2 py-2">
               <button
-                onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined })}
+                onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined })}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  !selectedCategory && !showFeatured && !showImmediate && !showOnDemand
+                  !selectedCategory && !showFeatured && !showImmediate && !showOnDemand && !showOnSale
                     ? 'bg-white text-[#0D1B2A]'
                     : 'bg-white/10 text-white/70 border border-white/20'
                 }`}
@@ -221,7 +222,7 @@ function PublicHeaderInner() {
                 Ver todo
               </button>
               <button
-                onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+                onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showFeatured ? 'bg-amber-500 text-white' : 'bg-white/10 text-amber-300 border border-white/20'
                 }`}
@@ -230,7 +231,7 @@ function PublicHeaderInner() {
                 {featuredLabel}
               </button>
               <button
-                onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+                onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showImmediate ? 'bg-emerald-600 text-white' : 'bg-white/10 text-emerald-300 border border-white/20'
                 }`}
@@ -239,13 +240,22 @@ function PublicHeaderInner() {
                 {immediateLabel}
               </button>
               <button
-                onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
+                onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                   showOnDemand ? 'bg-violet-600 text-white' : 'bg-white/10 text-violet-300 border border-white/20'
                 }`}
               >
                 <Package className="h-3 w-3" />
                 {onDemandLabel}
+              </button>
+              <button
+                onClick={() => updateParams(showOnSale ? { on_sale: undefined } : { on_sale: 'true', featured: undefined, immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                  showOnSale ? 'bg-red-600 text-white' : 'bg-white/10 text-red-300 border border-white/20'
+                }`}
+              >
+                <Tag className="h-3 w-3" />
+                Ofertas
               </button>
               {categoryNavStyle === 'menu' && !selectedCategory && (
                 <button
@@ -272,7 +282,7 @@ function PublicHeaderInner() {
                           trackPublicEvent('category_click', { category: category.name });
                           if (isHome) {
                             e.preventDefault();
-                            updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
+                            updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined });
                           }
                         }}
                         className="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
@@ -316,9 +326,9 @@ function PublicHeaderInner() {
 
             {/* Ver todo */}
             <button
-              onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined })}
+              onClick={() => updateParams({ category: undefined, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                !selectedCategory && !showFeatured && !showImmediate && !showOnDemand
+                !selectedCategory && !showFeatured && !showImmediate && !showOnDemand && !showOnSale
                   ? 'bg-white text-[#0D1B2A]'
                   : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
               }`}
@@ -328,7 +338,7 @@ function PublicHeaderInner() {
 
             {/* Novedades */}
             <button
-              onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showFeatured ? 'bg-amber-500 text-white' : 'bg-white/10 text-amber-300 border border-white/20 hover:bg-white/20'
               }`}
@@ -339,7 +349,7 @@ function PublicHeaderInner() {
 
             {/* Inmediata */}
             <button
-              onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showImmediate ? { immediate_delivery: undefined } : { immediate_delivery: 'true', featured: undefined, on_demand: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showImmediate ? 'bg-emerald-600 text-white' : 'bg-white/10 text-emerald-300 border border-white/20 hover:bg-white/20'
               }`}
@@ -350,13 +360,24 @@ function PublicHeaderInner() {
 
             {/* Por pedido */}
             <button
-              onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, category: undefined, subcategory: undefined })}
+              onClick={() => updateParams(showOnDemand ? { on_demand: undefined, category: undefined, subcategory: undefined } : { on_demand: 'true', featured: undefined, immediate_delivery: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
                 showOnDemand ? 'bg-violet-600 text-white' : 'bg-white/10 text-violet-300 border border-white/20 hover:bg-white/20'
               }`}
             >
               <Package className="h-3 w-3" />
               Por pedido
+            </button>
+
+            {/* Ofertas */}
+            <button
+              onClick={() => updateParams(showOnSale ? { on_sale: undefined } : { on_sale: 'true', featured: undefined, immediate_delivery: undefined, on_demand: undefined, category: undefined, subcategory: undefined })}
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
+                showOnSale ? 'bg-red-600 text-white' : 'bg-white/10 text-red-300 border border-white/20 hover:bg-white/20'
+              }`}
+            >
+              <Tag className="h-3 w-3" />
+              Ofertas
             </button>
 
             {/* Category pills OR menu button */}
@@ -383,7 +404,7 @@ function PublicHeaderInner() {
                     trackPublicEvent('category_click', { category: category.name });
                     if (isHome) {
                       e.preventDefault();
-                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
+                      updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined });
                     }
                   }}
                   className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-105 animate-attention-pulse"
@@ -455,7 +476,7 @@ function PublicHeaderInner() {
                       setCategoryMenuOpen(false);
                       if (isHome) {
                         e.preventDefault();
-                        updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, section_id: undefined });
+                        updateParams({ category: category.name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined });
                       }
                     }}
                     className="px-4 py-2 rounded-xl text-sm font-semibold border transition-all hover:scale-105"
