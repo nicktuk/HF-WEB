@@ -30,6 +30,7 @@ import {
   useDeposits,
   useDepositStock,
   useSetDepositStock,
+  useComercioConfig,
 } from '@/hooks/useProducts';
 
 export default function ProductEditPage() {
@@ -52,6 +53,7 @@ export default function ProductEditPage() {
   const { data: deposits } = useDeposits(apiKey);
   const { data: depositStockData } = useDepositStock(apiKey, productId);
   const setDepositStockMutation = useSetDepositStock(apiKey);
+  const { data: comercioConfig } = useComercioConfig(apiKey, productId);
 
   // Form state
   const [enabled, setEnabled] = useState(false);
@@ -1386,19 +1388,26 @@ export default function ProductEditPage() {
               </div>
 
               {/* Canal comercios — configuración propia, separada de este editor */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Canal comercios</p>
-                  <p className="text-sm text-gray-500">
-                    Visibilidad, precio, unidades por bulto, descripción y fotos propias del canal mayorista
-                  </p>
+              <div>
+                {comercioConfig?.es_mayorista && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 mb-2">
+                    Activo en comercios
+                  </span>
+                )}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Canal comercios</p>
+                    <p className="text-sm text-gray-500">
+                      Visibilidad, precio, unidades por bulto, descripción y fotos propias del canal mayorista
+                    </p>
+                  </div>
+                  <Link
+                    href={`/admin/productos/${productId}/comercio`}
+                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Configurar →
+                  </Link>
                 </div>
-                <Link
-                  href={`/admin/productos/${productId}/comercio`}
-                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Configurar →
-                </Link>
               </div>
 
               {/* Publicar toggle */}
