@@ -60,6 +60,25 @@ type Props =
   | { mode: 'full'; producto: ProductoDetalle; prevProductoId: number | null; nextProductoId: number | null }
   | { mode: 'preview'; producto: ProductoPreview; prevProductoId: number | null; nextProductoId: number | null }
 
+/** Tarjeta con esquinas redondeadas y sombra 3D, sin borde (mismo tratamiento que catalogo3). */
+function Card3D({ children, cardBg, isDark, className }: { children: React.ReactNode; cardBg: string; isDark: boolean; className?: string }) {
+  return (
+    <div
+      className="card-3d"
+      style={{
+        ...({
+          '--shadow-color': isDark ? 'rgba(0,0,0,0.6)' : 'rgba(13,27,42,0.22)',
+          '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.4)' : 'rgba(13,27,42,0.12)',
+        } as React.CSSProperties),
+      }}
+    >
+      <div className={`rounded-[1.75rem] overflow-hidden ${className ?? ''}`} style={{ backgroundColor: cardBg }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function CatalogoClient(props: Props) {
   const { prevProductoId, nextProductoId } = props
   const full = props.mode === 'full' ? props : null
@@ -170,20 +189,43 @@ export function CatalogoClient(props: Props) {
         </Link>
       )}
 
-      <div className="px-4 sm:px-6 lg:px-8">
-      <div
-        className="card-3d relative mx-auto my-4 sm:my-6 lg:my-8 max-w-6xl"
-        style={{
-          ...({
-            '--shadow-color': isDark ? 'rgba(0,0,0,0.6)' : 'rgba(13,27,42,0.22)',
-            '--shadow-color-soft': isDark ? 'rgba(0,0,0,0.4)' : 'rgba(13,27,42,0.12)',
-          } as React.CSSProperties),
-        }}
-      >
-      <div className="rounded-[1.75rem] overflow-hidden md:flex md:flex-col" style={{ backgroundColor: theme.cardBg }}>
-        <div className="md:grid md:grid-cols-2 md:items-start">
-          {/* Galería — mismo tamaño de imagen que la tarjeta del catálogo */}
-          <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
+      <div className="relative px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-4 sm:py-6 lg:py-8">
+        {/* Nombre del producto: arriba de todo, antes de cualquier tarjeta */}
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
+            {props.producto.categoria && <span>{props.producto.categoria}</span>}
+            {props.producto.categoria && props.producto.marca && <span>•</span>}
+            {props.producto.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{props.producto.marca}</span>}
+          </div>
+
+          <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.textPrimary }}>{props.producto.nombre}</h1>
+
+          {full && (full.producto.is_featured || full.producto.is_immediate_delivery || full.producto.is_best_seller) && (
+            <div className="flex flex-wrap gap-1.5">
+              {full.producto.is_featured && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                  <Star className="w-2.5 h-2.5 fill-current" /> Nuevo
+                </span>
+              )}
+              {full.producto.is_immediate_delivery && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                  <Zap className="w-2.5 h-2.5 fill-current" /> Inmediata
+                </span>
+              )}
+              {full.producto.is_best_seller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                  <Award className="w-2.5 h-2.5" /> Top
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
+          {/* Columna izquierda: fotos + características, cada una en su tarjeta */}
+          <div className="flex flex-col gap-6">
+          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div className="flex flex-col gap-3 p-4 sm:p-6">
             <div className="w-full max-w-md mx-auto">
               <div className="relative aspect-square rounded-2xl overflow-hidden group">
                 {actual ? (
@@ -239,7 +281,13 @@ export function CatalogoClient(props: Props) {
                 </div>
               )}
             </div>
+          </div>
+          </Card3D>
 
+          {/* Características: datos concretos, descripción, contenido del kit y video — su propia tarjeta */}
+          {(datosConcretos.length > 0 || full?.producto.descripcion || full?.producto.kit_content || full?.producto.video_url || !full) && (
+          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div className="flex flex-col gap-3 p-4 sm:p-6">
             {full?.producto.video_url && (
               <div className="rounded-xl overflow-hidden bg-black aspect-video shrink-0">
                 <video
@@ -251,7 +299,6 @@ export function CatalogoClient(props: Props) {
               </div>
             )}
 
-            {/* Características: datos concretos, descripción y contenido del kit */}
             {datosConcretos.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {datosConcretos.map(d => (
@@ -313,170 +360,145 @@ export function CatalogoClient(props: Props) {
               </p>
             )}
           </div>
+          </Card3D>
+          )}
+          </div>
 
-          {/* Info — título, precio, matriz de descuentos y compra a la derecha */}
-          <div className="p-4 sm:p-6 md:p-8 flex flex-col">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
-                {props.producto.categoria && <span>{props.producto.categoria}</span>}
-                {props.producto.categoria && props.producto.marca && <span>•</span>}
-                {props.producto.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{props.producto.marca}</span>}
+          {/* Columna derecha: precio, matriz y cantidad+botón, cada una en su tarjeta */}
+          <div className="flex flex-col gap-6">
+          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div className="p-4 sm:p-6">
+            {full ? (
+              <>
+                <p className="text-3xl md:text-4xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+                  ${precioUnitario.toLocaleString('es-AR')}
+                </p>
+                {enModoDescuento && (
+                  <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
+                    Precio de venta sugerido ${(full.producto.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
+                  </p>
+                )}
+              </>
+            ) : (
+              <div
+                className="flex items-center gap-2 text-sm font-semibold"
+                style={{ color: theme.textMuted }}
+              >
+                <Lock className="h-4 w-4 shrink-0" />
+                Iniciá sesión para ver el precio
               </div>
+            )}
+          </div>
+          </Card3D>
 
-              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.textPrimary }}>{props.producto.nombre}</h1>
+          {full && enModoDescuento && full.producto.tramos_descuento.length > 0 && (
+          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div className="px-4 pt-3 pb-2">
+            <SavingsBar
+              precioVenta={full.producto.precio_venta as number}
+              cantidad={cantidad}
+              tramos={full.producto.tramos_descuento}
+              redondeo={full.producto.redondeo}
+              theme={theme}
+              colorScale={getTramoScaleColorV2}
+            />
+          </div>
+          <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
+          <table className="w-full text-sm">
+            <tbody>
+              {(() => {
+                const tramos = full.producto.tramos_descuento
+                const maxDescuento = Math.max(...tramos.map(t => t.descuento_porcentaje))
+                return tramos.map(t => {
+                  const activo = cantidad >= t.cantidad_minima
+                    && !tramos.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
+                  const colorTramo = getTramoScaleColorV2(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
+                  return (
+                    <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
+                      <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
+                      <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
+                      <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
+                        ${calcularPrecioPorDescuento(full.producto.precio_venta as number, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  )
+                })
+              })()}
+            </tbody>
+          </table>
+          </Card3D>
+          )}
 
-              {full && (full.producto.is_featured || full.producto.is_immediate_delivery || full.producto.is_best_seller) && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {full.producto.is_featured && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                      <Star className="w-2.5 h-2.5 fill-current" /> Nuevo
-                    </span>
-                  )}
-                  {full.producto.is_immediate_delivery && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                      <Zap className="w-2.5 h-2.5 fill-current" /> Inmediata
-                    </span>
-                  )}
-                  {full.producto.is_best_seller && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-                      <Award className="w-2.5 h-2.5" /> Top
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {full ? (
-                <>
-                  <div className="mb-4">
-                    <p className="text-3xl md:text-4xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
-                      ${precioUnitario.toLocaleString('es-AR')}
-                    </p>
-                    {enModoDescuento && (
-                      <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
-                        Precio de lista ${(full.producto.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
-                      </p>
-                    )}
-                  </div>
-
-                  {enModoDescuento && full.producto.tramos_descuento.length > 0 && (
-                    <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.accentTint(0.25)}` }}>
-                      <div className="px-4 pt-3 pb-2">
-                        <SavingsBar
-                          precioVenta={full.producto.precio_venta as number}
-                          cantidad={cantidad}
-                          tramos={full.producto.tramos_descuento}
-                          redondeo={full.producto.redondeo}
-                          theme={theme}
-                          colorScale={getTramoScaleColorV2}
-                        />
-                      </div>
-                      <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
-                      <table className="w-full text-sm">
-                        <tbody>
-                          {(() => {
-                            const tramos = full.producto.tramos_descuento
-                            const maxDescuento = Math.max(...tramos.map(t => t.descuento_porcentaje))
-                            return tramos.map(t => {
-                              const activo = cantidad >= t.cantidad_minima
-                                && !tramos.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
-                              const colorTramo = getTramoScaleColorV2(maxDescuento > 0 ? t.descuento_porcentaje / maxDescuento : 0)
-                              return (
-                                <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
-                                  <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                                  <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
-                                  <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
-                                    ${calcularPrecioPorDescuento(full.producto.precio_venta as number, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
-                                  </td>
-                                </tr>
-                              )
-                            })
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div
-                  className="mt-1 rounded-xl px-4 py-3 flex items-center gap-2 text-sm font-semibold"
-                  style={{ backgroundColor: theme.accentTint(0.08), color: theme.textMuted }}
-                >
-                  <Lock className="h-4 w-4 shrink-0" />
-                  Iniciá sesión para ver el precio
-                </div>
-              )}
-            </div>
-
-            <div className="shrink-0 pt-4 space-y-3">
-              {full ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setCantidad(c => Math.max(1, c - 1))}
-                        className="w-8 h-8 rounded-lg text-sm font-medium"
-                        style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-                      >−</button>
-                      <input
-                        type="number"
-                        min={1}
-                        value={cantidad}
-                        onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
-                        style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-                      />
-                      <button
-                        onClick={() => setCantidad(c => c + 1)}
-                        className="w-8 h-8 rounded-lg text-sm font-medium"
-                        style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
-                      >+</button>
-                    </div>
-                  </div>
-
-                  {faltan > 0 ? (
-                    <p
-                      className="text-sm font-medium text-center rounded-xl py-3"
-                      style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.1)', border: '1.5px solid rgba(232,193,90,0.3)' }}
-                    >
-                      Te faltan {faltan} u. para el mínimo de {full.producto.cantidad_minima}
-                    </p>
-                  ) : (
+          <Card3D cardBg={theme.cardBg} isDark={isDark}>
+          <div className="p-4 sm:p-6 space-y-3">
+            {full ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={handleAdd}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold py-3 transition-colors"
-                      style={added
-                        ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
-                        : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
-                    >
-                      {added ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
-                      {added ? 'Agregado al pedido' : 'Agregar al pedido'}
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/comercios"
-                    className="w-full flex items-center justify-center rounded-xl font-semibold py-3 text-sm transition-colors"
-                    style={{ backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
+                      onClick={() => setCantidad(c => Math.max(1, c - 1))}
+                      className="w-8 h-8 rounded-lg text-sm font-medium"
+                      style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+                    >−</button>
+                    <input
+                      type="number"
+                      min={1}
+                      value={cantidad}
+                      onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
+                      style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+                    />
+                    <button
+                      onClick={() => setCantidad(c => c + 1)}
+                      className="w-8 h-8 rounded-lg text-sm font-medium"
+                      style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
+                    >+</button>
+                  </div>
+                </div>
+
+                {faltan > 0 ? (
+                  <p
+                    className="text-sm font-medium text-center rounded-xl py-3"
+                    style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.1)', border: '1.5px solid rgba(232,193,90,0.3)' }}
                   >
-                    Iniciar sesión
-                  </Link>
-                  <Link
-                    href="/comercios/solicitud"
-                    className="w-full text-center text-xs hover:underline"
-                    style={{ color: theme.textMuted }}
+                    Te faltan {faltan} u. para el mínimo de {full.producto.cantidad_minima}
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleAdd}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold py-3 transition-colors"
+                    style={added
+                      ? { backgroundColor: theme.buttonAddedBg, color: theme.accent, border: `1.5px solid ${theme.accent}` }
+                      : { backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
                   >
-                    ¿No tenés cuenta? Solicitá acceso
-                  </Link>
-                </>
-              )}
-            </div>
+                    {added ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+                    {added ? 'Agregado al pedido' : 'Agregar al pedido'}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/comercios"
+                  className="w-full flex items-center justify-center rounded-xl font-semibold py-3 text-sm transition-colors"
+                  style={{ backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/comercios/solicitud"
+                  className="w-full text-center text-xs hover:underline"
+                  style={{ color: theme.textMuted }}
+                >
+                  ¿No tenés cuenta? Solicitá acceso
+                </Link>
+              </>
+            )}
+          </div>
+          </Card3D>
           </div>
         </div>
-      </div>
-      </div>
       </div>
     </div>
   )
