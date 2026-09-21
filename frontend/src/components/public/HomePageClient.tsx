@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Zap, SlidersHorizontal } from 'lucide-react';
+import { Zap, SlidersHorizontal, Tag } from 'lucide-react';
 import { ProductGrid } from '@/components/public/ProductGrid';
 import { FloatingWhatsAppButton } from '@/components/public/ContactButton';
 import { Footer } from '@/components/public/Footer';
@@ -66,6 +66,7 @@ export function HomePageContent() {
   const showFeatured = searchParams.get('featured') === 'true';
   const showImmediate = searchParams.get('immediate_delivery') === 'true';
   const showOnDemand = searchParams.get('on_demand') === 'true';
+  const showOnSale = searchParams.get('on_sale') === 'true';
   const selectedSectionId = searchParams.get('section_id') ? Number(searchParams.get('section_id')) : undefined;
   const sortParam = searchParams.get('sort') || undefined;
   const categoriesParam = searchParams.get('categories') || '';
@@ -117,9 +118,9 @@ export function HomePageContent() {
     router.push(queryString ? `/?${queryString}` : '/', { scroll: false });
   }, [searchParams, router, selectedCategory, selectedSubcategory]);
 
-  const apiCategory = (!showFeatured && !showImmediate && !selectedSectionId && effectiveCategories.length === 1)
+  const apiCategory = (!showFeatured && !showImmediate && !showOnSale && !selectedSectionId && effectiveCategories.length === 1)
     ? effectiveCategories[0] : undefined;
-  const apiSubcategory = (!showFeatured && !showImmediate && !selectedSectionId && effectiveCategories.length === 1)
+  const apiSubcategory = (!showFeatured && !showImmediate && !showOnSale && !selectedSectionId && effectiveCategories.length === 1)
     ? selectedSubcategory : undefined;
 
   const { data, isLoading } = usePublicProducts({
@@ -130,6 +131,7 @@ export function HomePageContent() {
     search: searchFromUrl || undefined,
     featured: showFeatured ? true : undefined,
     immediate_delivery: showImmediate ? true : undefined,
+    on_sale: showOnSale ? true : undefined,
   });
 
   const { data: categories } = useCategories();
@@ -181,8 +183,9 @@ export function HomePageContent() {
     if (showFeatured) return '#f59e0b';
     if (showImmediate) return '#10b981';
     if (showOnDemand) return '#7c3aed';
+    if (showOnSale) return '#dc2626';
     return '#94a3b8';
-  }, [selectedCategory, orderedCategories, showFeatured, showImmediate, showOnDemand]);
+  }, [selectedCategory, orderedCategories, showFeatured, showImmediate, showOnDemand, showOnSale]);
 
   // Products for a manual section selected via section_id param
   const selectedSection = selectedSectionId ? sections?.find(s => s.id === selectedSectionId) : undefined;
@@ -226,7 +229,7 @@ export function HomePageContent() {
     if (sortParam === 'name_asc') return [...items].sort((a, b) => a.name.localeCompare(b.name, 'es'));
     if (sortParam === 'name_desc') return [...items].sort((a, b) => b.name.localeCompare(a.name, 'es'));
 
-    if (showFeatured || showImmediate) {
+    if (showFeatured || showImmediate || showOnSale) {
       return items;
     }
 
@@ -267,9 +270,9 @@ export function HomePageContent() {
   })();
 
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
-  const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || selectedSectionId || searchFromUrl);
+  const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || showOnSale || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !searchFromUrl;
+  const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !showOnSale && !searchFromUrl;
   const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory && !sortNewFirst;
 
   const groupedProducts = useMemo(() => {
@@ -508,6 +511,19 @@ export function HomePageContent() {
                 <div>
                   <p className="text-sm font-bold text-violet-800">{onDemandLabel}</p>
                   <p className="text-xs text-violet-700 mt-0.5">Productos que conseguimos especialmente para vos.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {showOnSale && (
+            <div className="mb-5 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-red-50 px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+                  <Tag className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-red-800">Ofertas</p>
+                  <p className="text-xs text-red-700 mt-0.5">Productos con precio de oferta por tiempo limitado.</p>
                 </div>
               </div>
             </div>

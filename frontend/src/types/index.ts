@@ -20,6 +20,9 @@ export interface ProductPublic {
   slug: string;
   name: string;
   price: number | null;
+  sale_price?: number | null;
+  is_on_sale: boolean;
+  discount_percentage?: number | null;
   currency: string;
   short_description?: string;
   brand?: string;
@@ -66,6 +69,8 @@ export interface ProductAdmin extends ProductPublic {
   markup_percentage: number;
   wholesale_markup_percentage?: number;
   custom_price?: number;
+  sale_price?: number | null;
+  sale_price_ends_at?: string | null;
   custom_installment_price?: number;
   description?: string;
   sku?: string;
@@ -419,6 +424,8 @@ export interface ProductUpdateForm {
   custom_name?: string;
   original_price?: number | null;
   custom_price?: number | null;
+  sale_price?: number | null;
+  sale_price_ends_at?: string | null;
   display_order?: number;
   category?: string;
   category_id?: number;

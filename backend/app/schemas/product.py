@@ -75,6 +75,8 @@ class ProductUpdate(BaseModel):
     custom_name: Optional[str] = Field(None, max_length=500)
     original_price: Optional[Decimal] = Field(None, ge=0)
     custom_price: Optional[Decimal] = Field(None, ge=0)
+    sale_price: Optional[Decimal] = Field(None, ge=0)
+    sale_price_ends_at: Optional[datetime] = None
     display_order: Optional[int] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)
     subcategory: Optional[str] = Field(None, max_length=100)
@@ -89,6 +91,14 @@ class ProductUpdate(BaseModel):
     video_url: Optional[str] = None
     mostrar_codigo: Optional[bool] = None
     alias_bot: Optional[str] = Field(None, max_length=40)
+
+    @field_validator("sale_price_ends_at")
+    @classmethod
+    def validate_sale_price_ends_at(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """La fecha de fin de la oferta debe ser futura."""
+        if v is not None and v <= datetime.utcnow():
+            raise ValueError("La fecha de fin de la oferta debe ser futura")
+        return v
 
     @field_validator("custom_name")
     @classmethod
@@ -127,6 +137,8 @@ class ProductResponse(BaseModel):
     markup_percentage: Decimal
     wholesale_markup_percentage: Decimal = Field(default=Decimal("0"), ge=0)
     custom_price: Optional[Decimal] = None
+    sale_price: Optional[Decimal] = None
+    sale_price_ends_at: Optional[datetime] = None
     description: Optional[str] = None
     short_description: Optional[str] = None
     brand: Optional[str] = None
@@ -179,6 +191,27 @@ class ProductResponse(BaseModel):
 
     @computed_field
     @property
+    def is_on_sale(self) -> bool:
+        if self.sale_price is None or self.sale_price <= 0:
+            return False
+        fp = self.final_price
+        if fp is None or self.sale_price >= fp:
+            return False
+        if self.sale_price_ends_at is not None and self.sale_price_ends_at <= datetime.utcnow():
+            return False
+        return True
+
+    @computed_field
+    @property
+    def discount_percentage(self) -> Optional[int]:
+        import math
+        if not self.is_on_sale:
+            return None
+        fp = self.final_price
+        return math.floor((1 - float(self.sale_price) / float(fp)) * 100)
+
+    @computed_field
+    @property
     def installment_price(self) -> Optional[Decimal]:
         import math
         if not self.installments_3:
@@ -200,6 +233,9 @@ class ProductPublicResponse(BaseModel):
     slug: str
     name: str  # display_name
     price: Optional[Decimal] = None  # final_price
+    sale_price: Optional[Decimal] = None
+    is_on_sale: bool = False
+    discount_percentage: Optional[int] = None
     currency: str = "ARS"
     short_description: Optional[str] = None
     brand: Optional[str] = None

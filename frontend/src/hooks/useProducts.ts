@@ -16,6 +16,7 @@ export function usePublicProducts(params: {
   search?: string;
   featured?: boolean;
   immediate_delivery?: boolean;
+  on_sale?: boolean;
 } = {}) {
   return useQuery({
     queryKey: ['public-products', params],

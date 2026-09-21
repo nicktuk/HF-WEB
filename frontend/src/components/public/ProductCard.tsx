@@ -116,8 +116,13 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Status badges — desktop overlay only */}
-        {(product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
+        {(product.is_on_sale || product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
           <div className="absolute top-2.5 left-2.5 hidden sm:flex flex-col gap-1.5">
+            {product.is_on_sale && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
+                Oferta
+              </span>
+            )}
             {product.is_featured && (product.stock_qty || 0) > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md uppercase tracking-wide">
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
@@ -159,8 +164,13 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Content */}
       <div className="p-3.5 flex flex-col gap-1.5">
         {/* Status badges — mobile only (below image) */}
-        {(product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
+        {(product.is_on_sale || product.is_featured || product.is_immediate_delivery || product.is_on_demand || product.is_check_stock || product.installments_3) && (
           <div className="flex flex-wrap gap-1 sm:hidden">
+            {product.is_on_sale && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                Oferta
+              </span>
+            )}
             {product.is_featured && (product.stock_qty || 0) > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
@@ -237,14 +247,30 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Price row */}
         <div className="flex items-start justify-between mt-1 pt-2 border-t border-zinc-100">
           <div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-extrabold text-zinc-900 tabular-nums tracking-tight">
-                {formatPrice(product.price)}
-              </span>
-              {product.installments_3 && (
-                <span className="text-[10px] font-medium text-zinc-400 leading-none">efectivo / transf.</span>
-              )}
-            </div>
+            {product.is_on_sale ? (
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-xs font-medium text-zinc-400 line-through tabular-nums">
+                  {formatPrice(product.price)}
+                </span>
+                {product.discount_percentage != null && (
+                  <span className="text-xs font-bold text-red-600 tabular-nums">
+                    -{product.discount_percentage}%
+                  </span>
+                )}
+                <span className="basis-full text-xl font-extrabold text-red-600 tabular-nums tracking-tight">
+                  {formatPrice(product.sale_price ?? null)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-extrabold text-zinc-900 tabular-nums tracking-tight">
+                  {formatPrice(product.price)}
+                </span>
+                {product.installments_3 && (
+                  <span className="text-[10px] font-medium text-zinc-400 leading-none">efectivo / transf.</span>
+                )}
+              </div>
+            )}
             {product.installments_3 && product.installment_price && (
               <p className="text-[11px] font-semibold text-teal-600 mt-0.5 tabular-nums">
                 3 de {formatPrice(product.installment_price)} con tarjeta

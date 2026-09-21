@@ -33,6 +33,13 @@ import {
   useComercioConfig,
 } from '@/hooks/useProducts';
 
+/** Convierte un ISO string (UTC) a formato "YYYY-MM-DDTHH:mm" para <input type="datetime-local"> en hora local. */
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function ProductEditPage() {
   const params = useParams();
   const productId = parseInt(params.id as string, 10);
@@ -70,6 +77,8 @@ export default function ProductEditPage() {
   const [customName, setCustomName] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   const [customPrice, setCustomPrice] = useState('');
+  const [salePrice, setSalePrice] = useState('');
+  const [salePriceEndsAt, setSalePriceEndsAt] = useState('');
   const [calcEnvio, setCalcEnvio] = useState('');
   const [calcVendedorPct, setCalcVendedorPct] = useState('');
   const [calcGananciaNetaPct, setCalcGananciaNetaPct] = useState('');
@@ -157,6 +166,8 @@ export default function ProductEditPage() {
       setCustomName(product.custom_name || '');
       setOriginalPrice(product.original_price ? String(product.original_price) : '');
       setCustomPrice(product.custom_price ? String(product.custom_price) : '');
+      setSalePrice(product.sale_price ? String(product.sale_price) : '');
+      setSalePriceEndsAt(product.sale_price_ends_at ? toDatetimeLocalValue(product.sale_price_ends_at) : '');
       setCategory(product.category || '');
       setSubcategory(product.subcategory || '');
       setDescription(product.description || '');
@@ -403,6 +414,8 @@ export default function ProductEditPage() {
         custom_name: customName || '',
         original_price: originalPrice ? parseFloat(originalPrice) : null,
         custom_price: customPrice ? parseFloat(customPrice) : null,
+        sale_price: salePrice ? parseFloat(salePrice) : null,
+        sale_price_ends_at: salePriceEndsAt ? new Date(salePriceEndsAt).toISOString().replace('Z', '') : null,
         category: category || '',
         subcategory: subcategory || '',
         description: description || '',
@@ -1578,6 +1591,25 @@ export default function ProductEditPage() {
                     placeholder="Dejar vacio para usar markup"
                     helperText="Si se define, ignora el markup"
                   />
+
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-3">
+                    <p className="text-sm font-medium text-red-700">Precio de oferta (catálogo minorista)</p>
+                    <Input
+                      label="Precio de oferta"
+                      type="number"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      placeholder="Dejar vacío para no tener oferta"
+                      helperText="Debe ser menor al precio de venta actual"
+                    />
+                    <Input
+                      label="Vence el (opcional)"
+                      type="datetime-local"
+                      value={salePriceEndsAt}
+                      onChange={(e) => setSalePriceEndsAt(e.target.value)}
+                      helperText="Si se deja vacío, la oferta no vence"
+                    />
+                  </div>
                 </>
               )}
 

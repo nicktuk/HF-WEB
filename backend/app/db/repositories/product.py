@@ -38,6 +38,19 @@ class ProductRepository(BaseRepository[Product]):
             .first()
         )
 
+    def _on_sale_condition(self):
+        """Condición SQL de oferta vigente: sale_price válido, menor al precio final y no vencido."""
+        final_price_expr = case(
+            (and_(Product.custom_price.isnot(None), Product.custom_price > 0), Product.custom_price),
+            else_=Product.original_price * (1 + Product.markup_percentage / 100),
+        )
+        return and_(
+            Product.sale_price.isnot(None),
+            Product.sale_price > 0,
+            Product.sale_price < final_price_expr,
+            or_(Product.sale_price_ends_at.is_(None), Product.sale_price_ends_at > datetime.utcnow()),
+        )
+
     def get_enabled_products(
         self,
         skip: int = 0,
@@ -47,6 +60,7 @@ class ProductRepository(BaseRepository[Product]):
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None,
+        on_sale: Optional[bool] = None,
         hide_out_of_stock: bool = False,
         sort_new_first: bool = False,
     ) -> List[Product]:
@@ -107,6 +121,10 @@ class ProductRepository(BaseRepository[Product]):
                 query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
                 query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
 
+        if on_sale is not None:
+            on_sale_condition = self._on_sale_condition()
+            query = query.filter(on_sale_condition if on_sale else ~on_sale_condition)
+
         if hide_out_of_stock:
             stock_subq = (
                 self.db.query(
@@ -149,6 +167,7 @@ class ProductRepository(BaseRepository[Product]):
         search: Optional[str] = None,
         featured: Optional[bool] = None,
         immediate_delivery: Optional[bool] = None,
+        on_sale: Optional[bool] = None,
         hide_out_of_stock: bool = False,
     ) -> int:
         """Count enabled products."""
@@ -205,6 +224,10 @@ class ProductRepository(BaseRepository[Product]):
                 )
                 query = query.outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
                 query = query.filter(func.coalesce(stock_subq.c.stock_qty, 0) > 0)
+
+        if on_sale is not None:
+            on_sale_condition = self._on_sale_condition()
+            query = query.filter(on_sale_condition if on_sale else ~on_sale_condition)
 
         if hide_out_of_stock:
             stock_subq = (
