@@ -25,11 +25,11 @@ export function ComercioHeader({ nombreLocal }: Props) {
   return (
     <header className="sticky top-0 z-40 header-texture shadow-lg px-4 py-3 flex items-center justify-between gap-4">
       <Link href="/comercios/catalogo" className="flex items-center gap-2.5 min-w-0">
-        <span className="text-lg font-black tracking-[0.14em] text-white shrink-0">HE·FA</span>
-        <span className="hidden sm:inline text-[10px] uppercase tracking-[0.2em] text-blue-200/70 font-medium shrink-0">
+        <span className="text-xl font-black tracking-[0.14em] text-white shrink-0">HE·FA</span>
+        <span className="hidden sm:inline text-xs uppercase tracking-[0.2em] text-blue-200/70 font-medium shrink-0">
           Comercios
         </span>
-        <span className="text-sm text-white/70 truncate border-l border-white/20 pl-2.5 ml-0.5">
+        <span className="text-base text-white/70 truncate border-l border-white/20 pl-2.5 ml-0.5">
           {nombreLocal}
         </span>
       </Link>
@@ -37,13 +37,13 @@ export function ComercioHeader({ nombreLocal }: Props) {
       <nav className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <Link
           href="/comercios/catalogo"
-          className="text-sm font-medium text-white/80 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-white/10 transition-colors hidden sm:inline-block"
+          className="text-base font-medium text-white/80 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-white/10 transition-colors hidden sm:inline-block"
         >
           Catálogo
         </Link>
         <Link
           href="/comercios/pedidos"
-          className="text-sm font-medium text-white/80 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-white/10 transition-colors hidden sm:inline-block"
+          className="text-base font-medium text-white/80 hover:text-white px-2.5 py-1.5 rounded-full hover:bg-white/10 transition-colors hidden sm:inline-block"
         >
           Mis pedidos
         </Link>
@@ -62,7 +62,7 @@ export function ComercioHeader({ nombreLocal }: Props) {
           <ShoppingCart className="h-4 w-4 text-white" />
           {itemCount > 0 && (
             <span
-              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold leading-none"
+              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-xs font-bold leading-none"
               style={{ backgroundColor: '#FFFFFF', color: '#0D1B2A' }}
             >
               {itemCount}

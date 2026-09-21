@@ -29,7 +29,7 @@ export default async function CatalogoIndexPage() {
     <div className="min-h-screen">
       <CapturarVendedorRef />
       <PublicComercioHeader />
-      <p className="text-center text-sm text-zinc-500 py-16">Todavía no hay productos cargados.</p>
+      <p className="text-center text-base text-zinc-500 py-16">Todavía no hay productos cargados.</p>
     </div>
   )
 }

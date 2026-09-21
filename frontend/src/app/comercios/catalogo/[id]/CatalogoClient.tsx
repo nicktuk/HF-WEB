@@ -192,28 +192,28 @@ export function CatalogoClient(props: Props) {
       <div className="relative px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-4 sm:py-6 lg:py-8">
         {/* Nombre del producto: arriba de todo, antes de cualquier tarjeta */}
         <div className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-2 text-xs mb-1.5" style={{ color: theme.textMuted }}>
+          <div className="flex items-center gap-2 text-sm mb-1.5" style={{ color: theme.textMuted }}>
             {props.producto.categoria && <span>{props.producto.categoria}</span>}
             {props.producto.categoria && props.producto.marca && <span>•</span>}
             {props.producto.marca && <span className="font-medium" style={{ color: theme.textMuted }}>{props.producto.marca}</span>}
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.textPrimary }}>{props.producto.nombre}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: theme.textPrimary }}>{props.producto.nombre}</h1>
 
           {full && (full.producto.is_featured || full.producto.is_immediate_delivery || full.producto.is_best_seller) && (
             <div className="flex flex-wrap gap-1.5">
               {full.producto.is_featured && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white uppercase tracking-wide">
                   <Star className="w-2.5 h-2.5 fill-current" /> Nuevo
                 </span>
               )}
               {full.producto.is_immediate_delivery && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white uppercase tracking-wide">
                   <Zap className="w-2.5 h-2.5 fill-current" /> Inmediata
                 </span>
               )}
               {full.producto.is_best_seller && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-bold text-white uppercase tracking-wide">
                   <Award className="w-2.5 h-2.5" /> Top
                 </span>
               )}
@@ -237,7 +237,7 @@ export function CatalogoClient(props: Props) {
                     priority
                   />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm" style={{ color: '#B7AF9C' }}>Sin imagen</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-base" style={{ color: '#B7AF9C' }}>Sin imagen</div>
                 )}
 
                 {imagenes.length > 1 && (
@@ -309,8 +309,8 @@ export function CatalogoClient(props: Props) {
                       ? { backgroundColor: theme.urgencyTint(0.08), border: `1.5px solid ${theme.urgencyTint(0.4)}` }
                       : { backgroundColor: theme.accentTint(0.05), border: `1.5px solid ${theme.inputBorder}` }}
                   >
-                    <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
-                    <p className="text-sm font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
+                    <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: d.urgent ? theme.urgency : theme.textFaint }}>{d.label}</p>
+                    <p className="text-base font-bold" style={{ color: d.urgent ? theme.urgency : theme.textPrimary }}>{d.value}</p>
                   </div>
                 ))}
               </div>
@@ -332,10 +332,10 @@ export function CatalogoClient(props: Props) {
                           style={{ backgroundColor: theme.textMuted }}
                         />
                       )}
-                      <p className="text-sm" style={{ color: theme.textPrimary }}>{line.text}</p>
+                      <p className="text-base" style={{ color: theme.textPrimary }}>{line.text}</p>
                     </div>
                   ) : (
-                    <p key={index} className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
+                    <p key={index} className="text-base font-semibold" style={{ color: theme.textPrimary }}>{line.text}</p>
                   )
                 )}
               </div>
@@ -348,14 +348,14 @@ export function CatalogoClient(props: Props) {
               >
                 <Package className="h-4 w-4 shrink-0 mt-0.5" style={{ color: theme.textMuted }} />
                 <div>
-                  <p className="text-xs font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
-                  <p className="text-sm whitespace-pre-line" style={{ color: theme.textMuted }}>{full.producto.kit_content}</p>
+                  <p className="text-sm font-semibold mb-0.5" style={{ color: theme.textMuted }}>Contenido</p>
+                  <p className="text-base whitespace-pre-line" style={{ color: theme.textMuted }}>{full.producto.kit_content}</p>
                 </div>
               </div>
             )}
 
             {!full && (
-              <p className="text-xs text-center" style={{ color: theme.textFaint }}>
+              <p className="text-sm text-center" style={{ color: theme.textFaint }}>
                 Iniciá sesión para ver el resto de las fotos, la descripción y el contenido.
               </p>
             )}
@@ -370,18 +370,18 @@ export function CatalogoClient(props: Props) {
           <div className="p-4 sm:p-6">
             {full ? (
               <>
-                <p className="text-3xl md:text-4xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
+                <p className="text-4xl md:text-5xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
                   ${precioUnitario.toLocaleString('es-AR')}
                 </p>
                 {enModoDescuento && (
-                  <p className="text-xs mt-0.5" style={{ color: theme.textFaint }}>
+                  <p className="text-sm mt-0.5" style={{ color: theme.textFaint }}>
                     Precio de venta sugerido ${(full.producto.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
                   </p>
                 )}
               </>
             ) : (
               <div
-                className="flex items-center gap-2 text-sm font-semibold"
+                className="flex items-center gap-2 text-base font-semibold"
                 style={{ color: theme.textMuted }}
               >
                 <Lock className="h-4 w-4 shrink-0" />
@@ -404,7 +404,7 @@ export function CatalogoClient(props: Props) {
             />
           </div>
           <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <tbody>
               {(() => {
                 const tramos = full.producto.tramos_descuento
@@ -434,11 +434,11 @@ export function CatalogoClient(props: Props) {
             {full ? (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
+                  <span className="text-base font-medium" style={{ color: theme.textMuted }}>Cantidad</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setCantidad(c => Math.max(1, c - 1))}
-                      className="w-8 h-8 rounded-lg text-sm font-medium"
+                      className="w-8 h-8 rounded-lg text-base font-medium"
                       style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                     >−</button>
                     <input
@@ -446,12 +446,12 @@ export function CatalogoClient(props: Props) {
                       min={1}
                       value={cantidad}
                       onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-14 text-center rounded-lg text-sm py-1 focus:outline-none"
+                      className="w-14 text-center rounded-lg text-base py-1 focus:outline-none"
                       style={{ backgroundColor: 'transparent', border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                     />
                     <button
                       onClick={() => setCantidad(c => c + 1)}
-                      className="w-8 h-8 rounded-lg text-sm font-medium"
+                      className="w-8 h-8 rounded-lg text-base font-medium"
                       style={{ border: `1.5px solid ${theme.inputBorder}`, color: theme.textPrimary }}
                     >+</button>
                   </div>
@@ -459,7 +459,7 @@ export function CatalogoClient(props: Props) {
 
                 {faltan > 0 ? (
                   <p
-                    className="text-sm font-medium text-center rounded-xl py-3"
+                    className="text-base font-medium text-center rounded-xl py-3"
                     style={{ color: '#E8C15A', backgroundColor: 'rgba(232,193,90,0.1)', border: '1.5px solid rgba(232,193,90,0.3)' }}
                   >
                     Te faltan {faltan} u. para el mínimo de {full.producto.cantidad_minima}
@@ -481,14 +481,14 @@ export function CatalogoClient(props: Props) {
               <>
                 <Link
                   href="/comercios"
-                  className="w-full flex items-center justify-center rounded-xl font-semibold py-3 text-sm transition-colors"
+                  className="w-full flex items-center justify-center rounded-xl font-semibold py-3 text-base transition-colors"
                   style={{ backgroundColor: theme.buttonBg, color: theme.buttonText, border: `1.5px solid ${theme.buttonBorder}` }}
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/comercios/solicitud"
-                  className="w-full text-center text-xs hover:underline"
+                  className="w-full text-center text-sm hover:underline"
                   style={{ color: theme.textMuted }}
                 >
                   ¿No tenés cuenta? Solicitá acceso

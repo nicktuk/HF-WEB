@@ -56,8 +56,8 @@ export default function CarritoPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4" style={{ backgroundColor: '#f7f4ef' }}>
-        <p className="text-zinc-500 text-sm">Tu carrito está vacío.</p>
-        <Link href="/comercios/catalogo" className="text-sm font-semibold text-primary-600 hover:underline">
+        <p className="text-zinc-500 text-base">Tu carrito está vacío.</p>
+        <Link href="/comercios/catalogo" className="text-base font-semibold text-primary-600 hover:underline">
           Ir al catálogo
         </Link>
       </div>
@@ -68,8 +68,8 @@ export default function CarritoPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-zinc-800">Tu pedido</h1>
-          <Link href="/comercios/catalogo" className="text-sm text-zinc-500 hover:underline">
+          <h1 className="text-2xl font-bold text-zinc-800">Tu pedido</h1>
+          <Link href="/comercios/catalogo" className="text-base text-zinc-500 hover:underline">
             ← Seguir comprando
           </Link>
         </div>
@@ -82,12 +82,12 @@ export default function CarritoPage() {
             return (
               <div key={item.producto_id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-800 truncate">{item.nombre}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-base font-medium text-zinc-800 truncate">{item.nombre}</p>
+                  <p className="text-sm text-zinc-500">
                     ${precio.toLocaleString('es-AR')} c/u
                   </p>
                   {minima && (
-                    <p className={`text-xs mt-0.5 ${alcanzaMinimo ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    <p className={`text-sm mt-0.5 ${alcanzaMinimo ? 'text-emerald-600' : 'text-amber-600'}`}>
                       {alcanzaMinimo
                         ? '✓ Mínimo alcanzado'
                         : `⚠ Faltan ${minima - item.cantidad} u. (mínimo ${minima} u.)`}
@@ -98,26 +98,26 @@ export default function CarritoPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => update(item.producto_id, item.cantidad - 1)}
-                    className="w-7 h-7 border border-zinc-300 rounded-lg text-sm hover:bg-zinc-50"
+                    className="w-7 h-7 border border-zinc-300 rounded-lg text-base hover:bg-zinc-50"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center text-sm">{item.cantidad}</span>
+                  <span className="w-8 text-center text-base">{item.cantidad}</span>
                   <button
                     onClick={() => update(item.producto_id, item.cantidad + 1)}
-                    className="w-7 h-7 border border-zinc-300 rounded-lg text-sm hover:bg-zinc-50"
+                    className="w-7 h-7 border border-zinc-300 rounded-lg text-base hover:bg-zinc-50"
                   >
                     +
                   </button>
                 </div>
 
-                <p className="text-sm font-semibold text-zinc-900 w-24 text-right">
+                <p className="text-base font-semibold text-zinc-900 w-24 text-right">
                   ${(precio * item.cantidad).toLocaleString('es-AR')}
                 </p>
 
                 <button
                   onClick={() => remove(item.producto_id)}
-                  className="text-zinc-300 hover:text-red-400 text-lg leading-none"
+                  className="text-zinc-300 hover:text-red-400 text-xl leading-none"
                 >
                   ×
                 </button>
@@ -132,24 +132,24 @@ export default function CarritoPage() {
             value={notas}
             onChange={e => setNotas(e.target.value)}
             rows={3}
-            className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
+            className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
           />
 
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-700">Total</span>
-            <span className="text-xl font-bold text-zinc-900">
+            <span className="text-base font-medium text-zinc-700">Total</span>
+            <span className="text-2xl font-bold text-zinc-900">
               ${totalVal.toLocaleString('es-AR')}
             </span>
           </div>
 
           {!puedeConfirmar && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            <p className="text-base text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
               Ajustá la cantidad de {itemsBajoMinimo.length === 1 ? 'este producto' : 'estos productos'} para llegar a su mínimo antes de confirmar.
             </p>
           )}
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-base text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -157,7 +157,7 @@ export default function CarritoPage() {
           <button
             onClick={handleConfirmar}
             disabled={loading || items.length === 0 || !puedeConfirmar}
-            className="w-full bg-primary-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-primary-600 text-white rounded-xl py-3 text-base font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Confirmando...' : 'Confirmar pedido'}
           </button>

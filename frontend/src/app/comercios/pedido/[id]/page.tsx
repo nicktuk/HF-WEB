@@ -35,7 +35,7 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
       <ComercioHeader nombreLocal={info.nombre_local} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/comercios/pedidos" className="text-sm text-zinc-500 hover:underline">
+          <Link href="/comercios/pedidos" className="text-base text-zinc-500 hover:underline">
             ← Mis pedidos
           </Link>
         </div>
@@ -43,20 +43,20 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
         <div className="bg-white border border-zinc-200/80 rounded-2xl shadow-sm p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-lg font-bold text-zinc-800">Pedido #{pedido.id}</h1>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <h1 className="text-xl font-bold text-zinc-800">Pedido #{pedido.id}</h1>
+              <p className="text-sm text-zinc-400 mt-0.5">
                 {new Date(pedido.created_at).toLocaleDateString('es-AR', {
                   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 })}
               </p>
             </div>
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoInfo.color}`}>
+            <span className={`text-sm font-medium px-2.5 py-1 rounded-full ${estadoInfo.color}`}>
               {estadoInfo.label}
             </span>
           </div>
 
           {pedido.estado === 'recibido' && (
-            <p className="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+            <p className="text-base text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
               Pedido recibido. Tu vendedor se va a contactar para coordinar pago y entrega.
             </p>
           )}
@@ -65,8 +65,8 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
             {pedido.items.map(item => (
               <div key={item.id} className="py-3 flex justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800">{item.nombre_producto}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-base text-gray-800">{item.nombre_producto}</p>
+                  <p className="text-sm text-gray-400">
                     {item.cantidad} u. × ${item.precio_unitario.toLocaleString('es-AR')}
                     {item.precio_original && item.precio_original !== item.precio_unitario && (
                       <span className="ml-1 line-through text-gray-300">
@@ -75,7 +75,7 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
                     )}
                   </p>
                 </div>
-                <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <p className="text-base font-medium text-gray-900 whitespace-nowrap">
                   ${item.subtotal.toLocaleString('es-AR')}
                 </p>
               </div>
@@ -83,14 +83,14 @@ export default async function PedidoDetailPage({ params }: { params: { id: strin
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-            <span className="text-sm font-medium text-gray-700">Total</span>
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-base font-medium text-gray-700">Total</span>
+            <span className="text-xl font-bold text-gray-900">
               ${pedido.total.toLocaleString('es-AR')}
             </span>
           </div>
 
           {pedido.notas && (
-            <div className="text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-3">
+            <div className="text-base text-gray-600 bg-gray-50 rounded-lg px-4 py-3">
               <span className="font-medium">Notas: </span>{pedido.notas}
             </div>
           )}
