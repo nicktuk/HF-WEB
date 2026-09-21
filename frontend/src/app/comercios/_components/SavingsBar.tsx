@@ -31,10 +31,10 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
   return (
     <div className={compact ? 'mt-0.5' : 'mt-1'}>
       <div className="flex items-center justify-between mb-1">
-        <span className={compact ? 'text-[10px] font-bold' : 'text-xs font-bold'} style={{ color: fill }}>
+        <span className={compact ? 'text-xs font-bold' : 'text-sm font-bold'} style={{ color: fill }}>
           {ahorro > 0 ? `Vas ahorrando $${Math.round(ahorro).toLocaleString('es-AR')}` : 'Comprá más para empezar a ahorrar'}
         </span>
-        <span className={compact ? 'text-[9px]' : 'text-[11px]'} style={{ color: theme.textFaint }}>
+        <span className={compact ? 'text-[10px]' : 'text-sm'} style={{ color: theme.textFaint }}>
           {Math.round(descuentoActual)}% / {Math.round(maxDescuento)}%
         </span>
       </div>
@@ -48,7 +48,7 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
         />
       </div>
       {proximoTramo && (
-        <p className={compact ? 'text-[9px] mt-1' : 'text-[11px] mt-1.5'} style={{ color: theme.textFaint }}>
+        <p className={compact ? 'text-[10px] mt-1' : 'text-sm mt-1.5'} style={{ color: theme.textFaint }}>
           Comprá {proximoTramo.cantidad_minima - cantidad} más y llegás a {proximoTramo.descuento_porcentaje}%
         </p>
       )}

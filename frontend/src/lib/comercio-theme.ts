@@ -30,8 +30,8 @@ const DARK: ComercioTheme = {
   cardBg: '#132845',
   cardBorder: 'rgba(91,157,249,0.14)',
   textPrimary: '#EFF3F8',
-  textMuted: 'rgba(244,246,242,0.6)',
-  textFaint: 'rgba(244,246,242,0.4)',
+  textMuted: 'rgba(244,246,242,0.78)',
+  textFaint: 'rgba(244,246,242,0.6)',
   accent: '#5B9DF9',
   accentTint: (a: number) => `rgba(91,157,249,${a})`,
   imagePlate: '#F4F1E7',
@@ -54,8 +54,8 @@ const LIGHT: ComercioTheme = {
   cardBg: '#FFFFFF',
   cardBorder: '#2F6FE0',
   textPrimary: '#0D1B2A',
-  textMuted: 'rgba(13,27,42,0.6)',
-  textFaint: 'rgba(13,27,42,0.42)',
+  textMuted: 'rgba(13,27,42,0.78)',
+  textFaint: 'rgba(13,27,42,0.6)',
   accent: '#2F6FE0',
   accentTint: (a: number) => `rgba(47,111,224,${a})`,
   imagePlate: '#F4F1E7',
@@ -80,8 +80,8 @@ export function getComercioTheme(mode: ComercioThemeMode): ComercioTheme {
 // descuento (tramo bajo = rojo, tramo alto = verde), usada en la matriz de
 // cantidad/descuento y en la barra de ahorro.
 type RGB = [number, number, number]
-const ESCALA_ROJO: RGB = [214, 71, 42]
-const ESCALA_NARANJA: RGB = [235, 130, 43]
+const ESCALA_ROJO: RGB = [220, 38, 38]
+const ESCALA_NARANJA: RGB = [249, 115, 22]
 const ESCALA_VERDE: RGB = [22, 197, 94]
 
 function mezclarRGB(a: RGB, b: RGB, t: number): string {

@@ -39,19 +39,19 @@ export default function OlvidePasswordPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#f7f4ef' }}>
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-zinc-200/80 p-8">
-        <h1 className="text-xl font-semibold text-zinc-800 mb-2">Olvidé mi contraseña</h1>
-        <p className="text-sm text-zinc-500 mb-6">
+        <h1 className="text-2xl font-semibold text-zinc-800 mb-2">Olvidé mi contraseña</h1>
+        <p className="text-base text-zinc-500 mb-6">
           Ingresá tu usuario y te enviamos instrucciones para reestablecer tu contraseña.
         </p>
 
         {mensaje ? (
-          <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-3">
+          <p className="text-base text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-3">
             {mensaje}
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="usuario" className="block text-sm font-medium text-zinc-700 mb-1">
+              <label htmlFor="usuario" className="block text-base font-medium text-zinc-700 mb-1">
                 Usuario
               </label>
               <input
@@ -61,12 +61,12 @@ export default function OlvidePasswordPage() {
                 value={usuario}
                 onChange={e => setUsuario(e.target.value)}
                 required
-                className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
+                className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="text-base text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                 {error}
               </p>
             )}
@@ -74,7 +74,7 @@ export default function OlvidePasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              className="w-full bg-primary-600 text-white rounded-lg py-2.5 text-base font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Enviando...' : 'Enviar instrucciones'}
             </button>
@@ -82,7 +82,7 @@ export default function OlvidePasswordPage() {
         )}
 
         <div className="mt-6 pt-6 border-t border-zinc-100 text-center">
-          <Link href="/comercios" className="text-sm text-zinc-500 hover:text-primary-600 hover:underline">
+          <Link href="/comercios" className="text-base text-zinc-500 hover:text-primary-600 hover:underline">
             Volver a iniciar sesión
           </Link>
         </div>
