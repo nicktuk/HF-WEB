@@ -90,6 +90,7 @@ class SaleItemResponse(BaseModel):
     paid: bool
     unit_price: Decimal
     total_price: Decimal
+    es_oferta: bool = False
 
     class Config:
         from_attributes = True

@@ -18,7 +18,6 @@ interface Vendedor {
   debe_cambiar_password: boolean
   comision_mayorista_nuevo_porcentaje: number | null
   comision_mayorista_recompra_porcentaje: number | null
-  comision_minorista_porcentaje: number | null
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -38,7 +37,7 @@ function sugerirUsuario(nombre: string): string {
 
 const emptyForm = {
   nombre: '', celular_wa: '', email: '', es_mayorista: false,
-  comisionMayoristaNuevo: '', comisionMayoristaRecompra: '', comisionMinorista: '',
+  comisionMayoristaNuevo: '', comisionMayoristaRecompra: '',
 }
 
 export default function VendedoresAdminPage() {
@@ -89,7 +88,6 @@ export default function VendedoresAdminPage() {
       nombre: v.nombre, celular_wa: v.celular_wa, email: v.email ?? '', es_mayorista: v.es_mayorista,
       comisionMayoristaNuevo: v.comision_mayorista_nuevo_porcentaje != null ? String(v.comision_mayorista_nuevo_porcentaje) : '',
       comisionMayoristaRecompra: v.comision_mayorista_recompra_porcentaje != null ? String(v.comision_mayorista_recompra_porcentaje) : '',
-      comisionMinorista: v.comision_minorista_porcentaje != null ? String(v.comision_minorista_porcentaje) : '',
     })
     setError(null)
     setShowForm(true)
@@ -112,7 +110,6 @@ export default function VendedoresAdminPage() {
       es_mayorista: form.es_mayorista,
       comision_mayorista_nuevo_porcentaje: form.comisionMayoristaNuevo.trim() ? Number(form.comisionMayoristaNuevo) : null,
       comision_mayorista_recompra_porcentaje: form.comisionMayoristaRecompra.trim() ? Number(form.comisionMayoristaRecompra) : null,
-      comision_minorista_porcentaje: form.comisionMinorista.trim() ? Number(form.comisionMinorista) : null,
     }
     const res = editingId
       ? await apiFetch(`/admin/vendedores/${editingId}`, apiKey, { method: 'PATCH', body: JSON.stringify(body) })
@@ -245,19 +242,12 @@ export default function VendedoresAdminPage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Comisión de este vendedor</p>
-              <p className="text-xs text-gray-500 mb-2">Vacío = usa el % general de Comercios → Configuración.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Minorista %</label>
-                  <input
-                    type="number" min="0" max="100" step="0.01"
-                    placeholder="General"
-                    value={form.comisionMinorista}
-                    onChange={e => setForm(f => ({ ...f, comisionMinorista: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Comisión mayorista de este vendedor</p>
+              <p className="text-xs text-gray-500 mb-2">
+                Vacío = usa el % general de Comercios → Configuración. La minorista es la matriz semanal general
+                (misma pantalla), igual para todos.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Mayorista nuevo %</label>
                   <input
