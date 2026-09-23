@@ -1,7 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, comision_minorista, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -73,6 +73,13 @@ api_router.include_router(
     comercios_admin.router,
     prefix="/admin",
     tags=["comercios-admin"]
+)
+
+# Comisión minorista (matriz semanal del canal ventas propias)
+api_router.include_router(
+    comision_minorista.router,
+    prefix="/admin",
+    tags=["comision-minorista"]
 )
 
 # Catalog sellers (CRUD simple sobre la misma tabla catalog_sellers, usado por

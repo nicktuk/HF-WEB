@@ -14,7 +14,6 @@ from app.models.comercio import (
     Comercio,
     ConfiguracionComercio,
     DescuentoTramoComercio,
-    ComisionMinoristaTramo,
     PedidoComercio,
     PedidoComercioItem,
 )
@@ -335,8 +334,6 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "semaforo_dias_rojo": int(cfg.semaforo_dias_rojo),
         "comision_mayorista_nuevo_porcentaje": float(cfg.comision_mayorista_nuevo_porcentaje),
         "comision_mayorista_recompra_porcentaje": float(cfg.comision_mayorista_recompra_porcentaje),
-        "comision_minorista_oferta_porcentaje": float(cfg.comision_minorista_oferta_porcentaje),
-        "comision_minorista_escalonada": bool(cfg.comision_minorista_escalonada),
     }
 
 
@@ -397,18 +394,12 @@ async def update_comercio_config(
     for campo in (
         "comision_mayorista_nuevo_porcentaje",
         "comision_mayorista_recompra_porcentaje",
-        "comision_minorista_oferta_porcentaje",
     ):
         if campo in body:
             val = float(body[campo])
             if val < 0 or val > 100:
                 raise HTTPException(400, f"{campo} debe estar entre 0 y 100")
             setattr(cfg, campo, val)
-    if "comision_minorista_escalonada" in body:
-        cfg.comision_minorista_escalonada = bool(body["comision_minorista_escalonada"])
-    if "comision_minorista_oferta_porcentaje" in body or "comision_minorista_escalonada" in body:
-        db.flush()
-        comisiones.recalcular_semana_actual(db)
     db.commit()
     db.refresh(cfg)
     return _config_dict(cfg)
@@ -456,55 +447,6 @@ async def set_comercio_tramos(
         {"id": t.id, "cantidad_minima": t.cantidad_minima, "descuento_porcentaje": float(t.descuento_porcentaje)}
         for t in tramos
     ]
-
-
-def _comision_tramos_list(db: Session) -> list[dict]:
-    tramos = db.query(ComisionMinoristaTramo).order_by(ComisionMinoristaTramo.monto_desde).all()
-    return [
-        {"id": t.id, "monto_desde": float(t.monto_desde), "porcentaje": float(t.porcentaje)}
-        for t in tramos
-    ]
-
-
-@router.get("/comercios/config/comision-minorista-tramos")
-async def get_comision_minorista_tramos(
-    db: Session = Depends(get_db),
-    _: bool = Depends(verify_admin),
-):
-    return _comision_tramos_list(db)
-
-
-@router.put("/comercios/config/comision-minorista-tramos")
-async def set_comision_minorista_tramos(
-    body: list[dict],
-    db: Session = Depends(get_db),
-    _: bool = Depends(verify_admin),
-):
-    """Reemplaza toda la matriz de comisión minorista por venta semanal. Se
-    manda la lista completa cada vez; tiene que haber un tramo desde 0. Se
-    recalcula la semana en curso; las semanas cerradas quedan como estaban."""
-    montos_vistos: set[float] = set()
-    nuevos: list[ComisionMinoristaTramo] = []
-    for row in body:
-        monto = float(row.get("monto_desde", 0))
-        porcentaje = float(row.get("porcentaje", 0))
-        if monto < 0:
-            raise HTTPException(400, "monto_desde debe ser >= 0")
-        if porcentaje < 0 or porcentaje > 100:
-            raise HTTPException(400, "porcentaje debe estar entre 0 y 100")
-        if monto in montos_vistos:
-            raise HTTPException(400, f"monto_desde {monto:g} está repetido")
-        montos_vistos.add(monto)
-        nuevos.append(ComisionMinoristaTramo(monto_desde=monto, porcentaje=porcentaje))
-    if 0 not in montos_vistos:
-        raise HTTPException(400, "La matriz tiene que tener un tramo desde $0")
-
-    db.query(ComisionMinoristaTramo).delete()
-    db.add_all(nuevos)
-    db.flush()
-    comisiones.recalcular_semana_actual(db)
-    db.commit()
-    return _comision_tramos_list(db)
 
 
 # ─── Pedidos ───────────────────────────────────────────────────────────────────

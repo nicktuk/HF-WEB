@@ -18,19 +18,6 @@ interface Tramo {
   descuento_porcentaje: string
 }
 
-interface TramoComision {
-  monto_desde: string
-  porcentaje: string
-}
-
-type TramoComisionApi = { id: number; monto_desde: number; porcentaje: number }
-
-function tramosComisionFromApi(d: TramoComisionApi[]): TramoComision[] {
-  return d.map(t => ({ monto_desde: String(t.monto_desde), porcentaje: String(t.porcentaje) }))
-}
-
-const formatPesos = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`
-
 export default function ConfigComercioPage() {
   const apiKey = useApiKey() ?? ''
   const [modoPrecio, setModoPrecio] = useState<'markup' | 'descuento'>('markup')
@@ -53,13 +40,6 @@ export default function ConfigComercioPage() {
   const [tramosSuccess, setTramosSuccess] = useState(false)
   const [tramosError, setTramosError] = useState<string | null>(null)
 
-  const [tramosComision, setTramosComision] = useState<TramoComision[]>([])
-  const [comisionOferta, setComisionOferta] = useState('')
-  const [comisionEscalonada, setComisionEscalonada] = useState(false)
-  const [savingComision, setSavingComision] = useState(false)
-  const [comisionSuccess, setComisionSuccess] = useState(false)
-  const [comisionError, setComisionError] = useState<string | null>(null)
-
   useEffect(() => {
     if (!apiKey) return
     apiFetch('/admin/comercios/config', apiKey).then(async res => {
@@ -73,8 +53,6 @@ export default function ConfigComercioPage() {
         setMontoMinimo(String(d.monto_minimo_pedido))
         setComisionMayoristaNuevo(String(d.comision_mayorista_nuevo_porcentaje))
         setComisionMayoristaRecompra(String(d.comision_mayorista_recompra_porcentaje))
-        setComisionOferta(String(d.comision_minorista_oferta_porcentaje))
-        setComisionEscalonada(!!d.comision_minorista_escalonada)
         setSemaforoDiasAmarillo(String(d.semaforo_dias_amarillo))
         setSemaforoDiasRojo(String(d.semaforo_dias_rojo))
       }
@@ -85,9 +63,6 @@ export default function ConfigComercioPage() {
         const d = await res.json() as { id: number; cantidad_minima: number; descuento_porcentaje: number }[]
         setTramos(d.map(t => ({ id: t.id, cantidad_minima: String(t.cantidad_minima), descuento_porcentaje: String(t.descuento_porcentaje) })))
       }
-    })
-    apiFetch('/admin/comercios/config/comision-minorista-tramos', apiKey).then(async res => {
-      if (res.ok) setTramosComision(tramosComisionFromApi(await res.json()))
     })
   }, [apiKey])
 
@@ -134,45 +109,6 @@ export default function ConfigComercioPage() {
 
   function updateTramo(index: number, field: keyof Tramo, value: string) {
     setTramos(t => t.map((row, i) => i === index ? { ...row, [field]: value } : row))
-  }
-
-  function updateTramoComision(index: number, field: keyof TramoComision, value: string) {
-    setTramosComision(t => t.map((row, i) => i === index ? { ...row, [field]: value } : row))
-  }
-
-  async function handleSaveComisionMinorista() {
-    setComisionError(null)
-    const payload = tramosComision.map(t => ({
-      monto_desde: parseFloat(t.monto_desde) || 0,
-      porcentaje: parseFloat(t.porcentaje) || 0,
-    }))
-    if (!payload.some(t => t.monto_desde === 0)) {
-      setComisionError('La matriz tiene que tener un tramo desde $0.')
-      return
-    }
-    setSavingComision(true)
-    const [cfgRes, tramosRes] = await Promise.all([
-      apiFetch('/admin/comercios/config', apiKey, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          comision_minorista_oferta_porcentaje: parseFloat(comisionOferta) || 0,
-          comision_minorista_escalonada: comisionEscalonada,
-        }),
-      }),
-      apiFetch('/admin/comercios/config/comision-minorista-tramos', apiKey, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      }),
-    ])
-    if (cfgRes.ok && tramosRes.ok) {
-      setTramosComision(tramosComisionFromApi(await tramosRes.json()))
-      setComisionSuccess(true)
-      setTimeout(() => setComisionSuccess(false), 2000)
-    } else {
-      const d = await (cfgRes.ok ? tramosRes : cfgRes).json()
-      setComisionError(d.detail ?? 'Error al guardar')
-    }
-    setSavingComision(false)
   }
 
   async function handleSaveTramos() {
@@ -436,124 +372,6 @@ export default function ConfigComercioPage() {
           {saving ? 'Guardando...' : success ? 'Guardado' : 'Guardar cambios'}
         </button>
       </form>
-
-      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">Comisión minorista (semanal)</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Se calcula por semana (lunes a domingo) sobre lo que vendió cada vendedor, ofertas incluidas: ese total
-            define el tramo. El % del tramo se aplica a la venta normal; lo vendido en oferta comisiona siempre al
-            % de ofertas. Durante la semana se le muestra al vendedor como provisorio y queda cerrado el domingo.
-            Al guardar se recalcula la semana en curso; las semanas anteriores no se tocan.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          {tramosComision.map((t, i) => {
-            const siguiente = tramosComision[i + 1]
-            return (
-              <div key={i} className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="block text-[11px] text-gray-400 mb-0.5">
-                    {parseFloat(t.monto_desde) === 0 ? 'Desde ($)' : 'Más de ($)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={t.monto_desde}
-                    onChange={e => updateTramoComision(i, 'monto_desde', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-[11px] text-gray-400 mb-0.5">Comisión (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={t.porcentaje}
-                    onChange={e => updateTramoComision(i, 'porcentaje', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
-                <div className="hidden sm:block w-40 mt-4 text-[11px] text-gray-400">
-                  {siguiente && siguiente.monto_desde !== ''
-                    ? `hasta ${formatPesos(parseFloat(siguiente.monto_desde) || 0)}`
-                    : 'sin tope'}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTramosComision(ts => ts.filter((_, j) => j !== i))}
-                  className="mt-4 text-gray-300 hover:text-red-500 text-lg leading-none px-1"
-                  aria-label="Quitar tramo"
-                >
-                  ×
-                </button>
-              </div>
-            )
-          })}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setTramosComision(t => [...t, { monto_desde: '', porcentaje: '' }])}
-          className="text-sm font-medium text-gray-600 hover:text-gray-900 border border-dashed border-gray-300 rounded-lg py-2 w-full hover:border-gray-400 transition-colors"
-        >
-          + Agregar tramo
-        </button>
-
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={comisionEscalonada}
-            onChange={e => setComisionEscalonada(e.target.checked)}
-            className="mt-0.5 rounded border-gray-300"
-          />
-          <span className="text-sm text-gray-700">
-            Escalonado
-            <span className="block text-xs text-gray-400">
-              {comisionEscalonada
-                ? 'Cada tramo aplica sólo a la parte de la venta que cae dentro de él (ej: con 0 → 10% y más de $150.000 → 15%, vendiendo $200.000 cobra 10% de $150.000 + 15% de $50.000).'
-                : 'El tramo alcanzado aplica a toda la venta de la semana (ej: con 0 → 10% y más de $150.000 → 15%, vendiendo $200.000 cobra 15% de $200.000).'}
-            </span>
-          </span>
-        </label>
-
-        <div className="max-w-xs">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Productos en oferta (%)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            max="100"
-            value={comisionOferta}
-            onChange={e => setComisionOferta(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Para los items que estaban en oferta al cargarse la venta. Suman igual para alcanzar el tramo.
-          </p>
-        </div>
-
-        {comisionError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{comisionError}</p>
-        )}
-
-        <button
-          type="button"
-          onClick={handleSaveComisionMinorista}
-          disabled={savingComision}
-          className={`w-full rounded-lg py-2.5 text-sm font-medium transition-colors ${
-            comisionSuccess
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50'
-          }`}
-        >
-          {savingComision ? 'Guardando...' : comisionSuccess ? 'Guardado' : 'Guardar comisión minorista'}
-        </button>
-      </div>
 
       {modoPrecio === 'descuento' && (
         <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">

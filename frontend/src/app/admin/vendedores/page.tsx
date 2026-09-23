@@ -245,7 +245,7 @@ export default function VendedoresAdminPage() {
               <p className="text-sm font-medium text-gray-700 mb-1">Comisión mayorista de este vendedor</p>
               <p className="text-xs text-gray-500 mb-2">
                 Vacío = usa el % general de Comercios → Configuración. La minorista es la matriz semanal general
-                (misma pantalla), igual para todos.
+                (Ventas → Comisión minorista), igual para todos.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
