@@ -20,7 +20,7 @@ from app.models.comercio import (
 from app.models.catalog_seller import CatalogSeller
 from app.services import comercio_password
 from app.services.comercio_auth import hash_password
-from app.services import comercio_pedidos, comisiones, vendedor_dashboard
+from app.services import comercio_pedidos, comisiones, liquidaciones, vendedor_dashboard
 from app.core.exceptions import AppException
 
 router = APIRouter()
@@ -705,10 +705,14 @@ async def list_comisiones(
     vendedor_id: Optional[int] = Query(None),
     estado: Optional[str] = Query(None),
     canal: Optional[str] = Query(None),
+    desde: Optional[date] = Query(None),
+    hasta: Optional[date] = Query(None),
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    return comisiones.listar_comisiones(db, vendedor_id=vendedor_id, estado=estado, canal=canal)
+    return comisiones.listar_comisiones(
+        db, vendedor_id=vendedor_id, estado=estado, canal=canal, desde=desde, hasta=hasta
+    )
 
 
 @router.patch("/comisiones/{comision_id}")
@@ -718,8 +722,8 @@ async def update_comision(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    """Edición manual de una comisión puntual (cualquier canal): tasa, monto
-    y/o estado. Pensado para ajustar casos particulares caso por caso."""
+    """Edición manual de una comisión pendiente (cualquier canal): tasa y/o
+    monto. El estado se maneja desde las liquidaciones semanales."""
     try:
         return comisiones.editar_comision(db, comision_id, body)
     except AppException as e:
@@ -756,3 +760,98 @@ async def generar_comisiones_pendientes(
     """Backfill masivo: genera de una la comisión de todas las ventas
     minoristas pagadas que todavía no la tienen."""
     return comisiones.generar_comisiones_pendientes(db)
+
+
+# ─── Liquidaciones semanales de comisiones ───────────────────────────────────
+
+@router.get("/liquidaciones/semanas")
+async def list_semanas_liquidacion(
+    cantidad: int = Query(8, ge=1, le=52),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Últimas semanas (lunes a domingo) más las anteriores que todavía
+    tienen comisiones pendientes, con pendiente y liquidado de cada una."""
+    return liquidaciones.listar_semanas(db, cantidad=cantidad)
+
+
+@router.get("/liquidaciones/semana")
+async def get_semana_liquidacion(
+    desde: date = Query(..., description="Lunes de la semana"),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    try:
+        return liquidaciones.resumen_semana(db, desde)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/liquidaciones", status_code=201)
+async def create_liquidaciones(
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Liquida una semana cerrada para uno o varios vendedores en una sola
+    transacción. Body: {semana_desde, vendedores: [{vendedor_id,
+    comision_ids?}], fecha_pago?, medio_pago?, notas?, registrar_gasto?}."""
+    try:
+        semana_desde = date.fromisoformat(body["semana_desde"])
+        fecha_pago = date.fromisoformat(body["fecha_pago"]) if body.get("fecha_pago") else None
+        vendedores = body.get("vendedores") or []
+        if not isinstance(vendedores, list) or any("vendedor_id" not in v for v in vendedores):
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(422, "Body inválido: semana_desde (YYYY-MM-DD) y vendedores [{vendedor_id}] son obligatorios.")
+    try:
+        return liquidaciones.liquidar_semana(
+            db,
+            semana_desde,
+            vendedores,
+            fecha_pago=fecha_pago,
+            medio_pago=body.get("medio_pago"),
+            notas=body.get("notas"),
+            registrar_gasto=bool(body.get("registrar_gasto", True)),
+        )
+    except AppException as e:
+        db.rollback()
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.get("/liquidaciones")
+async def list_liquidaciones(
+    vendedor_id: Optional[int] = Query(None),
+    semana_desde: Optional[date] = Query(None),
+    incluir_anuladas: bool = Query(False),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    return liquidaciones.listar_liquidaciones(
+        db, vendedor_id=vendedor_id, semana_desde=semana_desde, incluir_anuladas=incluir_anuladas
+    )
+
+
+@router.get("/liquidaciones/{liquidacion_id}")
+async def get_liquidacion(
+    liquidacion_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    try:
+        return liquidaciones.obtener_liquidacion(db, liquidacion_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/liquidaciones/{liquidacion_id}/anular")
+async def anular_liquidacion(
+    liquidacion_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Devuelve las comisiones a pendiente y borra el gasto asociado."""
+    try:
+        return liquidaciones.anular_liquidacion(db, liquidacion_id)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)

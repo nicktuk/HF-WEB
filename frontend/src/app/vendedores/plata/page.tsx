@@ -37,12 +37,37 @@ interface VentaSinComision {
   total: number
 }
 
+interface Liquidacion {
+  id: number
+  semana_desde: string
+  semana_hasta: string
+  fecha_pago: string
+  total: number
+  medio_pago: string | null
+  cantidad: number
+}
+
+interface SemanaEnCurso {
+  semana_desde: string
+  semana_hasta: string
+  cantidad: number
+  total: number
+}
+
+/** 'YYYY-MM-DD' -> 'dd/mm' sin pasar por Date (evita correr el día por zona horaria). */
+function fechaCorta(iso: string) {
+  const [, m, d] = iso.split('-')
+  return `${d}/${m}`
+}
+
 interface MiPlata {
   grupos: GrupoComision[]
   comisiones_minoristas: ComisionMinorista[]
   total_pendiente: number
   total_liquidado: number
   ventas_sin_comision: VentaSinComision[]
+  semana_en_curso: SemanaEnCurso
+  liquidaciones: Liquidacion[]
 }
 
 export default function MiPlataPage() {
@@ -82,6 +107,49 @@ export default function MiPlataPage() {
                 <p className="text-xl font-bold text-emerald-600">${plata.total_liquidado.toLocaleString('es-AR')}</p>
               </div>
             </div>
+
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <p className="text-xs text-zinc-500">
+                Esta semana ({fechaCorta(plata.semana_en_curso.semana_desde)} al {fechaCorta(plata.semana_en_curso.semana_hasta)}) llevás
+              </p>
+              <p className="text-xl font-bold text-zinc-800">
+                ${plata.semana_en_curso.total.toLocaleString('es-AR')}
+                <span className="text-sm font-normal text-zinc-400"> · {plata.semana_en_curso.cantidad} comisiones</span>
+              </p>
+              <p className="text-xs text-zinc-400 mt-1">Las comisiones se liquidan por semana, de lunes a domingo.</p>
+            </section>
+
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
+              <h2 className="text-sm font-semibold text-zinc-700 mb-2">Mis liquidaciones</h2>
+              {plata.liquidaciones.length === 0 ? (
+                <p className="text-sm text-zinc-400">Todavía no tenés liquidaciones.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Semana</th>
+                        <th className="text-left py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Pagado</th>
+                        <th className="text-right py-2 pr-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Comisiones</th>
+                        <th className="text-right py-2 pl-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                      {plata.liquidaciones.map(l => (
+                        <tr key={l.id}>
+                          <td className="py-2 pr-2 text-zinc-700 whitespace-nowrap">{fechaCorta(l.semana_desde)} al {fechaCorta(l.semana_hasta)}</td>
+                          <td className="py-2 pr-2 text-zinc-500 whitespace-nowrap">
+                            {fechaCorta(l.fecha_pago)}{l.medio_pago ? ` · ${l.medio_pago}` : ''}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-zinc-500">{l.cantidad}</td>
+                          <td className="py-2 pl-2 text-right font-medium text-emerald-600">${l.total.toLocaleString('es-AR')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
               <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones mayoristas por comercio</h2>
