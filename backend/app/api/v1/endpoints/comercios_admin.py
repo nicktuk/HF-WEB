@@ -176,7 +176,6 @@ def _vendedor_dict(v: CatalogSeller) -> dict:
         "debe_cambiar_password": bool(v.debe_cambiar_password),
         "comision_mayorista_nuevo_porcentaje": float(v.comision_mayorista_nuevo_porcentaje) if v.comision_mayorista_nuevo_porcentaje is not None else None,
         "comision_mayorista_recompra_porcentaje": float(v.comision_mayorista_recompra_porcentaje) if v.comision_mayorista_recompra_porcentaje is not None else None,
-        "comision_minorista_porcentaje": float(v.comision_minorista_porcentaje) if v.comision_minorista_porcentaje is not None else None,
     }
 
 
@@ -217,7 +216,6 @@ async def create_vendedor(
         activo=True,
         comision_mayorista_nuevo_porcentaje=body.get("comision_mayorista_nuevo_porcentaje"),
         comision_mayorista_recompra_porcentaje=body.get("comision_mayorista_recompra_porcentaje"),
-        comision_minorista_porcentaje=body.get("comision_minorista_porcentaje"),
     )
     db.add(v)
     db.commit()
@@ -251,8 +249,6 @@ async def update_vendedor(
         v.comision_mayorista_nuevo_porcentaje = body["comision_mayorista_nuevo_porcentaje"]
     if "comision_mayorista_recompra_porcentaje" in body:
         v.comision_mayorista_recompra_porcentaje = body["comision_mayorista_recompra_porcentaje"]
-    if "comision_minorista_porcentaje" in body:
-        v.comision_minorista_porcentaje = body["comision_minorista_porcentaje"]
     db.commit()
     db.refresh(v)
     return _vendedor_dict(v)
@@ -338,7 +334,6 @@ def _config_dict(cfg: ConfiguracionComercio) -> dict:
         "semaforo_dias_rojo": int(cfg.semaforo_dias_rojo),
         "comision_mayorista_nuevo_porcentaje": float(cfg.comision_mayorista_nuevo_porcentaje),
         "comision_mayorista_recompra_porcentaje": float(cfg.comision_mayorista_recompra_porcentaje),
-        "comision_minorista_porcentaje": float(cfg.comision_minorista_porcentaje),
     }
 
 
@@ -399,7 +394,6 @@ async def update_comercio_config(
     for campo in (
         "comision_mayorista_nuevo_porcentaje",
         "comision_mayorista_recompra_porcentaje",
-        "comision_minorista_porcentaje",
     ):
         if campo in body:
             val = float(body[campo])

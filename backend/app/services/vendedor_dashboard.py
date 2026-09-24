@@ -24,6 +24,7 @@ from app.models.comercio import (
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
 from app.models.sale import Sale, SaleItem
 from app.services import comercio_catalog, comercio_pedidos
+from app.services import comisiones as comisiones_service
 
 ESTADOS_PROSPECTO = {"interesado", "lo_pienso", "no_va", "convertido"}
 MERCADOPAGO_HEFA_LABEL = "Mercado Pago HEFA"
@@ -149,9 +150,10 @@ def get_mi_dia(db: Session, vendedor_id: int) -> dict:
 def get_mi_plata(db: Session, vendedor_id: int) -> dict:
     """Comisiones mayoristas agrupadas por comercio (para poder mostrarlas
     plegadas, con el detalle de pedidos al expandir) + comisiones minoristas
-    ya generadas (planas, una por venta) + ventas minoristas pagadas que
-    todavía no tienen comisión generada (las genera un admin caso por caso,
-    ver /admin/ventas-minoristas/pendientes-comision)."""
+    ya generadas (planas, una por venta, y agrupadas por semana con el
+    tramo alcanzado de la matriz — ver services/comisiones.py) + ventas
+    minoristas pagadas que todavía no tienen comisión generada (las genera
+    un admin caso por caso, ver /admin/ventas-minoristas/pendientes-comision)."""
     comisiones = (
         db.query(Comision)
         .filter(Comision.vendedor_id == vendedor_id)
@@ -219,6 +221,7 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         "total_pendiente": total_pendiente,
         "total_liquidado": total_liquidado,
         "ventas_sin_comision": ventas_sin_comision,
+        "semanas_minoristas": comisiones_service.semanas_minoristas_vendedor(db, vendedor_id),
     }
 
 

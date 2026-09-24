@@ -242,6 +242,7 @@ class SalesService:
                 "is_paid": paid_flag,
                 "unit_price": unit_price,
                 "total_price": total_price,
+                "es_oferta": bool(product and product.is_on_sale),
             })
             total_amount += total_price
 
@@ -295,7 +296,8 @@ class SalesService:
                 self.db.add(EstadoHistorial(canal="minorista", referencia_id=sale.id, estado="entregada"))
             # Comisión automática: se crea al quedar pagada, y se recalcula en
             # cada guardado posterior mientras siga pendiente (por si cambió
-            # el total o el override manual de %/monto de la venta).
+            # el total, los items, el vendedor o el override manual de
+            # %/monto de la venta), junto con el resto de su semana.
             comisiones.sincronizar_comision_minorista(self.db, sale)
 
     def _apply_item_states(
@@ -395,6 +397,7 @@ class SalesService:
                 is_paid=False,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
+                es_oferta=item["es_oferta"],
             )
             self.db.add(sale_item)
 
@@ -458,6 +461,7 @@ class SalesService:
                 "quantity": qty,
                 "unit_price": unit_price,
                 "total_price": total_price,
+                "es_oferta": product.is_on_sale,
             })
 
         total_amount = total_amount.quantize(Decimal("0.01"))
@@ -526,6 +530,7 @@ class SalesService:
                 is_paid=mark_paid,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
+                es_oferta=item["es_oferta"],
             ))
 
         if shipping_cost > 0:
@@ -705,6 +710,12 @@ class SalesService:
                 _item_ref_of(ci): (int(ci.delivered_quantity or 0), ci.deposit_id)
                 for ci in current_items
             }
+            # Un item que ya estaba en la venta conserva su marca de oferta
+            # (la de cuando se cargó), aunque la oferta del producto haya
+            # vencido o empezado después; sólo los items nuevos toman la actual.
+            current_oferta: dict[str, bool] = {
+                _item_ref_of(ci): bool(ci.es_oferta) for ci in current_items
+            }
             incoming_refs = {ni["item_ref"] for ni in normalized_items}
 
             # Only restore stock for items being REMOVED from the sale.
@@ -752,6 +763,7 @@ class SalesService:
                     is_paid=False,
                     unit_price=ni["unit_price"],
                     total_price=ni["total_price"],
+                    es_oferta=current_oferta.get(ni["item_ref"], ni["es_oferta"]),
                 ))
             sale.total_amount = new_total
             self.db.flush()
@@ -857,7 +869,20 @@ class SalesService:
                     else:
                         self._restore_deposit_stock(item.product_id, restore_deposit_id, delivered_qty)
 
+        # La comisión se va con la venta (como el ON DELETE CASCADE de la
+        # FK; se borra explícito porque el ORM si no la dejaría huérfana con
+        # sale_id en NULL) y el resto de su semana se recalcula: el volumen
+        # baja y puede cambiar el tramo.
+        comision = sale.comision
+        semana = None
+        if comision is not None:
+            semana = (comision.vendedor_id, comision.created_at)
+            self.db.delete(comision)
+
         self.db.delete(sale)
+        self.db.flush()
+        if semana is not None:
+            comisiones.recalcular_semana_minorista(self.db, *semana)
         self.db.commit()
 
     def reconcile_delivered_stock(self) -> dict:
