@@ -112,7 +112,10 @@ export default function VentasPage() {
   const updateSaleInList = useUpdateSale(apiKey);
   const updateInstallment = useUpdateSaleInstallment(apiKey);
   const { data: salesData, isLoading: isSalesLoading } = useSales(apiKey, 200, salesSearch || undefined, dateFrom || undefined, dateTo || undefined);
-  const { data: expensesData } = useExpenses(apiKey);
+  const { data: expensesData } = useExpenses(apiKey, {
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
   const { data: sellers } = useCatalogSellers(apiKey, true);
 
   useEffect(() => {
@@ -1151,7 +1154,7 @@ export default function VentasPage() {
             </div>
           )}
           {/* Resumen financiero: cobros vs gastos */}
-          {expensesData && Number(expensesData.total) > 0 && deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && !showPartials && (
+          {expensesData && deliveredFilter === 'all' && paidFilter === 'all' && !salesSearch && !showPartials && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-xs text-emerald-600 uppercase font-semibold">Cobrado</p>
