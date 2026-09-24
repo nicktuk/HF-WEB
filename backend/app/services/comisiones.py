@@ -1,33 +1,26 @@
 """Gestión de comisiones de vendedor, cruzando ambos canales (mayorista vía
 pedido_id, minorista vía sale_id — ver Comision en models/comercio.py).
 
-Mayorista: comercio_pedidos.sincronizar_comision_pedido (se dispara al pagar
-un pedido, y al editar su override manual) resuelve la tasa en dos pasos:
-porcentaje_vigente elige la tasa "base" — la propia del vendedor si la tiene
-cargada, si no la general de ConfiguracionComercio — y resolver_tasa_monto le
-aplica el override manual puntual del pedido si lo hay.
+El cálculo automático corre en dos puntos: comercio_pedidos.sincronizar_comision_pedido
+(se dispara al pagar un pedido mayorista, y al editar su override manual) y
+sincronizar_comision_minorista de acá (se dispara cada vez que se guarda una
+venta minorista pagada, desde SalesService). Ambos resuelven la tasa en dos
+pasos: primero porcentaje_vigente elige la tasa "base" — la propia del
+vendedor (CatalogSeller.comision_*_porcentaje) si la tiene cargada, si no la
+general configurada en el admin (ConfiguracionComercio) — y después
+resolver_tasa_monto le aplica el override manual puntual de la venta/pedido
+(comision_porcentaje_manual o comision_monto_manual) si lo hay, que gana
+sobre cualquiera de las dos. Mientras la comisión siga "pendiente" se
+recalcula en cada guardado (por si cambió el total, la tasa del vendedor o
+el override), y también se puede ajustar a mano vía
+editar_comision/PATCH /admin/comisiones/{id}; una vez "liquidada" queda fija
+hasta que se anule su liquidación.
 
-Minorista: sincronizar_comision_minorista de acá (se dispara cada vez que se
-guarda una venta pagada, desde SalesService) calcula por semana (lunes a
-domingo, hora Argentina) con la matriz ComisionMinoristaTramo. Cada venta
-cae en la semana en que se generó su comisión (= cuando quedó pagada). La
-venta semanal total del vendedor — incluidas las ofertas, para que las
-empujen — define el tramo; ese % (o el promedio escalonado, si
-comision_minorista_escalonada) se aplica a la parte no-oferta de cada venta,
-y la parte en oferta (SaleItem.es_oferta) va siempre al % de ofertas. El
-override manual de la venta (comision_porcentaje_manual / comision_monto_manual)
-sigue ganando sobre la matriz para esa venta, pero su monto suma igual al
-volumen de la semana.
-
-Cada venta pagada/editada/borrada recalcula todas las comisiones pendientes
-de su semana del vendedor (si pasa de tramo, sube el % de las anteriores
-también). Mientras la semana está abierta el resultado es provisorio (así se
-le muestra al vendedor); al cerrar el domingo queda el tramo final, que sólo
-cambia si se edita una venta de esa semana. Un cambio de la matriz en el
-admin recalcula sólo la semana en curso. Una comisión "liquidada" queda fija
-y sólo se toca a mano vía editar_comision/PATCH /admin/comisiones/{id}.
+Las comisiones se pagan por semana (lunes a domingo, hora Argentina): ver
+services/liquidaciones.py. Una comisión pertenece a la semana de su
+created_at, y pasa a "liquidada" sólo a través de una liquidación.
 """
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -37,7 +30,30 @@ from app.core.exceptions import AppException, NotFoundError, ValidationError
 from app.models.comercio import Comision, ComisionMinoristaTramo, ConfiguracionComercio
 from app.models.sale import Sale
 
-ESTADOS_COMISION = {"pendiente", "liquidada"}
+# Argentina no tiene horario de verano: UTC-3 fijo. created_at se guarda en
+# UTC sin zona (ver models/base.py).
+AR_OFFSET = timedelta(hours=3)
+
+
+def hoy_ar() -> date:
+    return (datetime.utcnow() - AR_OFFSET).date()
+
+
+def lunes_de(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def semana_de(created_at: datetime) -> date:
+    """Lunes (hora Argentina) de la semana a la que pertenece un created_at UTC."""
+    return lunes_de((created_at - AR_OFFSET).date())
+
+
+def rango_utc(desde: date, hasta: date) -> tuple[datetime, datetime]:
+    """[inicio, fin) en UTC sin zona para los días desde..hasta (inclusive)
+    en hora Argentina, para filtrar contra created_at."""
+    inicio = datetime.combine(desde, time()) + AR_OFFSET
+    fin = datetime.combine(hasta + timedelta(days=1), time()) + AR_OFFSET
+    return inicio, fin
 
 TZ_AR = ZoneInfo("America/Argentina/Buenos_Aires")
 
@@ -73,7 +89,7 @@ def resolver_tasa_monto(
     return tasa, monto
 
 
-def _comision_dict(c: Comision) -> dict:
+def comision_dict(c: Comision) -> dict:
     canal = "mayorista" if c.pedido_id is not None else "minorista"
     cliente_nombre = None
     if c.pedido and c.pedido.comercio:
@@ -103,8 +119,14 @@ def listar_comisiones(
     vendedor_id: int | None = None,
     estado: str | None = None,
     canal: str | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
 ) -> list[dict]:
     q = db.query(Comision)
+    if desde is not None:
+        q = q.filter(Comision.created_at >= rango_utc(desde, desde)[0])
+    if hasta is not None:
+        q = q.filter(Comision.created_at < rango_utc(hasta, hasta)[1])
     if vendedor_id is not None:
         q = q.filter(Comision.vendedor_id == vendedor_id)
     if estado is not None:
@@ -114,7 +136,7 @@ def listar_comisiones(
     elif canal == "minorista":
         q = q.filter(Comision.sale_id.isnot(None))
     comisiones = q.order_by(Comision.id.desc()).all()
-    return [_comision_dict(c) for c in comisiones]
+    return [comision_dict(c) for c in comisiones]
 
 
 def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
@@ -427,7 +449,7 @@ def generar_comision_minorista(db: Session, sale_id: int) -> dict:
     comision = sincronizar_comision_minorista(db, sale, fecha=sale.created_at)
     db.commit()
     db.refresh(comision)
-    return _comision_dict(comision)
+    return comision_dict(comision)
 
 
 def generar_comisiones_pendientes(db: Session) -> dict:
@@ -455,18 +477,20 @@ def generar_comisiones_pendientes(db: Session) -> dict:
 
 
 def editar_comision(db: Session, comision_id: int, cambios: dict) -> dict:
-    """Edición manual de una comisión ya creada (de cualquier canal). Si se
+    """Edición manual de una comisión pendiente (de cualquier canal). Si se
     manda `tasa` sin `monto`, el monto se recalcula sobre la base guardada;
-    si se manda `monto`, ese valor pisa el cálculo (ajuste puntual)."""
+    si se manda `monto`, ese valor pisa el cálculo (ajuste puntual). Una
+    comisión ya liquidada no se edita: primero hay que anular su liquidación."""
     c = db.query(Comision).filter(Comision.id == comision_id).first()
     if not c:
         raise NotFoundError("Comision", str(comision_id))
 
     if "estado" in cambios:
-        estado = cambios["estado"]
-        if estado not in ESTADOS_COMISION:
-            raise ValidationError(f"estado debe ser uno de: {', '.join(sorted(ESTADOS_COMISION))}")
-        c.estado = estado
+        raise ValidationError(
+            "El estado se maneja desde las liquidaciones semanales: liquidá la semana o anulá la liquidación."
+        )
+    if c.liquidacion_id is not None:
+        raise ValidationError("La comisión ya está liquidada; anulá la liquidación para poder editarla.")
 
     nueva_tasa = cambios.get("tasa")
     nuevo_monto = cambios.get("monto")
@@ -479,4 +503,4 @@ def editar_comision(db: Session, comision_id: int, cambios: dict) -> dict:
 
     db.commit()
     db.refresh(c)
-    return _comision_dict(c)
+    return comision_dict(c)

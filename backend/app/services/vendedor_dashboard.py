@@ -23,8 +23,7 @@ from app.models.comercio import (
 )
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
 from app.models.sale import Sale, SaleItem
-from app.services import comercio_catalog, comercio_pedidos
-from app.services import comisiones as comisiones_service
+from app.services import comercio_catalog, comercio_pedidos, liquidaciones
 
 ESTADOS_PROSPECTO = {"interesado", "lo_pienso", "no_va", "convertido"}
 MERCADOPAGO_HEFA_LABEL = "Mercado Pago HEFA"
@@ -221,7 +220,7 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         "total_pendiente": total_pendiente,
         "total_liquidado": total_liquidado,
         "ventas_sin_comision": ventas_sin_comision,
-        "semanas_minoristas": comisiones_service.semanas_minoristas_vendedor(db, vendedor_id),
+        **liquidaciones.resumen_vendedor(db, vendedor_id),
     }
 
 

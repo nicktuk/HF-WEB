@@ -4,7 +4,7 @@ Las tablas DB conservan sus nombres originales (mayoristas, pedidos_mayoristas, 
 """
 import enum
 import sqlalchemy as sa
-from sqlalchemy import Column, Integer, Boolean, Numeric, ForeignKey, Text, DateTime, Enum
+from sqlalchemy import Column, Integer, Boolean, Numeric, ForeignKey, Text, DateTime, Date, String, Enum
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -215,6 +215,12 @@ class Comision(Base):
     vendedor_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="RESTRICT"), nullable=False, index=True)
     pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=True, unique=True)
     sale_id = Column(Integer, ForeignKey("sales.id", ondelete="CASCADE"), nullable=True, unique=True)
+    # Liquidación semanal que la pagó (ver LiquidacionComision). Mientras sea
+    # NULL la comisión está pendiente; estado='liquidada' se mantiene en
+    # sincronía para no romper los lugares que ya filtran por estado.
+    liquidacion_id = Column(
+        Integer, ForeignKey("liquidaciones_comision.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     base = Column(Numeric(12, 2), nullable=False)
     # Parte de `base` vendida en oferta (sólo minorista; ver SaleItem.es_oferta).
     base_oferta = Column(Numeric(12, 2), nullable=False, default=0)
@@ -229,6 +235,34 @@ class Comision(Base):
     vendedor = relationship("CatalogSeller")
     pedido = relationship("PedidoComercio", back_populates="comision")
     sale = relationship("Sale", back_populates="comision")
+    liquidacion = relationship("LiquidacionComision", back_populates="comisiones")
+
+
+class LiquidacionComision(Base):
+    """Pago de comisiones a un vendedor por una semana (lunes a domingo, hora
+    Argentina) — ver services/liquidaciones.py. Una comisión pertenece a la
+    semana en que se generó (Comision.created_at, que se graba al pagarse la
+    venta/pedido). Puede haber más de una liquidación confirmada por
+    vendedor y semana: las comisiones que aparecen después de liquidada una
+    semana se pagan en una liquidación complementaria de esa misma semana.
+    Anularla devuelve sus comisiones a pendiente y borra el gasto asociado."""
+    __tablename__ = "liquidaciones_comision"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendedor_id = Column(Integer, ForeignKey("catalog_sellers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    semana_desde = Column(Date, nullable=False, index=True)
+    semana_hasta = Column(Date, nullable=False)
+    fecha_pago = Column(Date, nullable=False)
+    total = Column(Numeric(12, 2), nullable=False)
+    medio_pago = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    # 'confirmada' | 'anulada'
+    estado = Column(String(20), nullable=False, default='confirmada')
+    expense_id = Column(Integer, ForeignKey("expenses.id", ondelete="SET NULL"), nullable=True)
+
+    vendedor = relationship("CatalogSeller")
+    comisiones = relationship("Comision", back_populates="liquidacion")
+    expense = relationship("Expense")
 
 
 class VentaReportada(Base):
