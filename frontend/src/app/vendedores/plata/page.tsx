@@ -84,12 +84,6 @@ interface SemanaEnCurso {
   total: number
 }
 
-/** 'YYYY-MM-DD' -> 'dd/mm' sin pasar por Date (evita correr el día por zona horaria). */
-function fechaCorta(iso: string) {
-  const [, m, d] = iso.split('-')
-  return `${d}/${m}`
-}
-
 interface MiPlata {
   grupos: GrupoComision[]
   semanas_minoristas: SemanaMinorista[]

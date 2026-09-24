@@ -6,15 +6,15 @@ que ya estaban marcadas como liquidadas se agrupan en liquidaciones
 históricas por vendedor y semana de generación (sin gasto asociado), para
 que no queden liquidadas sin liquidación.
 
-Revision ID: 104
-Revises: 103
+Revision ID: 105
+Revises: 104
 Create Date: 2026-09-24
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '104'
-down_revision = '103'
+revision = '105'
+down_revision = '104'
 branch_labels = None
 depends_on = None
 
