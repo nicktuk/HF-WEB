@@ -107,10 +107,28 @@ class ConfiguracionComercio(Base):
     semaforo_dias_rojo = Column(Integer, nullable=False, default=14)
     # Tasas de comisión del vendedor, configurables desde el admin (antes
     # hardcodeadas). Mayorista distingue cliente nuevo vs. recompra; minorista
-    # es una sola tasa (default 0 = apagada hasta que se defina la regla).
+    # se calcula por semana con la matriz ComisionMinoristaTramo, salvo lo
+    # vendido en oferta, que va siempre a comision_minorista_oferta_porcentaje.
+    # Con comision_minorista_escalonada, cada tramo aplica sólo a la porción
+    # de la venta semanal que cae dentro de él; si no, el tramo alcanzado
+    # aplica a toda la venta de la semana.
     comision_mayorista_nuevo_porcentaje = Column(Numeric(5, 2), nullable=False, default=15)
     comision_mayorista_recompra_porcentaje = Column(Numeric(5, 2), nullable=False, default=10)
-    comision_minorista_porcentaje = Column(Numeric(5, 2), nullable=False, default=0)
+    comision_minorista_oferta_porcentaje = Column(Numeric(5, 2), nullable=False, default=0)
+    comision_minorista_escalonada = Column(Boolean, nullable=False, default=False)
+
+
+class ComisionMinoristaTramo(Base):
+    """Tramo de la matriz de comisión minorista por volumen de venta semanal.
+
+    Aplica cuando la venta semanal (lunes a domingo) del vendedor supera
+    `monto_desde` — el primer tramo arranca en 0. Ver services/comisiones.py.
+    """
+    __tablename__ = "comision_minorista_tramos"
+
+    id = Column(Integer, primary_key=True)
+    monto_desde = Column(Numeric(12, 2), nullable=False, unique=True)
+    porcentaje = Column(Numeric(5, 2), nullable=False)
 
 
 class DescuentoTramoComercio(Base):
@@ -204,6 +222,8 @@ class Comision(Base):
         Integer, ForeignKey("liquidaciones_comision.id", ondelete="SET NULL"), nullable=True, index=True
     )
     base = Column(Numeric(12, 2), nullable=False)
+    # Parte de `base` vendida en oferta (sólo minorista; ver SaleItem.es_oferta).
+    base_oferta = Column(Numeric(12, 2), nullable=False, default=0)
     tasa = Column(Numeric(5, 4), nullable=False)
     monto = Column(Numeric(12, 2), nullable=False)
     estado = Column(

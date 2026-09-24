@@ -28,7 +28,6 @@ export default function ConfigComercioPage() {
   const [montoMinimo, setMontoMinimo] = useState('')
   const [comisionMayoristaNuevo, setComisionMayoristaNuevo] = useState('')
   const [comisionMayoristaRecompra, setComisionMayoristaRecompra] = useState('')
-  const [comisionMinorista, setComisionMinorista] = useState('')
   const [semaforoDiasAmarillo, setSemaforoDiasAmarillo] = useState('')
   const [semaforoDiasRojo, setSemaforoDiasRojo] = useState('')
   const [loading, setLoading] = useState(true)
@@ -54,7 +53,6 @@ export default function ConfigComercioPage() {
         setMontoMinimo(String(d.monto_minimo_pedido))
         setComisionMayoristaNuevo(String(d.comision_mayorista_nuevo_porcentaje))
         setComisionMayoristaRecompra(String(d.comision_mayorista_recompra_porcentaje))
-        setComisionMinorista(String(d.comision_minorista_porcentaje))
         setSemaforoDiasAmarillo(String(d.semaforo_dias_amarillo))
         setSemaforoDiasRojo(String(d.semaforo_dias_rojo))
       }
@@ -87,7 +85,6 @@ export default function ConfigComercioPage() {
         monto_minimo_pedido: parseFloat(montoMinimo),
         comision_mayorista_nuevo_porcentaje: parseFloat(comisionMayoristaNuevo),
         comision_mayorista_recompra_porcentaje: parseFloat(comisionMayoristaRecompra),
-        comision_minorista_porcentaje: parseFloat(comisionMinorista),
         semaforo_dias_amarillo: parseInt(semaforoDiasAmarillo),
         semaforo_dias_rojo: parseInt(semaforoDiasRojo),
       }),
@@ -289,13 +286,13 @@ export default function ConfigComercioPage() {
         </div>
 
         <div className="border-t border-gray-100 pt-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-1">Comisión de vendedores (default general)</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">Comisión mayorista (default general)</h2>
           <p className="text-xs text-gray-500 mb-3">
             % sobre el monto pagado que se atribuye al vendedor de la cartera. Se usa para los vendedores que
             no tienen su propio % cargado (en /admin/vendedores, editando cada uno). Se aplica desde el momento
             en que se guarda — no afecta comisiones ya generadas (esas se editan una por una en /admin/comisiones).
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Mayorista, cliente nuevo (%)</label>
               <input
@@ -318,19 +315,6 @@ export default function ConfigComercioPage() {
                 max="100"
                 value={comisionMayoristaRecompra}
                 onChange={e => setComisionMayoristaRecompra(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Minorista (%)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={comisionMinorista}
-                onChange={e => setComisionMinorista(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 required
               />

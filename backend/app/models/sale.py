@@ -32,8 +32,8 @@ class Sale(Base):
     delivered_amount = Column(Numeric(12, 2), nullable=False, default=0)
     paid_amount = Column(Numeric(12, 2), nullable=False, default=0)
     # Override manual de la comisión del vendedor para esta venta puntual —
-    # a lo sumo uno de los dos, pisa la tasa configurada en el admin
-    # (ConfiguracionComercio.comision_minorista_porcentaje). Ver services/comisiones.py.
+    # a lo sumo uno de los dos, pisa la matriz semanal configurada en el
+    # admin (ComisionMinoristaTramo). Ver services/comisiones.py.
     comision_porcentaje_manual = Column(Numeric(5, 2), nullable=True)
     comision_monto_manual = Column(Numeric(12, 2), nullable=True)
 
@@ -91,6 +91,9 @@ class SaleItem(Base):
     is_paid = Column(Boolean, nullable=False, default=False)
     unit_price = Column(Numeric(10, 2), nullable=False)
     total_price = Column(Numeric(12, 2), nullable=False)
+    # Snapshot de si el producto estaba en oferta (Product.is_on_sale) al
+    # cargarse el item — define qué parte de la venta comisiona al % de ofertas.
+    es_oferta = Column(Boolean, nullable=False, default=False)
 
     sale = relationship("Sale", back_populates="items")
     product = relationship("Product")

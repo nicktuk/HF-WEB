@@ -149,9 +149,10 @@ def get_mi_dia(db: Session, vendedor_id: int) -> dict:
 def get_mi_plata(db: Session, vendedor_id: int) -> dict:
     """Comisiones mayoristas agrupadas por comercio (para poder mostrarlas
     plegadas, con el detalle de pedidos al expandir) + comisiones minoristas
-    ya generadas (planas, una por venta) + ventas minoristas pagadas que
-    todavía no tienen comisión generada (las genera un admin caso por caso,
-    ver /admin/ventas-minoristas/pendientes-comision)."""
+    ya generadas (planas, una por venta, y agrupadas por semana con el
+    tramo alcanzado de la matriz — ver services/comisiones.py) + ventas
+    minoristas pagadas que todavía no tienen comisión generada (las genera
+    un admin caso por caso, ver /admin/ventas-minoristas/pendientes-comision)."""
     comisiones = (
         db.query(Comision)
         .filter(Comision.vendedor_id == vendedor_id)

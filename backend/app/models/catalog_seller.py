@@ -33,12 +33,12 @@ class CatalogSeller(Base):
     reset_token_expires_at = Column(DateTime, nullable=True)
     debe_cambiar_password = Column(Boolean, nullable=False, default=False)
 
-    # Tasas de comisión propias del vendedor — pisan el % general de
-    # ConfiguracionComercio cuando están cargadas; en null, se usa el
-    # general (ver services/comisiones.py y services/comercio_pedidos.py).
+    # Tasas de comisión mayorista propias del vendedor — pisan el % general
+    # de ConfiguracionComercio cuando están cargadas; en null, se usa el
+    # general (ver services/comercio_pedidos.py). La minorista no tiene tasa
+    # por vendedor: es la matriz semanal general (services/comisiones.py).
     comision_mayorista_nuevo_porcentaje = Column(Numeric(5, 2), nullable=True)
     comision_mayorista_recompra_porcentaje = Column(Numeric(5, 2), nullable=True)
-    comision_minorista_porcentaje = Column(Numeric(5, 2), nullable=True)
 
     comercios = relationship("Comercio", back_populates="vendedor")
 

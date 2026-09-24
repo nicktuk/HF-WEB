@@ -34,6 +34,7 @@ import {
   Store,
   MapPin,
   UserPlus,
+  Percent,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -57,6 +58,7 @@ const ventasSubmenu = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
   { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
+  { name: 'Comisión minorista', href: '/admin/comision-minorista', icon: Percent },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];
