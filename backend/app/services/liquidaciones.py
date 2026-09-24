@@ -88,7 +88,7 @@ def listar_semanas(db: Session, cantidad: int = 8) -> list[dict]:
     for created_at, monto in (
         db.query(Comision.created_at, Comision.monto).filter(Comision.liquidacion_id.is_(None)).all()
     ):
-        lunes = semana_de(created_at)
+        lunes = semana_de(created_at)[0]
         pendiente_total[lunes] += monto
         pendiente_cantidad[lunes] += 1
     semanas |= set(pendiente_total)

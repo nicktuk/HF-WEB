@@ -1,26 +1,37 @@
 """Gestión de comisiones de vendedor, cruzando ambos canales (mayorista vía
 pedido_id, minorista vía sale_id — ver Comision en models/comercio.py).
 
-El cálculo automático corre en dos puntos: comercio_pedidos.sincronizar_comision_pedido
-(se dispara al pagar un pedido mayorista, y al editar su override manual) y
-sincronizar_comision_minorista de acá (se dispara cada vez que se guarda una
-venta minorista pagada, desde SalesService). Ambos resuelven la tasa en dos
-pasos: primero porcentaje_vigente elige la tasa "base" — la propia del
-vendedor (CatalogSeller.comision_*_porcentaje) si la tiene cargada, si no la
-general configurada en el admin (ConfiguracionComercio) — y después
-resolver_tasa_monto le aplica el override manual puntual de la venta/pedido
-(comision_porcentaje_manual o comision_monto_manual) si lo hay, que gana
-sobre cualquiera de las dos. Mientras la comisión siga "pendiente" se
-recalcula en cada guardado (por si cambió el total, la tasa del vendedor o
-el override), y también se puede ajustar a mano vía
-editar_comision/PATCH /admin/comisiones/{id}; una vez "liquidada" queda fija
+Mayorista: comercio_pedidos.sincronizar_comision_pedido (se dispara al pagar
+un pedido, y al editar su override manual) resuelve la tasa en dos pasos:
+porcentaje_vigente elige la tasa "base" — la propia del vendedor si la tiene
+cargada, si no la general de ConfiguracionComercio — y resolver_tasa_monto le
+aplica el override manual puntual del pedido si lo hay.
+
+Minorista: sincronizar_comision_minorista de acá (se dispara cada vez que se
+guarda una venta pagada, desde SalesService) calcula por semana (lunes a
+domingo, hora Argentina) con la matriz ComisionMinoristaTramo. Cada venta
+cae en la semana en que se generó su comisión (= cuando quedó pagada). La
+venta semanal total del vendedor — incluidas las ofertas, para que las
+empujen — define el tramo; ese % (o el promedio escalonado, si
+comision_minorista_escalonada) se aplica a la parte no-oferta de cada venta,
+y la parte en oferta (SaleItem.es_oferta) va siempre al % de ofertas. El
+override manual de la venta (comision_porcentaje_manual / comision_monto_manual)
+sigue ganando sobre la matriz para esa venta, pero su monto suma igual al
+volumen de la semana.
+
+Cada venta pagada/editada/borrada recalcula todas las comisiones pendientes
+de su semana del vendedor (si pasa de tramo, sube el % de las anteriores
+también). Mientras la semana está abierta el resultado es provisorio (así se
+le muestra al vendedor); al cerrar el domingo queda el tramo final, que sólo
+cambia si se edita una venta de esa semana. Un cambio de la matriz en el
+admin recalcula sólo la semana en curso. Una comisión "liquidada" queda fija
 hasta que se anule su liquidación.
 
 Las comisiones se pagan por semana (lunes a domingo, hora Argentina): ver
 services/liquidaciones.py. Una comisión pertenece a la semana de su
-created_at, y pasa a "liquidada" sólo a través de una liquidación.
+created_at y pasa a "liquidada" sólo a través de una liquidación.
 """
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -41,11 +52,6 @@ def hoy_ar() -> date:
 
 def lunes_de(d: date) -> date:
     return d - timedelta(days=d.weekday())
-
-
-def semana_de(created_at: datetime) -> date:
-    """Lunes (hora Argentina) de la semana a la que pertenece un created_at UTC."""
-    return lunes_de((created_at - AR_OFFSET).date())
 
 
 def rango_utc(desde: date, hasta: date) -> tuple[datetime, datetime]:
@@ -111,6 +117,9 @@ def comision_dict(c: Comision) -> dict:
         "monto": float(c.monto),
         "estado": c.estado,
         "fecha": c.created_at.isoformat() if c.created_at else None,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "semana_desde": semana_de(c.created_at)[0].isoformat() if c.created_at else None,
+        "liquidacion_id": c.liquidacion_id,
     }
 
 
