@@ -81,6 +81,7 @@ interface Liquidacion {
   notas: string | null
   estado: 'confirmada' | 'anulada'
   expense_id: number | null
+  historica: boolean
   cantidad: number
   comisiones?: ComisionRow[]
 }
@@ -123,6 +124,19 @@ function fechaHoraAr(isoUtc: string | null) {
 
 function hoyAr() {
   return new Date().toLocaleDateString('en-CA', { timeZone: TZ })
+}
+
+/** Último domingo ya terminado (hora Argentina). */
+function ultimoDomingoCerrado() {
+  const hoy = hoyAr()
+  const [y, m, d] = hoy.split('-').map(Number)
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+  return sumarDias(hoy, -(dow === 0 ? 7 : dow))
+}
+
+function esDomingo(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0
 }
 
 function sumarDias(iso: string, dias: number) {
@@ -402,6 +416,8 @@ function TabLiquidar({ apiKey, version, onCambio }: { apiKey: string; version: n
 
   return (
     <div className="space-y-4">
+      <PagosAnteriores apiKey={apiKey} onCambio={onCambio} />
+
       {atrasadas.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800">
           Hay {atrasadas.length} semana{atrasadas.length === 1 ? '' : 's'} anterior{atrasadas.length === 1 ? '' : 'es'} con comisiones sin liquidar
@@ -643,6 +659,126 @@ function TabLiquidar({ apiKey, version, onCambio }: { apiKey: string; version: n
   )
 }
 
+// ─── Pagos anteriores ────────────────────────────────────────────────────────
+
+interface ResumenPagosAnteriores {
+  hasta: string
+  desde: string | null
+  cantidad: number
+  total: number
+  vendedores: { vendedor_id: number; vendedor_nombre: string | null; semanas: number; cantidad: number; total: number }[]
+}
+
+/** Marca como ya pagadas (liquidaciones históricas, sin gasto) todas las
+ *  comisiones pendientes hasta un domingo: las que se pagaron por fuera
+ *  antes de existir las liquidaciones semanales. */
+function PagosAnteriores({ apiKey, onCambio }: { apiKey: string; onCambio: () => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const [hasta, setHasta] = useState(ultimoDomingoCerrado())
+  const [resumen, setResumen] = useState<ResumenPagosAnteriores | null>(null)
+  const [cargando, setCargando] = useState(false)
+  const [registrando, setRegistrando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [ok, setOk] = useState<string | null>(null)
+
+  useEffect(() => {
+    setResumen(null)
+    setError(null)
+    if (!abierto || !apiKey || !hasta) return
+    if (!esDomingo(hasta)) { setError('La fecha de corte tiene que ser un domingo.'); return }
+    setCargando(true)
+    apiFetch(`/admin/liquidaciones/pagos-anteriores?hasta=${hasta}`, apiKey)
+      .then(async res => {
+        if (res.ok) setResumen(await res.json())
+        else setError(await errorDe(res))
+      })
+      .finally(() => setCargando(false))
+  }, [abierto, apiKey, hasta])
+
+  async function registrar() {
+    if (!resumen || resumen.cantidad === 0) return
+    const msg = `¿Marcar como ya pagadas ${resumen.cantidad} comisiones (${pesos(resumen.total)}) hasta el ${fechaCorta(hasta, true)}?\n\n` +
+      'Se registran como liquidaciones históricas por vendedor y semana, sin gasto. Se pueden anular desde el Historial.'
+    if (!window.confirm(msg)) return
+    setRegistrando(true)
+    setError(null)
+    const res = await apiFetch('/admin/liquidaciones/pagos-anteriores', apiKey, {
+      method: 'POST',
+      body: JSON.stringify({ hasta }),
+    })
+    setRegistrando(false)
+    if (!res.ok) { setError(await errorDe(res)); return }
+    const r: { liquidaciones: number; cantidad: number; total: number } = await res.json()
+    setOk(`Listo: ${r.cantidad} comisiones (${pesos(r.total)}) quedaron registradas como pagadas en ${r.liquidaciones} liquidaciones históricas.`)
+    setAbierto(false)
+    onCambio()
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl">
+      <button
+        onClick={() => { setAbierto(a => !a); setOk(null) }}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span>
+          <span className="text-sm font-medium text-gray-800">Registrar pagos anteriores</span>
+          <span className="block text-xs text-gray-500">Para las comisiones que ya pagaste por fuera, antes de liquidar desde acá.</span>
+        </span>
+        {abierto ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+      </button>
+      {ok && !abierto && <p className="px-4 pb-3 text-sm text-emerald-700">{ok}</p>}
+      {abierto && (
+        <div className="border-t border-gray-100 px-4 py-3 space-y-3">
+          <label className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+            Ya pagué todo lo generado hasta el domingo
+            <input
+              type="date"
+              value={hasta}
+              onChange={e => setHasta(e.target.value)}
+              className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+            />
+          </label>
+          {cargando && <p className="text-sm text-gray-400">Calculando...</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {resumen && (
+            resumen.cantidad === 0 ? (
+              <p className="text-sm text-gray-500">No hay comisiones pendientes hasta esa fecha.</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  {resumen.cantidad} comisiones pendientes
+                  {resumen.desde && <> desde la semana del {fechaCorta(resumen.desde, true)}</>}, por {pesos(resumen.total)}:
+                </p>
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-100">
+                    {resumen.vendedores.map(v => (
+                      <tr key={v.vendedor_id}>
+                        <td className="py-1.5 text-gray-800">{v.vendedor_nombre ?? `Vendedor #${v.vendedor_id}`}</td>
+                        <td className="py-1.5 text-gray-500">{v.semanas} semana{v.semanas === 1 ? '' : 's'} · {v.cantidad} comisiones</td>
+                        <td className="py-1.5 text-right font-medium text-gray-900">{pesos(v.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-gray-500">No se registra ningún gasto: ya los pagaste en su momento.</p>
+                  <button
+                    onClick={registrar}
+                    disabled={registrando}
+                    className="text-sm font-medium bg-sky-600 text-white rounded-lg px-4 py-2 hover:bg-sky-700 disabled:opacity-50"
+                  >
+                    {registrando ? 'Registrando...' : `Marcar como pagado · ${pesos(resumen.total)}`}
+                  </button>
+                </div>
+              </>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Historial ───────────────────────────────────────────────────────────────
 
 function TabHistorial({ apiKey, version, onCambio }: { apiKey: string; version: number; onCambio: () => void }) {
@@ -754,10 +890,18 @@ function TabHistorial({ apiKey, version, onCambio }: { apiKey: string; version: 
                         </button>
                         <span className="text-gray-500">Pagado {fechaCorta(l.fecha_pago, true)}{l.medio_pago ? ` · ${l.medio_pago}` : ''}</span>
                         {l.estado === 'confirmada' && <span className="text-gray-400">{l.cantidad} comisiones</span>}
+                        {l.historica && (
+                          <span
+                            className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-sky-100 text-sky-700"
+                            title="Pago registrado como anterior al sistema, sin gasto asociado"
+                          >
+                            Histórica
+                          </span>
+                        )}
                         {l.estado === 'anulada' && (
                           <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">Anulada</span>
                         )}
-                        {l.notas && <span className="text-gray-400 truncate max-w-xs" title={l.notas}>{l.notas}</span>}
+                        {l.notas && !l.historica && <span className="text-gray-400 truncate max-w-xs" title={l.notas}>{l.notas}</span>}
                         <span className="ml-auto font-semibold text-gray-900">{pesos(l.total)}</span>
                         <button onClick={() => imprimir(l.id)} aria-label="Imprimir comprobante" className="p-1 text-gray-400 hover:text-gray-700">
                           <Printer className="h-4 w-4" />

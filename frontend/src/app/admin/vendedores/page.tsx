@@ -18,6 +18,7 @@ interface Vendedor {
   debe_cambiar_password: boolean
   comision_mayorista_nuevo_porcentaje: number | null
   comision_mayorista_recompra_porcentaje: number | null
+  es_dueno: boolean
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -37,7 +38,7 @@ function sugerirUsuario(nombre: string): string {
 
 const emptyForm = {
   nombre: '', celular_wa: '', email: '', es_mayorista: false,
-  comisionMayoristaNuevo: '', comisionMayoristaRecompra: '',
+  comisionMayoristaNuevo: '', comisionMayoristaRecompra: '', esDueno: false,
 }
 
 export default function VendedoresAdminPage() {
@@ -88,6 +89,7 @@ export default function VendedoresAdminPage() {
       nombre: v.nombre, celular_wa: v.celular_wa, email: v.email ?? '', es_mayorista: v.es_mayorista,
       comisionMayoristaNuevo: v.comision_mayorista_nuevo_porcentaje != null ? String(v.comision_mayorista_nuevo_porcentaje) : '',
       comisionMayoristaRecompra: v.comision_mayorista_recompra_porcentaje != null ? String(v.comision_mayorista_recompra_porcentaje) : '',
+      esDueno: v.es_dueno,
     })
     setError(null)
     setShowForm(true)
@@ -101,6 +103,10 @@ export default function VendedoresAdminPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const eraDueno = editingId ? vendedores.find(v => v.id === editingId)?.es_dueno ?? false : false
+    if (editingId && form.esDueno && !eraDueno && !window.confirm(
+      `¿Marcar a ${form.nombre.trim()} como dueño?\n\nNo se le van a generar más comisiones y se borran las que tiene pendientes (las ya liquidadas no se tocan).`
+    )) return
     setError(null)
     setSaving(true)
     const body = {
@@ -110,6 +116,7 @@ export default function VendedoresAdminPage() {
       es_mayorista: form.es_mayorista,
       comision_mayorista_nuevo_porcentaje: form.comisionMayoristaNuevo.trim() ? Number(form.comisionMayoristaNuevo) : null,
       comision_mayorista_recompra_porcentaje: form.comisionMayoristaRecompra.trim() ? Number(form.comisionMayoristaRecompra) : null,
+      es_dueno: form.esDueno,
     }
     const res = editingId
       ? await apiFetch(`/admin/vendedores/${editingId}`, apiKey, { method: 'PATCH', body: JSON.stringify(body) })
@@ -269,6 +276,21 @@ export default function VendedoresAdminPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-start gap-2 mt-4">
+                <input
+                  id="es_dueno"
+                  type="checkbox"
+                  checked={form.esDueno}
+                  onChange={e => setForm(f => ({ ...f, esDueno: e.target.checked }))}
+                  className="h-4 w-4 mt-0.5 rounded border-gray-300"
+                />
+                <label htmlFor="es_dueno" className="text-sm text-gray-700">
+                  Es dueño: no cobra comisión
+                  <span className="block text-xs text-gray-500">
+                    No se le generan comisiones (ni minoristas ni por su cartera mayorista): ese valor queda como margen.
+                  </span>
+                </label>
+              </div>
             </div>
             {error && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
@@ -315,7 +337,14 @@ export default function VendedoresAdminPage() {
             <tbody className="divide-y divide-gray-100">
               {vendedores.map(v => (
                 <tr key={v.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{v.nombre}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {v.nombre}
+                    {v.es_dueno && (
+                      <span className="ml-2 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">
+                        Dueño
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">
                     <a
                       href={`https://wa.me/${v.celular_wa}`}

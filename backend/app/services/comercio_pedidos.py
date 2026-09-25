@@ -107,7 +107,8 @@ def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision
     no se crea comisión. Sólo tiene efecto si el pedido ya está pagado; se
     llama al registrar el pago y también cuando se edita el override manual
     de un pedido ya pagado. Idempotente por el índice único en pedido_id;
-    una comisión ya liquidada no se toca acá."""
+    una comisión ya liquidada no se toca acá. Si el comercio es de la
+    cartera de un vendedor dueño, no hay comisión."""
     if pedido.estado_pago != "pagado":
         return None
 
@@ -118,6 +119,12 @@ def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision
     existente = db.query(Comision).filter(Comision.pedido_id == pedido.id).first()
     if existente is not None and existente.estado != "pendiente":
         return existente
+
+    if comercio.vendedor is not None and comercio.vendedor.es_dueno:
+        # Cartera de un dueño: no lleva comisión (ver CatalogSeller.es_dueno).
+        if existente is not None:
+            db.delete(existente)
+        return None
 
     hubo_pedido_pagado_antes = (
         db.query(PedidoComercio)

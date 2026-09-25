@@ -259,6 +259,8 @@ class LiquidacionComision(Base):
     # 'confirmada' | 'anulada'
     estado = Column(String(20), nullable=False, default='confirmada')
     expense_id = Column(Integer, ForeignKey("expenses.id", ondelete="SET NULL"), nullable=True)
+    # Pago hecho antes de existir las liquidaciones semanales (sin gasto).
+    historica = Column(Boolean, nullable=False, default=False)
 
     vendedor = relationship("CatalogSeller")
     comisiones = relationship("Comision", back_populates="liquidacion")

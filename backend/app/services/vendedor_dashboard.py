@@ -22,6 +22,7 @@ from app.models.comercio import (
     Prospecto,
 )
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
+from app.models.catalog_seller import CatalogSeller
 from app.models.sale import Sale, SaleItem
 from app.services import comercio_catalog, comercio_pedidos, liquidaciones
 from app.services import comisiones as comisiones_service
@@ -214,6 +215,10 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         {"id": s.id, "cliente_nombre": s.customer_name, "total": float(s.total_amount)}
         for s in ventas if s.id not in sale_ids_con_comision
     ]
+    vendedor = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
+    if vendedor is not None and vendedor.es_dueno:
+        # Un dueño no cobra comisión: sus ventas no están "esperando" nada.
+        ventas_sin_comision = []
 
     return {
         "grupos": grupos_lista,
