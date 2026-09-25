@@ -10,6 +10,11 @@ neto. Si aparecen comisiones de una semana ya liquidada (una venta que se
 pagó tarde, un backfill), quedan pendientes en esa semana y se pagan con una
 liquidación complementaria. Anular una liquidación devuelve sus comisiones a
 pendiente y borra el gasto asociado.
+
+"Pagos anteriores": las comisiones que ya se pagaron por fuera antes de
+existir las liquidaciones se registran de una vez hasta una fecha de corte
+(un domingo), como liquidaciones históricas por vendedor y semana y sin
+gasto, para no duplicar en el resultado neto lo que ya se pagó.
 """
 from collections import defaultdict
 from datetime import date, timedelta
@@ -59,6 +64,7 @@ def liquidacion_dict(l: LiquidacionComision, con_comisiones: bool = False) -> di
         "notas": l.notas,
         "estado": l.estado,
         "expense_id": l.expense_id,
+        "historica": bool(l.historica),
         "cantidad": len(l.comisiones),
         "created_at": l.created_at.isoformat() if l.created_at else None,
     }
@@ -323,4 +329,105 @@ def resumen_vendedor(db: Session, vendedor_id: int, limit: int = 26) -> dict:
             "total": float(sum((c.monto for c in en_curso), Decimal("0"))),
         },
         "liquidaciones": listar_liquidaciones(db, vendedor_id=vendedor_id, limit=limit),
+    }
+
+
+# ─── Pagos anteriores (liquidaciones históricas) ────────────────────────────
+
+NOTA_PAGO_ANTERIOR = "Pagado antes de existir las liquidaciones semanales"
+
+
+def _validar_corte(hasta: date) -> None:
+    if hasta.weekday() != 6:
+        raise ValidationError("La fecha de corte tiene que ser un domingo.", field="hasta")
+    if hasta >= hoy_ar():
+        raise ValidationError("La fecha de corte tiene que ser un domingo que ya pasó.", field="hasta")
+
+
+def _pendientes_hasta(db: Session, hasta: date):
+    """Comisiones sin liquidar generadas hasta el domingo `hasta` inclusive,
+    sin contar las de vendedores dueños."""
+    _, fin = rango_utc(hasta, hasta)
+    return (
+        db.query(Comision)
+        .join(CatalogSeller, CatalogSeller.id == Comision.vendedor_id)
+        .filter(
+            Comision.liquidacion_id.is_(None),
+            Comision.created_at < fin,
+            CatalogSeller.es_dueno.is_(False),
+        )
+    )
+
+
+def _agrupar(comisiones: list[Comision]) -> dict[tuple[int, date], list[Comision]]:
+    grupos: dict[tuple[int, date], list[Comision]] = defaultdict(list)
+    for c in comisiones:
+        grupos[(c.vendedor_id, semana_de(c.created_at)[0])].append(c)
+    return grupos
+
+
+def resumen_pagos_anteriores(db: Session, hasta: date) -> dict:
+    """Vista previa de registrar_pagos_anteriores: qué se marcaría como pagado."""
+    _validar_corte(hasta)
+    comisiones = _pendientes_hasta(db, hasta).options(selectinload(Comision.vendedor)).all()
+
+    por_vendedor: dict[int, dict] = {}
+    for (vendedor_id, _), lista in _agrupar(comisiones).items():
+        v = por_vendedor.get(vendedor_id)
+        if v is None:
+            vendedor = lista[0].vendedor
+            v = por_vendedor[vendedor_id] = {
+                "vendedor_id": vendedor_id,
+                "vendedor_nombre": vendedor.nombre if vendedor else None,
+                "semanas": 0,
+                "cantidad": 0,
+                "total": 0.0,
+            }
+        v["semanas"] += 1
+        v["cantidad"] += len(lista)
+        v["total"] += float(sum((c.monto for c in lista), Decimal("0")))
+
+    vendedores = sorted(por_vendedor.values(), key=lambda v: v["total"], reverse=True)
+    return {
+        "hasta": hasta.isoformat(),
+        "desde": min(semana_de(c.created_at)[0] for c in comisiones).isoformat() if comisiones else None,
+        "cantidad": len(comisiones),
+        "total": sum(v["total"] for v in vendedores),
+        "vendedores": vendedores,
+    }
+
+
+def registrar_pagos_anteriores(db: Session, hasta: date) -> dict:
+    """Marca como ya pagadas todas las comisiones pendientes hasta el domingo
+    `hasta`: una liquidación histórica por vendedor y semana, con fecha de
+    pago el domingo de esa semana y sin gasto asociado. Se anulan como
+    cualquier otra liquidación."""
+    _validar_corte(hasta)
+    comisiones = _pendientes_hasta(db, hasta).with_for_update(of=Comision).all()
+    if not comisiones:
+        raise ValidationError("No hay comisiones pendientes hasta esa fecha.")
+
+    creadas = 0
+    for (vendedor_id, lunes), lista in _agrupar(comisiones).items():
+        liquidacion = LiquidacionComision(
+            vendedor_id=vendedor_id,
+            semana_desde=lunes,
+            semana_hasta=lunes + timedelta(days=6),
+            fecha_pago=lunes + timedelta(days=6),
+            total=sum((c.monto for c in lista), Decimal("0")),
+            notas=NOTA_PAGO_ANTERIOR,
+            estado="confirmada",
+            historica=True,
+        )
+        db.add(liquidacion)
+        for c in lista:
+            c.liquidacion = liquidacion
+            c.estado = "liquidada"
+        creadas += 1
+
+    db.commit()
+    return {
+        "liquidaciones": creadas,
+        "cantidad": len(comisiones),
+        "total": float(sum((c.monto for c in comisiones), Decimal("0"))),
     }

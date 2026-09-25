@@ -30,6 +30,9 @@ hasta que se anule su liquidación.
 Las comisiones se pagan por semana (lunes a domingo, hora Argentina): ver
 services/liquidaciones.py. Una comisión pertenece a la semana de su
 created_at y pasa a "liquidada" sólo a través de una liquidación.
+
+Los vendedores dueños (CatalogSeller.es_dueno) no cobran comisión: no se les
+genera ninguna, ni minorista ni mayorista, y lo que ganarían queda como margen.
 """
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
@@ -38,6 +41,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppException, NotFoundError, ValidationError
+from app.models.catalog_seller import CatalogSeller
 from app.models.comercio import Comision, ComisionMinoristaTramo, ConfiguracionComercio
 from app.models.sale import Sale
 
@@ -148,6 +152,27 @@ def listar_comisiones(
     return [comision_dict(c) for c in comisiones]
 
 
+def _ventas_pagadas_sin_comision(db: Session):
+    """Ventas pagadas sin comisión generada, sin contar las de vendedores
+    dueños (que no llevan comisión)."""
+    return (
+        db.query(Sale)
+        .join(CatalogSeller, CatalogSeller.id == Sale.seller_id)
+        .outerjoin(Comision, Comision.sale_id == Sale.id)
+        .filter(Sale.paid.is_(True), Comision.id.is_(None), CatalogSeller.es_dueno.is_(False))
+    )
+
+
+def descartar_comisiones_pendientes(db: Session, vendedor_id: int) -> int:
+    """Borra las comisiones sin liquidar de un vendedor — al marcarlo como
+    dueño. Las ya liquidadas quedan como estaban. No hace commit."""
+    return (
+        db.query(Comision)
+        .filter(Comision.vendedor_id == vendedor_id, Comision.liquidacion_id.is_(None))
+        .delete(synchronize_session=False)
+    )
+
+
 def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
     """Ventas minoristas pagadas que todavía no tienen una comisión generada.
     Desde que sincronizar_comision_minorista corre automáticamente al pagar
@@ -155,9 +180,7 @@ def listar_ventas_minoristas_pendientes_comision(db: Session) -> list[dict]:
     estaban pagadas antes de que ese trigger existiera — es la vía de
     backfill/generación manual para esos casos puntuales."""
     ventas = (
-        db.query(Sale)
-        .outerjoin(Comision, Comision.sale_id == Sale.id)
-        .filter(Sale.paid.is_(True), Comision.id.is_(None))
+        _ventas_pagadas_sin_comision(db)
         .order_by(Sale.id.desc())
         .all()
     )
@@ -339,8 +362,18 @@ def sincronizar_comision_minorista(db: Session, sale: Sale, fecha: datetime | No
     if not sale.paid:
         return None
 
-    base, base_oferta = _bases_venta(sale)
     comision = db.query(Comision).filter(Comision.sale_id == sale.id).first()
+    if sale.seller is not None and sale.seller.es_dueno:
+        # Venta de un dueño: no lleva comisión. Si tenía una pendiente (p. ej.
+        # la venta era de otro vendedor), se borra y se recalcula esa semana.
+        if comision is not None and comision.liquidacion_id is None:
+            vendedor_anterior, momento = comision.vendedor_id, comision.created_at
+            db.delete(comision)
+            db.flush()
+            recalcular_semana_minorista(db, vendedor_anterior, momento)
+        return None
+
+    base, base_oferta = _bases_venta(sale)
     vendedor_anterior = None
     if comision is None:
         comision = Comision(
@@ -456,6 +489,8 @@ def generar_comision_minorista(db: Session, sale_id: int) -> dict:
         raise ValidationError("La venta todavía no está pagada.")
 
     comision = sincronizar_comision_minorista(db, sale, fecha=sale.created_at)
+    if comision is None:
+        raise ValidationError("El vendedor de esta venta es dueño: no cobra comisión.")
     db.commit()
     db.refresh(comision)
     return comision_dict(comision)
@@ -466,12 +501,7 @@ def generar_comisiones_pendientes(db: Session) -> dict:
     pagadas que todavía no la tienen (ver listar_ventas_minoristas_pendientes_comision),
     en un solo click en vez de una por una. Un commit por venta, para que un
     error puntual no tire abajo el resto del lote."""
-    sale_ids = [
-        s.id for s in db.query(Sale.id)
-        .outerjoin(Comision, Comision.sale_id == Sale.id)
-        .filter(Sale.paid.is_(True), Comision.id.is_(None))
-        .all()
-    ]
+    sale_ids = [s.id for s in _ventas_pagadas_sin_comision(db).all()]
 
     generadas: list[dict] = []
     errores: list[dict] = []

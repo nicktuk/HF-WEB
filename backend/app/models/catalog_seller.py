@@ -39,6 +39,10 @@ class CatalogSeller(Base):
     # por vendedor: es la matriz semanal general (services/comisiones.py).
     comision_mayorista_nuevo_porcentaje = Column(Numeric(5, 2), nullable=True)
     comision_mayorista_recompra_porcentaje = Column(Numeric(5, 2), nullable=True)
+    # Dueño del negocio: no cobra comisión, así que no se le generan
+    # comisiones ni por sus ventas minoristas ni por los pedidos de su
+    # cartera mayorista — ese valor queda como margen.
+    es_dueno = Column(Boolean, nullable=False, default=False)
 
     comercios = relationship("Comercio", back_populates="vendedor")
 

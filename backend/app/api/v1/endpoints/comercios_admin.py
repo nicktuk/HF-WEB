@@ -176,6 +176,7 @@ def _vendedor_dict(v: CatalogSeller) -> dict:
         "debe_cambiar_password": bool(v.debe_cambiar_password),
         "comision_mayorista_nuevo_porcentaje": float(v.comision_mayorista_nuevo_porcentaje) if v.comision_mayorista_nuevo_porcentaje is not None else None,
         "comision_mayorista_recompra_porcentaje": float(v.comision_mayorista_recompra_porcentaje) if v.comision_mayorista_recompra_porcentaje is not None else None,
+        "es_dueno": bool(v.es_dueno),
     }
 
 
@@ -216,6 +217,7 @@ async def create_vendedor(
         activo=True,
         comision_mayorista_nuevo_porcentaje=body.get("comision_mayorista_nuevo_porcentaje"),
         comision_mayorista_recompra_porcentaje=body.get("comision_mayorista_recompra_porcentaje"),
+        es_dueno=bool(body.get("es_dueno")),
     )
     db.add(v)
     db.commit()
@@ -249,6 +251,12 @@ async def update_vendedor(
         v.comision_mayorista_nuevo_porcentaje = body["comision_mayorista_nuevo_porcentaje"]
     if "comision_mayorista_recompra_porcentaje" in body:
         v.comision_mayorista_recompra_porcentaje = body["comision_mayorista_recompra_porcentaje"]
+    if "es_dueno" in body:
+        es_dueno = bool(body["es_dueno"])
+        if es_dueno and not v.es_dueno:
+            # Pasa a dueño: sus comisiones sin liquidar dejan de corresponder.
+            comisiones.descartar_comisiones_pendientes(db, v.id)
+        v.es_dueno = es_dueno
     db.commit()
     db.refresh(v)
     return _vendedor_dict(v)
@@ -808,6 +816,39 @@ async def create_liquidaciones(
             notas=body.get("notas"),
             registrar_gasto=bool(body.get("registrar_gasto", True)),
         )
+    except AppException as e:
+        db.rollback()
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.get("/liquidaciones/pagos-anteriores")
+async def preview_pagos_anteriores(
+    hasta: date = Query(..., description="Domingo de corte"),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Vista previa: comisiones pendientes hasta `hasta` que se marcarían
+    como ya pagadas."""
+    try:
+        return liquidaciones.resumen_pagos_anteriores(db, hasta)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
+
+
+@router.post("/liquidaciones/pagos-anteriores", status_code=201)
+async def create_pagos_anteriores(
+    body: dict,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Registra como ya pagadas (liquidaciones históricas, sin gasto) todas
+    las comisiones pendientes hasta el domingo `hasta`. Body: {hasta}."""
+    try:
+        hasta = date.fromisoformat(body["hasta"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(422, "Body inválido: hasta (YYYY-MM-DD) es obligatorio.")
+    try:
+        return liquidaciones.registrar_pagos_anteriores(db, hasta)
     except AppException as e:
         db.rollback()
         raise HTTPException(e.status_code, e.message)
