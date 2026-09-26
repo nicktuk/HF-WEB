@@ -44,7 +44,10 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
 ];
 
-const productosSubmenu = [
+type NavItem = { name: string; href: string; icon: React.ElementType };
+
+// ── General ──
+const productosSubmenu: NavItem[] = [
   { name: 'Productos', href: '/admin/productos', icon: Package },
   { name: 'Compras', href: '/admin/stock/compras', icon: ShoppingCart },
   { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
@@ -54,42 +57,56 @@ const productosSubmenu = [
   { name: 'Descripciones IA', href: '/admin/ai-descripciones', icon: Sparkles },
 ];
 
-const ventasSubmenu = [
+// product_editor sees products + stock summary (no purchases)
+const editorProductosSubmenu: NavItem[] = [
+  { name: 'Productos', href: '/admin/productos', icon: Package },
+  { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
+];
+
+const catalogoSubmenu: NavItem[] = [
+  { name: 'Categorías', href: '/admin/categorias', icon: Tags },
+  { name: 'Subcategorías', href: '/admin/subcategorias', icon: FolderTree },
+  { name: 'Etiquetas', href: '/admin/etiquetas', icon: Tag },
+  { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
+];
+
+const equipoSubmenu: NavItem[] = [
+  { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
+  { name: 'Liquidación de comisiones', href: '/admin/comisiones', icon: DollarSign },
+];
+
+const configGeneralSubmenu: NavItem[] = [
+  { name: 'Métodos de pago', href: '/admin/pagos', icon: CreditCard },
+  { name: 'Configuración IA', href: '/admin/configuracion', icon: Settings2 },
+];
+
+// ── Minorista ──
+const ventasSubmenu: NavItem[] = [
   { name: 'Ventas', href: '/admin/ventas', icon: DollarSign },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ClipboardList },
-  { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
-  { name: 'Comisión minorista', href: '/admin/comision-minorista', icon: Percent },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
+  { name: 'Ranking clientes', href: '/admin/clientes-ranking', icon: Trophy },
+  { name: 'Comisión minorista', href: '/admin/comision-minorista', icon: Percent },
   { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ];
 
-const analiticaSubmenu = [
-  { name: 'Movimientos', href: '/admin/analytics', icon: LineChart },
-  { name: 'Ranking Clientes', href: '/admin/clientes-ranking', icon: Trophy },
-];
-
-const configSubmenu = [
-  { name: 'Categorias', href: '/admin/categorias', icon: Tags },
-  { name: 'Subcategorias', href: '/admin/subcategorias', icon: FolderTree },
+const tiendaWebSubmenu: NavItem[] = [
   { name: 'Secciones', href: '/admin/secciones', icon: LayoutGrid },
-  { name: 'Etiquetas', href: '/admin/etiquetas', icon: Tag },
-  { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
-  { name: 'Catalogo', href: '/admin/catalogo', icon: Settings },
+  { name: 'Config. catálogo', href: '/admin/catalogo', icon: Settings },
   { name: 'Códigos AMBA', href: '/admin/codigos-amba', icon: MapPin },
-  { name: 'Pagos', href: '/admin/pagos', icon: CreditCard },
-  { name: 'Configuracion IA', href: '/admin/configuracion', icon: Settings2 },
+  { name: 'Analítica pública', href: '/admin/analytics', icon: LineChart },
 ];
 
-const comerciosSubmenu = [
+// ── Mayorista ──
+const comerciosSubmenu: NavItem[] = [
   { name: 'Cuentas', href: '/admin/comercios', icon: Users },
   { name: 'Pedidos', href: '/admin/comercios/pedidos', icon: ClipboardList },
   { name: 'Prospectos', href: '/admin/prospectos', icon: UserPlus },
-  { name: 'Vendedores', href: '/admin/vendedores', icon: Store },
-  { name: 'Comisiones', href: '/admin/comisiones', icon: DollarSign },
   { name: 'Configuración', href: '/admin/comercios/config', icon: Settings2 },
 ];
 
-const importScorerSubmenu = [
+// ── Importación ──
+const importScorerSubmenu: NavItem[] = [
   { name: 'Dashboard', href: '/admin/import-scorer', icon: Plane },
   { name: 'Radar', href: '/admin/import-scorer/radar', icon: LineChart },
   { name: 'Templates', href: '/admin/import-scorer/templates', icon: Tags },
@@ -103,28 +120,96 @@ const importScorerSubmenu = [
   { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
 ];
 
-type SubmenuKey = 'productos' | 'ventas' | 'analitica' | 'config' | 'importScorer' | 'comercios';
+type SubmenuKey =
+  | 'productos'
+  | 'catalogo'
+  | 'equipo'
+  | 'configGeneral'
+  | 'ventas'
+  | 'tiendaWeb'
+  | 'comercios'
+  | 'importScorer';
+
+type NavEntry =
+  | { kind: 'submenu'; key: SubmenuKey; label: string; icon: React.ElementType; items: NavItem[] }
+  | { kind: 'link'; name: string; href: string; icon: React.ElementType };
+
+type NavGroup = { title: string; entries: NavEntry[] };
+
+function buildNavGroups(isSuperadmin: boolean): NavGroup[] {
+  if (!isSuperadmin) {
+    return [
+      {
+        title: 'General',
+        entries: [{ kind: 'submenu', key: 'productos', label: 'Productos', icon: Package, items: editorProductosSubmenu }],
+      },
+    ];
+  }
+  return [
+    {
+      title: 'General',
+      entries: [
+        { kind: 'submenu', key: 'productos', label: 'Productos', icon: Package, items: productosSubmenu },
+        { kind: 'submenu', key: 'catalogo', label: 'Catálogo', icon: Tags, items: catalogoSubmenu },
+        { kind: 'submenu', key: 'equipo', label: 'Equipo', icon: Users, items: equipoSubmenu },
+        { kind: 'link', name: 'Gastos', href: '/admin/gastos', icon: TrendingDown },
+        { kind: 'submenu', key: 'configGeneral', label: 'Config. general', icon: Settings2, items: configGeneralSubmenu },
+      ],
+    },
+    {
+      title: 'Minorista',
+      entries: [
+        { kind: 'submenu', key: 'ventas', label: 'Ventas', icon: DollarSign, items: ventasSubmenu },
+        { kind: 'submenu', key: 'tiendaWeb', label: 'Tienda web', icon: LayoutGrid, items: tiendaWebSubmenu },
+      ],
+    },
+    {
+      title: 'Mayorista (Comercios)',
+      entries: [{ kind: 'submenu', key: 'comercios', label: 'Comercios', icon: Store, items: comerciosSubmenu }],
+    },
+    {
+      title: 'Importación',
+      entries: [{ kind: 'submenu', key: 'importScorer', label: 'Import Scorer', icon: Plane, items: importScorerSubmenu }],
+    },
+  ];
+}
+
+const allSubmenus: Record<SubmenuKey, NavItem[]> = {
+  productos: productosSubmenu,
+  catalogo: catalogoSubmenu,
+  equipo: equipoSubmenu,
+  configGeneral: configGeneralSubmenu,
+  ventas: ventasSubmenu,
+  tiendaWeb: tiendaWebSubmenu,
+  comercios: comerciosSubmenu,
+  importScorer: importScorerSubmenu,
+};
+
+const closedSubmenus: Record<SubmenuKey, boolean> = {
+  productos: false,
+  catalogo: false,
+  equipo: false,
+  configGeneral: false,
+  ventas: false,
+  tiendaWeb: false,
+  comercios: false,
+  importScorer: false,
+};
 
 function useSubmenuState(pathname: string) {
-  const [open, setOpen] = useState<Record<SubmenuKey, boolean>>({
-    productos: false,
-    ventas: false,
-    analitica: false,
-    config: false,
-    importScorer: false,
-    comercios: false,
-  });
+  const [open, setOpen] = useState<Record<SubmenuKey, boolean>>(closedSubmenus);
 
   useEffect(() => {
-    setOpen((prev) => ({
-      ...prev,
-      productos: productosSubmenu.some((i) => pathname.startsWith(i.href)),
-      ventas: ventasSubmenu.some((i) => pathname.startsWith(i.href)),
-      analitica: analiticaSubmenu.some((i) => pathname.startsWith(i.href)),
-      config: configSubmenu.some((i) => pathname.startsWith(i.href)),
-      importScorer: pathname.startsWith('/admin/import-scorer'),
-      comercios: comerciosSubmenu.some((i) => pathname.startsWith(i.href)),
-    }));
+    setOpen((prev) => {
+      const next = { ...prev };
+      (Object.keys(allSubmenus) as SubmenuKey[]).forEach((key) => {
+        next[key] =
+          key === 'importScorer'
+            ? pathname.startsWith('/admin/import-scorer')
+            : allSubmenus[key].some((i) => pathname.startsWith(i.href));
+      });
+      return next;
+    });
   }, [pathname]);
 
   const toggle = (key: SubmenuKey) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -143,7 +228,7 @@ function SidebarSubmenu({
 }: {
   label: string;
   icon: React.ElementType;
-  items: { name: string; href: string; icon: React.ElementType }[];
+  items: NavItem[];
   isOpen: boolean;
   onToggle: () => void;
   pathname: string;
@@ -199,7 +284,7 @@ function MobileSubmenu({
 }: {
   label: string;
   icon: React.ElementType;
-  items: { name: string; href: string; icon: React.ElementType }[];
+  items: NavItem[];
   isOpen: boolean;
   onToggle: () => void;
   pathname: string;
@@ -254,11 +339,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { open, toggle } = useSubmenuState(pathname);
 
-  // product_editor sees products + stock summary (no purchases)
-  const editorProductosSubmenu = [
-    { name: 'Productos', href: '/admin/productos', icon: Package },
-    { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
-  ];
+  const navGroups = buildNavGroups(isSuperadmin);
 
   // Close mobile menu on route change.
   useEffect(() => {
@@ -327,103 +408,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </div>
             )}
 
-            <div>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                Catálogo
-              </p>
-              <SidebarSubmenu
-                label="Productos"
-                icon={Package}
-                items={isSuperadmin ? productosSubmenu : editorProductosSubmenu}
-                isOpen={open.productos}
-                onToggle={() => toggle('productos')}
-                pathname={pathname}
-              />
-            </div>
-
-            {isSuperadmin && (
-              <>
-                <div>
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Comercial
-                  </p>
-                  <SidebarSubmenu
-                    label="Ventas"
-                    icon={DollarSign}
-                    items={ventasSubmenu}
-                    isOpen={open.ventas}
-                    onToggle={() => toggle('ventas')}
-                    pathname={pathname}
-                  />
-                  <Link
-                    href="/admin/gastos"
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      pathname.startsWith('/admin/gastos') ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                    )}
-                  >
-                    <TrendingDown className="h-5 w-5" />
-                    Gastos
-                  </Link>
-                </div>
-
-                <div>
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Analítica
-                  </p>
-                  <SidebarSubmenu
-                    label="Analítica"
-                    icon={LineChart}
-                    items={analiticaSubmenu}
-                    isOpen={open.analitica}
-                    onToggle={() => toggle('analitica')}
-                    pathname={pathname}
-                  />
-                </div>
-
-                <div>
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Configuración
-                  </p>
-                  <SidebarSubmenu
-                    label="Configuracion"
-                    icon={Settings}
-                    items={configSubmenu}
-                    isOpen={open.config}
-                    onToggle={() => toggle('config')}
-                    pathname={pathname}
-                  />
-                </div>
-
-                <div>
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Comercios
-                  </p>
-                  <SidebarSubmenu
-                    label="Comercios"
-                    icon={Store}
-                    items={comerciosSubmenu}
-                    isOpen={open.comercios}
-                    onToggle={() => toggle('comercios')}
-                    pathname={pathname}
-                  />
-                </div>
-
-                <div>
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Importación
-                  </p>
-                  <SidebarSubmenu
-                    label="Import Scorer"
-                    icon={Plane}
-                    items={importScorerSubmenu}
-                    isOpen={open.importScorer}
-                    onToggle={() => toggle('importScorer')}
-                    pathname={pathname}
-                  />
-                </div>
-              </>
-            )}
+            {navGroups.map((group) => (
+              <div key={group.title}>
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                  {group.title}
+                </p>
+                {group.entries.map((entry) =>
+                  entry.kind === 'submenu' ? (
+                    <SidebarSubmenu
+                      key={entry.key}
+                      label={entry.label}
+                      icon={entry.icon}
+                      items={entry.items}
+                      isOpen={open[entry.key]}
+                      onToggle={() => toggle(entry.key)}
+                      pathname={pathname}
+                    />
+                  ) : (
+                    <Link
+                      key={entry.href}
+                      href={entry.href}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        pathname.startsWith(entry.href) ? 'bg-white/10 text-white border-l-2 border-blue-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <entry.icon className="h-5 w-5" />
+                      {entry.name}
+                    </Link>
+                  )
+                )}
+              </div>
+            ))}
           </nav>
 
           <div className="border-t border-white/10 px-4 py-4">
@@ -478,69 +494,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </div>
             )}
 
-            <MobileSubmenu
-              label="Productos"
-              icon={Package}
-              items={isSuperadmin ? productosSubmenu : editorProductosSubmenu}
-              isOpen={open.productos}
-              onToggle={() => toggle('productos')}
-              pathname={pathname}
-            />
-
-            {isSuperadmin && (
-              <>
-                <MobileSubmenu
-                  label="Ventas"
-                  icon={DollarSign}
-                  items={ventasSubmenu}
-                  isOpen={open.ventas}
-                  onToggle={() => toggle('ventas')}
-                  pathname={pathname}
-                />
-                <Link
-                  href="/admin/gastos"
-                  className={cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/admin/gastos') ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
-                  )}
-                >
-                  <TrendingDown className="h-4 w-4" />
-                  Gastos
-                </Link>
-                <MobileSubmenu
-                  label="Analítica"
-                  icon={LineChart}
-                  items={analiticaSubmenu}
-                  isOpen={open.analitica}
-                  onToggle={() => toggle('analitica')}
-                  pathname={pathname}
-                />
-                <MobileSubmenu
-                  label="Configuracion"
-                  icon={Settings}
-                  items={configSubmenu}
-                  isOpen={open.config}
-                  onToggle={() => toggle('config')}
-                  pathname={pathname}
-                />
-                <MobileSubmenu
-                  label="Comercios"
-                  icon={Store}
-                  items={comerciosSubmenu}
-                  isOpen={open.comercios}
-                  onToggle={() => toggle('comercios')}
-                  pathname={pathname}
-                />
-                <MobileSubmenu
-                  label="Import Scorer"
-                  icon={Plane}
-                  items={importScorerSubmenu}
-                  isOpen={open.importScorer}
-                  onToggle={() => toggle('importScorer')}
-                  pathname={pathname}
-                />
-              </>
-            )}
+            {navGroups.map((group) => (
+              <div key={group.title} className="space-y-1">
+                <p className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  {group.title}
+                </p>
+                {group.entries.map((entry) =>
+                  entry.kind === 'submenu' ? (
+                    <MobileSubmenu
+                      key={entry.key}
+                      label={entry.label}
+                      icon={entry.icon}
+                      items={entry.items}
+                      isOpen={open[entry.key]}
+                      onToggle={() => toggle(entry.key)}
+                      pathname={pathname}
+                    />
+                  ) : (
+                    <Link
+                      key={entry.href}
+                      href={entry.href}
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        pathname.startsWith(entry.href) ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+                      )}
+                    >
+                      <entry.icon className="h-4 w-4" />
+                      {entry.name}
+                    </Link>
+                  )
+                )}
+              </div>
+            ))}
           </nav>
         )}
       </header>
