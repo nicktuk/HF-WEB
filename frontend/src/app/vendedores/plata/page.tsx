@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { VendedorHeader } from '../_components/VendedorHeader'
+import { useVendedorInfo } from '../_components/useVendedorInfo'
 
 interface ComisionItem {
   id: number
@@ -208,6 +209,7 @@ export default function MiPlataPage() {
   const [plata, setPlata] = useState<MiPlata | null>(null)
   const [abierto, setAbierto] = useState<number | null>(null)
   const [semanaAbierta, setSemanaAbierta] = useState<string | null>(null)
+  const esMayorista = Boolean(useVendedorInfo()?.es_mayorista)
 
   useEffect(() => {
     fetch('/api/vendedores/mi-plata')
@@ -222,11 +224,13 @@ export default function MiPlataPage() {
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mi plata</h1>
           <p className="text-sm text-zinc-500">
-            Tu comisión minorista de la semana y la de cada pedido mayorista pagado de tu cartera.
+            {esMayorista
+              ? 'Tu comisión minorista de la semana y la de cada pedido mayorista pagado de tu cartera.'
+              : 'Tu comisión minorista de la semana y tus liquidaciones.'}
           </p>
         </div>
 
@@ -350,6 +354,7 @@ export default function MiPlataPage() {
               )}
             </section>
 
+            {esMayorista && (
             <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
               <h2 className="text-sm font-semibold text-zinc-700 mb-2">Comisiones mayoristas por comercio</h2>
               {plata.grupos.length === 0 ? (
@@ -376,7 +381,7 @@ export default function MiPlataPage() {
                               <td className="py-2 pl-1 text-zinc-400">
                                 {abiertoAca ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                               </td>
-                              <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{g.comercio_nombre}</td>
+                              <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{g.comercio_nombre}</td>
                               <td className="py-2 pr-2 text-right text-zinc-500">{g.comisiones.length}</td>
                               <td className="py-2 pr-2 text-right font-semibold text-zinc-800">
                                 ${(g.total_pendiente + g.total_liquidado).toLocaleString('es-AR')}
@@ -423,6 +428,7 @@ export default function MiPlataPage() {
                 </div>
               )}
             </section>
+            )}
 
             {plata.ventas_sin_comision.length > 0 && (
               <section className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-4">
@@ -443,7 +449,7 @@ export default function MiPlataPage() {
                       {plata.ventas_sin_comision.map(v => (
                         <tr key={v.id}>
                           <td className="py-2 pr-2 text-zinc-400">#{v.id}</td>
-                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{v.cliente_nombre ?? '—'}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{v.cliente_nombre ?? '—'}</td>
                           <td className="py-2 pl-2 text-right text-zinc-700">${v.total.toLocaleString('es-AR')}</td>
                         </tr>
                       ))}

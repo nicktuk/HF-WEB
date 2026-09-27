@@ -8,6 +8,7 @@ import { VendedorHeader } from '../_components/VendedorHeader'
 interface VendedorInfo {
   id: number
   nombre: string
+  es_mayorista: boolean
 }
 
 interface EntregaPendiente {
@@ -77,6 +78,7 @@ export default function MiDiaPage() {
   const [info, setInfo] = useState<VendedorInfo | null>(null)
   const [dia, setDia] = useState<MiDia | null>(null)
   const [loading, setLoading] = useState(true)
+  const esMayorista = Boolean(info?.es_mayorista)
 
   useEffect(() => {
     Promise.all([
@@ -93,10 +95,14 @@ export default function MiDiaPage() {
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader nombre={info?.nombre} />
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mi día</h1>
-          <p className="text-sm text-zinc-500">Entregas primero, clientes a reactivar después, prospectos en los huecos.</p>
+          <p className="text-sm text-zinc-500">
+            {esMayorista
+              ? 'Entregas primero, clientes a reactivar después, prospectos en los huecos.'
+              : 'Tus entregas pendientes.'}
+          </p>
         </div>
 
         {loading ? (
@@ -122,7 +128,7 @@ export default function MiDiaPage() {
                       {dia.entregas_pendientes.map(e => (
                         <tr key={`${e.canal}-${e.id}`}>
                           <td className="py-2 pr-2 text-zinc-400">#{e.id}</td>
-                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{e.cliente_nombre ?? '—'}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{e.cliente_nombre ?? '—'}</td>
                           <td className="py-2 pr-2">
                             <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
                               e.canal === 'mayorista' ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700'
@@ -140,6 +146,7 @@ export default function MiDiaPage() {
               )}
             </SectionCard>
 
+            {esMayorista && (
             <SectionCard icon={Flame} iconBg="bg-amber-100" iconColor="text-amber-600" title="Clientes a reactivar" count={dia?.reactivar.length}>
               {!dia?.reactivar.length ? (
                 <p className="text-sm text-zinc-400">Ningún cliente necesita reactivación hoy.</p>
@@ -158,8 +165,8 @@ export default function MiDiaPage() {
                       {dia.reactivar.map(c => (
                         <tr key={c.id}>
                           <td className="py-2 pr-2 text-zinc-400">#{c.id}</td>
-                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{c.nombre_local}</td>
-                          <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px]">{c.ubicacion_local}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{c.nombre_local}</td>
+                          <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px] md:max-w-none">{c.ubicacion_local}</td>
                           <td className="py-2 pl-2 text-right">
                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COLOR_SEMAFORO[c.semaforo.color]}`}>
                               {c.semaforo.dias_desde_ultimo_pedido !== null ? `${c.semaforo.dias_desde_ultimo_pedido}d` : 'Nunca'}
@@ -172,7 +179,9 @@ export default function MiDiaPage() {
                 </div>
               )}
             </SectionCard>
+            )}
 
+            {esMayorista && (
             <SectionCard icon={UserPlus} iconBg="bg-violet-100" iconColor="text-violet-600" title="Prospectos a contactar" count={dia?.prospectos.length}>
               {!dia?.prospectos.length ? (
                 <p className="text-sm text-zinc-400">No tenés prospectos cargados todavía.</p>
@@ -191,7 +200,7 @@ export default function MiDiaPage() {
                       {dia.prospectos.map(p => (
                         <tr key={p.id}>
                           <td className="py-2 pr-2 text-zinc-400">#{p.id}</td>
-                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{p.comercio_nombre}</td>
+                          <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{p.comercio_nombre}</td>
                           <td className="py-2 pr-2 text-zinc-500">{p.fecha_proximo_contacto ?? 'Sin fecha'}</td>
                           <td className="py-2 pl-2 text-right">
                             {p.whatsapp && (
@@ -216,14 +225,17 @@ export default function MiDiaPage() {
                 Ver todos los prospectos →
               </Link>
             </SectionCard>
+            )}
 
+            {esMayorista && (
             <Link
               href="/vendedores/clientes/nuevo"
-              className="flex items-center justify-center gap-2 w-full bg-primary-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-700 transition-colors"
+              className="flex items-center justify-center gap-2 w-full sm:w-fit sm:px-6 bg-primary-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-700 transition-colors"
             >
               <Store className="h-4 w-4" />
               Cargar alta de cliente
             </Link>
+            )}
           </>
         )}
       </div>
