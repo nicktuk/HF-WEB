@@ -3,14 +3,16 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut } from 'lucide-react'
+import { useVendedorInfo } from './useVendedorInfo'
 
+// `mayorista`: sólo se muestra a vendedores marcados como mayoristas.
 const LINKS = [
   { href: '/vendedores/inicio', label: 'Mi día' },
-  { href: '/vendedores/cartera', label: 'Mi cartera' },
-  { href: '/vendedores/catalogo', label: 'Catálogo' },
+  { href: '/vendedores/cartera', label: 'Mi cartera', mayorista: true },
+  { href: '/vendedores/catalogo', label: 'Catálogo', mayorista: true },
   { href: '/vendedores/ventas', label: 'Mis ventas' },
   { href: '/vendedores/plata', label: 'Mi plata' },
-  { href: '/vendedores/prospectos', label: 'Prospectos' },
+  { href: '/vendedores/prospectos', label: 'Prospectos', mayorista: true },
   { href: '/vendedores/perfil', label: 'Mi perfil' },
 ]
 
@@ -20,6 +22,9 @@ interface Props {
 
 export function VendedorHeader({ nombre }: Props) {
   const pathname = usePathname()
+  const info = useVendedorInfo()
+  // Hasta saber si es mayorista, los links mayoristas no se muestran.
+  const links = LINKS.filter(link => !link.mayorista || info?.es_mayorista)
 
   async function handleLogout() {
     await fetch('/api/vendedores/auth/logout', { method: 'POST' })
@@ -46,7 +51,7 @@ export function VendedorHeader({ nombre }: Props) {
         </button>
       </div>
       <nav className="flex items-center gap-1 px-2 pb-2 overflow-x-auto">
-        {LINKS.map(link => {
+        {links.map(link => {
           const activo = pathname === link.href
           return (
             <Link

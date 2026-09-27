@@ -287,12 +287,12 @@ async def asignar_credenciales_vendedor(
     el vendedor pueda entrar al portal por primera vez. Se devuelve la OTP en
     texto plano una sola vez para que el admin se la comunique por WhatsApp;
     el vendedor queda forzado a cambiarla en su próximo login. Si ya tenía un
-    usuario asignado y no se manda uno nuevo, conserva el actual. Marca
-    es_mayorista=True de paso, si todavía no lo estaba."""
+    usuario asignado y no se manda uno nuevo, conserva el actual. No toca
+    es_mayorista: el portal es para todos los vendedores y sólo muestra lo
+    mayorista a los que lo son."""
     v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not v:
         raise HTTPException(404, "Vendedor no encontrado")
-    v.es_mayorista = True
 
     usuario = (body.get("usuario") or v.usuario or "").strip().lower()
     if not usuario:

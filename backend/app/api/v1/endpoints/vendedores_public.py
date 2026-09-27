@@ -51,9 +51,6 @@ async def login_vendedor(
     if not vendedor or not vendedor.password_hash or not password_ok:
         raise HTTPException(status_code=401, detail="credenciales_invalidas")
 
-    if not vendedor.es_mayorista:
-        raise HTTPException(status_code=403, detail="cuenta_inactiva")
-
     if not vendedor.activo:
         raise HTTPException(status_code=403, detail="cuenta_inactiva")
 
@@ -124,9 +121,10 @@ async def get_estado(
     db: Session = Depends(get_db),
 ):
     """Consulta rápida de estado — usada por el middleware de Next.js para revalidar.
-    Si se le desactiva es_mayorista después de loguearse, esto lo saca del
-    portal en la próxima revalidación aunque activo siga en True."""
+    Si se desactiva al vendedor después de loguearse, esto lo saca del portal
+    en la próxima revalidación. El portal es para minoristas y mayoristas: lo
+    mayorista se oculta/bloquea aparte según es_mayorista."""
     vendedor = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
     if not vendedor:
         raise HTTPException(status_code=404, detail="not_found")
-    return {"activo": bool(vendedor.activo and vendedor.es_mayorista)}
+    return {"activo": bool(vendedor.activo)}

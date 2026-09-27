@@ -313,15 +313,15 @@ def anular_liquidacion(db: Session, liquidacion_id: int) -> dict:
     return liquidacion_dict(l)
 
 
-def resumen_vendedor(db: Session, vendedor_id: int, limit: int = 26) -> dict:
+def resumen_vendedor(db: Session, vendedor_id: int, limit: int = 26, incluir_mayorista: bool = True) -> dict:
     """Para el portal del vendedor: lo que lleva generado en la semana en
-    curso y sus últimas liquidaciones cobradas."""
+    curso y sus últimas liquidaciones cobradas. Sin incluir_mayorista, la
+    semana en curso cuenta sólo comisiones minoristas."""
     lunes_actual = lunes_de(hoy_ar())
-    en_curso = (
-        _pendientes_query(db, lunes_actual)
-        .filter(Comision.vendedor_id == vendedor_id)
-        .all()
-    )
+    q = _pendientes_query(db, lunes_actual).filter(Comision.vendedor_id == vendedor_id)
+    if not incluir_mayorista:
+        q = q.filter(Comision.sale_id.isnot(None))
+    en_curso = q.all()
     return {
         "semana_en_curso": {
             **_semana_info(lunes_actual),

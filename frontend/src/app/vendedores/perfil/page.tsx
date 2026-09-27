@@ -10,7 +10,8 @@ interface VendedorInfo {
   usuario: string
   email: string | null
   celular_wa: string
-  link_personal: string
+  es_mayorista: boolean
+  link_personal: string | null
 }
 
 export default function MiPerfilPage() {
@@ -25,10 +26,10 @@ export default function MiPerfilPage() {
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader nombre={info?.nombre} />
-      <div className="max-w-md mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4 [&>*]:max-w-xl">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mi perfil</h1>
-          <p className="text-sm text-zinc-500">Tus datos y tu link personal.</p>
+          <p className="text-sm text-zinc-500">{info?.es_mayorista ? 'Tus datos y tu link personal.' : 'Tus datos.'}</p>
         </div>
 
         {!info ? (
@@ -56,7 +57,7 @@ export default function MiPerfilPage() {
               )}
             </div>
 
-            <LinkPersonal link={info.link_personal} />
+            {info.es_mayorista && info.link_personal && <LinkPersonal link={info.link_personal} />}
           </>
         )}
       </div>

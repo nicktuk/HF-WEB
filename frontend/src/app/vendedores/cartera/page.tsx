@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { VendedorHeader } from '../_components/VendedorHeader'
+import { useSoloMayorista } from '../_components/useVendedorInfo'
 
 interface ComercioCartera {
   id: number
@@ -44,6 +45,7 @@ const LABEL_ESTADO_PROSPECTO: Record<string, string> = {
 }
 
 export default function MiCarteraPage() {
+  const permitido = useSoloMayorista()
   const [cartera, setCartera] = useState<CarteraView | null>(null)
 
   useEffect(() => {
@@ -54,10 +56,18 @@ export default function MiCarteraPage() {
 
   const total = (cartera?.clientes.length ?? 0) + (cartera?.prospectos.length ?? 0)
 
+  if (!permitido) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+        <VendedorHeader />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mi cartera</h1>
           <p className="text-sm text-zinc-500">
@@ -87,8 +97,8 @@ export default function MiCarteraPage() {
                   {cartera.clientes.map(c => (
                     <tr key={c.id}>
                       <td className="py-2 pr-2 text-zinc-400">#{c.id}</td>
-                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{c.nombre_local}</td>
-                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px]">{c.ubicacion_local}</td>
+                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{c.nombre_local}</td>
+                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px] md:max-w-none">{c.ubicacion_local}</td>
                       <td className="py-2 pr-2">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COLOR_SEMAFORO[c.semaforo.color]}`}>
                           {LABEL_SEMAFORO[c.semaforo.color]}
@@ -133,8 +143,8 @@ export default function MiCarteraPage() {
                   {cartera.prospectos.map(p => (
                     <tr key={p.id}>
                       <td className="py-2 pr-2 text-zinc-400">#{p.id}</td>
-                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px]">{p.comercio_nombre}</td>
-                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px]">{p.direccion ?? 'Sin dirección'}</td>
+                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{p.comercio_nombre}</td>
+                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[160px] md:max-w-none">{p.direccion ?? 'Sin dirección'}</td>
                       <td className="py-2 pr-2">
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
                           {LABEL_ESTADO_PROSPECTO[p.estado] ?? p.estado}

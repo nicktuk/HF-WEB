@@ -30,6 +30,29 @@ def get_vendedor_id(authorization: str = Header(..., alias="Authorization")) -> 
         raise HTTPException(401, "token_invalido")
 
 
+def get_vendedor(
+    vendedor_id: int = Depends(get_vendedor_id),
+    db: Session = Depends(get_db),
+) -> CatalogSeller:
+    v = db.query(CatalogSeller).filter(CatalogSeller.id == vendedor_id).first()
+    if not v:
+        raise HTTPException(401, "token_invalido")
+    return v
+
+
+def get_vendedor_mayorista_id(vendedor: CatalogSeller = Depends(get_vendedor)) -> int:
+    """Para lo que es sólo del canal mayorista (cartera de comercios,
+    prospectos, catálogo demo, pedidos): un vendedor sólo minorista no lo ve."""
+    if not vendedor.es_mayorista:
+        raise HTTPException(403, "solo_mayorista")
+    return vendedor.id
+
+
+def _exigir_canal(canal: str, vendedor: CatalogSeller) -> None:
+    if canal == "mayorista" and not vendedor.es_mayorista:
+        raise HTTPException(403, "solo_mayorista")
+
+
 @router.get("/info")
 async def get_vendedor_info(
     vendedor_id: int = Depends(get_vendedor_id),
@@ -45,7 +68,9 @@ async def get_vendedor_info(
         "usuario": v.usuario,
         "email": v.email,
         "celular_wa": v.celular,
-        "link_personal": f"{base_url}/comercios/catalogo?v={v.id}",
+        "es_mayorista": bool(v.es_mayorista),
+        # El link personal es al catálogo de comercios: sólo para mayoristas.
+        "link_personal": f"{base_url}/comercios/catalogo?v={v.id}" if v.es_mayorista else None,
     }
 
 
@@ -81,15 +106,15 @@ async def set_password(
 
 @router.get("/mi-dia")
 async def get_mi_dia(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
-    return vendedor_dashboard.get_mi_dia(db, vendedor_id)
+    return vendedor_dashboard.get_mi_dia(db, vendedor.id, incluir_mayorista=bool(vendedor.es_mayorista))
 
 
 @router.get("/mi-cartera")
 async def get_mi_cartera(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     return vendedor_dashboard.get_mi_cartera_view(db, vendedor_id)
@@ -97,29 +122,30 @@ async def get_mi_cartera(
 
 @router.get("/mi-plata")
 async def get_mi_plata(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
-    return vendedor_dashboard.get_mi_plata(db, vendedor_id)
+    return vendedor_dashboard.get_mi_plata(db, vendedor.id, incluir_mayorista=bool(vendedor.es_mayorista))
 
 
 @router.get("/mis-ventas")
 async def get_mis_ventas(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
-    return vendedor_dashboard.get_mis_ventas(db, vendedor_id)
+    return vendedor_dashboard.get_mis_ventas(db, vendedor.id, incluir_mayorista=bool(vendedor.es_mayorista))
 
 
 @router.get("/mis-ventas/{canal}/{referencia_id}/historial")
 async def get_historial_venta(
     canal: str,
     referencia_id: int,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
+    _exigir_canal(canal, vendedor)
     try:
-        return vendedor_dashboard.get_historial_venta(db, vendedor_id, canal, referencia_id)
+        return vendedor_dashboard.get_historial_venta(db, vendedor.id, canal, referencia_id)
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
 
@@ -128,11 +154,12 @@ async def get_historial_venta(
 async def get_detalle_venta(
     canal: str,
     referencia_id: int,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
+    _exigir_canal(canal, vendedor)
     try:
-        return vendedor_dashboard.get_detalle_venta(db, vendedor_id, canal, referencia_id)
+        return vendedor_dashboard.get_detalle_venta(db, vendedor.id, canal, referencia_id)
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
 
@@ -142,11 +169,12 @@ async def marcar_item_entregado(
     canal: str,
     referencia_id: int,
     item_id: int,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor: CatalogSeller = Depends(get_vendedor),
     db: Session = Depends(get_db),
 ):
+    _exigir_canal(canal, vendedor)
     try:
-        return vendedor_dashboard.marcar_item_entregado(db, vendedor_id, canal, referencia_id, item_id)
+        return vendedor_dashboard.marcar_item_entregado(db, vendedor.id, canal, referencia_id, item_id)
     except AppException as e:
         raise HTTPException(e.status_code, e.message)
 
@@ -167,7 +195,7 @@ async def marcar_item_pagado(
 @router.post("/mis-ventas/mayorista/{referencia_id}/pagar")
 async def marcar_pedido_pagado(
     referencia_id: int,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     try:
@@ -178,7 +206,7 @@ async def marcar_pedido_pagado(
 
 @router.get("/catalogo-demo")
 async def get_catalogo_demo(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     return {"productos": vendedor_dashboard.get_catalogo_demo(db)}
@@ -204,7 +232,7 @@ class ProspectoUpdate(BaseModel):
 
 @router.get("/prospectos")
 async def listar_prospectos(
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     return vendedor_dashboard.listar_prospectos(db, vendedor_id)
@@ -213,7 +241,7 @@ async def listar_prospectos(
 @router.post("/prospectos")
 async def crear_prospecto(
     body: ProspectoCreate,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     try:
@@ -229,7 +257,7 @@ async def crear_prospecto(
 async def actualizar_prospecto(
     prospecto_id: int,
     body: ProspectoUpdate,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     try:
@@ -255,7 +283,7 @@ class ClienteCreate(BaseModel):
 async def convertir_prospecto(
     prospecto_id: int,
     body: ClienteCreate,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     try:
@@ -268,7 +296,7 @@ async def convertir_prospecto(
 @router.post("/clientes")
 async def crear_cliente(
     body: ClienteCreate,
-    vendedor_id: int = Depends(get_vendedor_id),
+    vendedor_id: int = Depends(get_vendedor_mayorista_id),
     db: Session = Depends(get_db),
 ):
     """Alta directa de cliente desde la tablet, sin prospecto previo. La

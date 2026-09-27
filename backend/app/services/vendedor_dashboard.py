@@ -113,10 +113,19 @@ def _entregas_minoristas_pendientes(db: Session, vendedor_id: int) -> list[dict]
     ]
 
 
-def get_mi_dia(db: Session, vendedor_id: int) -> dict:
+def get_mi_dia(db: Session, vendedor_id: int, incluir_mayorista: bool = True) -> dict:
     """Recorrido del día: entregas primero (mayoristas y minoristas juntas),
     clientes a reactivar después, prospectos en los huecos (mismo orden que
-    indica el manual del vendedor)."""
+    indica el manual del vendedor). Un vendedor sólo minorista
+    (incluir_mayorista=False) ve únicamente sus entregas minoristas: la
+    cartera de comercios y los prospectos son del canal mayorista."""
+    if not incluir_mayorista:
+        return {
+            "entregas_pendientes": _entregas_minoristas_pendientes(db, vendedor_id),
+            "reactivar": [],
+            "prospectos": [],
+        }
+
     entregas_pendientes = (
         _entregas_mayoristas_pendientes(db, vendedor_id)
         + _entregas_minoristas_pendientes(db, vendedor_id)
@@ -148,16 +157,19 @@ def get_mi_dia(db: Session, vendedor_id: int) -> dict:
 
 # ─── Mi plata ───────────────────────────────────────────────────────────────
 
-def get_mi_plata(db: Session, vendedor_id: int) -> dict:
+def get_mi_plata(db: Session, vendedor_id: int, incluir_mayorista: bool = True) -> dict:
     """Comisiones mayoristas agrupadas por comercio (para poder mostrarlas
     plegadas, con el detalle de pedidos al expandir) + comisiones minoristas
     ya generadas (planas, una por venta, y agrupadas por semana con el
     tramo alcanzado de la matriz — ver services/comisiones.py) + ventas
     minoristas pagadas que todavía no tienen comisión generada (las genera
     un admin caso por caso, ver /admin/ventas-minoristas/pendientes-comision)."""
+    q_comisiones = db.query(Comision).filter(Comision.vendedor_id == vendedor_id)
+    if not incluir_mayorista:
+        # Vendedor sólo minorista: no se le muestra nada del canal mayorista.
+        q_comisiones = q_comisiones.filter(Comision.sale_id.isnot(None))
     comisiones = (
-        db.query(Comision)
-        .filter(Comision.vendedor_id == vendedor_id)
+        q_comisiones
         .order_by(Comision.id.desc())
         .all()
     )
@@ -227,7 +239,7 @@ def get_mi_plata(db: Session, vendedor_id: int) -> dict:
         "total_liquidado": total_liquidado,
         "ventas_sin_comision": ventas_sin_comision,
         "semanas_minoristas": comisiones_service.semanas_minoristas_vendedor(db, vendedor_id),
-        **liquidaciones.resumen_vendedor(db, vendedor_id),
+        **liquidaciones.resumen_vendedor(db, vendedor_id, incluir_mayorista=incluir_mayorista),
     }
 
 
@@ -257,7 +269,7 @@ def _pago_estado_venta(s: Sale) -> str:
     return "pendiente"
 
 
-def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
+def get_mis_ventas(db: Session, vendedor_id: int, incluir_mayorista: bool = True) -> dict:
     """Pedidos mayoristas de la cartera + ventas minoristas propias, en una
     sola lista plana (cada item lleva su canal) para que el frontend las
     liste sin agrupar. Entrega y pago van por separado (cada uno puede estar
@@ -269,7 +281,7 @@ def get_mis_ventas(db: Session, vendedor_id: int) -> dict:
         .filter(Comercio.vendedor_id == vendedor_id)
         .order_by(PedidoComercio.created_at.desc())
         .all()
-    )
+    ) if incluir_mayorista else []
     ventas = (
         db.query(Sale)
         .filter(Sale.seller_id == vendedor_id)

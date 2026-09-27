@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 interface VendedorInfo {
   id: number
   nombre: string
+  es_mayorista: boolean
 }
 
 interface VentaItem {
@@ -154,7 +155,7 @@ function FilaVenta({ item, onClick }: { item: VentaItem; onClick: () => void }) 
         <span className={`inline-block w-1.5 h-1.5 rounded-full ${BARRA_POR_FAMILIA[familiaDe(item)]}`} />
       </td>
       <td className="py-2 pr-2 text-zinc-400">#{item.id}</td>
-      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[180px]">{item.cliente_nombre ?? '—'}</td>
+      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[180px] md:max-w-none">{item.cliente_nombre ?? '—'}</td>
       <td className="py-2 pr-2 text-zinc-600 whitespace-nowrap">${item.total.toLocaleString('es-AR')}</td>
       <td className="py-2 pr-2 text-zinc-500 whitespace-nowrap">{fechaCorta(item.created_at)}</td>
       <td className="py-2 pr-2">
@@ -384,12 +385,13 @@ export default function MisVentasPage() {
   const minoristas = ventas?.filter(v => v.canal === 'minorista') ?? []
   const pendientes = ventas?.filter(pendienteDeAccion).length ?? 0
   const cancelados = mayoristas.filter(v => v.cancelado).length
+  const esMayorista = Boolean(info?.es_mayorista)
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader nombre={info?.nombre} />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Mis ventas</h1>
           <p className="text-sm text-zinc-500">Tocá una para ver cuándo pasó por cada etapa.</p>
@@ -399,14 +401,14 @@ export default function MisVentasPage() {
           <p className="text-sm text-zinc-400">Cargando...</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatTile label="Pedidos mayoristas" valor={mayoristas.length} color="text-zinc-800" />
+            <div className={`grid grid-cols-2 gap-3 ${esMayorista ? 'sm:grid-cols-4' : ''}`}>
+              {esMayorista && <StatTile label="Pedidos mayoristas" valor={mayoristas.length} color="text-zinc-800" />}
               <StatTile label="Ventas minoristas" valor={minoristas.length} color="text-zinc-800" />
               <StatTile label="Pendientes de acción" valor={pendientes} color="text-amber-600" />
-              <StatTile label="Cancelados" valor={cancelados} color="text-red-600" />
+              {esMayorista && <StatTile label="Cancelados" valor={cancelados} color="text-red-600" />}
             </div>
 
-            <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirVenta} />
+            {esMayorista && <SeccionCanal icon={Store} titulo="Pedidos mayoristas" items={mayoristas} onClickItem={abrirVenta} />}
             <SeccionCanal icon={ShoppingBag} titulo="Ventas minoristas" items={minoristas} onClickItem={abrirVenta} />
           </>
         )}

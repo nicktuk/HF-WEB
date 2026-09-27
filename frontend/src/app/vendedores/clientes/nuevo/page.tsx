@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { VendedorHeader } from '../../_components/VendedorHeader'
+import { useSoloMayorista } from '../../_components/useVendedorInfo'
 import { ClienteForm, type ClienteFormData, type ClienteFormResult } from '../../_components/ClienteForm'
 
 export default function NuevoClientePage() {
+  const permitido = useSoloMayorista()
   const [otp, setOtp] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
 
@@ -30,10 +32,18 @@ export default function NuevoClientePage() {
     }
   }
 
+  if (!permitido) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+        <VendedorHeader />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader />
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 [&>*]:max-w-xl">
         {otp ? (
           <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/80 p-5 space-y-3">
             <h1 className="text-lg font-semibold text-zinc-800">Cliente cargado ✓</h1>

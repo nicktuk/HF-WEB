@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { VendedorHeader } from '../_components/VendedorHeader'
+import { useSoloMayorista } from '../_components/useVendedorInfo'
 import { ClienteForm, type ClienteFormData, type ClienteFormResult } from '../_components/ClienteForm'
 import { Modal, ModalContent } from '@/components/ui/modal'
 
@@ -26,6 +27,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
 const emptyForm = { comercio_nombre: '', whatsapp: '', direccion: '', fecha_proximo_contacto: '', notas: '' }
 
 export default function ProspectosPage() {
+  const permitido = useSoloMayorista()
   const [prospectos, setProspectos] = useState<Prospecto[] | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -100,10 +102,18 @@ export default function ProspectosPage() {
     }
   }
 
+  if (!permitido) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+        <VendedorHeader />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-zinc-800">Prospectos</h1>
@@ -217,8 +227,8 @@ export default function ProspectosPage() {
                   {prospectos.map(p => (
                     <tr key={p.id}>
                       <td className="py-2 pr-2 text-zinc-400">#{p.id}</td>
-                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[140px]">{p.comercio_nombre}</td>
-                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[140px]">{p.direccion ?? '—'}</td>
+                      <td className="py-2 pr-2 font-medium text-zinc-800 truncate max-w-[140px] md:max-w-none">{p.comercio_nombre}</td>
+                      <td className="py-2 pr-2 text-zinc-500 truncate max-w-[140px] md:max-w-none">{p.direccion ?? '—'}</td>
                       <td className="py-2 pr-2 text-zinc-500 whitespace-nowrap">{p.fecha_proximo_contacto ?? '—'}</td>
                       <td className="py-2 pr-2">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ESTADOS[p.estado].color}`}>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { VendedorHeader } from '../_components/VendedorHeader'
+import { useSoloMayorista } from '../_components/useVendedorInfo'
 import { resolveImageUrl } from '@/lib/api'
 
 interface Escalon {
@@ -25,6 +26,7 @@ interface ProductoDemo {
 }
 
 export default function CatalogoDemoPage() {
+  const permitido = useSoloMayorista()
   const [productos, setProductos] = useState<ProductoDemo[] | null>(null)
 
   useEffect(() => {
@@ -33,10 +35,18 @@ export default function CatalogoDemoPage() {
       .then(data => setProductos(data.productos))
   }, [])
 
+  if (!permitido) {
+    return (
+      <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
+        <VendedorHeader />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#f7f4ef' }}>
       <VendedorHeader />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">Catálogo demo</h1>
           <p className="text-sm text-zinc-500">
@@ -79,7 +89,7 @@ export default function CatalogoDemoPage() {
                           )}
                         </td>
                         <td className="py-2 pr-2">
-                          <p className="font-medium text-zinc-800 truncate max-w-[160px]">{p.nombre}</p>
+                          <p className="font-medium text-zinc-800 truncate max-w-[160px] md:max-w-none">{p.nombre}</p>
                           {p.marca && <p className="text-xs text-zinc-500">{p.marca}</p>}
                         </td>
                         <td className="py-2 pr-2 text-right text-zinc-500">{p.stock}</td>
