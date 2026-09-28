@@ -1,27 +1,4 @@
-﻿export interface ConfigComercio {
-  descuento_porcentaje: number
-  redondeo: number // 0 = sin redondeo; >0 = ceil al múltiplo indicado
-}
-
-export function calcularPrecioComercio(
-  precioCosto: number,
-  override: number | null,
-  config: ConfigComercio,
-): number {
-  if (override !== null) {
-    return override
-  }
-
-  const precio = precioCosto * (1 + config.descuento_porcentaje / 100)
-
-  if (config.redondeo > 0) {
-    return Math.ceil(precio / config.redondeo) * config.redondeo
-  }
-
-  return precio
-}
-
-export interface TramoDescuento {
+﻿export interface TramoDescuento {
   cantidad_minima: number
   descuento_porcentaje: number
 }
@@ -45,18 +22,19 @@ export function calcularDescuentoPorCantidad(tramos: TramoDescuento[], cantidad:
 }
 
 /**
- * Precio unitario en modo "descuento": parte del precio minorista y descuenta
- * el % que corresponda a `cantidad` según la matriz de tramos. Uso exclusivo
+ * Precio unitario para `cantidad` unidades: parte del precio mayorista propio
+ * del producto y descuenta el % que corresponda según la matriz de tramos.
+ * Espeja precio_comercio en el backend (comercio_catalog.py). Uso exclusivo
  * para mostrar el precio en vivo en la UI (ficha de producto / carrito) — la
  * confirmación real del pedido siempre recalcula el precio en el servidor.
  */
 export function calcularPrecioPorDescuento(
-  precioVenta: number,
+  precioMayorista: number,
   cantidad: number,
   tramos: TramoDescuento[],
   redondeo: number,
 ): number {
   const descuento = calcularDescuentoPorCantidad(tramos, cantidad)
-  const precio = precioVenta * (1 - descuento / 100)
+  const precio = precioMayorista * (1 - descuento / 100)
   return redondeo > 0 ? Math.ceil(precio / redondeo) * redondeo : precio
 }

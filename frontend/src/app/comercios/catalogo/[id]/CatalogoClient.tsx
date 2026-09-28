@@ -40,10 +40,8 @@ interface ProductoDetalle {
   is_featured: boolean
   is_immediate_delivery: boolean
   is_best_seller: boolean
-  modo_precio: 'markup' | 'descuento'
   redondeo: number
   tramos_descuento: TramoDescuento[]
-  override: boolean
 }
 
 /** Datos públicos (sin sesión): sin precio, stock ni galería completa. */
@@ -96,7 +94,7 @@ export function CatalogoClient(props: Props) {
 
   useEffect(() => {
     if (!full) return
-    setPricingConfig({ modo_precio: full.producto.modo_precio, redondeo: full.producto.redondeo, tramos_descuento: full.producto.tramos_descuento })
+    setPricingConfig({ redondeo: full.producto.redondeo, tramos_descuento: full.producto.tramos_descuento })
   }, [full, setPricingConfig])
 
   const imagenes: Imagen[] = full
@@ -106,13 +104,10 @@ export function CatalogoClient(props: Props) {
       : []
   const actual = imagenes[index]
 
-  const enModoDescuento = full ? full.producto.modo_precio === 'descuento' && full.producto.precio_venta != null && !full.producto.override : false
   const precioUnitario = full
-    ? (enModoDescuento
-      ? calcularPrecioPorDescuento(full.producto.precio_venta as number, cantidad, full.producto.tramos_descuento, full.producto.redondeo)
-      : full.producto.precio_comercio)
+    ? calcularPrecioPorDescuento(full.producto.precio_comercio, cantidad, full.producto.tramos_descuento, full.producto.redondeo)
     : 0
-  const descuentoAplicado = !!full && enModoDescuento && precioUnitario < (full.producto.precio_venta as number)
+  const descuentoAplicado = !!full && precioUnitario < full.producto.precio_comercio
 
   const faltan = full?.producto.cantidad_minima ? Math.max(0, full.producto.cantidad_minima - cantidad) : 0
 
@@ -373,9 +368,9 @@ export function CatalogoClient(props: Props) {
                 <p className="text-4xl md:text-5xl font-extrabold" style={{ color: descuentoAplicado ? theme.savings : theme.accent }}>
                   ${precioUnitario.toLocaleString('es-AR')}
                 </p>
-                {enModoDescuento && (
+                {full.producto.precio_venta != null && (
                   <p className="text-sm mt-0.5" style={{ color: theme.textFaint }}>
-                    Precio de venta sugerido ${(full.producto.precio_venta as number).toLocaleString('es-AR')} — se recalcula según la cantidad
+                    Precio de venta sugerido ${full.producto.precio_venta.toLocaleString('es-AR')}
                   </p>
                 )}
               </>
@@ -390,12 +385,12 @@ export function CatalogoClient(props: Props) {
             )}
           </div>
 
-          {full && enModoDescuento && full.producto.tramos_descuento.length > 0 && (
+          {full && full.producto.tramos_descuento.length > 0 && (
           <>
           <div style={{ height: 1, backgroundColor: theme.accentTint(0.2) }} />
           <div className="px-4 pt-3 pb-2">
             <SavingsBar
-              precioVenta={full.producto.precio_venta as number}
+              precioBase={full.producto.precio_comercio}
               cantidad={cantidad}
               tramos={full.producto.tramos_descuento}
               redondeo={full.producto.redondeo}
@@ -422,7 +417,7 @@ export function CatalogoClient(props: Props) {
                       <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
                       <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
                       <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
-                        ${calcularPrecioPorDescuento(full.producto.precio_venta as number, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
+                        ${calcularPrecioPorDescuento(full.producto.precio_comercio, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
                       </td>
                     </tr>
                   )

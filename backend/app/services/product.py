@@ -398,8 +398,8 @@ class ProductService:
 
         if data.es_mayorista is not None:
             config.es_mayorista = data.es_mayorista
-        if 'precio_mayorista_override' in data.model_fields_set:
-            config.precio_mayorista_override = data.precio_mayorista_override
+        if 'precio_mayorista' in data.model_fields_set:
+            config.precio_mayorista = data.precio_mayorista
         if 'unidades_por_bulto' in data.model_fields_set:
             config.unidades_por_bulto = data.unidades_por_bulto
         if 'cantidad_minima' in data.model_fields_set:

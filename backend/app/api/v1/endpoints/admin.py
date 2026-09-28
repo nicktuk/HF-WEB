@@ -1357,7 +1357,7 @@ async def get_product_comercio_config(
     return ProductComercioConfigResponse(
         product_id=config.product_id,
         es_mayorista=config.es_mayorista,
-        precio_mayorista_override=config.precio_mayorista_override,
+        precio_mayorista=config.precio_mayorista,
         unidades_por_bulto=config.unidades_por_bulto,
         cantidad_minima=config.cantidad_minima,
         descripcion=config.descripcion,
@@ -1381,7 +1381,7 @@ async def update_product_comercio_config(
         current_config = service.get_comercio_config(product_id)
         data = data.model_copy(update={
             "es_mayorista": current_config.es_mayorista,
-            "precio_mayorista_override": current_config.precio_mayorista_override,
+            "precio_mayorista": current_config.precio_mayorista,
             "unidades_por_bulto": current_config.unidades_por_bulto,
             "cantidad_minima": current_config.cantidad_minima,
         })
@@ -1390,7 +1390,7 @@ async def update_product_comercio_config(
     return ProductComercioConfigResponse(
         product_id=config.product_id,
         es_mayorista=config.es_mayorista,
-        precio_mayorista_override=config.precio_mayorista_override,
+        precio_mayorista=config.precio_mayorista,
         unidades_por_bulto=config.unidades_por_bulto,
         cantidad_minima=config.cantidad_minima,
         descripcion=config.descripcion,

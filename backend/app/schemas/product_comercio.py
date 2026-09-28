@@ -22,7 +22,7 @@ class ComercioIconItem(BaseModel):
 
 class ProductComercioConfigUpdate(BaseModel):
     es_mayorista: Optional[bool] = None
-    precio_mayorista_override: Optional[Decimal] = Field(None, ge=0)
+    precio_mayorista: Optional[Decimal] = Field(None, ge=0)
     unidades_por_bulto: Optional[int] = Field(None, ge=1)
     cantidad_minima: Optional[int] = Field(None, ge=1)
     descripcion: Optional[str] = Field(None, max_length=5000)
@@ -34,7 +34,7 @@ class ProductComercioConfigUpdate(BaseModel):
 class ProductComercioConfigResponse(BaseModel):
     product_id: int
     es_mayorista: bool = False
-    precio_mayorista_override: Optional[Decimal] = None
+    precio_mayorista: Optional[Decimal] = None
     unidades_por_bulto: Optional[int] = None
     cantidad_minima: Optional[int] = None
     descripcion: Optional[str] = None

@@ -4,7 +4,8 @@ import { calcularDescuentoPorCantidad, calcularPrecioPorDescuento, type TramoDes
 import { getTramoScaleColor, type ComercioTheme } from '@/lib/comercio-theme'
 
 interface Props {
-  precioVenta: number
+  /** Precio mayorista sin descuento por cantidad. */
+  precioBase: number
   cantidad: number
   tramos: TramoDescuento[]
   redondeo: number
@@ -13,7 +14,7 @@ interface Props {
   colorScale?: (t: number) => string
 }
 
-export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, compact, colorScale }: Props) {
+export function SavingsBar({ precioBase, cantidad, tramos, redondeo, theme, compact, colorScale }: Props) {
   if (tramos.length === 0) return null
 
   const ordenados = [...tramos].sort((a, b) => a.cantidad_minima - b.cantidad_minima)
@@ -21,8 +22,8 @@ export function SavingsBar({ precioVenta, cantidad, tramos, redondeo, theme, com
   const descuentoActual = calcularDescuentoPorCantidad(ordenados, cantidad)
   const progreso = maxDescuento > 0 ? Math.min(1, Math.max(0, descuentoActual / maxDescuento)) : 0
 
-  const precioActual = calcularPrecioPorDescuento(precioVenta, cantidad, ordenados, redondeo)
-  const ahorro = Math.max(0, (precioVenta - precioActual) * cantidad)
+  const precioActual = calcularPrecioPorDescuento(precioBase, cantidad, ordenados, redondeo)
+  const ahorro = Math.max(0, (precioBase - precioActual) * cantidad)
 
   const proximoTramo = ordenados.find(t => t.cantidad_minima > cantidad)
 

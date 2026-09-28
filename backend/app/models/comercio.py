@@ -89,17 +89,15 @@ class ConfiguracionComercio(Base):
     __tablename__ = "configuracion_mayorista"
 
     id = Column(Integer, primary_key=True)
-    descuento_porcentaje = Column(Numeric(5, 2), nullable=False, default=25)
     redondeo = Column(Integer, nullable=False, default=100)
     monto_minimo_pedido = Column(Numeric(12, 2), nullable=False, default=0)
-    # 'fijo': usar descuento_porcentaje sobre precio_compra
-    # 'variable': mitad del markup actual del producto (promedio entre compra y venta)
+    # Sin uso desde la migración 107: el precio del canal comercios es propio
+    # de cada producto (ProductComercioConfig.precio_mayorista) y ya no se
+    # calcula por markup sobre el costo ni por descuento sobre el minorista.
+    # Se conservan las columnas para no perder los valores históricos.
+    descuento_porcentaje = Column(Numeric(5, 2), nullable=False, default=25)
     tipo_markup = Column(sa.String(10), nullable=False, default='fijo')
-    # Si True: incluye en el catálogo todos los productos habilitados con stock > 0 y markup > 50%
     mostrar_todos_con_stock = Column(Boolean, nullable=False, default=False)
-    # 'markup': precio_comercio se calcula sobre el costo de compra (tipo_markup/descuento_porcentaje).
-    # 'descuento': precio_comercio se calcula descontando un % (según comercio_descuento_tramos,
-    # elegido por la cantidad pedida) sobre el precio minorista.
     modo_precio = Column(sa.String(10), nullable=False, default='markup')
     # Semáforo de actividad de recompra, calculado por días desde el último pedido
     # del comercio: verde (< amarillo), amarillo (>= amarillo y < rojo), rojo (>= rojo).
@@ -132,10 +130,10 @@ class ComisionMinoristaTramo(Base):
 
 
 class DescuentoTramoComercio(Base):
-    """Tramo de la matriz cantidad/descuento usada cuando modo_precio == 'descuento'.
+    """Tramo de la matriz cantidad/descuento del canal comercios.
 
     A partir de `cantidad_minima` unidades de un mismo producto en el pedido,
-    se aplica `descuento_porcentaje` sobre el precio minorista. Se usa siempre
+    se aplica `descuento_porcentaje` sobre el precio mayorista del producto. Se usa siempre
     el tramo de mayor cantidad_minima que la cantidad pedida alcance.
     """
     __tablename__ = "comercio_descuento_tramos"
