@@ -400,7 +400,7 @@ export const adminApi = {
   async bulkAction(
     apiKey: string,
     productIds: number[],
-    action: 'enable' | 'disable' | 'delete'
+    action: 'enable' | 'disable' | 'delete' | 'clear_sale'
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/bulk-action', {
       method: 'POST',

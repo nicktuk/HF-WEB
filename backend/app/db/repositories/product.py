@@ -406,6 +406,19 @@ class ProductRepository(BaseRepository[Product]):
         self.db.commit()
         return count
 
+    def bulk_clear_sale(self, product_ids: List[int]) -> int:
+        """Bulk clear offer price (sale_price and its end date). Returns count of updated rows."""
+        count = (
+            self.db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .update(
+                {Product.sale_price: None, Product.sale_price_ends_at: None},
+                synchronize_session=False,
+            )
+        )
+        self.db.commit()
+        return count
+
     def count_admin(
         self,
         enabled: Optional[bool] = None,

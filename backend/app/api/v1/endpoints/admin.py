@@ -1548,7 +1548,7 @@ async def bulk_action(
     """
     Perform bulk actions on products.
 
-    Actions: enable, disable, delete
+    Actions: enable, disable, delete, clear_sale
     """
     if data.action == "enable":
         count = service.bulk_enable(data.product_ids, True)
@@ -1556,6 +1556,9 @@ async def bulk_action(
     elif data.action == "disable":
         count = service.bulk_enable(data.product_ids, False)
         return MessageResponse(message=f"Disabled {count} products")
+    elif data.action == "clear_sale":
+        count = service.bulk_clear_sale(data.product_ids)
+        return MessageResponse(message=f"Oferta quitada de {count} productos")
     elif data.action == "delete":
         for pid in data.product_ids:
             service.delete(pid)

@@ -1484,6 +1484,12 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
+    def bulk_clear_sale(self, product_ids: List[int]) -> int:
+        """Bulk remove the offer price from products."""
+        count = self.repo.bulk_clear_sale(product_ids)
+        cache.invalidate_all_products()
+        return count
+
     def disable_by_supplier(self, supplier: str) -> dict:
         """Disable all enabled products whose source website name/display_name matches the supplier."""
         from app.models.source_website import SourceWebsite
