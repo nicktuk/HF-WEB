@@ -23,7 +23,14 @@ interface EditItem {
   unit_price: number;
   delivered: boolean;
   paid: boolean;
+  delivered_at?: string | null;
+  paid_at?: string | null;
 }
+
+const formatItemDate = (dateStr?: string | null): string | null => {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
 
 const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   const customPrice = Number(product.custom_price ?? 0);
@@ -171,6 +178,8 @@ export default function SaleDetailPage() {
       unit_price: Number(item.unit_price || 0),
       delivered: !!item.delivered,
       paid: !!item.paid,
+      delivered_at: item.delivered_at,
+      paid_at: item.paid_at,
     }));
   }, [isEditing, editItems, sale?.items]);
 
@@ -575,6 +584,11 @@ export default function SaleDetailPage() {
                               className="h-4 w-4 rounded border-gray-300 text-primary-600"
                               disabled={!isEditing}
                             />
+                            {!isEditing && item.delivered && (
+                              <div className="text-[11px] text-gray-500 whitespace-nowrap">
+                                {formatItemDate(item.delivered_at) ?? 'sin fecha'}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-center">
                             <input
@@ -584,6 +598,11 @@ export default function SaleDetailPage() {
                               className="h-4 w-4 rounded border-gray-300 text-primary-600"
                               disabled={!isEditing}
                             />
+                            {!isEditing && item.paid && (
+                              <div className="text-[11px] text-gray-500 whitespace-nowrap">
+                                {formatItemDate(item.paid_at) ?? 'sin fecha'}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right">
                             {isEditing ? (

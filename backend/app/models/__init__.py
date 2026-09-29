@@ -27,6 +27,8 @@ from app.models.comercio import (
     ComisionMinoristaTramo,
     PedidoComercio,
     PedidoComercioItem,
+    PedidoComercioEntrega,
+    PedidoComercioEntregaItem,
     Comision,
     LiquidacionComision,
     VentaReportada,

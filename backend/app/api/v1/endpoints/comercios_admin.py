@@ -454,6 +454,7 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "estado_pago": p.estado_pago,
         "metodo_pago": p.metodo_pago,
+        "fecha_pago": p.fecha_pago.isoformat() if p.fecha_pago else None,
         "foto_entrega_url": p.foto_entrega_url,
         "fecha_reserva_hasta": p.fecha_reserva_hasta.isoformat() if p.fecha_reserva_hasta else None,
         "cancelado_por_vencimiento": bool(p.cancelado_por_vencimiento),
@@ -480,6 +481,24 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
                 "subtotal": float(i.subtotal),
             }
             for i in p.items
+        ]
+        nombres = {i.id: i.nombre_producto for i in p.items}
+        d["entregas"] = [
+            {
+                "id": e.id,
+                "fecha": e.fecha.isoformat(),
+                "foto_url": e.foto_url,
+                "origen": e.origen,
+                "items": [
+                    {
+                        "pedido_item_id": ei.pedido_item_id,
+                        "nombre_producto": nombres.get(ei.pedido_item_id),
+                        "cantidad": ei.cantidad,
+                    }
+                    for ei in e.items
+                ],
+            }
+            for e in p.entregas
         ]
     return d
 

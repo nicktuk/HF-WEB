@@ -380,6 +380,8 @@ def _item_dict_venta(item: SaleItem) -> dict:
         "cantidad_entregada": item.delivered_quantity or 0,
         "entregado": item.delivered,
         "pagado": item.paid,
+        "fecha_entrega": item.delivered_at.isoformat() if item.delivered_at else None,
+        "fecha_pago": item.paid_at.isoformat() if item.paid_at else None,
         "precio_unitario": float(item.unit_price),
         "subtotal": float(item.total_price),
     }
@@ -402,6 +404,7 @@ def get_detalle_venta(db: Session, vendedor_id: int, canal: str, referencia_id: 
         return {
             "cancelado": pedido.estado == "cancelado",
             "pago_estado": "completo" if pedido.estado_pago == "pagado" else "pendiente",
+            "fecha_pago": pedido.fecha_pago.isoformat() if pedido.fecha_pago else None,
             "pago_por_item": False,
             "items": [_item_dict_pedido(i) for i in pedido.items],
         }
