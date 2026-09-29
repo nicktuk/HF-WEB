@@ -134,6 +134,9 @@ async def get_products_admin(
     is_featured: Optional[bool] = Query(default=None),
     is_immediate_delivery: Optional[bool] = Query(default=None),
     in_stock: Optional[bool] = Query(default=None),
+    is_best_seller: Optional[bool] = Query(default=None),
+    on_sale: Optional[bool] = Query(default=None),
+    in_comercio: Optional[bool] = Query(default=None),
     price_range: Optional[str] = Query(default=None, max_length=20),
     sort_by: Optional[str] = Query(default=None, max_length=20),
     service: ProductService = Depends(get_product_service),
@@ -159,6 +162,9 @@ async def get_products_admin(
         price_range,
         in_stock,
         sort_by,
+        is_best_seller=is_best_seller,
+        on_sale=on_sale,
+        in_comercio=in_comercio,
     )
     pages = (total + limit - 1) // limit if limit > 0 else 0
 

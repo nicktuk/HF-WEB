@@ -8,6 +8,7 @@ from app.db.repositories.base import BaseRepository
 from app.models.product import Product, ProductImage
 from app.models.stock import StockPurchase
 from app.models.category import Category
+from app.models.product_comercio import ProductComercioConfig
 
 
 class ProductRepository(BaseRepository[Product]):
@@ -259,6 +260,9 @@ class ProductRepository(BaseRepository[Product]):
         price_range: Optional[str] = None,
         in_stock: Optional[bool] = None,
         sort_by: Optional[str] = None,
+        is_best_seller: Optional[bool] = None,
+        on_sale: Optional[bool] = None,
+        in_comercio: Optional[bool] = None,
     ) -> List[Product]:
         """Get all products for admin panel."""
         query = (
@@ -314,6 +318,8 @@ class ProductRepository(BaseRepository[Product]):
 
         if is_immediate_delivery is not None:
             query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
+
+        query = self._apply_admin_flag_filters(query, is_best_seller, on_sale, in_comercio)
 
         if search:
             words = [w.strip() for w in search.split() if w.strip()]
@@ -413,6 +419,9 @@ class ProductRepository(BaseRepository[Product]):
         is_immediate_delivery: Optional[bool] = None,
         price_range: Optional[str] = None,
         in_stock: Optional[bool] = None,
+        is_best_seller: Optional[bool] = None,
+        on_sale: Optional[bool] = None,
+        in_comercio: Optional[bool] = None,
     ) -> int:
         """Count products with filters for admin panel."""
         query = self.db.query(Product)
@@ -461,6 +470,8 @@ class ProductRepository(BaseRepository[Product]):
         if is_immediate_delivery is not None:
             query = query.filter(Product.is_immediate_delivery == is_immediate_delivery)
 
+        query = self._apply_admin_flag_filters(query, is_best_seller, on_sale, in_comercio)
+
         if search:
             words = [w.strip() for w in search.split() if w.strip()]
             for word in words:
@@ -480,6 +491,34 @@ class ProductRepository(BaseRepository[Product]):
             query = self._apply_price_range_filter(query, price_range)
 
         return query.count()
+
+    def _apply_admin_flag_filters(
+        self,
+        query,
+        is_best_seller: Optional[bool],
+        on_sale: Optional[bool],
+        in_comercio: Optional[bool],
+    ):
+        """Filtros de admin: más vendido, oferta vigente y marcado para el canal comercios."""
+        if is_best_seller is not None:
+            query = query.filter(Product.is_best_seller == is_best_seller)
+
+        if on_sale is not None:
+            on_sale_cond = self._on_sale_condition()
+            query = query.filter(on_sale_cond if on_sale else ~on_sale_cond)
+
+        if in_comercio is not None:
+            comercio_exists = (
+                self.db.query(ProductComercioConfig.id)
+                .filter(
+                    ProductComercioConfig.product_id == Product.id,
+                    ProductComercioConfig.es_mayorista == True,
+                )
+                .exists()
+            )
+            query = query.filter(comercio_exists if in_comercio else ~comercio_exists)
+
+        return query
 
     def _apply_price_range_filter(self, query, price_range: str):
         """Apply price range filter to query.

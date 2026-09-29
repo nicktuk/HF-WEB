@@ -256,6 +256,9 @@ export const adminApi = {
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
       in_stock?: boolean;
+      is_best_seller?: boolean;
+      on_sale?: boolean;
+      in_comercio?: boolean;
       price_range?: string;
     } = {}
   ): Promise<PaginatedResponse<ProductAdmin>> {
@@ -276,6 +279,11 @@ export const adminApi = {
     if (params.in_stock !== undefined) {
       searchParams.set('in_stock', params.in_stock.toString());
     }
+    if (params.is_best_seller !== undefined) {
+      searchParams.set('is_best_seller', params.is_best_seller.toString());
+    }
+    if (params.on_sale !== undefined) searchParams.set('on_sale', params.on_sale.toString());
+    if (params.in_comercio !== undefined) searchParams.set('in_comercio', params.in_comercio.toString());
     if (params.price_range) searchParams.set('price_range', params.price_range);
 
     const query = searchParams.toString();
