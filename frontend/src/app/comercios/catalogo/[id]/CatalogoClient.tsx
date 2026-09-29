@@ -415,7 +415,7 @@ export function CatalogoClient(props: Props) {
                   return (
                     <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
                       <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                      <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>−{t.descuento_porcentaje}%</td>
+                      <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>{t.descuento_porcentaje > 0 ? `−${t.descuento_porcentaje}%` : ''}</td>
                       <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
                         ${calcularPrecioPorDescuento(full.producto.precio_comercio, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
                       </td>
