@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2, Send } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2, Send, Tag, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
@@ -35,6 +35,8 @@ export default function ProductsPage() {
     bestSellerFilter,
     immediateDeliveryFilter,
     inStockFilter,
+    onSaleFilter,
+    inComercioFilter,
     priceRangeFilter,
     sortByFilter,
     page,
@@ -48,6 +50,8 @@ export default function ProductsPage() {
     setBestSellerFilter,
     setImmediateDeliveryFilter,
     setInStockFilter,
+    setOnSaleFilter,
+    setInComercioFilter,
     setPriceRangeFilter,
     setSortByFilter,
     setPage,
@@ -283,6 +287,9 @@ export default function ProductsPage() {
     is_featured: featuredFilter,
     is_immediate_delivery: immediateDeliveryFilter,
     in_stock: inStockFilter,
+    is_best_seller: bestSellerFilter,
+    on_sale: onSaleFilter,
+    in_comercio: inComercioFilter,
     price_range: priceRangeFilter,
     sort_by: sortByFilter,
   });
@@ -714,6 +721,38 @@ export default function ProductsPage() {
           Stock
         </button>
 
+        {/* On Sale (Oferta) Filter */}
+        <button
+          onClick={() => {
+            setOnSaleFilter(onSaleFilter === true ? undefined : true);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            onSaleFilter === true
+              ? 'bg-red-600 text-white'
+              : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+          }`}
+        >
+          <Tag className="h-4 w-4" />
+          En oferta
+        </button>
+
+        {/* Comercio Filter */}
+        <button
+          onClick={() => {
+            setInComercioFilter(inComercioFilter === true ? undefined : true);
+            setSelectedIds([]);
+          }}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            inComercioFilter === true
+              ? 'bg-blue-600 text-white'
+              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+          }`}
+        >
+          <Store className="h-4 w-4" />
+          Comercio
+        </button>
+
         {/* Status Filter */}
         <select
           value={enabledFilter === undefined ? '' : enabledFilter.toString()}
@@ -826,7 +865,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || bestSellerFilter || immediateDeliveryFilter || inStockFilter || priceRangeFilter) && (
+              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || bestSellerFilter || immediateDeliveryFilter || inStockFilter || onSaleFilter || inComercioFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>

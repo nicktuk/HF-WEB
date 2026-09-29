@@ -84,6 +84,9 @@ export function useAdminProducts(
       is_featured?: boolean;
       is_immediate_delivery?: boolean;
       in_stock?: boolean;
+      is_best_seller?: boolean;
+      on_sale?: boolean;
+      in_comercio?: boolean;
       price_range?: string;
       sort_by?: string;
   } = {}
