@@ -332,12 +332,8 @@ async def list_prospectos(
 
 def _config_dict(cfg: ConfiguracionComercio) -> dict:
     return {
-        "descuento_porcentaje": float(cfg.descuento_porcentaje),
         "redondeo": int(cfg.redondeo),
         "monto_minimo_pedido": float(cfg.monto_minimo_pedido),
-        "tipo_markup": cfg.tipo_markup or 'fijo',
-        "mostrar_todos_con_stock": bool(cfg.mostrar_todos_con_stock),
-        "modo_precio": cfg.modo_precio or 'markup',
         "semaforo_dias_amarillo": int(cfg.semaforo_dias_amarillo),
         "semaforo_dias_rojo": int(cfg.semaforo_dias_rojo),
         "comision_mayorista_nuevo_porcentaje": float(cfg.comision_mayorista_nuevo_porcentaje),
@@ -365,21 +361,6 @@ async def update_comercio_config(
     cfg = db.query(ConfiguracionComercio).first()
     if not cfg:
         raise HTTPException(404, "Configuración no encontrada")
-    if "mostrar_todos_con_stock" in body:
-        cfg.mostrar_todos_con_stock = bool(body["mostrar_todos_con_stock"])
-    if "tipo_markup" in body:
-        if body["tipo_markup"] not in ("fijo", "variable"):
-            raise HTTPException(400, "tipo_markup debe ser 'fijo' o 'variable'")
-        cfg.tipo_markup = body["tipo_markup"]
-    if "modo_precio" in body:
-        if body["modo_precio"] not in ("markup", "descuento"):
-            raise HTTPException(400, "modo_precio debe ser 'markup' o 'descuento'")
-        cfg.modo_precio = body["modo_precio"]
-    if "descuento_porcentaje" in body:
-        val = float(body["descuento_porcentaje"])
-        if val < 0:
-            raise HTTPException(400, "descuento_porcentaje debe ser >= 0")
-        cfg.descuento_porcentaje = val
     if "redondeo" in body:
         r = int(body["redondeo"])
         if r < 0:

@@ -1,11 +1,15 @@
-"""Lógica compartida del catálogo comercios: selección de productos, costo y precio.
+"""Lógica compartida del catálogo comercios: selección de productos y precio.
 
 Usado tanto por el catálogo público (sin precios, para previsualizar sin login)
 como por el catálogo protegido (con precios, requiere sesión) — ambos deben
 mostrar exactamente el mismo conjunto de productos.
 
-La configuración específica del canal comercios (es_mayorista, override de
-precio, unidades por bulto, cantidad mínima, descripción, fotos propias) vive
+El precio del canal comercios es propio de cada producto (precio_mayorista),
+no se calcula a partir del precio minorista ni del costo; la matriz de
+descuento por cantidad se aplica sobre ese precio.
+
+La configuración específica del canal comercios (es_mayorista, precio
+mayorista, unidades por bulto, cantidad mínima, descripción, fotos propias) vive
 en ProductComercioConfig/ProductComercioImage — separada de Product a
 propósito, para no seguir mezclando campos del minorista y el mayorista.
 """
@@ -42,7 +46,7 @@ def descuento_para_cantidad(tramos: list[dict], cantidad: int) -> float:
     """Descuento % aplicable a `cantidad` unidades según la matriz de tramos.
 
     Usa el tramo de mayor cantidad_minima que la cantidad alcance. Si no
-    alcanza ni el tramo más bajo, no hay descuento (precio minorista completo).
+    alcanza ni el tramo más bajo, no hay descuento (precio mayorista completo).
     """
     aplicable = 0.0
     for t in tramos:
@@ -51,13 +55,6 @@ def descuento_para_cantidad(tramos: list[dict], cantidad: int) -> float:
         else:
             break
     return aplicable
-
-
-def ultimo_precio_compra(db: Session, product_id: int) -> Optional[Decimal]:
-    result = db.query(StockPurchase.unit_price).filter(
-        StockPurchase.product_id == product_id
-    ).order_by(StockPurchase.purchase_date.desc()).first()
-    return Decimal(str(result[0])) if result else None
 
 
 def stock_total(db: Session, product_id: int) -> int:
@@ -72,142 +69,66 @@ def get_comercio_config(db: Session, product_id: int) -> Optional[ProductComerci
 
 
 def precio_comercio(
-    costo: Optional[Decimal],
-    override: Optional[Decimal],
+    precio_mayorista: Decimal,
     cfg: ConfiguracionComercio,
-    precio_venta: Optional[int] = None,
     cantidad: int = 1,
     tramos: Optional[list[dict]] = None,
 ) -> Decimal:
     """Precio unitario real para `cantidad` unidades pedidas.
 
-    En modo 'descuento': parte del precio minorista (precio_venta) y descuenta
-    el % que corresponda a `cantidad` según la matriz de tramos.
-    En modo 'markup' (default): igual que siempre, sobre el costo de compra.
+    Parte del precio mayorista propio del producto y descuenta el % que
+    corresponda a `cantidad` según la matriz de tramos. No depende del
+    precio minorista ni del costo de compra.
     """
-    if override is not None:
-        return override
-    if cfg.modo_precio == 'descuento' and precio_venta is not None:
-        descuento = descuento_para_cantidad(tramos or [], cantidad)
-        precio = float(precio_venta) * (1 - descuento / 100)
-    elif cfg.tipo_markup == 'variable' and precio_venta is not None:
-        precio = (float(costo) + float(precio_venta)) / 2
-    else:
-        precio = float(costo) * (1 + float(cfg.descuento_porcentaje) / 100)
+    descuento = descuento_para_cantidad(tramos or [], cantidad)
+    precio = float(precio_mayorista) * (1 - descuento / 100)
     if cfg.redondeo > 0:
         precio = math.ceil(precio / cfg.redondeo) * cfg.redondeo
     return Decimal(str(int(precio)))
 
 
-def precio_referencia(
-    costo: Optional[Decimal],
-    override: Optional[Decimal],
-    cfg: ConfiguracionComercio,
-    precio_venta: Optional[int] = None,
-) -> Decimal:
-    """Precio a mostrar en listado/ficha antes de elegir cantidad.
-
-    En modo 'descuento' es el precio minorista sin descontar (el descuento
-    real depende de la cantidad y se muestra aparte, en la matriz de tramos).
-    En modo 'markup' es el mismo cálculo de siempre, sin cantidad.
-    """
-    if override is not None:
-        return override
-    if cfg.modo_precio == 'descuento':
-        return Decimal(str(int(precio_venta))) if precio_venta is not None else Decimal('0')
-    return precio_comercio(costo, None, cfg, precio_venta)
-
-
 def productos_visibles(
     db: Session, cfg: ConfiguracionComercio
-) -> list[tuple[Product, Decimal, int, Optional[ProductComercioConfig]]]:
-    """Productos visibles en el canal comercios, con costo, stock y su config
-    de comercio ya resueltos.
+) -> list[tuple[Product, Decimal, int, ProductComercioConfig]]:
+    """Productos visibles en el canal comercios, con precio mayorista, stock
+    y su config de comercio ya resueltos.
 
-    Devuelve tuplas (producto, costo, stock, config) aplicando las mismas
-    reglas de selección tanto en modo normal (es_mayorista) como en
-    'mostrar_todos_con_stock'.
+    Visibles: habilitados, marcados como mayoristas, con precio mayorista
+    cargado y con stock (o a pedido). Devuelve tuplas
+    (producto, precio_mayorista, stock, config).
     """
-    if cfg.mostrar_todos_con_stock:
-        products = (
-            db.query(Product)
-            .filter(Product.enabled == True)
-            .order_by(Product.display_order, Product.id)
-            .all()
+    rows = (
+        db.query(Product, ProductComercioConfig)
+        .join(ProductComercioConfig, ProductComercioConfig.product_id == Product.id)
+        .filter(
+            Product.enabled == True,
+            ProductComercioConfig.es_mayorista == True,
+            ProductComercioConfig.precio_mayorista.isnot(None),
         )
-    else:
-        products = (
-            db.query(Product)
-            .join(ProductComercioConfig, ProductComercioConfig.product_id == Product.id)
-            .filter(Product.enabled == True, ProductComercioConfig.es_mayorista == True)
-            .order_by(Product.display_order, Product.id)
-            .all()
-        )
-
-    if not products:
-        return []
-
-    configs_por_producto = {
-        c.product_id: c
-        for c in db.query(ProductComercioConfig)
-        .filter(ProductComercioConfig.product_id.in_([p.id for p in products]))
+        .order_by(Product.display_order, Product.id)
         .all()
-    }
+    )
 
-    visibles: list[tuple[Product, Decimal, int, Optional[ProductComercioConfig]]] = []
-    for p in products:
-        config = configs_por_producto.get(p.id)
-
-        if cfg.modo_precio == 'descuento':
-            # En modo descuento el precio parte del precio minorista, no del
-            # costo de compra — la visibilidad depende de que haya precio de venta.
-            if p.final_price is None:
-                continue
-            stock = stock_total(db, p.id)
-            if stock == 0 and not p.is_on_demand:
-                continue
-            costo = ultimo_precio_compra(db, p.id)  # informativo, puede ser None
-            visibles.append((p, costo, stock, config))
+    visibles: list[tuple[Product, Decimal, int, ProductComercioConfig]] = []
+    for p, config in rows:
+        stock = stock_total(db, p.id)
+        if stock == 0 and not p.is_on_demand:
             continue
-
-        costo = ultimo_precio_compra(db, p.id)
-
-        if cfg.mostrar_todos_con_stock:
-            if costo is None:
-                continue
-            stock = stock_total(db, p.id)
-            if stock == 0:
-                continue
-            precio_venta = p.final_price
-            if precio_venta is None:
-                continue
-            markup = (float(precio_venta) - float(costo)) / float(precio_venta) * 100
-            if markup <= 50:
-                continue
-        else:
-            if costo is None:
-                costo = p.original_price
-            if costo is None:
-                continue
-            stock = stock_total(db, p.id)
-            if stock == 0 and not p.is_on_demand:
-                continue
-
-        visibles.append((p, costo, stock, config))
+        visibles.append((p, Decimal(config.precio_mayorista), stock, config))
 
     return visibles
 
 
 def producto_visible(
     db: Session, cfg: ConfiguracionComercio, product_id: int
-) -> Optional[tuple[Product, Decimal, int, Optional[ProductComercioConfig]]]:
-    """Devuelve (producto, costo, stock, config) si el producto es visible en
-    el canal comercios, o None.
+) -> Optional[tuple[Product, Decimal, int, ProductComercioConfig]]:
+    """Devuelve (producto, precio_mayorista, stock, config) si el producto es
+    visible en el canal comercios, o None.
 
     Reutiliza productos_visibles para no duplicar las reglas de selección — la
     ficha de producto debe mostrar exactamente los mismos productos que el listado.
     """
-    for p, costo, stock, config in productos_visibles(db, cfg):
+    for p, precio_mayorista, stock, config in productos_visibles(db, cfg):
         if p.id == product_id:
-            return p, costo, stock, config
+            return p, precio_mayorista, stock, config
     return None

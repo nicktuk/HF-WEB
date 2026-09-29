@@ -113,7 +113,7 @@ export interface ComercioIconItem {
 export interface ProductComercioConfig {
   product_id: number;
   es_mayorista: boolean;
-  precio_mayorista_override?: number | null;
+  precio_mayorista?: number | null;
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
   descripcion?: string | null;
@@ -123,7 +123,7 @@ export interface ProductComercioConfig {
 
 export interface ProductComercioConfigUpdateForm {
   es_mayorista?: boolean;
-  precio_mayorista_override?: number | null;
+  precio_mayorista?: number | null;
   unidades_por_bulto?: number | null;
   cantidad_minima?: number | null;
   descripcion?: string | null;

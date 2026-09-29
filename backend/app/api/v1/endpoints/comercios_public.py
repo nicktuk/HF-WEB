@@ -219,7 +219,7 @@ async def get_catalogo_preview(db: Session = Depends(get_db)):
 
     Muestra foto, nombre, marca, categoría y cantidad mínima para que un
     comercio nuevo pueda ver qué se vende antes de pedir acceso. No incluye
-    precio, costo ni stock — eso requiere iniciar sesión (ver /comercios/catalogo
+    precio ni stock — eso requiere iniciar sesión (ver /comercios/catalogo
     en comercios_protected.py). `unidades_por_bulto` no se expone: esa lógica
     está en pausa hasta retomarla.
     """
@@ -233,9 +233,9 @@ async def get_catalogo_preview(db: Session = Depends(get_db)):
                 "marca": p.brand,
                 "categoria": p.category,
                 "imagen_url": _imagen_url(db, p.id),
-                "cantidad_minima": config.cantidad_minima if config else None,
+                "cantidad_minima": config.cantidad_minima,
             }
-            for p, _costo, _stock, config in visibles
+            for p, _precio, _stock, config in visibles
         ],
     }
 

@@ -25,7 +25,7 @@ export default function ProductComercioConfigPage() {
   const updateMutation = useSetComercioConfig(apiKey);
 
   const [esMayorista, setEsMayorista] = useState(false);
-  const [precioOverride, setPrecioOverride] = useState('');
+  const [precioMayorista, setPrecioMayorista] = useState('');
   const [unidadesPorBulto, setUnidadesPorBulto] = useState('');
   const [cantidadMinima, setCantidadMinima] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -44,7 +44,7 @@ export default function ProductComercioConfigPage() {
     if (config && !initialized.current) {
       initialized.current = true;
       setEsMayorista(config.es_mayorista);
-      setPrecioOverride(config.precio_mayorista_override != null ? String(config.precio_mayorista_override) : '');
+      setPrecioMayorista(config.precio_mayorista != null ? String(config.precio_mayorista) : '');
       setUnidadesPorBulto(config.unidades_por_bulto != null ? String(config.unidades_por_bulto) : '');
       setCantidadMinima(config.cantidad_minima != null ? String(config.cantidad_minima) : '');
       setDescripcion(config.descripcion || '');
@@ -125,7 +125,7 @@ export default function ProductComercioConfigPage() {
       productId,
       data: {
         es_mayorista: esMayorista,
-        precio_mayorista_override: precioOverride !== '' ? parseFloat(precioOverride) : null,
+        precio_mayorista: precioMayorista !== '' ? parseFloat(precioMayorista) : null,
         unidades_por_bulto: unidadesPorBulto !== '' ? Number(unidadesPorBulto) : null,
         cantidad_minima: cantidadMinima !== '' ? Number(cantidadMinima) : null,
         descripcion: descripcion || null,
@@ -196,17 +196,22 @@ export default function ProductComercioConfigPage() {
 
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-medium text-sm">Precio manual (override)</p>
+                <p className="font-medium text-sm">Precio mayorista</p>
                 <p className="text-xs text-gray-500">
-                  Pisa el cálculo automático de precio comercio. Vacío = se calcula por regla.
+                  Precio por unidad en el canal comercios. Los descuentos por cantidad se aplican sobre este precio.
                 </p>
+                {esMayorista && precioMayorista === '' && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Sin precio mayorista el producto no se muestra en el catálogo comercios.
+                  </p>
+                )}
               </div>
               <input
                 type="number"
                 min="0"
-                value={precioOverride}
-                onChange={(e) => setPrecioOverride(e.target.value)}
-                placeholder="Automático"
+                value={precioMayorista}
+                onChange={(e) => setPrecioMayorista(e.target.value)}
+                placeholder="Sin precio"
                 className="w-28 shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>

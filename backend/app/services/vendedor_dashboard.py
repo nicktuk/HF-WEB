@@ -490,23 +490,21 @@ def get_catalogo_demo(db: Session) -> list[dict]:
     """Catálogo con precio mayorista, precio de público y ganancia por unidad
     en cada escalón de la matriz de descuento — lo que el vendedor necesita
     para armar la cuenta en voz alta frente al comerciante (Manual del
-    Vendedor, Paso 1). Los precios los define HEFA vía la matriz de
-    descuento; el vendedor no los edita acá — es intencional (Especificación
+    Vendedor, Paso 1). Los precios los define HEFA (precio mayorista de cada
+    producto y matriz de descuento); el vendedor no los edita acá — es intencional (Especificación
     Funcional §2.3: "el vendedor no negocia precio")."""
     cfg = comercio_catalog.get_config(db)
     visibles = comercio_catalog.productos_visibles(db, cfg)
-    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    tramos = comercio_catalog.get_tramos_descuento(db)
 
     items = []
-    for p, costo, stock, config in visibles:
-        override = config.precio_mayorista_override if config else None
-        precio_base = comercio_catalog.precio_referencia(costo, override, cfg, p.final_price)
+    for p, precio_base, stock, config in visibles:
         precio_venta = p.final_price
 
         escalones = []
         cantidades = sorted({t["cantidad_minima"] for t in tramos}) or [1]
         for cantidad in cantidades:
-            precio_u = comercio_catalog.precio_comercio(costo, override, cfg, precio_venta, cantidad, tramos)
+            precio_u = comercio_catalog.precio_comercio(precio_base, cfg, cantidad, tramos)
             ganancia = (precio_venta - int(precio_u)) if precio_venta is not None else None
             escalones.append({
                 "cantidad_minima": cantidad,
@@ -523,7 +521,7 @@ def get_catalogo_demo(db: Session) -> list[dict]:
             "ganancia_unitaria": (precio_venta - int(precio_base)) if precio_venta is not None else None,
             "stock": stock,
             "imagen_url": _imagen_url(db, p.id),
-            "cantidad_minima": config.cantidad_minima if config else None,
+            "cantidad_minima": config.cantidad_minima,
             "escalones": escalones,
         })
     return items

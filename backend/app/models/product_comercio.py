@@ -1,6 +1,6 @@
 """Configuración del canal comercios por producto — separada de Product a
 propósito: todo lo que solo aplica al canal mayorista (visibilidad, precio
-manual, reglas de compra, descripción y fotos propias) vive acá, para no
+mayorista, reglas de compra, descripción y fotos propias) vive acá, para no
 seguir mezclándolo con los campos del catálogo minorista.
 """
 from sqlalchemy import Column, Integer, String, Boolean, Text, Numeric, ForeignKey, JSON
@@ -15,7 +15,7 @@ class ProductComercioConfig(Base):
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     es_mayorista = Column(Boolean, default=False, nullable=False, index=True, comment="Visible en catálogo comercios")
-    precio_mayorista_override = Column(Numeric(12, 2), nullable=True, comment="Precio comercio manual (pisa el cálculo por regla)")
+    precio_mayorista = Column(Numeric(12, 2), nullable=True, comment="Precio mayorista del producto (base de la matriz de descuento por cantidad)")
     unidades_por_bulto = Column(Integer, nullable=True, comment="Unidades por bulto en el canal comercios")
     cantidad_minima = Column(Integer, nullable=True, comment="Cantidad mínima de compra en el canal comercios")
     descripcion = Column(Text, nullable=True, comment="Descripción propia del canal comercios (no la del minorista)")

@@ -109,9 +109,8 @@ async def get_pricing_config(
     """Config de precios liviana, para recalcular precios en el carrito sin
     depender de que el comercio haya pasado antes por el catálogo."""
     cfg = comercio_catalog.get_config(db)
-    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    tramos = comercio_catalog.get_tramos_descuento(db)
     return {
-        "modo_precio": cfg.modo_precio,
         "redondeo": int(cfg.redondeo),
         "tramos_descuento": tramos,
         "monto_minimo_pedido": int(cfg.monto_minimo_pedido or 0),
@@ -125,12 +124,10 @@ async def get_catalogo(
 ):
     cfg = comercio_catalog.get_config(db)
     visibles = comercio_catalog.productos_visibles(db, cfg)
-    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    tramos = comercio_catalog.get_tramos_descuento(db)
 
     items = []
-    for p, costo, stock, config in visibles:
-        override = config.precio_mayorista_override if config else None
-        precio_m = comercio_catalog.precio_referencia(costo, override, cfg, p.final_price)
+    for p, precio_m, stock, config in visibles:
         items.append({
             "id": p.id,
             "nombre": p.display_name,
@@ -142,8 +139,8 @@ async def get_catalogo(
             "imagen_url": _imagen_url(db, p.id),
             "categoria": p.category,
             "subcategoria": p.subcategory,
-            "unidades_por_bulto": config.unidades_por_bulto if config else None,
-            "cantidad_minima": config.cantidad_minima if config else None,
+            "unidades_por_bulto": config.unidades_por_bulto,
+            "cantidad_minima": config.cantidad_minima,
             "is_featured": bool(p.is_featured),
             "is_immediate_delivery": bool(p.is_immediate_delivery),
             "is_best_seller": bool(p.is_best_seller),
@@ -153,8 +150,6 @@ async def get_catalogo(
         "productos": items,
         "config": {
             "monto_minimo_pedido": int(cfg.monto_minimo_pedido or 0),
-            "descuento_porcentaje": float(cfg.descuento_porcentaje),
-            "modo_precio": cfg.modo_precio,
             "redondeo": int(cfg.redondeo),
             "tramos_descuento": tramos,
         },
@@ -177,10 +172,8 @@ async def get_producto_detalle(
     if not resultado:
         raise HTTPException(404, "Producto no encontrado.")
 
-    p, costo, stock, config = resultado
-    override = config.precio_mayorista_override if config else None
-    precio_m = comercio_catalog.precio_referencia(costo, override, cfg, p.final_price)
-    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    p, precio_m, stock, config = resultado
+    tramos = comercio_catalog.get_tramos_descuento(db)
 
     return {
         "id": p.id,
@@ -190,10 +183,10 @@ async def get_producto_detalle(
         "categoria": p.category,
         "subcategoria": p.subcategory,
         "kit_content": p.kit_content,
-        "descripcion": config.descripcion if config else None,
-        "iconos": config.iconos if config else None,
-        "unidades_por_bulto": config.unidades_por_bulto if config else None,
-        "cantidad_minima": config.cantidad_minima if config else None,
+        "descripcion": config.descripcion,
+        "iconos": config.iconos,
+        "unidades_por_bulto": config.unidades_por_bulto,
+        "cantidad_minima": config.cantidad_minima,
         "precio_comercio": int(precio_m),
         "precio_venta": p.final_price,
         "stock": stock,
@@ -203,10 +196,8 @@ async def get_producto_detalle(
         "is_featured": bool(p.is_featured),
         "is_immediate_delivery": bool(p.is_immediate_delivery),
         "is_best_seller": bool(p.is_best_seller),
-        "modo_precio": cfg.modo_precio,
         "redondeo": int(cfg.redondeo),
         "tramos_descuento": tramos,
-        "override": override is not None,
     }
 
 
@@ -232,7 +223,7 @@ async def crear_pedido(
         raise HTTPException(422, "El pedido no tiene items.")
 
     cfg = comercio_catalog.get_config(db)
-    tramos = comercio_catalog.get_tramos_descuento(db) if cfg.modo_precio == 'descuento' else []
+    tramos = comercio_catalog.get_tramos_descuento(db)
     comercio = db.query(Comercio).filter(Comercio.id == comercio_id).first()
     if not comercio or comercio.estado != "activo":
         raise HTTPException(403, "cuenta_inactiva")
@@ -244,16 +235,15 @@ async def crear_pedido(
         if inp.cantidad <= 0:
             continue
         # Reutiliza las mismas reglas de visibilidad del catálogo (producto,
-        # costo y stock ya resueltos) — nunca confiar en datos del cliente.
+        # precio mayorista y stock ya resueltos) — nunca confiar en datos del cliente.
         resultado = comercio_catalog.producto_visible(db, cfg, inp.producto_id)
         if not resultado:
             raise HTTPException(422, f"Producto {inp.producto_id} no disponible.")
-        p, costo, stock, config = resultado
-        cantidad_minima = config.cantidad_minima if config else None
-        override = config.precio_mayorista_override if config else None
+        p, precio_mayorista, stock, config = resultado
+        cantidad_minima = config.cantidad_minima
 
         # Validación por bulto en pausa (se retoma más adelante):
-        # if config and config.unidades_por_bulto and inp.cantidad % config.unidades_por_bulto != 0:
+        # if config.unidades_por_bulto and inp.cantidad % config.unidades_por_bulto != 0:
         #     raise HTTPException(422, f"'{p.display_name}' se vende por bultos de {config.unidades_por_bulto} u.")
 
         if cantidad_minima and inp.cantidad < cantidad_minima:
@@ -262,9 +252,7 @@ async def crear_pedido(
         if stock < inp.cantidad and not p.is_on_demand:
             raise HTTPException(422, f"Stock insuficiente para '{p.display_name}'.")
 
-        precio_u = comercio_catalog.precio_comercio(
-            costo, override, cfg, p.final_price, inp.cantidad, tramos,
-        )
+        precio_u = comercio_catalog.precio_comercio(precio_mayorista, cfg, inp.cantidad, tramos)
         subtotal = precio_u * inp.cantidad
         total += subtotal
         items_built.append({"product": p, "cantidad": inp.cantidad, "precio_u": precio_u, "subtotal": subtotal})
