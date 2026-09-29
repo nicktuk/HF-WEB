@@ -89,6 +89,9 @@ class SaleItem(Base):
     quantity = Column(Integer, nullable=False)
     delivered_quantity = Column(Integer, nullable=False, default=0)
     is_paid = Column(Boolean, nullable=False, default=False)
+    # Cuándo quedó entregado / pagado este producto (se borran si se desmarca).
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
     unit_price = Column(Numeric(10, 2), nullable=False)
     total_price = Column(Numeric(12, 2), nullable=False)
     # Snapshot de si el producto estaba en oferta (Product.is_on_sale) al

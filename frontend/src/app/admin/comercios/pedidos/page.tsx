@@ -32,6 +32,7 @@ interface Pedido {
   estado: EstadoPedido
   estado_pago: 'pendiente' | 'pagado'
   metodo_pago: string | null
+  fecha_pago: string | null
   foto_entrega_url: string | null
   comision: Comision | null
   comision_porcentaje_manual: number | null
@@ -51,6 +52,18 @@ interface PedidoDetalle extends Pedido {
     precio_original: number | null
     subtotal: number
   }[]
+  entregas: {
+    id: number
+    fecha: string
+    foto_url: string | null
+    origen: 'admin' | 'vendedor' | 'migracion'
+    items: { pedido_item_id: number; nombre_producto: string | null; cantidad: number }[]
+  }[]
+}
+
+function formatFecha(iso: string | null): string | null {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 function apiFetch(path: string, apiKey: string, options?: RequestInit) {
@@ -314,7 +327,10 @@ function PagoPanel({
       <h3 className="text-sm font-semibold text-gray-800 mb-3">Pago</h3>
       {pedido.estado_pago === 'pagado' ? (
         <div className="text-sm text-gray-600">
-          <p>Pagado por <strong>{pedido.metodo_pago}</strong>.</p>
+          <p>
+            Pagado por <strong>{pedido.metodo_pago}</strong>
+            {pedido.fecha_pago && <> el <strong>{formatFecha(pedido.fecha_pago)}</strong></>}.
+          </p>
           {pedido.comision && (
             <p className="mt-1 text-xs text-gray-400">
               Comisión: ${pedido.comision.monto.toLocaleString('es-AR')} ({(pedido.comision.tasa * 100).toFixed(0)}%, {pedido.comision.estado})
@@ -470,6 +486,33 @@ function EntregaPanel({
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
       <h3 className="text-sm font-semibold text-gray-800 mb-3">Entrega</h3>
+
+      {pedido.entregas.length > 0 && (
+        <ul className="mb-3 space-y-2 border-b border-gray-100 pb-3">
+          {pedido.entregas.map(e => (
+            <li key={e.id} className="flex items-start gap-2 text-xs">
+              {e.foto_url ? (
+                <a href={resolveImageUrl(e.foto_url) ?? e.foto_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  <img src={resolveImageUrl(e.foto_url) ?? e.foto_url} alt={`Foto de la entrega del ${formatFecha(e.fecha)}`} className="h-9 w-9 object-cover rounded border border-gray-200" />
+                </a>
+              ) : (
+                <div className="h-9 w-9 shrink-0 rounded border border-dashed border-gray-300" aria-hidden="true" />
+              )}
+              <div className="min-w-0">
+                <p className="font-medium text-gray-700">
+                  {formatFecha(e.fecha)}
+                  <span className="font-normal text-gray-400">
+                    {e.origen === 'vendedor' ? ' · vendedor' : e.origen === 'migracion' ? ' · fecha aproximada' : ''}
+                  </span>
+                </p>
+                <p className="text-gray-500">
+                  {e.items.map(i => `${i.cantidad} × ${i.nombre_producto ?? 'producto'}`).join(', ')}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="space-y-2 mb-3">
         {pedido.items.map(item => (

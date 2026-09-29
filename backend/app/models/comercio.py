@@ -167,6 +167,8 @@ class PedidoComercio(Base):
         default='pendiente',
     )
     metodo_pago = Column(Text, nullable=True)
+    fecha_pago = Column(DateTime(timezone=True), nullable=True)
+    # Foto de la última entrega; las de cada entrega viven en PedidoComercioEntrega.
     foto_entrega_url = Column(Text, nullable=True)
     # Ventana de 48hs desde que se confirma: si sigue sin pago al vencer,
     # el autocancelador lo pasa a 'cancelado' y marca cancelado_por_vencimiento.
@@ -181,6 +183,12 @@ class PedidoComercio(Base):
     comercio = relationship("Comercio", back_populates="pedidos")
     items = relationship("PedidoComercioItem", back_populates="pedido", cascade="all, delete-orphan")
     comision = relationship("Comision", back_populates="pedido", uselist=False)
+    entregas = relationship(
+        "PedidoComercioEntrega",
+        back_populates="pedido",
+        cascade="all, delete-orphan",
+        order_by="PedidoComercioEntrega.fecha",
+    )
 
 
 class PedidoComercioItem(Base):
@@ -197,6 +205,35 @@ class PedidoComercioItem(Base):
     cantidad_entregada = Column(Integer, nullable=False, default=0)
 
     pedido = relationship("PedidoComercio", back_populates="items")
+
+
+class PedidoComercioEntrega(Base):
+    """Una entrega (total o parcial) de un pedido mayorista: cuándo, con qué
+    foto y cuánto de cada producto. `cantidad_entregada` de cada item sigue
+    siendo el acumulado; esto es el detalle de cómo se llegó a él.
+    origen: 'admin' | 'vendedor' | 'migracion'."""
+    __tablename__ = "pedido_mayorista_entregas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pedido_id = Column(Integer, ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"), nullable=False, index=True)
+    fecha = Column(DateTime(timezone=True), nullable=False)
+    foto_url = Column(Text, nullable=True)
+    origen = Column(String(20), nullable=False)
+
+    pedido = relationship("PedidoComercio", back_populates="entregas")
+    items = relationship("PedidoComercioEntregaItem", back_populates="entrega", cascade="all, delete-orphan")
+
+
+class PedidoComercioEntregaItem(Base):
+    __tablename__ = "pedido_mayorista_entrega_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entrega_id = Column(Integer, ForeignKey("pedido_mayorista_entregas.id", ondelete="CASCADE"), nullable=False, index=True)
+    pedido_item_id = Column(Integer, ForeignKey("pedidos_mayoristas_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    cantidad = Column(Integer, nullable=False)
+
+    entrega = relationship("PedidoComercioEntrega", back_populates="items")
+    pedido_item = relationship("PedidoComercioItem")
 
 
 class Comision(Base):

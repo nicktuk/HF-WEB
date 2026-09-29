@@ -5,7 +5,7 @@ parcial, comisiones). No cablea reserva de stock al confirmar (Bloque 0,
 pendiente); la deducción física de stock ocurre recién al entregar, igual
 que hoy pasa con las ventas minoristas en SalesService._deduct_stock.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -17,6 +17,8 @@ from app.models.comercio import (
     Comision,
     EstadoHistorial,
     PedidoComercio,
+    PedidoComercioEntrega,
+    PedidoComercioEntregaItem,
     PedidoComercioItem,
     VentaReportada,
 )
@@ -32,6 +34,27 @@ def registrar_estado_historial(db: Session, canal: str, referencia_id: int, esta
     hace commit — queda dentro de la misma transacción que el cambio de
     estado que la origina."""
     db.add(EstadoHistorial(canal=canal, referencia_id=referencia_id, estado=estado))
+
+
+def _registrar_entrega(
+    pedido: PedidoComercio,
+    entregado_por_item: dict[int, int],
+    foto_url: str | None,
+    origen: str,
+) -> None:
+    """Anota una entrega con lo que se entregó en ella de cada producto (sólo
+    los aumentos; una corrección a la baja no es una entrega). No hace commit."""
+    lineas = [(item_id, cant) for item_id, cant in entregado_por_item.items() if cant > 0]
+    if not lineas:
+        return
+    entrega = PedidoComercioEntrega(
+        pedido_id=pedido.id,
+        fecha=datetime.now(timezone.utc),
+        foto_url=foto_url,
+        origen=origen,
+    )
+    entrega.items = [PedidoComercioEntregaItem(pedido_item_id=i, cantidad=c) for i, c in lineas]
+    pedido.entregas.append(entrega)
 
 
 def _get_available_stock(db: Session, product_id: int) -> int:
@@ -89,6 +112,7 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
 
     pedido.estado_pago = "pagado"
     pedido.metodo_pago = metodo_pago
+    pedido.fecha_pago = datetime.now(timezone.utc)
 
     sincronizar_comision_pedido(db, pedido)
 
@@ -197,15 +221,18 @@ def entregar_pedido(
         if item_id not in items_by_id:
             raise ValidationError(f"El ítem {item_id} no pertenece a este pedido.")
 
+    entregado_ahora: dict[int, int] = {}
     for item in pedido.items:
         nueva_cantidad = entregas.get(item.id, item.cantidad_entregada)
         nueva_cantidad = max(0, min(nueva_cantidad, item.cantidad))
         delta = nueva_cantidad - item.cantidad_entregada
         if delta > 0:
             _deduct_stock_fifo(db, item.producto_id, delta)
+        entregado_ahora[item.id] = delta
         item.cantidad_entregada = nueva_cantidad
 
     pedido.foto_entrega_url = foto_entrega_url
+    _registrar_entrega(pedido, entregado_ahora, foto_entrega_url, "admin")
     todo_entregado = all(item.cantidad_entregada >= item.cantidad for item in pedido.items)
     algo_entregado = any(item.cantidad_entregada > 0 for item in pedido.items)
     estado_anterior = pedido.estado
@@ -235,6 +262,7 @@ def entregar_item_pedido(db: Session, pedido_id: int, item_id: int) -> PedidoCom
     if delta > 0:
         _deduct_stock_fifo(db, item.producto_id, delta)
     item.cantidad_entregada = item.cantidad
+    _registrar_entrega(pedido, {item.id: delta}, None, "vendedor")
 
     todo_entregado = all(i.cantidad_entregada >= i.cantidad for i in pedido.items)
     algo_entregado = any(i.cantidad_entregada > 0 for i in pedido.items)

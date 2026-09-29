@@ -500,6 +500,8 @@ export interface SaleItem {
   delivered_quantity: number;
   delivered: boolean;
   paid: boolean;
+  delivered_at?: string | null;
+  paid_at?: string | null;
   unit_price: number;
   total_price: number;
 }

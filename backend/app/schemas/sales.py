@@ -88,6 +88,8 @@ class SaleItemResponse(BaseModel):
     delivered_quantity: int
     delivered: bool
     paid: bool
+    delivered_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
     unit_price: Decimal
     total_price: Decimal
     es_oferta: bool = False

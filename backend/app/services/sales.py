@@ -337,7 +337,25 @@ class SalesService:
             if paid_targets_by_ref is not None:
                 item.is_paid = bool(paid_targets_by_ref.get(item_ref, item.is_paid))
 
+            self._sync_item_dates(item)
+
         self._sync_sale_state(sale)
+
+    @staticmethod
+    def _sync_item_dates(item: SaleItem) -> None:
+        """Fecha de entrega/pago del producto: se graba al quedar entregado /
+        pagado, se conserva mientras siga así y se borra si se desmarca."""
+        now = datetime.now(timezone.utc)
+        if item.delivered:
+            if item.delivered_at is None:
+                item.delivered_at = now
+        else:
+            item.delivered_at = None
+        if item.is_paid:
+            if item.paid_at is None:
+                item.paid_at = now
+        else:
+            item.paid_at = None
 
     def _create_installments(
         self,
@@ -371,8 +389,10 @@ class SalesService:
             notes=data.notes,
             installments=data.installments,
             seller_id=data.seller_id,
-            delivered=data.delivered,
-            paid=data.paid,
+            # Arranca sin pagar/entregar: _apply_item_states la marca según
+            # sus items, así la transición queda en estado_historial.
+            delivered=False,
+            paid=False,
             payment_method=getattr(data, 'payment_method', None),
             phone=getattr(data, 'phone', None),
             email=getattr(data, 'email', None),
@@ -495,6 +515,7 @@ class SalesService:
 
         web_seller_id = self.db.query(CatalogSeller.id).filter(CatalogSeller.nombre == "Web").scalar()
 
+        paid_at = datetime.now(timezone.utc) if mark_paid else None
         sale = Sale(
             customer_name=data.name,
             notes=data.notes,
@@ -528,6 +549,7 @@ class SalesService:
                 quantity=item["quantity"],
                 delivered_quantity=0,
                 is_paid=mark_paid,
+                paid_at=paid_at,
                 unit_price=item["unit_price"],
                 total_price=item["total_price"],
                 es_oferta=item["es_oferta"],
@@ -543,6 +565,7 @@ class SalesService:
                 quantity=1,
                 delivered_quantity=0,
                 is_paid=mark_paid,
+                paid_at=paid_at,
                 unit_price=shipping_cost,
                 total_price=shipping_cost,
             ))
@@ -710,6 +733,12 @@ class SalesService:
                 _item_ref_of(ci): (int(ci.delivered_quantity or 0), ci.deposit_id)
                 for ci in current_items
             }
+            # Los items se borran y se vuelven a crear: los que siguen en la
+            # venta conservan su estado de pago y sus fechas de entrega/pago.
+            current_dates: dict[str, tuple[bool, datetime | None, datetime | None]] = {
+                _item_ref_of(ci): (bool(ci.is_paid), ci.paid_at, ci.delivered_at)
+                for ci in current_items
+            }
             # Un item que ya estaba en la venta conserva su marca de oferta
             # (la de cuando se cargó), aunque la oferta del producto haya
             # vencido o empezado después; sólo los items nuevos toman la actual.
@@ -752,6 +781,7 @@ class SalesService:
             # so _apply_item_states only deducts/restores the *delta*, not the full qty.
             for ni in normalized_items:
                 prev_qty, prev_deposit_id = current_state.get(ni["item_ref"], (0, None))
+                prev_paid, prev_paid_at, prev_delivered_at = current_dates.get(ni["item_ref"], (False, None, None))
                 self.db.add(SaleItem(
                     sale_id=sale.id,
                     product_id=ni["product_id"],
@@ -760,7 +790,9 @@ class SalesService:
                     quantity=ni["quantity"],
                     delivered_quantity=prev_qty,
                     deposit_id=prev_deposit_id,
-                    is_paid=False,
+                    is_paid=prev_paid,
+                    paid_at=prev_paid_at,
+                    delivered_at=prev_delivered_at,
                     unit_price=ni["unit_price"],
                     total_price=ni["total_price"],
                     es_oferta=current_oferta.get(ni["item_ref"], ni["es_oferta"]),

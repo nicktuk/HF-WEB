@@ -36,6 +36,8 @@ interface VentaDetalleItem {
   cantidad_entregada: number
   entregado: boolean
   pagado?: boolean
+  fecha_entrega?: string | null
+  fecha_pago?: string | null
   precio_unitario: number
   subtotal: number
 }
@@ -43,6 +45,7 @@ interface VentaDetalleItem {
 interface VentaDetalle {
   cancelado: boolean
   pago_estado: 'pendiente' | 'parcial' | 'completo'
+  fecha_pago?: string | null
   pago_por_item: boolean
   items: VentaDetalleItem[]
 }
@@ -240,7 +243,10 @@ function PanelProductos({
         <div className="flex items-center justify-between bg-zinc-50 rounded-lg px-3 py-2">
           <div>
             <p className="text-sm font-medium text-zinc-700">Pago del pedido</p>
-            <Badge label={LABEL_PAGO[detalle.pago_estado]} color={COLOR_POR_ESTADO_GENERICO[detalle.pago_estado]} />
+            <Badge
+              label={detalle.fecha_pago ? `${LABEL_PAGO[detalle.pago_estado]} ${fechaCorta(detalle.fecha_pago)}` : LABEL_PAGO[detalle.pago_estado]}
+              color={COLOR_POR_ESTADO_GENERICO[detalle.pago_estado]}
+            />
           </div>
           {detalle.pago_estado !== 'completo' && (
             <Button size="sm" onClick={onPagarPedido} isLoading={accionando === 'pagar-pedido'} disabled={accionando !== null}>
@@ -261,7 +267,10 @@ function PanelProductos({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {item.entregado ? (
-                <Badge label="Entregado" color={COLOR_POR_ESTADO_GENERICO.completo} />
+                <Badge
+                  label={item.fecha_entrega ? `Entregado ${fechaCorta(item.fecha_entrega)}` : 'Entregado'}
+                  color={COLOR_POR_ESTADO_GENERICO.completo}
+                />
               ) : (
                 <Button
                   size="sm" variant="outline"
@@ -274,7 +283,10 @@ function PanelProductos({
               )}
               {detalle.pago_por_item && (
                 item.pagado ? (
-                  <Badge label="Pagado" color={COLOR_POR_ESTADO_GENERICO.completo} />
+                  <Badge
+                    label={item.fecha_pago ? `Pagado ${fechaCorta(item.fecha_pago)}` : 'Pagado'}
+                    color={COLOR_POR_ESTADO_GENERICO.completo}
+                  />
                 ) : (
                   <Button
                     size="sm" variant="outline"
