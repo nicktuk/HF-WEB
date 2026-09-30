@@ -96,7 +96,7 @@ def _entregas_mayoristas_pendientes(db: Session, vendedor_id: int) -> list[dict]
 def _entregas_minoristas_pendientes(db: Session, vendedor_id: int) -> list[dict]:
     ventas = (
         db.query(Sale)
-        .filter(Sale.seller_id == vendedor_id, Sale.delivered.is_(False))
+        .filter(Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None), Sale.delivered.is_(False))
         .order_by(Sale.created_at.asc())
         .all()
     )
@@ -218,7 +218,7 @@ def get_mi_plata(db: Session, vendedor_id: int, incluir_mayorista: bool = True) 
     sale_ids_con_comision = {c.sale_id for c in comisiones if c.sale_id is not None}
     ventas = (
         db.query(Sale)
-        .filter(Sale.seller_id == vendedor_id, Sale.paid.is_(True))
+        .filter(Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None), Sale.paid.is_(True))
         .order_by(Sale.id.desc())
         .limit(50)
         .all()
@@ -284,7 +284,7 @@ def get_mis_ventas(db: Session, vendedor_id: int, incluir_mayorista: bool = True
     ) if incluir_mayorista else []
     ventas = (
         db.query(Sale)
-        .filter(Sale.seller_id == vendedor_id)
+        .filter(Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None))
         .order_by(Sale.created_at.desc())
         .all()
     )
@@ -339,7 +339,7 @@ def get_historial_venta(db: Session, vendedor_id: int, canal: str, referencia_id
     elif canal == "minorista":
         venta = (
             db.query(Sale)
-            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id)
+            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None))
             .first()
         )
         if not venta:
@@ -411,7 +411,7 @@ def get_detalle_venta(db: Session, vendedor_id: int, canal: str, referencia_id: 
     if canal == "minorista":
         venta = (
             db.query(Sale)
-            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id)
+            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None))
             .first()
         )
         if not venta:
@@ -439,7 +439,11 @@ def marcar_item_entregado(db: Session, vendedor_id: int, canal: str, referencia_
             raise ValidationError("El pedido está cancelado.")
         comercio_pedidos.entregar_item_pedido(db, referencia_id, item_id)
     elif canal == "minorista":
-        venta = db.query(Sale).filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id).first()
+        venta = (
+            db.query(Sale)
+            .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None))
+            .first()
+        )
         if not venta:
             raise NotFoundError("Sale", str(referencia_id))
         from app.services.sales import SalesService
@@ -452,7 +456,11 @@ def marcar_item_entregado(db: Session, vendedor_id: int, canal: str, referencia_
 def marcar_item_pagado(db: Session, vendedor_id: int, referencia_id: int, item_id: int) -> dict:
     """Sólo canal minorista: en mayorista el pago es de todo el pedido a la
     vez (ver marcar_pedido_pagado)."""
-    venta = db.query(Sale).filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id).first()
+    venta = (
+        db.query(Sale)
+        .filter(Sale.id == referencia_id, Sale.seller_id == vendedor_id, Sale.pedido_mayorista_id.is_(None))
+        .first()
+    )
     if not venta:
         raise NotFoundError("Sale", str(referencia_id))
     from app.services.sales import SalesService

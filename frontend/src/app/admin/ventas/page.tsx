@@ -57,7 +57,7 @@ export default function VentasPage() {
   const [dateTo, setDateTo] = useState<string>(() => getSavedFilters()?.dateTo ?? '');
   const [deliveredFilter, setDeliveredFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.deliveredFilter ?? 'all');
   const [paidFilter, setPaidFilter] = useState<'all' | 'yes' | 'no' | 'partial'>(() => getSavedFilters()?.paidFilter ?? 'all');
-  const [origenFilter, setOrigenFilter] = useState<'all' | 'web' | 'admin' | 'vendedor'>(() => getSavedFilters()?.origenFilter ?? 'all');
+  const [origenFilter, setOrigenFilter] = useState<'all' | 'web' | 'admin' | 'vendedor' | 'mayorista'>(() => getSavedFilters()?.origenFilter ?? 'all');
   const [sellerFilter, setSellerFilter] = useState<string>(() => getSavedFilters()?.sellerFilter ?? 'all');
   const [showPartials, setShowPartials] = useState<boolean>(() => getSavedFilters()?.showPartials ?? false);
   const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
@@ -130,6 +130,7 @@ export default function VentasPage() {
     field: 'delivered' | 'paid',
     newValue: boolean,
   ) => {
+    if (sale.pedido_mayorista_id != null) return;
     const key = `${sale.id}-${item.id}-${field}`;
     setTogglingItemKey(key);
     const items = sale.items.map((i) => ({
@@ -1242,13 +1243,14 @@ export default function VentasPage() {
               <label className="text-xs text-gray-500">Origen</label>
               <select
                 value={origenFilter}
-                onChange={(e) => setOrigenFilter(e.target.value as 'all' | 'web' | 'admin' | 'vendedor')}
+                onChange={(e) => setOrigenFilter(e.target.value as 'all' | 'web' | 'admin' | 'vendedor' | 'mayorista')}
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Todos</option>
                 <option value="web">Web</option>
                 <option value="admin">Admin</option>
                 <option value="vendedor">Vendedor</option>
+                <option value="mayorista">Comercios</option>
               </select>
             </div>
             <div className="flex items-center gap-2">
@@ -1347,6 +1349,9 @@ export default function VentasPage() {
                             {sale.origen === 'vendedor' && (
                               <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Bot</span>
                             )}
+                            {sale.origen === 'mayorista' && (
+                              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Comercio</span>
+                            )}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right text-gray-700">{item.quantity}</td>
@@ -1358,7 +1363,9 @@ export default function VentasPage() {
                               type="checkbox"
                               checked={item.delivered}
                               onChange={(e) => handleToggleItem(sale, item, 'delivered', e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                              disabled={sale.pedido_mayorista_id != null}
+                              title={sale.pedido_mayorista_id != null ? 'Se modifica desde el pedido del comercio' : undefined}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                             />
                           )}
                         </td>
@@ -1370,7 +1377,9 @@ export default function VentasPage() {
                               type="checkbox"
                               checked={item.paid}
                               onChange={(e) => handleToggleItem(sale, item, 'paid', e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                              disabled={sale.pedido_mayorista_id != null}
+                              title={sale.pedido_mayorista_id != null ? 'Se modifica desde el pedido del comercio' : undefined}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                             />
                           )}
                         </td>
@@ -1432,7 +1441,14 @@ export default function VentasPage() {
                           >
                             <td className="px-3 py-2 font-medium text-gray-900">#{sale.id}</td>
                             <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatSaleDate(sale.created_at)}</td>
-                            <td className="px-3 py-2 text-gray-700">{sale.customer_name || '-'}</td>
+                            <td className="px-3 py-2 text-gray-700">
+                              <span className="flex items-center gap-1">
+                                {sale.customer_name || '-'}
+                                {sale.origen === 'mayorista' && (
+                                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Comercio</span>
+                                )}
+                              </span>
+                            </td>
                             <td className="px-3 py-2 text-right text-gray-700">
                               {sale.items.length} item{sale.items.length === 1 ? '' : 's'}
                             </td>
@@ -1470,14 +1486,24 @@ export default function VentasPage() {
                             </td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex justify-end gap-3">
-                                <Link
-                                  href={`/admin/ventas/${sale.id}?mode=edit`}
-                                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                  Editar
-                                </Link>
+                                {sale.pedido_mayorista_id != null ? (
+                                  <Link
+                                    href={`/admin/comercios/pedidos?pedido=${sale.pedido_mayorista_id}`}
+                                    className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    Ver pedido
+                                  </Link>
+                                ) : (
+                                  <Link
+                                    href={`/admin/ventas/${sale.id}?mode=edit`}
+                                    className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                    Editar
+                                  </Link>
+                                )}
                                 <Link
                                   href={`/admin/ventas/${sale.id}`}
                                   className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
@@ -1544,7 +1570,9 @@ export default function VentasPage() {
                                                   type="checkbox"
                                                   checked={item.delivered}
                                                   onChange={(e) => handleToggleItem(sale, item, 'delivered', e.target.checked)}
-                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                                                  disabled={sale.pedido_mayorista_id != null}
+                                                  title={sale.pedido_mayorista_id != null ? 'Se modifica desde el pedido del comercio' : undefined}
+                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                                 />
                                               )}
                                             </td>
@@ -1556,7 +1584,9 @@ export default function VentasPage() {
                                                   type="checkbox"
                                                   checked={item.paid}
                                                   onChange={(e) => handleToggleItem(sale, item, 'paid', e.target.checked)}
-                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer"
+                                                  disabled={sale.pedido_mayorista_id != null}
+                                                  title={sale.pedido_mayorista_id != null ? 'Se modifica desde el pedido del comercio' : undefined}
+                                                  className="h-4 w-4 rounded border-gray-300 text-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                                 />
                                               )}
                                             </td>

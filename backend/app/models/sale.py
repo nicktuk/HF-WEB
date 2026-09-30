@@ -36,6 +36,16 @@ class Sale(Base):
     # admin (ComisionMinoristaTramo). Ver services/comisiones.py.
     comision_porcentaje_manual = Column(Numeric(5, 2), nullable=True)
     comision_monto_manual = Column(Numeric(12, 2), nullable=True)
+    # Venta espejo de un pedido de comercio (origen='mayorista'): se genera y
+    # actualiza sola desde el pedido y no se edita a mano. Ver
+    # services/comercio_pedidos.sincronizar_venta_pedido.
+    pedido_mayorista_id = Column(
+        Integer,
+        ForeignKey("pedidos_mayoristas.id", ondelete="CASCADE"),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
 
     seller = relationship("CatalogSeller")
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")

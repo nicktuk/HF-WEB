@@ -524,6 +524,9 @@ export interface Sale {
   seller_id: number;
   seller_nombre: string;
   origen: string;
+  // Venta generada desde un pedido de comercio (origen 'mayorista'): se
+  // modifica desde el pedido, no desde Ventas.
+  pedido_mayorista_id?: number | null;
   delivered: boolean;
   paid: boolean;
   payment_method?: string | null;

@@ -126,6 +126,10 @@ async def assign_vendedor_to_comercio(
         if not v:
             raise HTTPException(404, "Vendedor no encontrado, inactivo o no es mayorista")
     m.vendedor_id = vendedor_id
+    db.flush()
+    # La venta de cada pedido se atribuye al vendedor de la cartera: la
+    # reasigna, o la crea si faltaba por no tener vendedor.
+    comercio_pedidos.sincronizar_ventas_comercio(db, m.id)
     db.commit()
     db.refresh(m)
     return _comercio_dict(m)
@@ -468,6 +472,14 @@ def _pedido_dict(p: PedidoComercio, with_items: bool = False) -> dict:
             }
             if p.comision else None
         ),
+        "venta_id": p.venta.id if p.venta else None,
+        # El pedido debería contar como venta pero el comercio no tiene
+        # vendedor asignado a quien atribuirla.
+        "venta_sin_vendedor": (
+            p.venta is None
+            and comercio_pedidos.lleva_venta(p)
+            and (p.comercio is None or p.comercio.vendedor_id is None)
+        ),
     }
     if with_items:
         d["items"] = [
@@ -522,6 +534,27 @@ async def list_pedidos_comercios(
     return {"total": total, "items": [_pedido_dict(p) for p in items]}
 
 
+@router.get("/comercios/pedidos/generar-ventas")
+async def preview_generar_ventas_pedidos(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Pedidos existentes que cuentan como venta y todavía no la tienen
+    (anteriores a la venta espejo): los que se van a generar y los que no se
+    pueden por no tener vendedor asignado el comercio."""
+    return comercio_pedidos.preview_generar_ventas(db)
+
+
+@router.post("/comercios/pedidos/generar-ventas")
+async def generar_ventas_pedidos(
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """Genera la venta de los pedidos existentes que no la tienen, con la
+    fecha original del pedido y sin tocar stock. Idempotente."""
+    return comercio_pedidos.generar_ventas_pendientes(db)
+
+
 @router.get("/comercios/pedidos/{pedido_id}")
 async def get_pedido_comercio(
     pedido_id: int,
@@ -541,19 +574,17 @@ async def update_pedido_estado(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
-    p = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
-    if not p:
-        raise HTTPException(404, "Pedido no encontrado")
+    """Cambio de estado manual. 'entregado' entrega todo lo pendiente
+    (descuenta stock); salir de un estado de entrega o cancelar devuelve lo
+    entregado; 'entrega_parcial' no se elige a mano (va por /entregar).
+    Ver comercio_pedidos.cambiar_estado."""
     nuevo = body.get("estado")
     if nuevo not in _ESTADOS_PEDIDO:
         raise HTTPException(400, "Estado inválido")
-    if nuevo != p.estado:
-        comercio_pedidos.registrar_estado_historial(db, "mayorista", p.id, nuevo)
-    p.estado = nuevo
-    if nuevo == "confirmado":
-        comercio_pedidos.on_pedido_confirmado(p)
-    db.commit()
-    db.refresh(p)
+    try:
+        p = comercio_pedidos.cambiar_estado(db, pedido_id, nuevo)
+    except AppException as e:
+        raise HTTPException(e.status_code, e.message)
     return _pedido_dict(p)
 
 

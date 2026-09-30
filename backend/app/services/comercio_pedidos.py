@@ -22,11 +22,24 @@ from app.models.comercio import (
     PedidoComercioItem,
     VentaReportada,
 )
+from app.models.sale import Sale, SaleItem
 from app.models.stock import StockPurchase
 from app.services import comisiones
 
 VENTANA_RESERVA_HORAS = 48
 RECHAZOS_PARA_ANTICIPADO = 2
+
+# Estados en los que el pedido ya cuenta como venta (ver sincronizar_venta_pedido).
+ESTADOS_CON_VENTA = ("confirmado", "preparando", "entrega_parcial", "entregado")
+ESTADOS_ENTREGA = ("entrega_parcial", "entregado")
+# metodo_pago del pedido -> nombre del método de cobro en ventas/caja
+# (el de 'mercadopago_hefa' es el mismo que usa el vendedor en minorista,
+# ver vendedor_dashboard.MERCADOPAGO_HEFA_LABEL).
+METODO_PAGO_VENTA = {
+    "efectivo": "Efectivo",
+    "transferencia": "Transferencia",
+    "mercadopago_hefa": "Mercado Pago HEFA",
+}
 
 
 def registrar_estado_historial(db: Session, canal: str, referencia_id: int, estado: str) -> None:
@@ -99,6 +112,217 @@ def _deduct_stock_fifo(db: Session, product_id: int | None, quantity: int) -> No
         raise ValidationError("No se pudo descontar el stock completo")
 
 
+def _restore_stock_lifo(db: Session, product_id: int | None, quantity: int) -> None:
+    """Devuelve stock físico descontado por una entrega que se deshace
+    (inverso de _deduct_stock_fifo: libera primero lo de las compras más
+    nuevas, igual que SalesService._restore_stock)."""
+    if quantity <= 0 or product_id is None:
+        return
+
+    remaining = quantity
+    purchases = (
+        db.query(StockPurchase)
+        .filter(StockPurchase.product_id == product_id)
+        .order_by(StockPurchase.purchase_date.desc(), StockPurchase.id.desc())
+        .all()
+    )
+    for purchase in purchases:
+        if remaining <= 0:
+            break
+        if purchase.out_quantity <= 0:
+            continue
+        restore = min(purchase.out_quantity, remaining)
+        purchase.out_quantity -= restore
+        remaining -= restore
+
+    if remaining > 0:
+        raise ValidationError("No se pudo devolver el stock completo")
+
+
+def _ajustar_entregado(db: Session, item: PedidoComercioItem, nueva_cantidad: int) -> int:
+    """Lleva la cantidad entregada de un ítem a `nueva_cantidad` (acotada a
+    [0, cantidad]) descontando o devolviendo stock por la diferencia.
+    Devuelve el delta aplicado."""
+    nueva_cantidad = max(0, min(nueva_cantidad, item.cantidad))
+    delta = nueva_cantidad - item.cantidad_entregada
+    if delta > 0:
+        _deduct_stock_fifo(db, item.producto_id, delta)
+    elif delta < 0:
+        _restore_stock_lifo(db, item.producto_id, -delta)
+    item.cantidad_entregada = nueva_cantidad
+    return delta
+
+
+def _estado_segun_entregas(pedido: PedidoComercio) -> str:
+    """Estado del pedido según lo entregado. Si ya no queda nada entregado
+    y venía de un estado de entrega, vuelve a 'confirmado'."""
+    if all(item.cantidad_entregada >= item.cantidad for item in pedido.items):
+        return "entregado"
+    if any(item.cantidad_entregada > 0 for item in pedido.items):
+        return "entrega_parcial"
+    return "confirmado" if pedido.estado in ESTADOS_ENTREGA else pedido.estado
+
+
+def _verificar_comision_no_liquidada(pedido: PedidoComercio) -> None:
+    if pedido.comision is not None and pedido.comision.estado != "pendiente":
+        raise ValidationError(
+            "La comisión de este pedido ya fue liquidada: no se puede cancelar."
+        )
+
+
+# ─── Venta espejo ─────────────────────────────────────────────────────────────
+
+def venta_de_pedido(db: Session, pedido_id: int) -> Sale | None:
+    return db.query(Sale).filter(Sale.pedido_mayorista_id == pedido_id).first()
+
+
+def lleva_venta(pedido: PedidoComercio) -> bool:
+    """Un pedido cuenta como venta desde que se confirma (o se cobra) y
+    hasta que se cancela."""
+    if pedido.estado == "cancelado":
+        return False
+    return pedido.estado in ESTADOS_CON_VENTA or pedido.estado_pago == "pagado"
+
+
+def sincronizar_venta_pedido(db: Session, pedido: PedidoComercio) -> Sale | None:
+    """Crea, actualiza o borra la venta espejo del pedido (sales con
+    origen='mayorista' y pedido_mayorista_id) para que ventas, caja y
+    reportes lo cuenten. La venta copia ítems, precios, lo entregado y lo
+    cobrado del pedido, pero:
+    - no descuenta ni devuelve stock (eso lo hace el pedido al entregar);
+    - no genera comisión minorista ni historial para Mis ventas (el pedido
+      ya tiene su comisión mayorista y su propio historial).
+    El vendedor es el de la cartera del comercio; si el comercio no tiene
+    vendedor asignado no se crea (se crea al asignárselo). No hace commit."""
+    venta = venta_de_pedido(db, pedido.id)
+
+    if not lleva_venta(pedido):
+        if venta is not None:
+            db.delete(venta)
+        return None
+
+    comercio = pedido.comercio
+    if comercio is None or comercio.vendedor_id is None:
+        return venta
+
+    if venta is None:
+        venta = Sale(
+            origen="mayorista",
+            pedido_mayorista_id=pedido.id,
+            created_at=pedido.created_at,
+            total_amount=0,
+            delivered_amount=0,
+            paid_amount=0,
+        )
+        db.add(venta)
+
+    pagado = pedido.estado_pago == "pagado"
+    venta.seller_id = comercio.vendedor_id
+    venta.customer_name = comercio.nombre_local
+    venta.phone = comercio.celular
+    venta.email = comercio.email
+    venta.notes = f"Pedido de comercio #{pedido.id}"
+    venta.payment_method = (
+        METODO_PAGO_VENTA.get(pedido.metodo_pago, pedido.metodo_pago) if pagado else None
+    )
+
+    # Fecha de la última entrega que incluyó cada ítem (para delivered_at).
+    ultima_entrega: dict[int, datetime] = {}
+    for entrega in pedido.entregas:
+        for ei in entrega.items:
+            ultima_entrega[ei.pedido_item_id] = entrega.fecha
+
+    # Los ítems se regeneran completos en cada sincronización: son un
+    # reflejo del pedido, no tienen estado propio que preservar.
+    for item in list(venta.items):
+        venta.items.remove(item)
+    ahora = datetime.now(timezone.utc)
+    total = Decimal("0")
+    entregado = Decimal("0")
+    for item in pedido.items:
+        subtotal = Decimal(str(item.subtotal))
+        completo = item.cantidad > 0 and item.cantidad_entregada >= item.cantidad
+        total += subtotal
+        if completo:
+            entregado += subtotal
+        venta.items.append(SaleItem(
+            product_id=item.producto_id,
+            manual_product_name=None if item.producto_id is not None else item.nombre_producto,
+            quantity=item.cantidad,
+            delivered_quantity=item.cantidad_entregada,
+            is_paid=pagado,
+            paid_at=(pedido.fecha_pago or ahora) if pagado else None,
+            delivered_at=ultima_entrega.get(item.id, ahora) if completo else None,
+            unit_price=item.precio_unitario,
+            total_price=subtotal,
+            es_oferta=False,
+        ))
+
+    venta.total_amount = total
+    venta.delivered_amount = entregado
+    venta.delivered = bool(pedido.items) and entregado == total
+    venta.paid = pagado and bool(pedido.items)
+    venta.paid_amount = total if pagado else Decimal("0")
+    return venta
+
+
+def sincronizar_ventas_comercio(db: Session, comercio_id: int) -> None:
+    """Resincroniza la venta de todos los pedidos de un comercio (p. ej. al
+    cambiarle el vendedor asignado). No hace commit."""
+    pedidos = db.query(PedidoComercio).filter(PedidoComercio.comercio_id == comercio_id).all()
+    for pedido in pedidos:
+        sincronizar_venta_pedido(db, pedido)
+
+
+def pedidos_sin_venta(db: Session) -> list[PedidoComercio]:
+    """Pedidos que deberían tener venta y todavía no la tienen (los
+    anteriores a que existiera la venta espejo)."""
+    pedidos = (
+        db.query(PedidoComercio)
+        .outerjoin(Sale, Sale.pedido_mayorista_id == PedidoComercio.id)
+        .filter(Sale.id.is_(None), PedidoComercio.estado != "cancelado")
+        .order_by(PedidoComercio.id.asc())
+        .all()
+    )
+    return [p for p in pedidos if lleva_venta(p)]
+
+
+def _pedido_sin_venta_dict(p: PedidoComercio) -> dict:
+    comercio = p.comercio
+    return {
+        "pedido_id": p.id,
+        "comercio_local": comercio.nombre_local if comercio else None,
+        "estado": p.estado,
+        "estado_pago": p.estado_pago,
+        "total": float(p.total),
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "sin_vendedor": comercio is None or comercio.vendedor_id is None,
+    }
+
+
+def preview_generar_ventas(db: Session) -> dict:
+    pedidos = [_pedido_sin_venta_dict(p) for p in pedidos_sin_venta(db)]
+    return {
+        "a_generar": [p for p in pedidos if not p["sin_vendedor"]],
+        "sin_vendedor": [p for p in pedidos if p["sin_vendedor"]],
+    }
+
+
+def generar_ventas_pendientes(db: Session) -> dict:
+    """Genera la venta de los pedidos existentes que no la tienen, con la
+    fecha original del pedido. No toca stock (lo entregado ya se descontó
+    al entregar). Idempotente."""
+    generadas: list[int] = []
+    sin_vendedor: list[int] = []
+    for pedido in pedidos_sin_venta(db):
+        if sincronizar_venta_pedido(db, pedido) is None:
+            sin_vendedor.append(pedido.id)
+        else:
+            generadas.append(pedido.id)
+    db.commit()
+    return {"generadas": generadas, "sin_vendedor": sin_vendedor}
+
+
 def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComercio:
     if metodo_pago not in ("efectivo", "transferencia", "mercadopago_hefa"):
         raise ValidationError("metodo_pago debe ser 'efectivo', 'transferencia' o 'mercadopago_hefa'")
@@ -106,6 +330,9 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
     pedido = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
     if not pedido:
         raise NotFoundError("PedidoComercio", str(pedido_id))
+
+    if pedido.estado == "cancelado":
+        raise ValidationError("El pedido está cancelado.")
 
     if pedido.estado_pago == "pagado":
         return pedido
@@ -115,6 +342,7 @@ def registrar_pago(db: Session, pedido_id: int, metodo_pago: str) -> PedidoComer
     pedido.fecha_pago = datetime.now(timezone.utc)
 
     sincronizar_comision_pedido(db, pedido)
+    sincronizar_venta_pedido(db, pedido)
 
     db.commit()
     db.refresh(pedido)
@@ -132,7 +360,14 @@ def sincronizar_comision_pedido(db: Session, pedido: PedidoComercio) -> Comision
     llama al registrar el pago y también cuando se edita el override manual
     de un pedido ya pagado. Idempotente por el índice único en pedido_id;
     una comisión ya liquidada no se toca acá. Si el comercio es de la
-    cartera de un vendedor dueño, no hay comisión."""
+    cartera de un vendedor dueño, no hay comisión. Un pedido cancelado no
+    lleva comisión: si tenía una pendiente, se borra."""
+    if pedido.estado == "cancelado":
+        existente = db.query(Comision).filter(Comision.pedido_id == pedido.id).first()
+        if existente is not None and existente.estado == "pendiente":
+            db.delete(existente)
+        return None
+
     if pedido.estado_pago != "pagado":
         return None
 
@@ -203,8 +438,8 @@ def entregar_pedido(
     entregas: dict[int, int],
 ) -> PedidoComercio:
     """Registra una entrega (total o parcial). `entregas` mapea item_id -> nueva
-    cantidad entregada acumulada (no delta). Descuenta stock físico por la
-    diferencia contra lo ya entregado antes."""
+    cantidad entregada acumulada (no delta). Descuenta stock físico por lo que
+    se suma respecto de lo ya entregado, y lo devuelve si se corrige a la baja."""
     if not foto_entrega_url:
         raise ValidationError("La foto de entrega es obligatoria.")
 
@@ -215,6 +450,8 @@ def entregar_pedido(
     )
     if not pedido:
         raise NotFoundError("PedidoComercio", str(pedido_id))
+    if pedido.estado == "cancelado":
+        raise ValidationError("El pedido está cancelado.")
 
     items_by_id = {item.id: item for item in pedido.items}
     for item_id in entregas:
@@ -224,25 +461,23 @@ def entregar_pedido(
     entregado_ahora: dict[int, int] = {}
     for item in pedido.items:
         nueva_cantidad = entregas.get(item.id, item.cantidad_entregada)
-        nueva_cantidad = max(0, min(nueva_cantidad, item.cantidad))
-        delta = nueva_cantidad - item.cantidad_entregada
-        if delta > 0:
-            _deduct_stock_fifo(db, item.producto_id, delta)
-        entregado_ahora[item.id] = delta
-        item.cantidad_entregada = nueva_cantidad
+        entregado_ahora[item.id] = _ajustar_entregado(db, item, nueva_cantidad)
 
     pedido.foto_entrega_url = foto_entrega_url
     _registrar_entrega(pedido, entregado_ahora, foto_entrega_url, "admin")
-    todo_entregado = all(item.cantidad_entregada >= item.cantidad for item in pedido.items)
-    algo_entregado = any(item.cantidad_entregada > 0 for item in pedido.items)
-    estado_anterior = pedido.estado
-    pedido.estado = "entregado" if todo_entregado else ("entrega_parcial" if algo_entregado else pedido.estado)
-    if pedido.estado != estado_anterior:
-        registrar_estado_historial(db, "mayorista", pedido.id, pedido.estado)
+    _actualizar_estado_por_entregas(db, pedido)
+    sincronizar_venta_pedido(db, pedido)
 
     db.commit()
     db.refresh(pedido)
     return pedido
+
+
+def _actualizar_estado_por_entregas(db: Session, pedido: PedidoComercio) -> None:
+    estado_anterior = pedido.estado
+    pedido.estado = _estado_segun_entregas(pedido)
+    if pedido.estado != estado_anterior:
+        registrar_estado_historial(db, "mayorista", pedido.id, pedido.estado)
 
 
 def entregar_item_pedido(db: Session, pedido_id: int, item_id: int) -> PedidoComercio:
@@ -253,23 +488,61 @@ def entregar_item_pedido(db: Session, pedido_id: int, item_id: int) -> PedidoCom
     pedido = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
     if not pedido:
         raise NotFoundError("PedidoComercio", str(pedido_id))
+    if pedido.estado == "cancelado":
+        raise ValidationError("El pedido está cancelado.")
 
     item = next((i for i in pedido.items if i.id == item_id), None)
     if not item:
         raise NotFoundError("PedidoComercioItem", str(item_id))
 
-    delta = item.cantidad - item.cantidad_entregada
-    if delta > 0:
-        _deduct_stock_fifo(db, item.producto_id, delta)
-    item.cantidad_entregada = item.cantidad
+    delta = _ajustar_entregado(db, item, item.cantidad)
     _registrar_entrega(pedido, {item.id: delta}, None, "vendedor")
+    _actualizar_estado_por_entregas(db, pedido)
+    sincronizar_venta_pedido(db, pedido)
 
-    todo_entregado = all(i.cantidad_entregada >= i.cantidad for i in pedido.items)
-    algo_entregado = any(i.cantidad_entregada > 0 for i in pedido.items)
+    db.commit()
+    db.refresh(pedido)
+    return pedido
+
+
+def cambiar_estado(db: Session, pedido_id: int, nuevo: str) -> PedidoComercio:
+    """Cambio de estado manual desde el admin. Mantiene el stock coherente
+    con lo que el estado dice:
+    - 'entregado': entrega todo lo pendiente (descuenta stock).
+    - 'entrega_parcial': no se puede elegir a mano (no dice qué cantidades);
+      va por entregar_pedido().
+    - salir de 'entregado'/'entrega_parcial' hacia un estado anterior o a
+      'cancelado': devuelve todo lo entregado.
+    Cancelar borra la comisión pendiente y la venta del pedido; con la
+    comisión ya liquidada no se puede cancelar."""
+    pedido = db.query(PedidoComercio).filter(PedidoComercio.id == pedido_id).first()
+    if not pedido:
+        raise NotFoundError("PedidoComercio", str(pedido_id))
+    if nuevo == pedido.estado:
+        return pedido
+    if nuevo == "entrega_parcial":
+        raise ValidationError(
+            "Para una entrega parcial usá 'Entregar' y cargá las cantidades entregadas."
+        )
+    if nuevo == "cancelado":
+        _verificar_comision_no_liquidada(pedido)
+
+    if nuevo == "entregado":
+        entregado_ahora = {item.id: _ajustar_entregado(db, item, item.cantidad) for item in pedido.items}
+        _registrar_entrega(pedido, entregado_ahora, None, "admin")
+    elif pedido.estado in ESTADOS_ENTREGA or nuevo == "cancelado":
+        for item in pedido.items:
+            _ajustar_entregado(db, item, 0)
+
+    registrar_estado_historial(db, "mayorista", pedido.id, nuevo)
     estado_anterior = pedido.estado
-    pedido.estado = "entregado" if todo_entregado else ("entrega_parcial" if algo_entregado else pedido.estado)
-    if pedido.estado != estado_anterior:
-        registrar_estado_historial(db, "mayorista", pedido.id, pedido.estado)
+    pedido.estado = nuevo
+    if nuevo == "confirmado":
+        on_pedido_confirmado(pedido)
+
+    if "cancelado" in (nuevo, estado_anterior):
+        sincronizar_comision_pedido(db, pedido)
+    sincronizar_venta_pedido(db, pedido)
 
     db.commit()
     db.refresh(pedido)
@@ -310,6 +583,7 @@ def autocancelar_vencidos(db: Session) -> list[int]:
         pedido.estado = "cancelado"
         pedido.cancelado_por_vencimiento = True
         registrar_estado_historial(db, "mayorista", pedido.id, "cancelado")
+        sincronizar_venta_pedido(db, pedido)
         cancelados_ids.append(pedido.id)
         comercios_afectados.add(pedido.comercio_id)
 

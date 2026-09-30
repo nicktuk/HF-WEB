@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useApiKey } from '@/hooks/useAuth'
 import { uploadImages, resolveImageUrl } from '@/lib/api'
 
@@ -16,6 +17,23 @@ const ESTADOS = {
 } as const
 
 type EstadoPedido = keyof typeof ESTADOS
+
+const ESTADOS_ENTREGA: EstadoPedido[] = ['entregado', 'entrega_parcial']
+
+// Qué le pasa al stock (y a la venta) con cada cambio de estado manual; ver
+// comercio_pedidos.cambiar_estado en el backend.
+function avisoCambioEstado(actual: EstadoPedido, nuevo: EstadoPedido): string | null {
+  if (nuevo === 'cancelado') {
+    return '¿Cancelar el pedido? Se devuelve al stock lo entregado y se elimina su venta.'
+  }
+  if (nuevo === 'entregado') {
+    return '¿Marcar como entregado? Se entrega todo lo pendiente y se descuenta del stock.'
+  }
+  if (ESTADOS_ENTREGA.includes(actual)) {
+    return `¿Pasar a "${ESTADOS[nuevo].label}"? Se devuelve al stock todo lo entregado.`
+  }
+  return null
+}
 
 interface Comision {
   monto: number
@@ -40,6 +58,15 @@ interface Pedido {
   total: number
   notas: string | null
   created_at: string | null
+  venta_id: number | null
+  venta_sin_vendedor: boolean
+}
+
+interface PedidoSinVenta {
+  pedido_id: number
+  comercio_local: string | null
+  total: number
+  sin_vendedor: boolean
 }
 
 interface PedidoDetalle extends Pedido {
@@ -73,6 +100,18 @@ function apiFetch(path: string, apiKey: string, options?: RequestInit) {
   })
 }
 
+async function alertarSiFallo(res: Response) {
+  if (res.ok) return
+  let detalle = 'No se pudo completar la acción.'
+  try {
+    const body = await res.json()
+    if (typeof body?.detail === 'string') detalle = body.detail
+  } catch {
+    // respuesta sin JSON: queda el mensaje genérico
+  }
+  alert(detalle)
+}
+
 export default function PedidosComercioAdminPage() {
   const apiKey = useApiKey() ?? ''
   const [pedidos, setPedidos] = useState<Pedido[]>([])
@@ -82,6 +121,28 @@ export default function PedidosComercioAdminPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [detalle, setDetalle] = useState<PedidoDetalle | null>(null)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [sinVenta, setSinVenta] = useState<{ a_generar: PedidoSinVenta[]; sin_vendedor: PedidoSinVenta[] } | null>(null)
+  const [generando, setGenerando] = useState(false)
+
+  const fetchSinVenta = useCallback(async () => {
+    if (!apiKey) return
+    const res = await apiFetch('/admin/comercios/pedidos/generar-ventas', apiKey)
+    if (res.ok) setSinVenta(await res.json())
+  }, [apiKey])
+
+  useEffect(() => { fetchSinVenta() }, [fetchSinVenta])
+
+  async function generarVentas() {
+    if (!sinVenta) return
+    const n = sinVenta.a_generar.length
+    if (!confirm(`Se van a generar ${n} ventas de pedidos anteriores, con la fecha original de cada pedido. No se toca el stock. ¿Continuar?`)) return
+    setGenerando(true)
+    const res = await apiFetch('/admin/comercios/pedidos/generar-ventas', apiKey, { method: 'POST' })
+    await alertarSiFallo(res)
+    setGenerando(false)
+    await fetchSinVenta()
+    await fetchData()
+  }
 
   const fetchData = useCallback(async () => {
     if (!apiKey) return
@@ -99,6 +160,17 @@ export default function PedidosComercioAdminPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Link "Ver pedido" desde Ventas: /admin/comercios/pedidos?pedido=<id>
+  useEffect(() => {
+    if (!apiKey) return
+    const id = Number(new URLSearchParams(window.location.search).get('pedido'))
+    if (id) {
+      setExpandedId(id)
+      refreshDetalle(id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey])
+
   async function refreshDetalle(id: number) {
     const res = await apiFetch(`/admin/comercios/pedidos/${id}`, apiKey)
     if (res.ok) setDetalle(await res.json())
@@ -114,12 +186,16 @@ export default function PedidosComercioAdminPage() {
     await refreshDetalle(id)
   }
 
-  async function cambiarEstado(id: number, estado: string) {
+  async function cambiarEstado(p: Pedido, estado: EstadoPedido) {
+    const id = p.id
+    const aviso = avisoCambioEstado(p.estado, estado)
+    if (aviso && !confirm(aviso)) return
     setUpdatingId(id)
-    await apiFetch(`/admin/comercios/pedidos/${id}/estado`, apiKey, {
+    const res = await apiFetch(`/admin/comercios/pedidos/${id}/estado`, apiKey, {
       method: 'PATCH',
       body: JSON.stringify({ estado }),
     })
+    await alertarSiFallo(res)
     await fetchData()
     if (expandedId === id) await refreshDetalle(id)
     setUpdatingId(null)
@@ -127,10 +203,11 @@ export default function PedidosComercioAdminPage() {
 
   async function registrarPago(id: number, metodoPago: string) {
     setUpdatingId(id)
-    await apiFetch(`/admin/comercios/pedidos/${id}/pago`, apiKey, {
+    const res = await apiFetch(`/admin/comercios/pedidos/${id}/pago`, apiKey, {
       method: 'POST',
       body: JSON.stringify({ metodo_pago: metodoPago }),
     })
+    await alertarSiFallo(res)
     await fetchData()
     await refreshDetalle(id)
     setUpdatingId(null)
@@ -138,10 +215,11 @@ export default function PedidosComercioAdminPage() {
 
   async function entregarPedido(id: number, fotoUrl: string, entregas: Record<number, number>) {
     setUpdatingId(id)
-    await apiFetch(`/admin/comercios/pedidos/${id}/entregar`, apiKey, {
+    const res = await apiFetch(`/admin/comercios/pedidos/${id}/entregar`, apiKey, {
       method: 'POST',
       body: JSON.stringify({ foto_entrega_url: fotoUrl, entregas }),
     })
+    await alertarSiFallo(res)
     await fetchData()
     await refreshDetalle(id)
     setUpdatingId(null)
@@ -166,6 +244,33 @@ export default function PedidosComercioAdminPage() {
           <p className="text-sm text-gray-500 mt-0.5">{total} pedidos</p>
         </div>
       </div>
+
+      {sinVenta && (sinVenta.a_generar.length > 0 || sinVenta.sin_vendedor.length > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-900 flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[16rem]">
+            {sinVenta.a_generar.length > 0 && (
+              <p>
+                Hay <strong>{sinVenta.a_generar.length}</strong> pedidos anteriores que todavía no figuran en Ventas.
+              </p>
+            )}
+            {sinVenta.sin_vendedor.length > 0 && (
+              <p className="text-xs mt-0.5">
+                {sinVenta.sin_vendedor.length} pedidos no pueden pasar a Ventas porque su comercio no tiene vendedor asignado
+                ({sinVenta.sin_vendedor.map(p => `#${p.pedido_id}`).join(', ')}).
+              </p>
+            )}
+          </div>
+          {sinVenta.a_generar.length > 0 && (
+            <button
+              onClick={generarVentas}
+              disabled={generando}
+              className="bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+            >
+              {generando ? 'Generando...' : 'Generar ventas'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3">
         <select
@@ -221,6 +326,18 @@ export default function PedidosComercioAdminPage() {
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${estadoInfo.color}`}>
                           {estadoInfo.label}
                         </span>
+                        {p.venta_id != null && (
+                          <Link
+                            href={`/admin/ventas/${p.venta_id}`}
+                            onClick={e => e.stopPropagation()}
+                            className="block mt-1 text-[11px] text-blue-600 hover:underline"
+                          >
+                            Venta #{p.venta_id}
+                          </Link>
+                        )}
+                        {p.venta_sin_vendedor && (
+                          <p className="mt-1 text-[11px] text-amber-700">Asigná un vendedor al comercio para registrar la venta</p>
+                        )}
                       </td>
                       <td className="px-4 py-3" onClick={() => toggleDetalle(p.id)}>
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.estado_pago === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -237,11 +354,14 @@ export default function PedidosComercioAdminPage() {
                         <select
                           disabled={isUpdating}
                           value={p.estado}
-                          onChange={e => cambiarEstado(p.id, e.target.value)}
+                          onChange={e => cambiarEstado(p, e.target.value as EstadoPedido)}
                           className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:opacity-50"
                         >
                           {Object.entries(ESTADOS).map(([k, v]) => (
-                            <option key={k} value={k}>{v.label}</option>
+                            // La entrega parcial se carga con cantidades desde el panel de Entrega.
+                            <option key={k} value={k} disabled={k === 'entrega_parcial' && p.estado !== 'entrega_parcial'}>
+                              {v.label}
+                            </option>
                           ))}
                         </select>
                       </td>
