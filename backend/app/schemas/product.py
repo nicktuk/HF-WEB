@@ -308,7 +308,7 @@ class ProductListResponse(BaseModel):
 class ProductBulkAction(BaseModel):
     """Schema for bulk actions on products."""
     product_ids: List[int] = Field(..., min_length=1, max_length=100)
-    action: str = Field(..., pattern="^(enable|disable|delete)$")
+    action: str = Field(..., pattern="^(enable|disable|delete|clear_sale)$")
 
 
 class ProductBulkMarkup(BaseModel):

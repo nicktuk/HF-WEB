@@ -79,6 +79,7 @@ export default function ProductsPage() {
   const [aiJob, setAiJob] = useState<AIJobStatus | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
   const [isBulkDisabling, setIsBulkDisabling] = useState(false);
+  const [isClearingSale, setIsClearingSale] = useState(false);
   const [showSupplierDisableModal, setShowSupplierDisableModal] = useState(false);
   const [supplierToDisable, setSupplierToDisable] = useState('');
   const [supplierDisableResult, setSupplierDisableResult] = useState<{ count: number } | null>(null);
@@ -116,6 +117,22 @@ export default function ProductsPage() {
       showToast('Error al quitar marca', 'error');
     } finally {
       setIsRemovingBadge(false);
+    }
+  };
+
+  const handleClearSaleSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`¿Quitar el precio de oferta de ${selectedIds.length} producto(s)? Esta acción no se puede deshacer.`)) return;
+    setIsClearingSale(true);
+    try {
+      const result = await adminApi.bulkAction(apiKey, selectedIds, 'clear_sale');
+      showToast(result.message, 'success');
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch {
+      showToast('Error al quitar ofertas', 'error');
+    } finally {
+      setIsClearingSale(false);
     }
   };
 
@@ -630,6 +647,16 @@ export default function ProductsPage() {
               >
                 <TrendingUp className="mr-1 h-4 w-4" />
                 Quitar Top
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleClearSaleSelected}
+                disabled={isClearingSale}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <Tag className="mr-1 h-4 w-4" />
+                Quitar oferta
               </Button>
               <Button
                 size="sm"
