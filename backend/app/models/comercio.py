@@ -183,6 +183,8 @@ class PedidoComercio(Base):
     comercio = relationship("Comercio", back_populates="pedidos")
     items = relationship("PedidoComercioItem", back_populates="pedido", cascade="all, delete-orphan")
     comision = relationship("Comision", back_populates="pedido", uselist=False)
+    # Venta espejo en `sales` (ver comercio_pedidos.sincronizar_venta_pedido).
+    venta = relationship("Sale", uselist=False, viewonly=True)
     entregas = relationship(
         "PedidoComercioEntrega",
         back_populates="pedido",

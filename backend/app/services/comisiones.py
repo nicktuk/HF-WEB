@@ -154,12 +154,18 @@ def listar_comisiones(
 
 def _ventas_pagadas_sin_comision(db: Session):
     """Ventas pagadas sin comisión generada, sin contar las de vendedores
-    dueños (que no llevan comisión)."""
+    dueños (que no llevan comisión) ni las ventas espejo de pedidos de
+    comercio (su comisión es la mayorista del pedido)."""
     return (
         db.query(Sale)
         .join(CatalogSeller, CatalogSeller.id == Sale.seller_id)
         .outerjoin(Comision, Comision.sale_id == Sale.id)
-        .filter(Sale.paid.is_(True), Comision.id.is_(None), CatalogSeller.es_dueno.is_(False))
+        .filter(
+            Sale.paid.is_(True),
+            Comision.id.is_(None),
+            CatalogSeller.es_dueno.is_(False),
+            Sale.pedido_mayorista_id.is_(None),
+        )
     )
 
 
@@ -359,6 +365,10 @@ def sincronizar_comision_minorista(db: Session, sale: Sale, fecha: datetime | No
 
     `fecha` define la semana de una comisión nueva (default: ahora, o sea
     la semana en que la venta quedó pagada)."""
+    if sale.pedido_mayorista_id is not None:
+        # Venta espejo de un pedido de comercio: la comisión es la mayorista
+        # del pedido (comercio_pedidos.sincronizar_comision_pedido).
+        return None
     if not sale.paid:
         return None
 

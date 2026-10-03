@@ -117,6 +117,7 @@ class SaleResponse(BaseModel):
     seller_id: int
     seller_nombre: str
     origen: str
+    pedido_mayorista_id: Optional[int] = None
     delivered: bool
     paid: bool
     payment_method: Optional[str] = None

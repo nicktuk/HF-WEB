@@ -17,6 +17,11 @@ from app.services.codigo_amba import classify_shipping_zone
 from app.services import comisiones
 
 
+VENTA_DE_PEDIDO_MSG = (
+    "Esta venta viene de un pedido de comercio: se modifica desde el pedido."
+)
+
+
 class SalesService:
     def __init__(self, db: Session):
         self.db = db
@@ -284,6 +289,11 @@ class SalesService:
                     paid_amount += Decimal(str(item.total_price or 0)).quantize(Decimal("0.01"))
             sale.paid_amount = paid_amount.quantize(Decimal("0.01"))
             sale.paid = has_items and paid_all
+
+        # La venta espejo de un pedido de comercio no lleva historial ni
+        # comisión minorista: los tiene el pedido.
+        if sale.pedido_mayorista_id is not None:
+            return
 
         # Historial para Mis ventas del vendedor: sólo el paso hacia adelante
         # (false -> true) es un hito que le importa ver en el timeline; un
@@ -610,10 +620,16 @@ class SalesService:
 
         return query.order_by(Sale.created_at.desc()).limit(limit).all()
 
+    @staticmethod
+    def _verificar_editable(sale: Sale) -> None:
+        if sale.pedido_mayorista_id is not None:
+            raise ValidationError(VENTA_DE_PEDIDO_MSG)
+
     def update_installment(self, sale_id: int, installment_id: int, data) -> Sale:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
+        self._verificar_editable(sale)
 
         installment = (
             self.db.query(SaleInstallment)
@@ -665,6 +681,7 @@ class SalesService:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
+        self._verificar_editable(sale)
 
         if comision_automatica:
             sale.comision_porcentaje_manual = None
@@ -839,6 +856,7 @@ class SalesService:
 
     def mark_item_delivered(self, sale_id: int, item_id: int) -> Sale:
         sale = self.get_sale(sale_id)
+        self._verificar_editable(sale)
         item = next((i for i in sale.items if i.id == item_id), None)
         if not item:
             raise NotFoundError("SaleItem", str(item_id))
@@ -849,6 +867,7 @@ class SalesService:
 
     def mark_item_paid(self, sale_id: int, item_id: int, payment_method: str) -> Sale:
         sale = self.get_sale(sale_id)
+        self._verificar_editable(sale)
         item = next((i for i in sale.items if i.id == item_id), None)
         if not item:
             raise NotFoundError("SaleItem", str(item_id))
@@ -878,6 +897,14 @@ class SalesService:
         sale = self.db.query(Sale).filter(Sale.id == sale_id).first()
         if not sale:
             raise NotFoundError("Sale", str(sale_id))
+
+        if sale.pedido_mayorista_id is not None:
+            # Borrar la venta de un pedido de comercio = cancelar el pedido:
+            # devuelve el stock entregado, borra la comisión pendiente y la
+            # venta (ver comercio_pedidos.cambiar_estado).
+            from app.services import comercio_pedidos
+            comercio_pedidos.cambiar_estado(self.db, sale.pedido_mayorista_id, "cancelado")
+            return
 
         items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
         for item in items:

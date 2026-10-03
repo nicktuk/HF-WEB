@@ -183,8 +183,25 @@ export default function SaleDetailPage() {
     }));
   }, [isEditing, editItems, sale?.items]);
 
+  const esDePedido = sale?.pedido_mayorista_id != null;
+
+  // La venta de un pedido de comercio no se edita acá (ni con ?mode=edit).
+  useEffect(() => {
+    if (esDePedido) setIsEditing(false);
+  }, [esDePedido]);
+
   const handleDelete = async () => {
     if (!sale) return;
+    if (esDePedido) {
+      if (!confirm('Esta venta viene de un pedido de comercio. Eliminarla cancela el pedido: se devuelve al stock lo entregado. ¿Continuar?')) return;
+      try {
+        await deleteSale.mutateAsync({ saleId: sale.id });
+        router.push('/admin/ventas');
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al eliminar la venta');
+      }
+      return;
+    }
     if (!confirm('¿Eliminar esta venta y revertir stock entregado?')) return;
     try {
       await deleteSale.mutateAsync({ saleId: sale.id });
@@ -365,7 +382,11 @@ export default function SaleDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing ? (
+          {esDePedido ? (
+            <Link href={`/admin/comercios/pedidos?pedido=${sale.pedido_mayorista_id}`}>
+              <Button variant="outline">Ver pedido #{sale.pedido_mayorista_id}</Button>
+            </Link>
+          ) : !isEditing ? (
             <Button onClick={() => setIsEditing(true)}>Editar venta</Button>
           ) : (
             <>
@@ -383,6 +404,13 @@ export default function SaleDetailPage() {
           </Button>
         </div>
       </div>
+
+      {esDePedido && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-900">
+          Venta de un pedido de comercio: se actualiza sola con el pedido (confirmación, cobro y entregas).
+          Para cambiarla, modificá el pedido.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
