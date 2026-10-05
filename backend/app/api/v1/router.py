@@ -1,21 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, comision_minorista, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
-from app.api.v1.endpoints.import_scorer import (
-    templates as is_templates,
-    retailers as is_retailers,
-    outlets as is_outlets,
-    rubros as is_rubros,
-    dashboard as is_dashboard,
-    carritos as is_carritos,
-    productos as is_productos,
-    scrape as is_scrape,
-    analytics as is_analytics,
-    config_endpoint as is_config,
-    lista_caza as is_lista_caza,
-    radar as is_radar,
-)
+from app.api.v1.endpoints import public, admin, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, comision_minorista, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
 
 api_router = APIRouter()
 
@@ -104,13 +90,6 @@ api_router.include_router(
     tags=["bot-vendedores"]
 )
 
-# Source websites management
-api_router.include_router(
-    source_websites.router,
-    prefix="/admin/source-websites",
-    tags=["source-websites"]
-)
-
 # Categories management
 api_router.include_router(
     categories.router,
@@ -153,64 +132,3 @@ api_router.include_router(
     tags=["expenses"]
 )
 
-# ── Import Scorer ──────────────────────────────────────────────────────────────
-api_router.include_router(
-    is_dashboard.router,
-    prefix="/admin/import-scorer",
-    tags=["import-scorer"],
-)
-api_router.include_router(
-    is_templates.router,
-    prefix="/admin/import-scorer/templates",
-    tags=["import-scorer-templates"],
-)
-api_router.include_router(
-    is_retailers.router,
-    prefix="/admin/import-scorer/retailers",
-    tags=["import-scorer-retailers"],
-)
-api_router.include_router(
-    is_outlets.router,
-    prefix="/admin/import-scorer/outlets",
-    tags=["import-scorer-outlets"],
-)
-api_router.include_router(
-    is_rubros.router,
-    prefix="/admin/import-scorer/rubros",
-    tags=["import-scorer-rubros"],
-)
-api_router.include_router(
-    is_carritos.router,
-    prefix="/admin/import-scorer/carritos",
-    tags=["import-scorer-carritos"],
-)
-api_router.include_router(
-    is_productos.router,
-    prefix="/admin/import-scorer/productos",
-    tags=["import-scorer-productos"],
-)
-api_router.include_router(
-    is_scrape.router,
-    prefix="/admin/import-scorer/scrape",
-    tags=["import-scorer-scrape"],
-)
-api_router.include_router(
-    is_analytics.router,
-    prefix="/admin/import-scorer/analytics",
-    tags=["import-scorer-analytics"],
-)
-api_router.include_router(
-    is_config.router,
-    prefix="/admin/import-scorer/config",
-    tags=["import-scorer-config"],
-)
-api_router.include_router(
-    is_lista_caza.router,
-    prefix="/admin/import-scorer/listas-caza",
-    tags=["import-scorer-listas-caza"],
-)
-api_router.include_router(
-    is_radar.router,
-    prefix="/admin/import-scorer/radar",
-    tags=["import-scorer-radar"],
-)

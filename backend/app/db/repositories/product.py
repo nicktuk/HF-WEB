@@ -1,6 +1,6 @@
 """Repository for Product operations."""
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, case, func
 
@@ -23,19 +23,6 @@ class ProductRepository(BaseRepository[Product]):
             self.db.query(Product)
             .options(joinedload(Product.images))
             .filter(Product.id == id)
-            .first()
-        )
-
-    def get_by_slug(self, source_website_id: int, slug: str) -> Optional[Product]:
-        """Get product by source website and slug (unique combination)."""
-        return (
-            self.db.query(Product)
-            .filter(
-                and_(
-                    Product.source_website_id == source_website_id,
-                    Product.slug == slug
-                )
-            )
             .first()
         )
 
@@ -249,7 +236,6 @@ class ProductRepository(BaseRepository[Product]):
         skip: int = 0,
         limit: int = 100,
         enabled: Optional[bool] = None,
-        source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category_id: Optional[int] = None,
         category: Optional[str] = None,
@@ -269,8 +255,6 @@ class ProductRepository(BaseRepository[Product]):
             self.db.query(Product)
             .options(
                 joinedload(Product.images),
-                joinedload(Product.source_website),
-                joinedload(Product.market_price_stats),
                 joinedload(Product.category_ref),
             )
         )
@@ -294,8 +278,6 @@ class ProductRepository(BaseRepository[Product]):
         if enabled is not None:
             query = query.filter(Product.enabled == enabled)
 
-        if source_website_id:
-            query = query.filter(Product.source_website_id == source_website_id)
 
         if without_category:
             query = query.filter(Product.category_id.is_(None))
@@ -358,31 +340,6 @@ class ProductRepository(BaseRepository[Product]):
             .all()
         )
 
-    def get_products_needing_rescrape(self, hours: int = 24) -> List[Product]:
-        """Get enabled products that need to be re-scraped."""
-        threshold = datetime.utcnow() - timedelta(hours=hours)
-        return (
-            self.db.query(Product)
-            .filter(
-                and_(
-                    Product.enabled == True,
-                    or_(
-                        Product.last_scraped_at < threshold,
-                        Product.last_scraped_at == None
-                    )
-                )
-            )
-            .all()
-        )
-
-    def get_by_source_website(self, source_website_id: int) -> List[Product]:
-        """Get all products from a specific source website."""
-        return (
-            self.db.query(Product)
-            .filter(Product.source_website_id == source_website_id)
-            .all()
-        )
-
     def get_categories(self, only_enabled: bool = True) -> List[str]:
         """Get list of unique categories from enabled products."""
         query = self.db.query(Category.name).join(Product, Product.category_id == Category.id)
@@ -422,7 +379,6 @@ class ProductRepository(BaseRepository[Product]):
     def count_admin(
         self,
         enabled: Optional[bool] = None,
-        source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category_id: Optional[int] = None,
         category: Optional[str] = None,
@@ -458,8 +414,6 @@ class ProductRepository(BaseRepository[Product]):
         if enabled is not None:
             query = query.filter(Product.enabled == enabled)
 
-        if source_website_id:
-            query = query.filter(Product.source_website_id == source_website_id)
 
         if without_category:
             query = query.filter(Product.category_id.is_(None))

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { publicApi, adminApi } from '@/lib/api';
-import type { ProductCreateForm, ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem, DepositStockItem, ProductComercioConfigUpdateForm } from '@/types';
+import type { ProductCreateManualForm, ProductUpdateForm, SaleCreateForm, ProductPublic, ExpenseCreateForm, ColorStockItem, DepositStockItem, ProductComercioConfigUpdateForm } from '@/types';
 
 // ============================================
 // Public Hooks
@@ -75,7 +75,6 @@ export function useAdminProducts(
       page?: number;
       limit?: number;
       enabled?: boolean;
-      source_website_id?: number;
       search?: string;
       category_id?: number;
       category?: string;
@@ -96,36 +95,6 @@ export function useAdminProducts(
     queryFn: () => adminApi.getProducts(apiKey, params),
     staleTime: 30 * 1000, // 30 seconds for admin
     enabled: !!apiKey,
-  });
-}
-
-export function usePendingPriceChanges(apiKey: string) {
-  return useQuery({
-    queryKey: ['pending-price-changes'],
-    queryFn: () => adminApi.getPendingPriceChanges(apiKey),
-    staleTime: 30 * 1000,
-    enabled: !!apiKey,
-  });
-}
-
-export function useApprovePendingPriceChanges(apiKey: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (productIds: number[]) => adminApi.approvePendingPriceChanges(apiKey, productIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-price-changes'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    },
-  });
-}
-
-export function useRejectPendingPriceChanges(apiKey: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (productIds: number[]) => adminApi.rejectPendingPriceChanges(apiKey, productIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-price-changes'] });
-    },
   });
 }
 
@@ -457,29 +426,16 @@ export function useAdminProduct(apiKey: string, id: number) {
   });
 }
 
-export function useCreateProduct(apiKey: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: ProductCreateForm) => adminApi.createProduct(apiKey, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    },
-  });
-}
-
 export function useBulkSetWholesaleMarkup(apiKey: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       markupPercentage,
       onlyEnabled,
-      sourceWebsiteId,
     }: {
       markupPercentage: number;
       onlyEnabled?: boolean;
-      sourceWebsiteId?: number;
-    }) => adminApi.bulkSetWholesaleMarkup(apiKey, markupPercentage, onlyEnabled, sourceWebsiteId),
+    }) => adminApi.bulkSetWholesaleMarkup(apiKey, markupPercentage, onlyEnabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
@@ -525,60 +481,14 @@ export function useDeleteProduct(apiKey: string) {
   });
 }
 
-export function useRescrapeProduct(apiKey: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => adminApi.rescrapeProduct(apiKey, id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    },
-  });
-}
-
-export function useMarketPrices(apiKey: string, productId: number) {
-  return useQuery({
-    queryKey: ['market-prices', productId],
-    queryFn: () => adminApi.getMarketPrices(apiKey, productId),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!apiKey && !!productId,
-  });
-}
-
-export function useRefreshMarketPrices(apiKey: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ productId, options }: {
-      productId: number;
-      options?: { force?: boolean; search_query?: string };
-    }) => adminApi.refreshMarketPrices(apiKey, productId, options),
-    onSuccess: (_, { productId }) => {
-      queryClient.invalidateQueries({ queryKey: ['market-prices', productId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product', productId] });
-    },
-  });
-}
-
-export function usePriceComparison(apiKey: string, productId: number) {
-  return useQuery({
-    queryKey: ['price-comparison', productId],
-    queryFn: () => adminApi.getPriceComparison(apiKey, productId),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!apiKey && !!productId,
-  });
-}
-
 export function useBulkSetMarkup(apiKey: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ markupPercentage, onlyEnabled, sourceWebsiteId }: {
+    mutationFn: ({ markupPercentage, onlyEnabled }: {
       markupPercentage: number;
       onlyEnabled?: boolean;
-      sourceWebsiteId?: number;
-    }) => adminApi.bulkSetMarkup(apiKey, markupPercentage, onlyEnabled, sourceWebsiteId),
+    }) => adminApi.bulkSetMarkup(apiKey, markupPercentage, onlyEnabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
@@ -668,17 +578,6 @@ export function useDisableSelected(apiKey: string) {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['public-products'] });
     },
-  });
-}
-
-// Source Websites
-
-export function useSourceWebsites(apiKey: string) {
-  return useQuery({
-    queryKey: ['source-websites'],
-    queryFn: () => adminApi.getSourceWebsites(apiKey),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!apiKey,
   });
 }
 

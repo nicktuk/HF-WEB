@@ -5,7 +5,6 @@ interface AdminFiltersState {
   // Product filters
   search: string;
   enabledFilter: boolean | undefined;
-  sourceFilter: number | undefined;
   categoryFilter: string | undefined;
   subcategoryFilter: string | undefined;
   featuredFilter: boolean | undefined;
@@ -22,7 +21,6 @@ interface AdminFiltersState {
   // Actions
   setSearch: (search: string) => void;
   setEnabledFilter: (enabled: boolean | undefined) => void;
-  setSourceFilter: (sourceId: number | undefined) => void;
   setCategoryFilter: (category: string | undefined) => void;
   setSubcategoryFilter: (subcategory: string | undefined) => void;
   setFeaturedFilter: (featured: boolean | undefined) => void;
@@ -41,7 +39,6 @@ interface AdminFiltersState {
 const initialState = {
   search: '',
   enabledFilter: undefined as boolean | undefined,
-  sourceFilter: undefined as number | undefined,
   categoryFilter: undefined as string | undefined,
   subcategoryFilter: undefined as string | undefined,
   featuredFilter: undefined as boolean | undefined,
@@ -63,7 +60,6 @@ export const useAdminFilters = create<AdminFiltersState>()(
 
       setSearch: (search) => set({ search, page: 1 }),
       setEnabledFilter: (enabledFilter) => set({ enabledFilter, page: 1 }),
-      setSourceFilter: (sourceFilter) => set({ sourceFilter, page: 1 }),
       setCategoryFilter: (categoryFilter) => set({ categoryFilter, subcategoryFilter: undefined, page: 1 }),
       setSubcategoryFilter: (subcategoryFilter) => set({ subcategoryFilter, page: 1 }),
       setFeaturedFilter: (featuredFilter) => set({ featuredFilter, page: 1 }),

@@ -1,13 +1,12 @@
 # Catálogo de Revendedor
 
-Sistema de catálogo web para revendedores con inteligencia de precios de mercado.
+Sistema de catálogo web y gestión para revendedores.
 
 ## Características
 
-- **Múltiples webs de origen**: Configura varias fuentes de productos (mayoristas)
-- **Scraping automático**: Extrae información de productos automáticamente
-- **Inteligencia de precios**: Compara tus precios con el mercado (MercadoLibre, etc.)
-- **Panel administrativo**: Gestiona productos, precios y markup
+- **Panel administrativo**: Gestiona productos (carga manual), precios y markup
+- **Compras y stock**: Compras a proveedores, depósitos y stock por producto
+- **Ventas**: Minoristas, pedidos y canal mayorista (comercios)
 - **Catálogo público**: Web responsive para tus clientes
 
 ## Estructura del Proyecto
@@ -20,11 +19,9 @@ Sistema de catálogo web para revendedores con inteligencia de precios de mercad
 │   │   ├── db/       # Database, repositorios
 │   │   ├── models/   # SQLAlchemy models
 │   │   ├── schemas/  # Pydantic schemas
-│   │   ├── scrapers/ # Web scrapers
 │   │   ├── services/ # Business logic
 │   │   └── main.py   # Entry point
-│   ├── alembic/      # Migraciones DB
-│   └── scripts/      # Scripts auxiliares
+│   └── alembic/      # Migraciones DB
 │
 └── frontend/         # Next.js (React)
     └── src/
@@ -64,9 +61,6 @@ createdb catalog_db  # o usar pgAdmin
 
 # Ejecutar migraciones
 alembic upgrade head
-
-# Seed inicial
-python -m scripts.seed_data
 
 # Ejecutar servidor
 uvicorn app.main:app --reload
@@ -113,37 +107,17 @@ NEXT_PUBLIC_SITE_NAME=HeFa - Productos
 
 ## Uso
 
-### 1. Configurar Web de Origen
+### 1. Agregar Productos
 
-1. Acceder al admin: `/admin`
-2. Ingresar API Key
-3. Ir a "Webs Origen"
-4. Agregar la web mayorista (ya viene pre-configurada `newredmayorista`)
+1. Acceder al admin: `/admin` e ingresar la API Key
+2. Ir a "Productos" → "Agregar Producto"
+3. Completar nombre, precio, categoría e imágenes
 
-### 2. Agregar Productos
-
-1. Ir a "Productos"
-2. Click en "Agregar Producto"
-3. Seleccionar la web de origen
-4. Ingresar el **slug** del producto (la parte de la URL)
-   - Ejemplo: `heladera-bgh-inox-404l` de la URL `https://newredmayorista.com.ar/producto/heladera-bgh-inox-404l/`
-5. El sistema scrapeará la información automáticamente
-
-### 3. Configurar Precios
+### 2. Configurar Precios
 
 1. Editar el producto
-2. Ajustar el **markup** (porcentaje de ganancia)
-3. Usar el widget de **inteligencia de precios** para comparar con el mercado
-4. Habilitar el producto para mostrarlo en el catálogo público
-
-### 4. Inteligencia de Precios
-
-- Click en "Actualizar precios de mercado" para buscar productos similares
-- El sistema buscará en MercadoLibre y calculará:
-  - Precio promedio
-  - Precio mínimo
-  - Precio máximo
-- Te indicará si tu precio es competitivo
+2. Ajustar el **markup** (porcentaje de ganancia) o fijar un precio
+3. Habilitar el producto para mostrarlo en el catálogo público
 
 ## Deploy
 
@@ -183,12 +157,9 @@ docker-compose up
 ### Admin (requiere `X-Admin-API-Key` header)
 
 - `GET /api/v1/admin/products` - Listar productos
-- `POST /api/v1/admin/products` - Crear (scrapear)
+- `POST /api/v1/admin/products/manual` - Crear
 - `PATCH /api/v1/admin/products/{id}` - Actualizar
 - `DELETE /api/v1/admin/products/{id}` - Eliminar
-- `POST /api/v1/admin/products/{id}/rescrape` - Re-scrapear
-- `GET /api/v1/admin/products/{id}/market-prices` - Precios de mercado
-- `POST /api/v1/admin/products/{id}/market-prices/refresh` - Actualizar precios
 
 ## Tecnologías
 
@@ -196,8 +167,7 @@ docker-compose up
 - FastAPI (Python)
 - SQLAlchemy 2.0
 - PostgreSQL
-- httpx + BeautifulSoup (scraping)
-- APScheduler (tareas programadas)
+- Alembic (migraciones)
 
 ### Frontend
 - Next.js 14 (App Router)
