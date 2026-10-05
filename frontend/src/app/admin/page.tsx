@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Package, Eye, EyeOff, TrendingUp, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Eye, EyeOff, ChevronRight, ChevronDown, ExternalLink, DollarSign, Boxes, Truck, CreditCard, Clock, Users, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MonthlySummaryCard } from '@/components/admin/MonthlySummaryCard';
 import { useApiKey } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, usePurchasesByPayer } from '@/hooks/useProducts';
+import { useAdminProducts, usePurchasesByPayer } from '@/hooks/useProducts';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api';
 import type { OrderStats } from '@/types';
@@ -17,7 +17,6 @@ interface PriceRangeProduct {
   original_name: string;
   price: number | null;
   sku: string | null;
-  source_name: string | null;
   image: string | null;
 }
 
@@ -90,7 +89,6 @@ export default function AdminDashboard() {
   // Get counts for enabled/disabled
   const { data: enabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: true });
   const { data: disabledData } = useAdminProducts(apiKey || '', { limit: 1, enabled: false });
-  const { data: sourceWebsites } = useSourceWebsites(apiKey || '');
 
   // Get price range stats
   const { data: priceRangeData } = useQuery<PriceRangeResponse>({
@@ -587,7 +585,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
           <div className="h-1 bg-blue-500" />
           <div className="p-5 flex items-start justify-between">
@@ -627,18 +625,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-          <div className="h-1 bg-violet-500" />
-          <div className="p-5 flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Webs de Origen</p>
-              <p className="mt-2 text-3xl font-bold text-zinc-900 tabular-nums">{sourceWebsites?.items.length || 0}</p>
-            </div>
-            <div className="rounded-lg bg-violet-50 p-2">
-              <TrendingUp className="h-5 w-5 text-violet-500" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Order Stats */}
@@ -742,9 +728,6 @@ export default function AdminDashboard() {
                               <th className="px-4 py-2 text-left text-xs font-medium text-zinc-500 uppercase">
                                 Producto
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-zinc-500 uppercase">
-                                Fuente
-                              </th>
                               <th className="px-4 py-2 text-right text-xs font-medium text-zinc-500 uppercase">
                                 Precio
                               </th>
@@ -770,9 +753,6 @@ export default function AdminDashboard() {
                                       <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                     </Link>
                                   </div>
-                                </td>
-                                <td className="px-4 py-2 text-zinc-600">
-                                  {product.source_name || '-'}
                                 </td>
                                 <td className="px-4 py-2 text-right font-medium text-zinc-900">
                                   {formatPrice(product.price)}
@@ -869,55 +849,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       )}
-
-      {/* Source Websites */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold text-zinc-900">
-            Webs de Origen
-          </h2>
-        </CardHeader>
-        <CardContent>
-          {sourceWebsites?.items && sourceWebsites.items.length > 0 ? (
-            <ul className="space-y-2">
-              {sourceWebsites.items.map((website) => (
-                <li
-                  key={website.id}
-                  className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-zinc-900">
-                      {website.display_name}
-                    </p>
-                    <p className="text-sm text-zinc-500">
-                      {website.enabled_product_count} activos / {website.product_count} total
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      website.is_active
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-zinc-100 text-zinc-700'
-                    }`}
-                  >
-                    {website.is_active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-zinc-500 text-center py-4">
-              No hay webs de origen configuradas
-            </p>
-          )}
-          <Link
-            href="/admin/source-websites"
-            className="block mt-4 text-center text-sm text-primary-600 hover:text-primary-700"
-          >
-            Gestionar webs de origen <ChevronRight className="inline h-4 w-4" />
-          </Link>
-        </CardContent>
-      </Card>
 
       {/* Monthly Summary Chart */}
       <MonthlySummaryCard apiKey={apiKey || ''} />

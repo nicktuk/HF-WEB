@@ -11,7 +11,6 @@ from app.models.catalog_seller import CatalogSeller
 from app.models.comercio import Comercio, Comision, PedidoComercio, PedidoComercioItem
 from app.models.product import Product
 from app.models.sale import Sale
-from app.models.source_website import SourceWebsite
 from app.models.stock import StockPurchase
 from app.services import comercio_pedidos, vendedor_dashboard
 from app.services.sales import SalesService
@@ -47,12 +46,9 @@ def comercio(db, vendedor):
 
 @pytest.fixture
 def productos(db):
-    web = SourceWebsite(name="web", display_name="Web", base_url="https://example.com")
-    db.add(web)
-    db.flush()
     prods = []
     for i in range(2):
-        p = Product(source_website_id=web.id, slug=f"p{i}", original_name=f"Producto {i}")
+        p = Product(slug=f"p{i}", original_name=f"Producto {i}")
         db.add(p)
         db.flush()
         db.add(StockPurchase(

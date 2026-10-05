@@ -56,38 +56,3 @@ class CategoryResponse(CategoryBase):
     enabled_product_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-
-class CategoryMappingCreate(BaseModel):
-    source_name: str = Field(..., min_length=1, max_length=100)
-    category_id: int
-    apply_existing: bool = True
-
-
-class CategoryMappingResponse(BaseModel):
-    id: int
-    source_name: str
-    source_key: str
-    category_id: int
-    category_name: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-class UnmappedCategoryResponse(BaseModel):
-    source_name: str
-    product_count: int
-
-
-class SourceCategoryProductResponse(BaseModel):
-    id: int
-    slug: str
-    name: str
-    enabled: bool
-    source_category: str
-    source_website_name: Optional[str] = None
-    mapped_category_id: Optional[int] = None
-    mapped_category_name: Optional[str] = None

@@ -18,7 +18,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import httpx
-from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -171,7 +170,6 @@ class AIDescriptionService:
         product: Product,
         use_search: bool = True,
         use_vision: bool = True,
-        use_source_refetch: bool = True,
         use_image_search: bool = False,
         config: Optional[Dict] = None,
         db: Optional[Session] = None,
@@ -212,12 +210,6 @@ class AIDescriptionService:
             if found_urls:
                 image_url = image_url or found_urls[0]
                 await self._save_images_to_db(db, product.id, found_urls)
-
-        # Re-fetch URL origen
-        if use_source_refetch and product.source_url:
-            source_text = await self._fetch_source_url(product.source_url)
-            if source_text:
-                context_parts.append(f"Info del proveedor: {source_text}")
 
         # Búsqueda web
         brave_key = cfg.get("BRAVE_SEARCH_API_KEY") or settings.BRAVE_SEARCH_API_KEY
@@ -317,37 +309,6 @@ class AIDescriptionService:
             icons.append({"icon": icon, "label": label[:200]})
 
         return icons
-
-    # ------------------------------------------------------------------
-    # Fetch URL origen
-    # ------------------------------------------------------------------
-
-    async def _fetch_source_url(self, url: str) -> Optional[str]:
-        try:
-            resp = await self._http.get(
-                url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; HefaBot/1.0)"},
-            )
-            if resp.status_code != 200:
-                return None
-            soup = BeautifulSoup(resp.text, "lxml")
-            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                tag.decompose()
-            # Intentar extraer la sección más relevante
-            for selector in [
-                "[class*='descripcion']", "[class*='description']",
-                "[class*='detalle']", "[class*='detail']",
-                "[class*='especificacion']", "[class*='spec']",
-                "main", "article", ".product-info",
-            ]:
-                el = soup.select_one(selector)
-                if el:
-                    text = el.get_text(separator=" ", strip=True)
-                    if len(text) > 50:
-                        return text[:600]
-            return soup.get_text(separator=" ", strip=True)[:400]
-        except Exception:
-            return None
 
     # ------------------------------------------------------------------
     # Brave Search
@@ -544,7 +505,6 @@ class AIDescriptionService:
         product_ids: List[int],
         use_search: bool,
         use_vision: bool,
-        use_source_refetch: bool,
         use_image_search: bool = False,
         action: str = "description",   # "description" | "images" | "both"
         config: Optional[Dict] = None,
@@ -580,7 +540,7 @@ class AIDescriptionService:
 
                     if action in ("description", "both"):
                         desc = await self.generate_for_product(
-                            product, use_search, use_vision, use_source_refetch,
+                            product, use_search, use_vision,
                             use_image_search=False, config=cfg, db=db,
                         )
                         product.short_description = desc[:2000]

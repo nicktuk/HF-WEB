@@ -22,10 +22,6 @@ class CacheService:
             maxsize=500,
             ttl=settings.CACHE_TTL_PRODUCTS
         )
-        self._market_cache = TTLCache(
-            maxsize=100,
-            ttl=settings.CACHE_TTL_MARKET_PRICES
-        )
         self._general_cache = TTLCache(
             maxsize=200,
             ttl=300  # 5 minutes default
@@ -57,17 +53,6 @@ class CacheService:
 
     # Market cache methods
 
-    def get_market(self, key: str) -> Optional[Any]:
-        """Get from market cache."""
-        return self._market_cache.get(key)
-
-    def set_market(self, key: str, value: Any) -> None:
-        """Set in market cache."""
-        self._market_cache[key] = value
-
-    def invalidate_market(self, key: str) -> None:
-        """Invalidate market cache entry."""
-        self._market_cache.pop(key, None)
 
     # General cache methods
 

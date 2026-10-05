@@ -16,13 +16,10 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api.deps import (
     get_product_service,
-    get_market_intelligence_service,
 )
 from app.services.product import ProductService
-from app.services.market_intelligence import MarketIntelligenceService
 from app.services.pdf_generator import PDFGeneratorService
 from app.schemas.product import (
-    ProductCreate,
     ProductCreateManual,
     ProductUpdate,
     ProductAdminResponse,
@@ -34,8 +31,6 @@ from app.schemas.product import (
     ProductChangeSubcategorySelected,
     ProductDisableSelected,
     ProductRemoveBadge,
-    PendingPriceChangeResponse,
-    PendingPriceAction,
     ProductBulkWholesaleMarkup,
     ProductSelectedExport,
     ColorStockItem,
@@ -85,11 +80,6 @@ from app.schemas.order import (
     OrderStats,
     OrderAttachmentResponse,
 )
-from app.schemas.market_price import (
-    MarketPriceStatsResponse,
-    MarketPriceRefreshRequest,
-    PriceComparisonResponse,
-)
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.core.security import verify_admin, get_admin_user, AdminUserInfo
 from app.config import settings
@@ -125,7 +115,6 @@ async def get_products_admin(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     enabled: Optional[bool] = Query(default=None),
-    source_website_id: Optional[int] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     category_id: Optional[int] = Query(default=None),
     category: Optional[str] = Query(default=None, max_length=100),
@@ -145,13 +134,12 @@ async def get_products_admin(
     """
     Get all products for admin management.
 
-    Includes disabled products, market price stats, and source info.
+    Includes disabled products.
     """
     products, total = service.get_all_admin(
         page,
         limit,
         enabled,
-        source_website_id,
         search,
         category_id,
         category,
@@ -189,10 +177,9 @@ async def get_products_admin(
 
     hide_prices = current_user.is_product_editor
 
-    # Transform to admin response with market stats
+    # Transform to admin response
     admin_products = []
     for p in products:
-        stats = p.market_price_stats
         admin_products.append(ProductAdminResponse(
             id=p.id,
             slug=p.slug,
@@ -232,18 +219,7 @@ async def get_products_admin(
             color_stock=color_stock_map.get(p.id, []),
             created_at=p.created_at,
             updated_at=p.updated_at,
-            source_website_id=p.source_website_id,
-            source_website_name=p.source_website.display_name if p.source_website else None,
-            source_url=p.source_url,
-            last_scraped_at=p.last_scraped_at,
-            scrape_error_count=p.scrape_error_count,
-            scrape_last_error=p.scrape_last_error,
             display_order=p.display_order,
-            pending_original_price=None if hide_prices else p.pending_original_price,
-            market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
-            market_min_price=None if hide_prices else (stats.min_price if stats else None),
-            market_max_price=None if hide_prices else (stats.max_price if stats else None),
-            market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
             stock_qty=stock_summary.get(p.id, 0),
         ))
 
@@ -773,47 +749,6 @@ def get_account_balance(db: Session = Depends(get_db)):
 
 
 @router.get(
-    "/products/pending-prices",
-    response_model=PendingPriceChangeResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def get_pending_price_changes(
-    request: Request,
-    service: ProductService = Depends(get_product_service),
-):
-    """Get pending original price changes for approval."""
-    return service.get_pending_price_changes()
-
-
-@router.post(
-    "/products/pending-prices/approve",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def approve_pending_price_changes(
-    data: PendingPriceAction,
-    service: ProductService = Depends(get_product_service),
-):
-    """Approve pending original price changes."""
-    count = service.approve_pending_prices(data.product_ids)
-    return MessageResponse(message=f"Precios aprobados: {count}")
-
-
-@router.post(
-    "/products/pending-prices/reject",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def reject_pending_price_changes(
-    data: PendingPriceAction,
-    service: ProductService = Depends(get_product_service),
-):
-    """Reject pending original price changes."""
-    count = service.reject_pending_prices(data.product_ids)
-    return MessageResponse(message=f"Precios descartados: {count}")
-
-
-@router.get(
     "/products/{product_id}",
     response_model=ProductAdminResponse,
 )
@@ -824,7 +759,6 @@ async def get_product_admin(
 ):
     """Get a single product with full admin details."""
     p = service.get_by_id(product_id)
-    stats = p.market_price_stats
     stock_summary = service.get_stock_summary([p.id])
     hide_prices = current_user.is_product_editor
 
@@ -872,90 +806,8 @@ async def get_product_admin(
         } for img in sorted(p.images, key=lambda x: (not x.is_primary, x.display_order))],
         created_at=p.created_at,
         updated_at=p.updated_at,
-        source_website_id=p.source_website_id,
-        source_website_name=p.source_website.display_name if p.source_website else None,
-        source_url=p.source_url,
-        last_scraped_at=p.last_scraped_at,
-        scrape_error_count=p.scrape_error_count,
-        scrape_last_error=p.scrape_last_error,
         display_order=p.display_order,
-        pending_original_price=None if hide_prices else p.pending_original_price,
-        pending_price_detected_at=None if hide_prices else p.pending_price_detected_at,
-        market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
-        market_min_price=None if hide_prices else (stats.min_price if stats else None),
-        market_max_price=None if hide_prices else (stats.max_price if stats else None),
-        market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
         stock_qty=stock_summary.get(p.id, 0),
-    )
-
-
-@router.post(
-    "/products",
-    response_model=ProductAdminResponse,
-    status_code=201,
-    dependencies=[Depends(verify_admin)]
-)
-@limiter.limit("30/minute")
-async def create_product(
-    request: Request,
-    data: ProductCreate,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Create a new product by scraping from source website.
-
-    Provide the source_website_id and product slug.
-    The system will scrape product information automatically.
-    """
-    product = await service.create_from_slug(data)
-
-    return ProductAdminResponse(
-        id=product.id,
-        slug=product.slug,
-        original_name=product.original_name,
-        custom_name=product.custom_name,
-        original_price=product.original_price,
-        markup_percentage=product.markup_percentage,
-        wholesale_markup_percentage=product.wholesale_markup_percentage,
-        custom_price=product.custom_price,
-        sale_price=product.sale_price,
-        sale_price_ends_at=product.sale_price_ends_at,
-        description=product.description,
-        short_description=product.short_description,
-        brand=product.brand,
-        sku=product.sku,
-        codigo_interno=product.codigo_interno,
-        mostrar_codigo=product.mostrar_codigo,
-        category=product.category_ref.name if product.category_ref else None,
-        category_id=product.category_id,
-        enabled=product.enabled,
-        is_featured=product.is_featured,
-        is_immediate_delivery=product.is_immediate_delivery,
-        is_check_stock=product.is_check_stock,
-        is_best_seller=product.is_best_seller,
-        is_on_demand=product.is_on_demand,
-        is_published=product.is_published,
-        publish_without_stock=product.publish_without_stock,
-        stock_low_threshold=product.stock_low_threshold,
-        images=[{
-            "id": img.id,
-            "url": img.url,
-            "alt_text": img.alt_text,
-            "is_primary": img.is_primary
-        } for img in product.images],
-        created_at=product.created_at,
-        updated_at=product.updated_at,
-        source_website_id=product.source_website_id,
-        source_website_name=product.source_website.display_name if product.source_website else None,
-        source_url=product.source_url,
-        last_scraped_at=product.last_scraped_at,
-        scrape_error_count=product.scrape_error_count,
-        scrape_last_error=product.scrape_last_error,
-        display_order=product.display_order,
-        market_avg_price=None,
-        market_min_price=None,
-        market_max_price=None,
-        market_sample_count=0,
     )
 
 
@@ -972,7 +824,7 @@ async def create_product_manual(
     service: ProductService = Depends(get_product_service),
 ):
     """
-    Create a new product manually without scraping.
+    Create a new product.
 
     Provide name, price, description, images, etc. directly.
     Useful for products not available in source catalogs.
@@ -1014,17 +866,7 @@ async def create_product_manual(
         } for img in product.images],
         created_at=product.created_at,
         updated_at=product.updated_at,
-        source_website_id=product.source_website_id,
-        source_website_name="Producto Manual",
-        source_url=product.source_url,
-        last_scraped_at=product.last_scraped_at,
-        scrape_error_count=product.scrape_error_count,
-        scrape_last_error=product.scrape_last_error,
         display_order=product.display_order,
-        market_avg_price=None,
-        market_min_price=None,
-        market_max_price=None,
-        market_sample_count=0,
     )
 
 
@@ -1242,7 +1084,6 @@ async def update_product(
         data = data.model_copy(update=strip_update)
     product = service.update(product_id, data)
 
-    stats = product.market_price_stats
     hide_prices = current_user.is_product_editor
     stock_summary = service.get_stock_summary([product_id])
     return ProductAdminResponse(
@@ -1286,18 +1127,7 @@ async def update_product(
         } for img in sorted(product.images, key=lambda x: (not x.is_primary, x.display_order))],
         created_at=product.created_at,
         updated_at=product.updated_at,
-        source_website_id=product.source_website_id,
-        source_website_name=product.source_website.display_name if product.source_website else None,
-        source_url=product.source_url,
-        last_scraped_at=product.last_scraped_at,
-        scrape_error_count=product.scrape_error_count,
-        scrape_last_error=product.scrape_last_error,
         display_order=product.display_order,
-        pending_original_price=None if hide_prices else product.pending_original_price,
-        market_avg_price=None if hide_prices else (stats.avg_price if stats else None),
-        market_min_price=None if hide_prices else (stats.min_price if stats else None),
-        market_max_price=None if hide_prices else (stats.max_price if stats else None),
-        market_sample_count=0 if hide_prices else (stats.sample_count if stats else 0),
         stock_qty=stock_summary.get(product_id, 0),
     )
 
@@ -1507,22 +1337,6 @@ async def process_product_image(
     return {"url": f"/uploads/{out_filename}"}
 
 
-@router.post(
-    "/products/{product_id}/rescrape",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-@limiter.limit("10/minute")
-async def rescrape_product(
-    request: Request,
-    product_id: int,
-    service: ProductService = Depends(get_product_service),
-):
-    """Re-scrape product data from source website."""
-    await service.rescrape(product_id)
-    return MessageResponse(message="Product data updated from source")
-
-
 @router.delete(
     "/products/{product_id}",
     status_code=204,
@@ -1566,22 +1380,6 @@ async def bulk_action(
 
 
 @router.post(
-    "/products/disable-by-supplier",
-    dependencies=[Depends(verify_admin)]
-)
-async def disable_by_supplier(
-    data: dict,
-    service: ProductService = Depends(get_product_service),
-):
-    """Disable all enabled products that have purchases from the given supplier."""
-    supplier = (data.get("supplier") or "").strip()
-    if not supplier:
-        raise HTTPException(status_code=400, detail="supplier requerido")
-    result = service.disable_by_supplier(supplier)
-    return result
-
-
-@router.post(
     "/products/bulk-markup",
     response_model=MessageResponse,
     dependencies=[Depends(verify_admin)]
@@ -1595,16 +1393,13 @@ async def bulk_set_markup(
 
     By default only updates enabled products.
     Set only_enabled=false to update all products.
-    Set source_website_id to filter by source.
     """
     count = service.bulk_set_markup(
         data.markup_percentage,
         data.only_enabled,
-        data.source_website_id
     )
     scope = "habilitados" if data.only_enabled else "todos"
-    source_msg = f" de fuente {data.source_website_id}" if data.source_website_id else ""
-    return MessageResponse(message=f"Markup {data.markup_percentage}% aplicado a {count} productos {scope}{source_msg}")
+    return MessageResponse(message=f"Markup {data.markup_percentage}% aplicado a {count} productos {scope}")
 
 
 @router.post(
@@ -1621,16 +1416,13 @@ async def bulk_set_wholesale_markup(
 
     By default updates all products (only_enabled=false).
     Set only_enabled=true to update enabled products only.
-    Set source_website_id to filter by source.
     """
     count = service.bulk_set_wholesale_markup(
         data.markup_percentage,
         data.only_enabled,
-        data.source_website_id
     )
     scope = "habilitados" if data.only_enabled else "todos"
-    source_msg = f" de fuente {data.source_website_id}" if data.source_website_id else ""
-    return MessageResponse(message=f"Markup mayorista {data.markup_percentage}% aplicado a {count} productos {scope}{source_msg}")
+    return MessageResponse(message=f"Markup mayorista {data.markup_percentage}% aplicado a {count} productos {scope}")
 
 
 @router.post(
@@ -1728,245 +1520,6 @@ async def disable_selected(
     """
     count = service.disable_selected(data.product_ids)
     return MessageResponse(message=f"Deshabilitados {count} productos")
-
-
-@router.post(
-    "/source-websites/{source_id}/disable-all",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def disable_all_from_source(
-    request: Request,
-    source_id: int,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Disable ALL products from a source website.
-    """
-    count = service.disable_all_from_source(source_id)
-    return MessageResponse(message=f"Deshabilitados {count} productos de esta fuente")
-
-
-@router.delete(
-    "/source-websites/{source_id}/products",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def delete_all_products_from_source(
-    request: Request,
-    source_id: int,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    DELETE ALL products from a source website.
-    Use with caution - this permanently removes all products.
-    """
-    count = service.delete_all_from_source(source_id)
-    return MessageResponse(message=f"Eliminados {count} productos de esta fuente")
-
-
-@router.post(
-    "/source-websites/{source_id}/check-stock-all",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def check_stock_all_from_source(
-    request: Request,
-    source_id: int,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Set is_check_stock=True for ALL enabled products from a source website.
-    This also removes is_featured and is_immediate_delivery flags.
-    """
-    count = service.check_stock_all_from_source(source_id)
-    return MessageResponse(message=f"Marcados {count} productos como 'Consultar stock'")
-
-
-# ============================================
-# Market Intelligence
-# ============================================
-
-@router.get(
-    "/products/{product_id}/market-prices",
-    response_model=MarketPriceStatsResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def get_market_prices(
-    product_id: int,
-    service: MarketIntelligenceService = Depends(get_market_intelligence_service),
-):
-    """Get market price statistics for a product."""
-    stats = service.get_stats(product_id)
-    if not stats:
-        return MarketPriceStatsResponse(product_id=product_id)
-    return stats
-
-
-@router.post(
-    "/products/{product_id}/market-prices/refresh",
-    response_model=MarketPriceStatsResponse,
-    dependencies=[Depends(verify_admin)]
-)
-@limiter.limit("5/minute")
-async def refresh_market_prices(
-    request: Request,
-    product_id: int,
-    data: MarketPriceRefreshRequest = MarketPriceRefreshRequest(),
-    service: MarketIntelligenceService = Depends(get_market_intelligence_service),
-):
-    """
-    Refresh market prices for a product.
-
-    Searches external sources (MercadoLibre, etc.) for similar products
-    and updates price statistics.
-    """
-    return await service.refresh_market_prices(
-        product_id,
-        force=data.force,
-        search_query=data.search_query
-    )
-
-
-@router.get(
-    "/products/{product_id}/price-comparison",
-    response_model=PriceComparisonResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def get_price_comparison(
-    product_id: int,
-    service: MarketIntelligenceService = Depends(get_market_intelligence_service),
-):
-    """
-    Get price comparison analysis.
-
-    Shows how your price compares to market average, min, max
-    with competitiveness indicator and recommendations.
-    """
-    return service.get_price_comparison(product_id)
-
-
-# ============================================
-# Bulk Operations
-# ============================================
-
-@router.post(
-    "/source-websites/{source_id}/scrape-all",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-@limiter.limit("2/hour")
-async def scrape_all_products(
-    request: Request,
-    source_id: int,
-    update_existing: bool = Query(default=True, description="Update existing products"),
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Scrape all products from a source website (synchronous).
-
-    This operation:
-    - Fetches all product slugs from the source catalog
-    - Creates new products (disabled by default)
-    - Optionally updates existing products with fresh data
-
-    New products are created disabled - you must enable them manually.
-    This can take several minutes depending on catalog size.
-
-    NOTE: Use /scrape-job for background scraping with progress tracking.
-    """
-    results = await service.scrape_all_from_source(source_id, update_existing)
-
-    return MessageResponse(
-        message=f"Scrape complete: {results['new']} new, {results['updated']} updated, {results['errors']} errors (total: {results['total']})"
-    )
-
-
-# ============================================
-# Background Scrape Jobs
-# ============================================
-
-@router.post(
-    "/source-websites/{source_id}/scrape-job",
-    dependencies=[Depends(verify_admin)]
-)
-async def start_scrape_job(
-    request: Request,
-    source_id: int,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Start a background scrape job.
-
-    Products are saved to the database as they're processed.
-    Use GET /scrape-jobs/{job_id} to check progress.
-    """
-    from app.services.scrape_job import scrape_job_manager
-    from app.db.session import SessionLocal
-
-    # Verify source exists
-    source = service.source_repo.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source website not found")
-
-    # Check if already running
-    active = scrape_job_manager.get_active_job_for_source(source.name)
-    if active:
-        return {
-            "message": "Job already running",
-            "job": active.to_dict()
-        }
-
-    # Start new job
-    job = scrape_job_manager.start_job(
-        source_name=source.name,
-        source_website_id=source_id,
-        db_session_factory=SessionLocal,
-    )
-
-    return {
-        "message": "Scrape job started",
-        "job": job.to_dict()
-    }
-
-
-@router.get(
-    "/scrape-jobs",
-    dependencies=[Depends(verify_admin)]
-)
-async def get_all_scrape_jobs(request: Request):
-    """Get all scrape jobs (active and completed)."""
-    from app.services.scrape_job import scrape_job_manager
-    return {"jobs": scrape_job_manager.get_all_jobs()}
-
-
-@router.get(
-    "/scrape-jobs/{job_id}",
-    dependencies=[Depends(verify_admin)]
-)
-async def get_scrape_job(request: Request, job_id: str):
-    """Get scrape job progress by ID."""
-    from app.services.scrape_job import scrape_job_manager
-
-    job = scrape_job_manager.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    return {"job": job.to_dict()}
-
-
-@router.delete(
-    "/scrape-jobs/{job_id}",
-    dependencies=[Depends(verify_admin)]
-)
-async def cancel_scrape_job(request: Request, job_id: str):
-    """Cancel a running scrape job."""
-    from app.services.scrape_job import scrape_job_manager
-
-    if scrape_job_manager.cancel_job(job_id):
-        return {"message": "Job cancelled"}
-    else:
-        raise HTTPException(status_code=404, detail="Job not found or not running")
 
 
 # ============================================
@@ -2167,21 +1720,6 @@ async def get_monthly_summary(
     return result
 
 
-@router.post(
-    "/products/mark-new-by-date",
-    response_model=MessageResponse,
-    dependencies=[Depends(verify_admin)]
-)
-async def mark_products_new_by_date(
-    request: Request,
-    scrape_date: str = Query(..., description="Fecha de scraping YYYY-MM-DD"),
-    service: ProductService = Depends(get_product_service),
-):
-    """Mark products scraped on a specific date as 'Nuevo' (is_featured=true)."""
-    count = service.mark_new_by_scrape_date(scrape_date)
-    return MessageResponse(message=f"Productos marcados como nuevos: {count}")
-
-
 # ============================================
 # Sales
 # ============================================
@@ -2313,25 +1851,6 @@ async def update_sale_installment(
     return service.update_installment(sale_id, installment_id, data)
 
 
-@router.get(
-    "/price-comparator",
-    dependencies=[Depends(verify_admin)]
-)
-async def compare_prices(
-    request: Request,
-    search: str = Query(..., min_length=2, max_length=100, description="Search keyword"),
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Compare prices across source websites.
-
-    Searches for products matching the keyword and returns
-    prices from each source website for comparison.
-    """
-    results = service.compare_prices(search)
-    return results
-
-
 # ============================================
 # Dashboard Stats
 # ============================================
@@ -2346,23 +1865,6 @@ async def get_customer_ranking(
 ):
     """Get sales grouped by customer: purchase count, product count, total amount."""
     return service.customer_ranking()
-
-
-@router.get(
-    "/stats/by-source-category",
-    dependencies=[Depends(verify_admin)]
-)
-async def get_stats_by_source_and_category(
-    request: Request,
-    service: ProductService = Depends(get_product_service),
-):
-    """
-    Get product stats grouped by source website and category.
-
-    Returns counts of enabled/total products for each source-category combination.
-    Used for dashboard overview and charts.
-    """
-    return service.get_stats_by_source_and_category()
 
 
 @router.get(

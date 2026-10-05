@@ -9,19 +9,13 @@ import type {
   CodigoAmba,
   DepositStockItem,
   CatalogSeller,
-  SourceWebsite,
-  MarketPriceStats,
-  PriceComparison,
   PaginatedResponse,
   MessageResponse,
-  ProductCreateForm,
   ProductCreateManualForm,
   ProductUpdateForm,
-  SourceWebsiteCreateForm,
   StockPurchase,
   StockPreviewResponse,
   StockSummaryItem,
-  PendingPriceChange,
   SaleCreateForm,
   Sale,
   WhatsAppProductItem,
@@ -48,7 +42,7 @@ const API_BASE = API_URL.replace('/api/v1', '');
 
 /**
  * Normalizes an image URL so that /uploads/ paths always resolve to the current backend,
- * and external URLs (ImgBB, scrapers, etc.) are returned as-is.
+ * and external URLs (ImgBB, etc.) are returned as-is.
  */
 export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -247,7 +241,6 @@ export const adminApi = {
       page?: number;
       limit?: number;
       enabled?: boolean;
-      source_website_id?: number;
       search?: string;
       category_id?: number;
       category?: string;
@@ -266,7 +259,6 @@ export const adminApi = {
     if (params.page) searchParams.set('page', params.page.toString());
     if (params.limit) searchParams.set('limit', params.limit.toString());
     if (params.enabled !== undefined) searchParams.set('enabled', params.enabled.toString());
-    if (params.source_website_id) searchParams.set('source_website_id', params.source_website_id.toString());
     if (params.search) searchParams.set('search', params.search);
     if (params.category_id !== undefined) searchParams.set('category_id', params.category_id.toString());
     if (params.without_category !== undefined) searchParams.set('without_category', params.without_category.toString());
@@ -291,33 +283,6 @@ export const adminApi = {
   },
 
   /**
-   * Get pending original price changes
-   */
-  async getPendingPriceChanges(apiKey: string): Promise<{ items: PendingPriceChange[] }> {
-    return fetchAPI('/admin/products/pending-prices', {}, apiKey);
-  },
-
-  /**
-   * Approve pending original price changes
-   */
-  async approvePendingPriceChanges(apiKey: string, productIds: number[]): Promise<MessageResponse> {
-    return fetchAPI('/admin/products/pending-prices/approve', {
-      method: 'POST',
-      body: JSON.stringify({ product_ids: productIds }),
-    }, apiKey);
-  },
-
-  /**
-   * Reject pending original price changes
-   */
-  async rejectPendingPriceChanges(apiKey: string, productIds: number[]): Promise<MessageResponse> {
-    return fetchAPI('/admin/products/pending-prices/reject', {
-      method: 'POST',
-      body: JSON.stringify({ product_ids: productIds }),
-    }, apiKey);
-  },
-
-  /**
    * Get single product by ID
    */
   async getProduct(apiKey: string, id: number): Promise<ProductAdmin> {
@@ -325,17 +290,7 @@ export const adminApi = {
   },
 
   /**
-   * Create product by scraping
-   */
-  async createProduct(apiKey: string, data: ProductCreateForm): Promise<ProductAdmin> {
-    return fetchAPI('/admin/products', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }, apiKey);
-  },
-
-  /**
-   * Create product manually (without scraping)
+   * Create product
    */
   async createProductManual(apiKey: string, data: ProductCreateManualForm): Promise<ProductAdmin> {
     return fetchAPI('/admin/products/manual', {
@@ -386,15 +341,6 @@ export const adminApi = {
   },
 
   /**
-   * Re-scrape product
-   */
-  async rescrapeProduct(apiKey: string, id: number): Promise<MessageResponse> {
-    return fetchAPI(`/admin/products/${id}/rescrape`, {
-      method: 'POST',
-    }, apiKey);
-  },
-
-  /**
    * Bulk action on products
    */
   async bulkAction(
@@ -408,16 +354,6 @@ export const adminApi = {
     }, apiKey);
   },
 
-  async disableBySupplier(
-    apiKey: string,
-    supplier: string,
-  ): Promise<{ count: number; product_ids: number[] }> {
-    return fetchAPI('/admin/products/disable-by-supplier', {
-      method: 'POST',
-      body: JSON.stringify({ supplier }),
-    }, apiKey);
-  },
-
   /**
    * Set markup percentage for all products
    */
@@ -425,14 +361,12 @@ export const adminApi = {
     apiKey: string,
     markupPercentage: number,
     onlyEnabled: boolean = true,
-    sourceWebsiteId?: number
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/bulk-markup', {
       method: 'POST',
       body: JSON.stringify({
         markup_percentage: markupPercentage,
         only_enabled: onlyEnabled,
-        source_website_id: sourceWebsiteId,
       }),
     }, apiKey);
   },
@@ -444,14 +378,12 @@ export const adminApi = {
     apiKey: string,
     markupPercentage: number,
     onlyEnabled: boolean = false,
-    sourceWebsiteId?: number
   ): Promise<MessageResponse> {
     return fetchAPI('/admin/products/bulk-wholesale-markup', {
       method: 'POST',
       body: JSON.stringify({
         markup_percentage: markupPercentage,
         only_enabled: onlyEnabled,
-        source_website_id: sourceWebsiteId,
       }),
     }, apiKey);
   },
@@ -538,98 +470,6 @@ export const adminApi = {
         product_ids: productIds,
         subcategory: subcategory,
       }),
-    }, apiKey);
-  },
-
-  /**
-   * Get market price stats
-   */
-  async getMarketPrices(apiKey: string, productId: number): Promise<MarketPriceStats> {
-    return fetchAPI(`/admin/products/${productId}/market-prices`, {}, apiKey);
-  },
-
-  /**
-   * Refresh market prices
-   */
-  async refreshMarketPrices(
-    apiKey: string,
-    productId: number,
-    options: { force?: boolean; search_query?: string } = {}
-  ): Promise<MarketPriceStats> {
-    return fetchAPI(`/admin/products/${productId}/market-prices/refresh`, {
-      method: 'POST',
-      body: JSON.stringify(options),
-    }, apiKey);
-  },
-
-  /**
-   * Get price comparison
-   */
-  async getPriceComparison(apiKey: string, productId: number): Promise<PriceComparison> {
-    return fetchAPI(`/admin/products/${productId}/price-comparison`, {}, apiKey);
-  },
-
-  // Source Websites
-
-  /**
-   * Get all source websites
-   */
-  async getSourceWebsites(apiKey: string): Promise<{ items: SourceWebsite[]; total: number }> {
-    return fetchAPI('/admin/source-websites', {}, apiKey);
-  },
-
-  /**
-   * Get single source website
-   */
-  async getSourceWebsite(apiKey: string, id: number): Promise<SourceWebsite> {
-    return fetchAPI(`/admin/source-websites/${id}`, {}, apiKey);
-  },
-
-  /**
-   * Create source website
-   */
-  async createSourceWebsite(apiKey: string, data: SourceWebsiteCreateForm): Promise<SourceWebsite> {
-    return fetchAPI('/admin/source-websites', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }, apiKey);
-  },
-
-  /**
-   * Update source website
-   */
-  async updateSourceWebsite(
-    apiKey: string,
-    id: number,
-    data: Partial<SourceWebsiteCreateForm>
-  ): Promise<SourceWebsite> {
-    return fetchAPI(`/admin/source-websites/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }, apiKey);
-  },
-
-  /**
-   * Delete source website
-   */
-  async deleteSourceWebsite(apiKey: string, id: number): Promise<void> {
-    return fetchAPI(`/admin/source-websites/${id}`, {
-      method: 'DELETE',
-    }, apiKey);
-  },
-
-  /**
-   * Scrape all products from a source website
-   */
-  async scrapeAllProducts(
-    apiKey: string,
-    sourceId: number,
-    updateExisting: boolean = true
-  ): Promise<MessageResponse> {
-    const params = new URLSearchParams();
-    params.set('update_existing', updateExisting.toString());
-    return fetchAPI(`/admin/source-websites/${sourceId}/scrape-all?${params}`, {
-      method: 'POST',
     }, apiKey);
   },
 
@@ -988,15 +828,6 @@ export const adminApi = {
    */
   async calculateBestSellers(apiKey: string, threshold: number = 5): Promise<MessageResponse> {
     return fetchAPI(`/admin/products/calculate-best-sellers?threshold=${threshold}`, {
-      method: 'POST',
-    }, apiKey);
-  },
-
-  /**
-   * Mark products scraped on a specific date as "Nuevo"
-   */
-  async markNewByDate(apiKey: string, scrapeDate: string): Promise<MessageResponse> {
-    return fetchAPI(`/admin/products/mark-new-by-date?scrape_date=${scrapeDate}`, {
       method: 'POST',
     }, apiKey);
   },
@@ -1459,7 +1290,6 @@ export interface AIGenerateRequest {
   force_regenerate?: boolean;
   use_search?: boolean;
   use_vision?: boolean;
-  use_source_refetch?: boolean;
   use_image_search?: boolean;
   action?: 'description' | 'images' | 'both';
 }
@@ -1499,12 +1329,11 @@ export const aiApi = {
   async generateSingle(
     apiKey: string,
     productId: number,
-    opts: { use_search?: boolean; use_vision?: boolean; use_source_refetch?: boolean; use_image_search?: boolean } = {},
+    opts: { use_search?: boolean; use_vision?: boolean; use_image_search?: boolean } = {},
   ): Promise<{ product_id: number; short_description: string }> {
     const params = new URLSearchParams();
     if (opts.use_search !== undefined) params.set('use_search', String(opts.use_search));
     if (opts.use_vision !== undefined) params.set('use_vision', String(opts.use_vision));
-    if (opts.use_source_refetch !== undefined) params.set('use_source_refetch', String(opts.use_source_refetch));
     if (opts.use_image_search !== undefined) params.set('use_image_search', String(opts.use_image_search));
     const qs = params.toString() ? `?${params.toString()}` : '';
     return fetchAPI(`/admin/ai/generate/${productId}${qs}`, { method: 'POST' }, apiKey);
@@ -1632,222 +1461,6 @@ export async function fetchBadgeLabels(): Promise<BadgeLabels> {
   }
   return res.json();
 }
-
-// ─── Import Scorer API ─────────────────────────────────────────────────────────
-import type {
-  ISRubroTemplate, ISRubroTemplateCreate,
-  ISRetailer, ISRetailerCreate,
-  ISOutlet, ISOutletCreate,
-  ISRubro, ISRubroCreate,
-  ISMepRate, ISConfig,
-  ISProducto, ISProductoUpdate,
-  ISCarrito, ISCarritoCreate, ISCarritoItem, ISCarritoItemCreate,
-  ISListaCaza, ISListaCazaCreate,
-  ISTrendSnapshot,
-} from '@/types';
-
-const IS = '/admin/import-scorer';
-
-export const importScorerApi = {
-  // ── MEP ──
-  async getMep(apiKey: string): Promise<ISMepRate> {
-    return fetchAPI<ISMepRate>(`${IS}/mep`, {}, apiKey);
-  },
-  async refreshMep(apiKey: string): Promise<ISMepRate> {
-    return fetchAPI<ISMepRate>(`${IS}/mep/refresh`, { method: 'POST' }, apiKey);
-  },
-  async getResumen(apiKey: string) {
-    return fetchAPI(`${IS}/resumen`, {}, apiKey);
-  },
-
-  // ── Templates ──
-  async getTemplates(apiKey: string): Promise<ISRubroTemplate[]> {
-    return fetchAPI<ISRubroTemplate[]>(`${IS}/templates`, {}, apiKey);
-  },
-  async getTemplate(apiKey: string, id: string): Promise<ISRubroTemplate> {
-    return fetchAPI<ISRubroTemplate>(`${IS}/templates/${id}`, {}, apiKey);
-  },
-  async createTemplate(apiKey: string, data: ISRubroTemplateCreate): Promise<ISRubroTemplate> {
-    return fetchAPI<ISRubroTemplate>(`${IS}/templates`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateTemplate(apiKey: string, id: string, data: Partial<ISRubroTemplateCreate>): Promise<ISRubroTemplate> {
-    return fetchAPI<ISRubroTemplate>(`${IS}/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async deleteTemplate(apiKey: string, id: string): Promise<void> {
-    await fetchAPI(`${IS}/templates/${id}`, { method: 'DELETE' }, apiKey);
-  },
-
-  // ── Retailers ──
-  async getRetailers(apiKey: string, activo?: boolean): Promise<ISRetailer[]> {
-    const qs = activo !== undefined ? `?activo=${activo}` : '';
-    return fetchAPI<ISRetailer[]>(`${IS}/retailers${qs}`, {}, apiKey);
-  },
-  async getRetailer(apiKey: string, id: string): Promise<ISRetailer> {
-    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}`, {}, apiKey);
-  },
-  async createRetailer(apiKey: string, data: ISRetailerCreate): Promise<ISRetailer> {
-    return fetchAPI<ISRetailer>(`${IS}/retailers`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateRetailer(apiKey: string, id: string, data: Partial<ISRetailerCreate>): Promise<ISRetailer> {
-    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async deleteRetailer(apiKey: string, id: string): Promise<void> {
-    await fetchAPI(`${IS}/retailers/${id}`, { method: 'DELETE' }, apiKey);
-  },
-  async pausarRetailer(apiKey: string, id: string, horas = 6): Promise<ISRetailer> {
-    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}/pausar?horas=${horas}`, { method: 'POST' }, apiKey);
-  },
-  async reactivarRetailer(apiKey: string, id: string): Promise<ISRetailer> {
-    return fetchAPI<ISRetailer>(`${IS}/retailers/${id}/reactivar`, { method: 'POST' }, apiKey);
-  },
-
-  // ── Outlets ──
-  async getOutlets(apiKey: string, activo?: boolean): Promise<ISOutlet[]> {
-    const qs = activo !== undefined ? `?activo=${activo}` : '';
-    return fetchAPI<ISOutlet[]>(`${IS}/outlets${qs}`, {}, apiKey);
-  },
-  async getOutlet(apiKey: string, id: string): Promise<ISOutlet> {
-    return fetchAPI<ISOutlet>(`${IS}/outlets/${id}`, {}, apiKey);
-  },
-  async createOutlet(apiKey: string, data: ISOutletCreate): Promise<ISOutlet> {
-    return fetchAPI<ISOutlet>(`${IS}/outlets`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateOutlet(apiKey: string, id: string, data: Partial<ISOutletCreate>): Promise<ISOutlet> {
-    return fetchAPI<ISOutlet>(`${IS}/outlets/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async deleteOutlet(apiKey: string, id: string): Promise<void> {
-    await fetchAPI(`${IS}/outlets/${id}`, { method: 'DELETE' }, apiKey);
-  },
-
-  // ── Rubros ──
-  async getRubros(apiKey: string, activo?: boolean): Promise<ISRubro[]> {
-    const qs = activo !== undefined ? `?activo=${activo}` : '';
-    return fetchAPI<ISRubro[]>(`${IS}/rubros${qs}`, {}, apiKey);
-  },
-  async getRubro(apiKey: string, id: string): Promise<ISRubro> {
-    return fetchAPI<ISRubro>(`${IS}/rubros/${id}`, {}, apiKey);
-  },
-  async createRubro(apiKey: string, data: ISRubroCreate): Promise<ISRubro> {
-    return fetchAPI<ISRubro>(`${IS}/rubros`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateRubro(apiKey: string, id: string, data: Partial<ISRubroCreate>): Promise<ISRubro> {
-    return fetchAPI<ISRubro>(`${IS}/rubros/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async deleteRubro(apiKey: string, id: string): Promise<void> {
-    await fetchAPI(`${IS}/rubros/${id}`, { method: 'DELETE' }, apiKey);
-  },
-
-  // ── Config ──
-  async getConfig(apiKey: string): Promise<ISConfig> {
-    return fetchAPI<ISConfig>(`${IS}/config`, {}, apiKey);
-  },
-  async updateConfig(apiKey: string, data: Partial<ISConfig>): Promise<ISConfig> {
-    return fetchAPI<ISConfig>(`${IS}/config`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-
-  // ── Productos ──
-  async getProductos(
-    apiKey: string,
-    params?: { rubro_id?: string; semaforo?: string; solo_pinned?: boolean; q?: string; limit?: number }
-  ): Promise<ISProducto[]> {
-    const qs = new URLSearchParams();
-    if (params?.rubro_id) qs.set('rubro_id', params.rubro_id);
-    if (params?.semaforo) qs.set('semaforo', params.semaforo);
-    if (params?.solo_pinned) qs.set('solo_pinned', 'true');
-    if (params?.q) qs.set('q', params.q);
-    if (params?.limit) qs.set('limit', String(params.limit));
-    const q = qs.toString();
-    return fetchAPI<ISProducto[]>(`${IS}/productos${q ? `?${q}` : ''}`, {}, apiKey);
-  },
-  async updateProducto(apiKey: string, id: string, data: ISProductoUpdate): Promise<ISProducto> {
-    return fetchAPI<ISProducto>(`${IS}/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async recalcularScoring(apiKey: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/productos/recalcular-scoring`, { method: 'POST' }, apiKey);
-  },
-
-  // ── Carritos ──
-  async getCarritos(apiKey: string, estado?: string): Promise<ISCarrito[]> {
-    const qs = estado ? `?estado=${estado}` : '';
-    return fetchAPI<ISCarrito[]>(`${IS}/carritos${qs}`, {}, apiKey);
-  },
-  async getCarrito(apiKey: string, id: string): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}`, {}, apiKey);
-  },
-  async createCarrito(apiKey: string, data: ISCarritoCreate): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateCarrito(apiKey: string, id: string, data: Partial<ISCarritoCreate>): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async deleteCarrito(apiKey: string, id: string): Promise<void> {
-    await fetchAPI(`${IS}/carritos/${id}`, { method: 'DELETE' }, apiKey);
-  },
-  async cambiarEstadoCarrito(apiKey: string, id: string, estado: string): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}/estado?estado=${estado}`, { method: 'POST' }, apiKey);
-  },
-  async cotizarCarrito(apiKey: string, id: string): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${id}/cotizar`, { method: 'POST' }, apiKey);
-  },
-  async addItemCarrito(apiKey: string, carritoId: string, data: ISCarritoItemCreate): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateItemCarrito(apiKey: string, carritoId: string, itemId: string, data: Partial<ISCarritoItemCreate>): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items/${itemId}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  async removeItemCarrito(apiKey: string, carritoId: string, itemId: string): Promise<ISCarrito> {
-    return fetchAPI<ISCarrito>(`${IS}/carritos/${carritoId}/items/${itemId}`, { method: 'DELETE' }, apiKey);
-  },
-  async optimizarCarrito(apiKey: string, rubro_id?: string): Promise<Record<string, unknown>> {
-    const qs = rubro_id ? `?rubro_id=${rubro_id}` : '';
-    return fetchAPI(`${IS}/carritos/optimizar${qs}`, { method: 'POST' }, apiKey);
-  },
-  async generarListaCaza(apiKey: string, carritoId: string): Promise<{ lista_caza_id: string }> {
-    return fetchAPI(`${IS}/carritos/${carritoId}/generar-lista-caza`, { method: 'POST' }, apiKey);
-  },
-
-  // ── Lista caza ──
-  async getListasCaza(apiKey: string): Promise<ISListaCaza[]> {
-    return fetchAPI<ISListaCaza[]>(`${IS}/listas-caza`, {}, apiKey);
-  },
-  async getListaCaza(apiKey: string, id: string): Promise<ISListaCaza> {
-    return fetchAPI<ISListaCaza>(`${IS}/listas-caza/${id}`, {}, apiKey);
-  },
-  async createListaCaza(apiKey: string, data: ISListaCazaCreate): Promise<ISListaCaza> {
-    return fetchAPI<ISListaCaza>(`${IS}/listas-caza`, { method: 'POST', body: JSON.stringify(data) }, apiKey);
-  },
-  async updateListaCaza(apiKey: string, id: string, data: Partial<ISListaCaza>): Promise<ISListaCaza> {
-    return fetchAPI<ISListaCaza>(`${IS}/listas-caza/${id}`, { method: 'PUT', body: JSON.stringify(data) }, apiKey);
-  },
-  exportListaCazaPdfUrl(id: string): string {
-    return `${API_URL}/admin/import-scorer/listas-caza/${id}/pdf`;
-  },
-
-  // ── Scrape ──
-  async triggerScrape(apiKey: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/scrape`, { method: 'POST' }, apiKey);
-  },
-  async triggerScrapeRubro(apiKey: string, rubroId: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/scrape/rubro/${rubroId}`, { method: 'POST' }, apiKey);
-  },
-
-  // ── Analytics ──
-  async getAnalytics(apiKey: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/analytics`, {}, apiKey);
-  },
-  async getCalibracion(apiKey: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/analytics/calibracion`, {}, apiKey);
-  },
-  async getRadar(apiKey: string): Promise<ISTrendSnapshot[]> {
-    return fetchAPI(`${IS}/radar`, {}, apiKey);
-  },
-  async actualizarRadar(apiKey: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/radar/actualizar`, { method: 'POST' }, apiKey);
-  },
-  async actualizarRadarRubro(apiKey: string, rubroId: string): Promise<Record<string, unknown>> {
-    return fetchAPI(`${IS}/radar/actualizar/${rubroId}`, { method: 'POST' }, apiKey);
-  },
-};
 
 // ============================================
 // CRM — Clientes

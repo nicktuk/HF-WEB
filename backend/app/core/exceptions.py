@@ -36,14 +36,6 @@ class ValidationError(AppException):
         super().__init__(message=message, code=code, status_code=422)
 
 
-class ScraperError(AppException):
-    """Error during web scraping."""
-
-    def __init__(self, message: str, source: Optional[str] = None):
-        code = f"scraper_error.{source}" if source else "scraper_error"
-        super().__init__(message=message, code=code, status_code=502)
-
-
 class AuthenticationError(AppException):
     """Authentication failed."""
 

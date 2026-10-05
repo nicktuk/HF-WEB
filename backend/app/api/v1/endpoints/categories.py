@@ -1,28 +1,18 @@
 """Category management endpoints."""
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.api.deps import get_db, verify_admin
 from app.models.category import Category
-from app.models.category_mapping import CategoryMapping
 from app.models.product import Product
 from app.schemas.category import (
     CategoryCreate,
     CategoryUpdate,
     CategoryResponse,
-    CategoryMappingCreate,
-    CategoryMappingResponse,
-    SourceCategoryProductResponse,
-    UnmappedCategoryResponse,
 )
 
 router = APIRouter()
-
-
-def normalize_source_category(value: str) -> str:
-    return " ".join((value or "").strip().lower().split())
 
 
 def get_product_counts(db: Session, category_id: int) -> tuple[int, int]:
@@ -198,151 +188,3 @@ async def delete_category(
     db.commit()
 
     return {"message": f"Categoria '{category.name}' eliminada"}
-
-
-@router.get("/unmapped-sources", response_model=List[UnmappedCategoryResponse], dependencies=[Depends(verify_admin)])
-async def get_unmapped_source_categories(db: Session = Depends(get_db)):
-    """Get source categories that still have no mapping."""
-    mapped_keys = {m.source_key for m in db.query(CategoryMapping).all()}
-
-    rows = (
-        db.query(
-            func.coalesce(Product.source_category, Product.category).label("source_name"),
-            func.count(Product.id).label("product_count"),
-        )
-        .filter(func.coalesce(Product.source_category, Product.category).isnot(None))
-        .group_by(func.coalesce(Product.source_category, Product.category))
-        .all()
-    )
-
-    result: list[UnmappedCategoryResponse] = []
-    for row in rows:
-        source_name = (row.source_name or "").strip()
-        if not source_name:
-            continue
-        source_key = normalize_source_category(source_name)
-        if source_key in mapped_keys:
-            continue
-        result.append(
-            UnmappedCategoryResponse(
-                source_name=source_name,
-                product_count=int(row.product_count or 0),
-            )
-        )
-
-    result.sort(key=lambda x: (-x.product_count, x.source_name.lower()))
-    return result
-
-
-@router.get(
-    "/source-products",
-    response_model=List[SourceCategoryProductResponse],
-    dependencies=[Depends(verify_admin)],
-)
-async def get_source_category_products(
-    source_name: str = Query(..., min_length=1, max_length=100),
-    limit: int = Query(default=200, ge=1, le=1000),
-    db: Session = Depends(get_db),
-):
-    """List products that belong to a given source category (normalized match)."""
-    source_key = normalize_source_category(source_name)
-    if not source_key:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="source_name invalido")
-
-    products = (
-        db.query(Product)
-        .filter(func.lower(func.trim(func.coalesce(Product.source_category, Product.category))) == source_key)
-        .order_by(Product.enabled.desc(), Product.original_name.asc())
-        .limit(limit)
-        .all()
-    )
-
-    return [
-        SourceCategoryProductResponse(
-            id=p.id,
-            slug=p.slug,
-            name=p.custom_name or p.original_name,
-            enabled=bool(p.enabled),
-            source_category=(p.source_category or p.category or ""),
-            source_website_name=p.source_website.display_name if p.source_website else None,
-            mapped_category_id=p.category_id,
-            mapped_category_name=p.category_ref.name if p.category_ref else None,
-        )
-        for p in products
-    ]
-
-
-@router.get("/mappings", response_model=List[CategoryMappingResponse], dependencies=[Depends(verify_admin)])
-async def list_category_mappings(db: Session = Depends(get_db)):
-    mappings = (
-        db.query(CategoryMapping)
-        .join(Category, Category.id == CategoryMapping.category_id)
-        .order_by(Category.name.asc(), CategoryMapping.source_name.asc())
-        .all()
-    )
-
-    return [
-        CategoryMappingResponse(
-            id=m.id,
-            source_name=m.source_name,
-            source_key=m.source_key,
-            category_id=m.category_id,
-            category_name=m.category.name if m.category else "",
-            created_at=m.created_at,
-            updated_at=m.updated_at,
-        )
-        for m in mappings
-    ]
-
-
-@router.post("/mappings", response_model=CategoryMappingResponse, dependencies=[Depends(verify_admin)])
-async def create_or_update_category_mapping(data: CategoryMappingCreate, db: Session = Depends(get_db)):
-    category = db.query(Category).filter(Category.id == data.category_id).first()
-    if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
-
-    source_name = data.source_name.strip()
-    source_key = normalize_source_category(source_name)
-    if not source_key:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="source_name invalido")
-
-    mapping = db.query(CategoryMapping).filter(CategoryMapping.source_key == source_key).first()
-    if mapping:
-        mapping.source_name = source_name
-        mapping.category_id = data.category_id
-    else:
-        mapping = CategoryMapping(source_name=source_name, source_key=source_key, category_id=data.category_id)
-        db.add(mapping)
-        db.flush()
-
-    if data.apply_existing:
-        db.query(Product).filter(
-            func.lower(func.trim(func.coalesce(Product.source_category, Product.category))) == source_key
-        ).update(
-            {Product.category_id: data.category_id},
-            synchronize_session=False,
-        )
-
-    db.commit()
-    db.refresh(mapping)
-
-    return CategoryMappingResponse(
-        id=mapping.id,
-        source_name=mapping.source_name,
-        source_key=mapping.source_key,
-        category_id=mapping.category_id,
-        category_name=category.name,
-        created_at=mapping.created_at,
-        updated_at=mapping.updated_at,
-    )
-
-
-@router.delete("/mappings/{mapping_id}", dependencies=[Depends(verify_admin)])
-async def delete_category_mapping(mapping_id: int, db: Session = Depends(get_db)):
-    mapping = db.query(CategoryMapping).filter(CategoryMapping.id == mapping_id).first()
-    if not mapping:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mapeo no encontrado")
-
-    db.delete(mapping)
-    db.commit()
-    return {"message": "Mapeo eliminado"}

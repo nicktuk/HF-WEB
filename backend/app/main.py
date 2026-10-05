@@ -17,15 +17,6 @@ from app.config import settings
 from app.api.v1.router import api_router
 from app.core.security import limiter
 from app.core.exceptions import AppException
-from app.scrapers.registry import ScraperRegistry
-
-# Import scrapers to register them
-from app.scrapers import newredmayorista  # noqa: F401
-from app.scrapers import redlenic  # noqa: F401
-from app.scrapers import decomoda  # noqa: F401
-from app.scrapers import sina  # noqa: F401
-from app.scrapers import protrade  # noqa: F401
-from app.scrapers.market import mercadolibre  # noqa: F401
 
 # Configure logging
 logging.basicConfig(
@@ -42,19 +33,17 @@ async def lifespan(app: FastAPI):
     logger.info("Starting application...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"ALLOWED_ORIGINS: {settings.ALLOWED_ORIGINS}")
-    logger.info(f"Registered scrapers: {list(ScraperRegistry._scrapers.keys())}")
 
     yield
 
     # Shutdown
     logger.info("Shutting down...")
-    await ScraperRegistry.close_all()
 
 
 # Create FastAPI app
 app = FastAPI(
     title="Catalog API",
-    description="Backend API for product catalog management with market intelligence",
+    description="Backend API for product catalog management",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.is_development else None,
