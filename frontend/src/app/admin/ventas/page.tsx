@@ -40,6 +40,21 @@ const getProductSaleUnitPrice = (product: ProductAdmin): number => {
   return Number((originalPrice * (1 + markup / 100)).toFixed(2));
 };
 
+// Products with color variants (color stock or colored images) must be sold with a color.
+const hasColorVariants = (product: ProductAdmin): boolean =>
+  (product.color_stock || []).length > 0 || (product.images || []).some((img) => img.color);
+
+// Colors with stock > 0, aggregated across deposits.
+const getAvailableColors = (product: ProductAdmin): { color: string; quantity: number }[] => {
+  const colorAggMap = new Map<string, number>();
+  for (const cs of product.color_stock || []) {
+    colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
+  }
+  return Array.from(colorAggMap.entries())
+    .filter(([, quantity]) => quantity > 0)
+    .map(([color, quantity]) => ({ color, quantity }));
+};
+
 const FILTER_KEY = 'ventas-filters';
 const getSavedFilters = () => {
   if (typeof window === 'undefined') return null;
@@ -318,9 +333,7 @@ export default function VentasPage() {
     // Validate: products with color variants must have a color selected
     const missingColor = cartItems.filter(item => {
       if (!item.product) return false;
-      const hasColorStock = (item.product.color_stock || []).length > 0;
-      const hasColorImages = (item.product.images || []).some(img => img.color);
-      return (hasColorStock || hasColorImages) && !item.color;
+      return hasColorVariants(item.product) && !item.color;
     });
     if (missingColor.length > 0) {
       const names = missingColor.map(i => i.product?.custom_name || i.product?.original_name || 'producto').join(', ');
@@ -639,20 +652,12 @@ export default function VentasPage() {
               <div className="divide-y">
                 {sortedProducts.map((product) => {
                   const inStock = Number(product.stock_qty || 0) > 0;
-                  // Build selectable colors: aggregate color_stock across deposits, fallback to image colors
-                  const colorAggMap = new Map<string, number>();
-                  for (const cs of product.color_stock || []) {
-                    colorAggMap.set(cs.color, (colorAggMap.get(cs.color) || 0) + cs.quantity);
-                  }
-                  const imageColorArr = product.images.filter(img => img.color).map(img => img.color!);
-                  const allColorKeys = Array.from(new Set([...Array.from(colorAggMap.keys()), ...imageColorArr]));
+                  // Only colors with stock can be sold
+                  const hasColors = hasColorVariants(product);
+                  const productColors = getAvailableColors(product);
                   const productColorNameMap = Object.fromEntries(
                     product.images.filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                   );
-                  const productColors = allColorKeys.map(color => ({
-                    color,
-                    quantity: colorAggMap.get(color) ?? null,
-                  }));
                   const primaryImg = product.images.find(i => i.is_primary) || product.images[0];
                   const thumbUrl = primaryImg ? (resolveImageUrl(primaryImg.url) ?? primaryImg.url) : null;
                   return (
@@ -694,16 +699,18 @@ export default function VentasPage() {
                               <button
                                 key={color}
                                 onClick={() => addToCart(product, color)}
-                                title={quantity !== null ? `${colorName || color} · ${quantity} disponibles` : (colorName || color)}
+                                title={`${colorName || color} · ${quantity} disponibles`}
                                 className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-300 text-xs bg-white hover:border-gray-500 transition-colors"
                               >
                                 <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
                                 {colorName ? <span>{colorName}</span> : null}
-                                {quantity !== null && <span className="text-gray-400">({quantity})</span>}
+                                <span className="text-gray-400">({quantity})</span>
                               </button>
                             );
                           })}
                         </div>
+                      ) : hasColors ? (
+                        <span className="text-xs text-gray-400 whitespace-nowrap py-1">Sin stock de colores</span>
                       ) : (
                         <Button size="sm" variant={inStock ? 'outline' : 'ghost'} onClick={() => addToCart(product)}
                           className={!inStock ? 'text-gray-400 border border-dashed border-gray-300 hover:text-gray-600' : ''}
@@ -876,17 +883,11 @@ export default function VentasPage() {
                       : (item.manualName || 'Producto manual');
                     const stockQty = Number(item.product?.stock_qty || 0);
                     const hasStock = !item.product || stockQty > 0;
-                    // Build selectable colors: aggregate color_stock, fallback to image colors
-                    const cartColorAggMap = new Map<string, number>();
-                    for (const cs of item.product?.color_stock || []) {
-                      cartColorAggMap.set(cs.color, (cartColorAggMap.get(cs.color) || 0) + cs.quantity);
+                    // Only colors with stock; keep the selected one visible even if it ran out
+                    const productColors = item.product ? getAvailableColors(item.product) : [];
+                    if (item.color && !productColors.some(c => c.color === item.color)) {
+                      productColors.push({ color: item.color, quantity: 0 });
                     }
-                    const cartImageColorArr = (item.product?.images || []).filter(img => img.color).map(img => img.color!);
-                    const allCartColorKeys = Array.from(new Set([...Array.from(cartColorAggMap.keys()), ...cartImageColorArr]));
-                    const productColors = allCartColorKeys.map(color => ({
-                      color,
-                      quantity: cartColorAggMap.get(color) ?? null,
-                    }));
                     const cartItemColorNameMap = Object.fromEntries(
                       (item.product?.images || []).filter(img => img.color && img.alt_text).map(img => [img.color!, img.alt_text!])
                     );
@@ -994,12 +995,12 @@ export default function VentasPage() {
                                 <button
                                   key={color}
                                   onClick={() => updateCartItemColor(item.id, item.color === color ? null : color)}
-                                  title={quantity !== null ? `${cName || color} · ${quantity} disponibles` : (cName || color)}
-                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${item.color === color ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-500'} ${quantity !== null && quantity <= 0 ? 'opacity-40' : ''}`}
+                                  title={`${cName || color} · ${quantity} disponibles`}
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all text-xs ${item.color === color ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-500'} ${quantity <= 0 ? 'opacity-40' : ''}`}
                                 >
                                   <span className="w-3.5 h-3.5 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: color }} />
                                   {cName ? <span className="text-gray-700">{cName}</span> : null}
-                                  {quantity !== null && <span className="text-gray-400">({quantity})</span>}
+                                  <span className="text-gray-400">({quantity})</span>
                                 </button>
                               );
                             })}
