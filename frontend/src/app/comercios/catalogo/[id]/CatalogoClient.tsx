@@ -13,6 +13,13 @@ import { parseDescripcionConIconos } from '@/lib/comercio-icons'
 import { SavingsBar } from '../../_components/SavingsBar'
 import type { ComercioIconItem } from '@/types'
 
+/** % de descuento del precio mayorista respecto del precio de venta sugerido (null si no hay margen). */
+function descuentoSobreSugerido(precio: number, sugerido: number): number | null {
+  if (!(sugerido > 0)) return null
+  const pct = Math.round(((sugerido - precio) / sugerido) * 100)
+  return pct > 0 ? pct : null
+}
+
 interface Imagen {
   id: number
   url: string
@@ -369,9 +376,25 @@ export function CatalogoClient(props: Props) {
                   ${precioUnitario.toLocaleString('es-AR')}
                 </p>
                 {full.producto.precio_venta != null && (
-                  <p className="text-sm mt-0.5" style={{ color: theme.textFaint }}>
-                    Precio de venta sugerido ${full.producto.precio_venta.toLocaleString('es-AR')}
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-sm font-medium" style={{ color: theme.textFaint }}>Precio de venta sugerido</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-2xl md:text-3xl font-extrabold" style={{ color: theme.suggested }}>
+                        ${full.producto.precio_venta.toLocaleString('es-AR')}
+                      </p>
+                      {(() => {
+                        const pct = descuentoSobreSugerido(precioUnitario, full.producto.precio_venta)
+                        return pct != null && (
+                          <span
+                            className="rounded-full px-2.5 py-0.5 text-base font-bold"
+                            style={{ color: theme.suggested, backgroundColor: theme.suggestedTint(0.12), border: `1.5px solid ${theme.suggestedTint(0.45)}` }}
+                          >
+                            −{pct}%
+                          </span>
+                        )
+                      })()}
+                    </div>
+                  </div>
                 )}
               </>
             ) : (
@@ -412,12 +435,23 @@ export function CatalogoClient(props: Props) {
                   const activo = cantidad >= t.cantidad_minima
                     && !tramos.some(o => o.cantidad_minima > t.cantidad_minima && o.cantidad_minima <= cantidad)
                   const colorTramo = getTramoScaleColorV2(ordenados.length > 1 ? i / (ordenados.length - 1) : 1)
+                  const precioTramo = calcularPrecioPorDescuento(full.producto.precio_comercio, t.cantidad_minima, tramos, full.producto.redondeo)
+                  const pctSugerido = full.producto.precio_venta != null
+                    ? descuentoSobreSugerido(precioTramo, full.producto.precio_venta)
+                    : null
                   return (
                     <tr key={t.cantidad_minima} style={activo ? { backgroundColor: theme.accent } : undefined}>
                       <td className="px-4 py-2 font-medium" style={{ color: activo ? theme.buttonBg : theme.textMuted }}>{t.cantidad_minima}+ u.</td>
-                      <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>{t.descuento_porcentaje > 0 ? `−${t.descuento_porcentaje}%` : ''}</td>
+                      <td className="py-2 font-bold" style={{ color: activo ? theme.buttonBg : colorTramo }}>
+                        {t.descuento_porcentaje > 0 ? `−${t.descuento_porcentaje}%` : ''}
+                        {pctSugerido != null && (
+                          <span className="text-sm font-semibold" style={{ color: activo ? theme.buttonBg : theme.suggested }}>
+                            {t.descuento_porcentaje > 0 ? ' / ' : ''}−{pctSugerido}% sobre sugerido
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-right font-bold" style={{ color: activo ? theme.buttonBg : theme.textPrimary }}>
-                        ${calcularPrecioPorDescuento(full.producto.precio_comercio, t.cantidad_minima, tramos, full.producto.redondeo).toLocaleString('es-AR')}
+                        ${precioTramo.toLocaleString('es-AR')}
                       </td>
                     </tr>
                   )

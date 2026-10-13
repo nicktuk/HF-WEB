@@ -23,6 +23,9 @@ export interface ComercioTheme {
   /** Naranja/rojo — señal de urgencia (poco stock). */
   urgency: string
   urgencyTint: (alpha: number) => string
+  /** Fucsia llamativo — precio de venta sugerido y % de margen sobre él. */
+  suggested: string
+  suggestedTint: (alpha: number) => string
 }
 
 const DARK: ComercioTheme = {
@@ -46,6 +49,8 @@ const DARK: ComercioTheme = {
   savingsTint: (a: number) => `rgba(52,211,153,${a})`,
   urgency: '#FF7A50',
   urgencyTint: (a: number) => `rgba(255,122,80,${a})`,
+  suggested: '#FF4FB8',
+  suggestedTint: (a: number) => `rgba(255,79,184,${a})`,
 }
 
 // Fondo claro: el contraste lo dan los bordes y el texto en azul, no rellenos oscuros.
@@ -70,6 +75,8 @@ const LIGHT: ComercioTheme = {
   savingsTint: (a: number) => `rgba(14,159,110,${a})`,
   urgency: '#D6472A',
   urgencyTint: (a: number) => `rgba(214,71,42,${a})`,
+  suggested: '#D4148A',
+  suggestedTint: (a: number) => `rgba(212,20,138,${a})`,
 }
 
 export function getComercioTheme(mode: ComercioThemeMode): ComercioTheme {
