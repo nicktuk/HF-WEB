@@ -10,23 +10,19 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func, case
 import logging
 
-from app.db.repositories import ProductRepository, SourceWebsiteRepository
+from app.db.repositories import ProductRepository
 from app.models.product import Product, ProductImage
 from app.models.category import Category
-from app.models.category_mapping import CategoryMapping
 from app.models.stock import Deposit, StockPurchase
 from app.models.catalog_seller import CatalogSeller, require_active_catalog_seller
 from app.models.sale import Sale, SaleItem
 from app.models.product_review import ProductReview
-from app.models.source_website import SourceWebsite
 from app.models.analytics_event import AnalyticsEvent
 from app.models.product import ProductColorStock, ProductDepositStock
 from app.models.product_comercio import ProductComercioConfig, ProductComercioImage
-from app.schemas.product import ProductCreate, ProductUpdate, ProductPublicResponse, ColorStockItem, ProductReviewPublic
+from app.schemas.product import ProductUpdate, ProductPublicResponse, ColorStockItem, ProductReviewPublic
 from app.schemas.product_comercio import ProductComercioConfigUpdate
-from app.scrapers.registry import ScraperRegistry
-from app.scrapers.base import ScrapedProduct
-from app.core.exceptions import NotFoundError, DuplicateError, ScraperError
+from app.core.exceptions import NotFoundError, DuplicateError
 from app.services.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -45,7 +41,6 @@ class ProductService:
     def __init__(self, db: Session):
         self.db = db
         self.repo = ProductRepository(db)
-        self.source_repo = SourceWebsiteRepository(db)
 
     # Public catalog methods
 
@@ -316,7 +311,6 @@ class ProductService:
             stock_low_threshold=product.stock_low_threshold,
             stock_qty=stock_qty,
             images=images,
-            source_url=product.source_url,
             video_url=product.video_url,
             color_stock=color_stock,
             updated_at=product.updated_at,
@@ -481,22 +475,10 @@ class ProductService:
 
         return result
 
-    @staticmethod
-    def _normalize_source_category(value: Optional[str]) -> str:
-        raw = (value or "").strip().lower()
-        return re.sub(r"\s+", " ", raw)
-
     def _get_category_by_name(self, category_name: Optional[str]) -> Optional[Category]:
         if not category_name:
             return None
         return self.db.query(Category).filter(Category.name == category_name).first()
-
-    def _get_category_id_from_source(self, source_category: Optional[str]) -> Optional[int]:
-        key = self._normalize_source_category(source_category)
-        if not key:
-            return None
-        mapping = self.db.query(CategoryMapping).filter(CategoryMapping.source_key == key).first()
-        return mapping.category_id if mapping else None
 
     # Admin methods
 
@@ -505,7 +487,6 @@ class ProductService:
         page: int = 1,
         limit: int = 20,
         enabled: Optional[bool] = None,
-        source_website_id: Optional[int] = None,
         search: Optional[str] = None,
         category_id: Optional[int] = None,
         category: Optional[str] = None,
@@ -526,7 +507,6 @@ class ProductService:
             skip,
             limit,
             enabled,
-            source_website_id,
             search,
             category_id,
             category,
@@ -543,7 +523,6 @@ class ProductService:
         )
         total = self.repo.count_admin(
             enabled,
-            source_website_id,
             search,
             category_id,
             category,
@@ -1061,106 +1040,6 @@ class ProductService:
 
         return {"rows": rows, "summary": summary}
 
-    async def create_from_slug(self, data: ProductCreate) -> Product:
-        """
-        Create a new product by scraping from source website.
-
-        Args:
-            data: ProductCreate with source_website_id and slug
-
-        Returns:
-            Created Product
-
-        Raises:
-            NotFoundError: If source website not found
-            DuplicateError: If product already exists
-            ScraperError: If scraping fails
-        """
-        # Get source website
-        source_website = self.source_repo.get(data.source_website_id)
-        if not source_website:
-            raise NotFoundError("SourceWebsite", str(data.source_website_id))
-
-        # Check for duplicate
-        existing = self.repo.get_by_slug(data.source_website_id, data.slug)
-        if existing:
-            raise DuplicateError("Product", data.slug)
-
-        # Get scraper
-        try:
-            scraper = ScraperRegistry.get_scraper(source_website.name)
-        except ValueError:
-            raise ScraperError(
-                f"No scraper available for {source_website.name}",
-                source=source_website.name
-            )
-
-        # Scrape product data
-        scraped = await scraper.scrape_product(
-            data.slug,
-            config=source_website.scraper_config
-        )
-
-        target_category = self._get_category_by_name(data.category) if data.category else None
-        if data.category and target_category is None:
-            from app.core.exceptions import ValidationError
-            raise ValidationError(f"Categoría no encontrada: {data.category}")
-
-        # Create product
-        if data.category and target_category is None:
-            from app.core.exceptions import ValidationError
-            raise ValidationError(f"Categoría no encontrada: {data.category}")
-
-        product = Product(
-            source_website_id=data.source_website_id,
-            slug=data.slug,
-            source_url=scraped.source_url,
-            original_name=scraped.name,
-            original_price=Decimal(str(scraped.price)) if scraped.price else None,
-            description=scraped.description,
-            short_description=scraped.short_description,
-            brand=scraped.brand,
-            sku=scraped.sku,
-            codigo_interno=self._generate_codigo_interno(),
-            min_purchase_qty=scraped.min_purchase_qty,
-            kit_content=scraped.kit_content,
-            enabled=data.enabled,
-            activated_at=datetime.utcnow() if data.enabled else None,
-            is_featured=True,  # Mark new scraped products as "Nuevo"
-            markup_percentage=data.markup_percentage,
-            source_category=scraped.categories[0] if scraped.categories else None,
-            category=scraped.categories[0] if scraped.categories else None,
-            category_id=(
-                target_category.id
-                if target_category
-                else self._get_category_id_from_source(scraped.categories[0] if scraped.categories else None)
-            ),
-            last_scraped_at=datetime.utcnow(),
-        )
-
-        self.db.add(product)
-        self.db.flush()  # Get product ID
-
-        # Add images
-        for i, img_url in enumerate(scraped.images):
-            image = ProductImage(
-                product_id=product.id,
-                url=img_url,
-                original_url=img_url,
-                display_order=i,
-                is_primary=(i == 0),
-            )
-            self.db.add(image)
-
-        self.db.commit()
-        self.db.refresh(product)
-
-        # Invalidate cache
-        cache.invalidate_all_products()
-
-        logger.info(f"Created product {product.slug} from {source_website.name}")
-        return product
-
     def update(self, id: int, data: ProductUpdate) -> Product:
         """Update a product."""
         product = self.get_by_id(id)
@@ -1299,76 +1178,6 @@ class ProductService:
 
         return product
 
-    async def rescrape(self, id: int) -> Product:
-        """Re-scrape product data from source."""
-        product = self.get_by_id(id)
-        source_website = product.source_website
-
-        try:
-            scraper = ScraperRegistry.get_scraper(source_website.name)
-            scraped = await scraper.scrape_product(
-                product.slug,
-                config=source_website.scraper_config
-            )
-
-            # Update scraped fields (preserve admin customizations)
-            product.original_name = scraped.name
-            if scraped.price is not None:
-                new_price = Decimal(str(scraped.price))
-                if product.original_price is None:
-                    product.original_price = new_price
-                    product.pending_original_price = None
-                    product.pending_price_detected_at = None
-                elif Decimal(str(product.original_price)) != new_price:
-                    product.pending_original_price = new_price
-                    product.pending_price_detected_at = datetime.utcnow()
-                else:
-                    product.pending_original_price = None
-                    product.pending_price_detected_at = None
-            product.description = scraped.description
-            product.short_description = scraped.short_description
-            product.brand = scraped.brand or product.brand
-            product.sku = scraped.sku or product.sku
-            product.min_purchase_qty = scraped.min_purchase_qty or product.min_purchase_qty
-            product.kit_content = scraped.kit_content or product.kit_content
-            if scraped.categories:
-                product.source_category = scraped.categories[0]
-                if product.category_id is None:
-                    product.category_id = self._get_category_id_from_source(scraped.categories[0])
-                # Keep legacy text column aligned with source
-                product.category = scraped.categories[0]
-            product.last_scraped_at = datetime.utcnow()
-            product.scrape_error_count = 0
-            product.scrape_last_error = None
-
-            # Update images (replace all)
-            for img in product.images:
-                self.db.delete(img)
-
-            for i, img_url in enumerate(scraped.images):
-                image = ProductImage(
-                    product_id=product.id,
-                    url=img_url,
-                    original_url=img_url,
-                    display_order=i,
-                    is_primary=(i == 0),
-                )
-                self.db.add(image)
-
-            self.db.commit()
-            self.db.refresh(product)
-
-            cache.invalidate_all_products()
-
-            logger.info(f"Re-scraped product {product.slug}")
-            return product
-
-        except Exception as e:
-            product.scrape_error_count += 1
-            product.scrape_last_error = str(e)
-            self.db.commit()
-            raise
-
     def delete(self, id: int) -> None:
         """Delete a product."""
         product = self.get_by_id(id)
@@ -1385,7 +1194,7 @@ class ProductService:
 
     def create_manual(self, data) -> Product:
         """
-        Create a product manually without scraping.
+        Create a product.
 
         Args:
             data: ProductCreateManual with name, price, description, images, etc.
@@ -1393,26 +1202,6 @@ class ProductService:
         Returns:
             Created Product
         """
-        from app.models.source_website import SourceWebsite
-
-        # Get or create the "manual" source website
-        manual_source = self.db.query(SourceWebsite).filter(
-            SourceWebsite.name == "manual"
-        ).first()
-
-        if not manual_source:
-            # Create it if it doesn't exist
-            manual_source = SourceWebsite(
-                name="manual",
-                display_name="Producto Manual",
-                base_url="",
-                is_active=True,
-                scraper_config={},
-                notes="Productos creados manualmente sin scraping."
-            )
-            self.db.add(manual_source)
-            self.db.flush()
-
         # Generate a unique slug from the name
         import re
         import uuid
@@ -1432,9 +1221,7 @@ class ProductService:
             custom_price = None
 
         product = Product(
-            source_website_id=manual_source.id,
             slug=slug,
-            source_url=None,
             original_name=data.name,
             original_price=original_price,
             custom_price=custom_price,
@@ -1450,10 +1237,8 @@ class ProductService:
             is_on_demand=data.is_on_demand if not data.is_immediate_delivery else False,
             markup_percentage=Decimal("0"),
             category_id=target_category.id if target_category else None,
-            source_category=None,
             category=data.category,
             subcategory=data.subcategory,
-            last_scraped_at=None,
         )
 
         self.db.add(product)
@@ -1490,38 +1275,15 @@ class ProductService:
         cache.invalidate_all_products()
         return count
 
-    def disable_by_supplier(self, supplier: str) -> dict:
-        """Disable all enabled products whose source website name/display_name matches the supplier."""
-        from app.models.source_website import SourceWebsite
-
-        product_ids_q = (
-            self.db.query(Product.id)
-            .join(SourceWebsite, SourceWebsite.id == Product.source_website_id)
-            .filter(Product.enabled == True)
-            .filter(
-                SourceWebsite.name.ilike(f"%{supplier}%") |
-                SourceWebsite.display_name.ilike(f"%{supplier}%")
-            )
-        )
-        product_ids = [row[0] for row in product_ids_q.all()]
-        if not product_ids:
-            return {"count": 0, "product_ids": []}
-        count = self.repo.bulk_update_enabled(product_ids, False)
-        cache.invalidate_all_products()
-        return {"count": count, "product_ids": product_ids}
-
     def bulk_set_markup(
         self,
         markup_percentage: Decimal,
         only_enabled: bool = True,
-        source_website_id: Optional[int] = None
     ) -> int:
         """Set markup percentage for multiple products."""
         query = self.db.query(Product)
         if only_enabled:
             query = query.filter(Product.enabled == True)
-        if source_website_id:
-            query = query.filter(Product.source_website_id == source_website_id)
 
         count = query.update(
             {Product.markup_percentage: markup_percentage},
@@ -1535,14 +1297,11 @@ class ProductService:
         self,
         markup_percentage: Decimal,
         only_enabled: bool = True,
-        source_website_id: Optional[int] = None
     ) -> int:
         """Set wholesale markup percentage for multiple products."""
         query = self.db.query(Product)
         if only_enabled:
             query = query.filter(Product.enabled == True)
-        if source_website_id:
-            query = query.filter(Product.source_website_id == source_website_id)
 
         count = query.update(
             {Product.wholesale_markup_percentage: markup_percentage},
@@ -1683,61 +1442,6 @@ class ProductService:
         logger.info(f"Disabled {count} products")
         return count
 
-    def disable_all_from_source(self, source_website_id: int) -> int:
-        """
-        Disable ALL products from a source website.
-
-        Returns the number of products disabled.
-        """
-        count = self.db.query(Product).filter(
-            Product.source_website_id == source_website_id,
-            Product.enabled == True
-        ).update(
-            {Product.enabled: False},
-            synchronize_session=False
-        )
-        self.db.commit()
-        cache.invalidate_all_products()
-        logger.info(f"Disabled {count} products from source {source_website_id}")
-        return count
-
-    def delete_all_from_source(self, source_website_id: int) -> int:
-        """
-        DELETE ALL products from a source website.
-
-        Returns the number of products deleted.
-        """
-        count = self.db.query(Product).filter(
-            Product.source_website_id == source_website_id
-        ).delete(synchronize_session=False)
-        self.db.commit()
-        cache.invalidate_all_products()
-        logger.info(f"Deleted {count} products from source {source_website_id}")
-        return count
-
-    def check_stock_all_from_source(self, source_website_id: int) -> int:
-        """
-        Set is_check_stock=True for ALL enabled products from a source website.
-        Also removes is_featured and is_immediate_delivery flags.
-
-        Returns the number of products updated.
-        """
-        count = self.db.query(Product).filter(
-            Product.source_website_id == source_website_id,
-            Product.enabled == True
-        ).update(
-            {
-                Product.is_check_stock: True,
-                Product.is_featured: False,
-                Product.is_immediate_delivery: False
-            },
-            synchronize_session=False
-        )
-        self.db.commit()
-        cache.invalidate_all_products()
-        logger.info(f"Set check_stock for {count} products from source {source_website_id}")
-        return count
-
     def get_categories(self) -> List[str]:
         """Get list of unique categories."""
         return self.repo.get_categories()
@@ -1825,308 +1529,6 @@ class ProductService:
             Product.enabled == True
         ).order_by(Product.category_id, Product.original_name).all()
 
-    async def scrape_all_from_source(
-        self,
-        source_website_id: int,
-        update_existing: bool = True
-    ) -> dict:
-        """
-        Scrape all products from a source website.
-
-        - Finds all products in the source catalog
-        - Creates new products (disabled by default)
-        - Optionally updates existing products
-
-        Args:
-            source_website_id: ID of the source website
-            update_existing: Whether to update existing products
-
-        Returns:
-            Dict with counts: {new: int, updated: int, errors: int, total: int}
-        """
-        source_website = self.source_repo.get(source_website_id)
-        if not source_website:
-            raise NotFoundError("SourceWebsite", str(source_website_id))
-
-        try:
-            scraper = ScraperRegistry.get_scraper(source_website.name)
-        except ValueError:
-            raise ScraperError(
-                f"No scraper available for {source_website.name}",
-                source=source_website.name
-            )
-
-        # Get all slugs from catalog
-        logger.info(f"Fetching catalog from {source_website.name}...")
-        all_slugs = await scraper.scrape_catalog(config=source_website.scraper_config)
-        logger.info(f"Found {len(all_slugs)} products in catalog")
-
-        results = {"new": 0, "updated": 0, "errors": 0, "total": len(all_slugs)}
-
-        for slug in all_slugs:
-            try:
-                existing = self.repo.get_by_slug(source_website_id, slug)
-
-                if existing:
-                    if update_existing:
-                        # Update existing product
-                        await self.rescrape(existing.id)
-                        results["updated"] += 1
-                        logger.info(f"Updated: {slug}")
-                else:
-                    # Create new product (disabled by default)
-                    scraped = await scraper.scrape_product(
-                        slug,
-                        config=source_website.scraper_config
-                    )
-
-                    product = Product(
-                        source_website_id=source_website_id,
-                        slug=slug,
-                        source_url=scraped.source_url,
-                        original_name=scraped.name,
-                        original_price=Decimal(str(scraped.price)) if scraped.price else None,
-                        description=scraped.description,
-                        short_description=scraped.short_description,
-                        brand=scraped.brand,
-                        sku=scraped.sku,
-                        min_purchase_qty=scraped.min_purchase_qty,
-                        kit_content=scraped.kit_content,
-                        enabled=False,  # Disabled by default - admin enables manually
-                        is_featured=True,  # Mark new scraped products as "Nuevo"
-                        markup_percentage=Decimal("0"),
-                        source_category=scraped.categories[0] if scraped.categories else None,
-                        category=scraped.categories[0] if scraped.categories else None,
-                        category_id=self._get_category_id_from_source(scraped.categories[0] if scraped.categories else None),
-                        last_scraped_at=datetime.utcnow(),
-                    )
-
-                    self.db.add(product)
-                    self.db.flush()
-
-                    # Add images
-                    for i, img_url in enumerate(scraped.images):
-                        image = ProductImage(
-                            product_id=product.id,
-                            url=img_url,
-                            original_url=img_url,
-                            display_order=i,
-                            is_primary=(i == 0),
-                        )
-                        self.db.add(image)
-
-                    self.db.commit()
-                    results["new"] += 1
-                    logger.info(f"Created: {slug}")
-
-            except Exception as e:
-                results["errors"] += 1
-                logger.error(f"Error processing {slug}: {e}")
-                self.db.rollback()
-                continue
-
-        cache.invalidate_all_products()
-        logger.info(f"Scrape complete: {results}")
-        return results
-
-    def compare_prices(self, search: str, similarity_threshold: int = 70) -> dict:
-        """
-        Compare prices across source websites for products matching search term.
-        Groups similar products using fuzzy matching.
-
-        Args:
-            search: Search keyword
-            similarity_threshold: Minimum similarity score (0-100) to group products
-
-        Returns:
-            dict with:
-            - sources: list of source websites with products matching search
-            - groups: list of product groups (similar products grouped together)
-        """
-        from rapidfuzz import fuzz
-        import re
-
-        search_term = f"%{search}%"
-
-        # Get all products matching the search
-        products = (
-            self.db.query(Product)
-            .filter(
-                or_(
-                    Product.original_name.ilike(search_term),
-                    Product.custom_name.ilike(search_term),
-                    Product.sku.ilike(search_term),
-                    Product.codigo_interno.ilike(search_term),
-                    Product.slug.ilike(search_term)
-                )
-            )
-            .all()
-        )
-
-        if not products:
-            return {"sources": [], "groups": [], "total": 0}
-
-        # Get all source websites that have matching products
-        source_ids = set(p.source_website_id for p in products if p.source_website_id)
-        sources = self.source_repo.get_by_ids(list(source_ids))
-
-        # Build source map
-        source_map = {s.id: {"id": s.id, "name": s.display_name or s.name} for s in sources}
-
-        def normalize_name(name: str) -> str:
-            """Normalize product name for better comparison."""
-            if not name:
-                return ""
-            # Lowercase
-            name = name.lower()
-            # Remove common words that don't help comparison
-            stopwords = ['de', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'por']
-            words = name.split()
-            words = [w for w in words if w not in stopwords]
-            # Remove special characters
-            name = ' '.join(words)
-            name = re.sub(r'[^\w\s]', '', name)
-            return name.strip()
-
-        def build_product_data(p: Product) -> dict:
-            """Build product dict for response."""
-            primary_image = None
-            for img in p.images:
-                if img.is_primary:
-                    primary_image = img.url
-                    break
-            if not primary_image and p.images:
-                primary_image = p.images[0].url
-
-            return {
-                "id": p.id,
-                "name": p.display_name,
-                "original_name": p.original_name,
-                "sku": p.sku,
-                "slug": p.slug,
-                "source_website_id": p.source_website_id,
-                "source_name": source_map.get(p.source_website_id, {}).get("name", "Desconocido"),
-                "original_price": float(p.original_price) if p.original_price else None,
-                "final_price": float(p.final_price) if p.final_price else None,
-                "markup_percentage": float(p.markup_percentage) if p.markup_percentage else 0,
-                "enabled": p.enabled,
-                "image": primary_image,
-            }
-
-        # Group products by similarity
-        groups = []
-        used_ids = set()
-
-        for product in products:
-            if product.id in used_ids:
-                continue
-
-            # Start a new group with this product
-            group = {
-                "name": product.display_name,
-                "products": [build_product_data(product)]
-            }
-            used_ids.add(product.id)
-
-            normalized_name = normalize_name(product.original_name)
-
-            # Find similar products from other sources
-            for other in products:
-                if other.id in used_ids:
-                    continue
-                # Skip products from the same source
-                if other.source_website_id == product.source_website_id:
-                    continue
-
-                other_normalized = normalize_name(other.original_name)
-
-                # Calculate similarity
-                similarity = fuzz.token_sort_ratio(normalized_name, other_normalized)
-
-                if similarity >= similarity_threshold:
-                    group["products"].append(build_product_data(other))
-                    used_ids.add(other.id)
-
-            groups.append(group)
-
-        # Sort groups by number of sources (more sources = more interesting comparison)
-        groups.sort(key=lambda g: len(g["products"]), reverse=True)
-
-        return {
-            "sources": list(source_map.values()),
-            "groups": groups,
-            "total": len(products)
-        }
-
-    def get_stats_by_source_and_category(self) -> dict:
-        """
-        Get product stats grouped by source website and category.
-
-        Returns:
-            dict with:
-            - sources: list of source websites
-            - categories: list of unique categories
-            - stats: list of {source_id, source_name, category, enabled_count, total_count}
-            - chart_data: data formatted for stacked bar chart
-        """
-        from sqlalchemy import func, case
-
-        # Get all source websites
-        sources = self.source_repo.get_all()
-        source_map = {s.id: s.display_name or s.name for s in sources}
-
-        # Query stats grouped by source and category
-        stats_query = (
-            self.db.query(
-                Product.source_website_id,
-                Category.name.label("category_name"),
-                func.count(Product.id).label('total'),
-                func.sum(case((Product.enabled == True, 1), else_=0)).label('enabled')
-            )
-            .outerjoin(Category, Product.category_id == Category.id)
-            .group_by(Product.source_website_id, Category.name)
-            .all()
-        )
-
-        # Build stats list
-        stats = []
-        categories_set = set()
-
-        for row in stats_query:
-            source_id = row.source_website_id
-            category = row.category_name or "Sin categoría"
-            categories_set.add(category)
-
-            stats.append({
-                "source_id": source_id,
-                "source_name": source_map.get(source_id, "Desconocido"),
-                "category": category,
-                "enabled_count": int(row.enabled or 0),
-                "total_count": int(row.total or 0),
-            })
-
-        # Sort categories alphabetically, but "Sin categoría" at the end
-        categories = sorted([c for c in categories_set if c != "Sin categoría"])
-        if "Sin categoría" in categories_set:
-            categories.append("Sin categoría")
-
-        # Build chart data (for stacked bar chart)
-        # Format: [{source: "RedLenic", "Bazar": 10, "Audio": 5, ...}, ...]
-        chart_data = []
-        for source in sources:
-            source_stats = {"source": source.display_name or source.name}
-            for stat in stats:
-                if stat["source_id"] == source.id:
-                    source_stats[stat["category"]] = stat["enabled_count"]
-            chart_data.append(source_stats)
-
-        return {
-            "sources": [{"id": s.id, "name": s.display_name or s.name} for s in sources],
-            "categories": categories,
-            "stats": stats,
-            "chart_data": chart_data,
-        }
-
     def get_stats_by_price_range(self) -> dict:
         """
         Get product stats grouped by price ranges.
@@ -2192,7 +1594,6 @@ class ProductService:
                     "original_name": p.original_name,
                     "price": float(p.original_price) if p.original_price else None,
                     "sku": p.sku,
-                    "source_name": p.source_website.display_name if p.source_website else None,
                     "image": first_image,
                 })
 
@@ -2252,71 +1653,6 @@ class ProductService:
             "total_value": total_value,
             "items": items,
         }
-
-    def get_pending_price_changes(self) -> dict:
-        """Get products with pending original price changes."""
-        products = (
-            self.db.query(Product)
-            .filter(Product.pending_original_price.isnot(None))
-            .order_by(Product.pending_price_detected_at.desc().nullslast(), Product.id.desc())
-            .all()
-        )
-
-        items = []
-        for product in products:
-            items.append({
-                "product_id": product.id,
-                "display_name": product.display_name,
-                "source_website_name": product.source_website.display_name if product.source_website else None,
-                "original_price": float(product.original_price) if product.original_price is not None else None,
-                "pending_original_price": float(product.pending_original_price) if product.pending_original_price is not None else None,
-                "detected_at": product.pending_price_detected_at,
-            })
-
-        return {"items": items}
-
-    def approve_pending_prices(self, product_ids: List[int]) -> int:
-        """Approve pending original price changes."""
-        products = (
-            self.db.query(Product)
-            .filter(Product.id.in_(product_ids))
-            .all()
-        )
-        updated = 0
-        for product in products:
-            if product.pending_original_price is None:
-                continue
-            product.original_price = product.pending_original_price
-            product.pending_original_price = None
-            product.pending_price_detected_at = None
-            updated += 1
-
-        if updated:
-            self.db.commit()
-            cache.invalidate_all_products()
-
-        return updated
-
-    def reject_pending_prices(self, product_ids: List[int]) -> int:
-        """Reject pending original price changes."""
-        products = (
-            self.db.query(Product)
-            .filter(Product.id.in_(product_ids))
-            .all()
-        )
-        updated = 0
-        for product in products:
-            if product.pending_original_price is None:
-                continue
-            product.pending_original_price = None
-            product.pending_price_detected_at = None
-            updated += 1
-
-        if updated:
-            self.db.commit()
-            cache.invalidate_all_products()
-
-        return updated
 
     def get_financial_stats(self) -> dict:
         """Get dashboard financial stats."""
@@ -2574,19 +1910,6 @@ class ProductService:
                 for row in daily_rows
             ],
         }
-
-    def mark_new_by_scrape_date(self, scrape_date: str) -> int:
-        """Mark products scraped on a specific date as 'Nuevo' (is_featured=true)."""
-        from sqlalchemy import cast, Date
-
-        count = (
-            self.db.query(Product)
-            .filter(cast(Product.last_scraped_at, Date) == scrape_date)
-            .update({Product.is_featured: True}, synchronize_session=False)
-        )
-        self.db.commit()
-        cache.invalidate_all_products()
-        return count
 
     def bulk_remove_badge(
         self,

@@ -14,9 +14,6 @@ import { adminApi, uploadImages, resolveImageUrl } from '@/lib/api';
 import type {
   Category,
   CategoryCreateForm,
-  CategoryMapping,
-  SourceCategoryProduct,
-  UnmappedSourceCategory,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -42,44 +39,16 @@ async function fetchCategories(apiKey: string): Promise<Category[]> {
   return res.json();
 }
 
-async function fetchCategoryMappings(apiKey: string): Promise<CategoryMapping[]> {
-  const res = await fetch(`${API_URL}/categories/mappings`, {
-    headers: { 'X-Admin-API-Key': apiKey },
-  });
-  if (!res.ok) throw new Error('Error al cargar mapeos');
-  return res.json();
-}
-
-async function fetchUnmappedSources(apiKey: string): Promise<UnmappedSourceCategory[]> {
-  const res = await fetch(`${API_URL}/categories/unmapped-sources`, {
-    headers: { 'X-Admin-API-Key': apiKey },
-  });
-  if (!res.ok) throw new Error('Error al cargar categorias no mapeadas');
-  return res.json();
-}
-
-async function fetchSourceCategoryProducts(apiKey: string, sourceName: string): Promise<SourceCategoryProduct[]> {
-  const params = new URLSearchParams({ source_name: sourceName, limit: '500' });
-  const res = await fetch(`${API_URL}/categories/source-products?${params.toString()}`, {
-    headers: { 'X-Admin-API-Key': apiKey },
-  });
-  if (!res.ok) throw new Error('Error al cargar productos de categoria origen');
-  return res.json();
-}
-
 export default function CategoriasPage() {
   const apiKey = useApiKey() || '';
   const queryClient = useQueryClient();
 
   const [showModal, setShowModal] = useState(false);
-  const [showSourceProductsModal, setShowSourceProductsModal] = useState(false);
 
   // Catalog settings
   const [pillLabelInput, setPillLabelInput] = useState('');
   const [pillLabelSaved, setPillLabelSaved] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [mapTargets, setMapTargets] = useState<Record<string, number>>({});
-  const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState<CategoryCreateForm>({
@@ -104,24 +73,6 @@ export default function CategoriasPage() {
     queryKey: ['categories', apiKey],
     queryFn: () => fetchCategories(apiKey),
     enabled: !!apiKey,
-  });
-
-  const { data: mappings } = useQuery({
-    queryKey: ['category-mappings', apiKey],
-    queryFn: () => fetchCategoryMappings(apiKey),
-    enabled: !!apiKey,
-  });
-
-  const { data: unmappedSources } = useQuery({
-    queryKey: ['category-unmapped-sources', apiKey],
-    queryFn: () => fetchUnmappedSources(apiKey),
-    enabled: !!apiKey,
-  });
-
-  const { data: sourceProducts, isLoading: isLoadingSourceProducts } = useQuery({
-    queryKey: ['source-category-products', apiKey, selectedSourceName],
-    queryFn: () => fetchSourceCategoryProducts(apiKey, selectedSourceName || ''),
-    enabled: !!apiKey && !!selectedSourceName && showSourceProductsModal,
   });
 
   const { data: catalogSettings } = useQuery({
@@ -202,49 +153,6 @@ export default function CategoriasPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-  });
-
-  const mapMutation = useMutation({
-    mutationFn: async ({ sourceName, categoryId }: { sourceName: string; categoryId: number }) => {
-      const res = await fetch(`${API_URL}/categories/mappings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-API-Key': apiKey,
-        },
-        body: JSON.stringify({
-          source_name: sourceName,
-          category_id: categoryId,
-          apply_existing: true,
-        }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Error al mapear categoría');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['category-mappings'] });
-      queryClient.invalidateQueries({ queryKey: ['category-unmapped-sources'] });
-    },
-  });
-
-  const deleteMapMutation = useMutation({
-    mutationFn: async (mappingId: number) => {
-      const res = await fetch(`${API_URL}/categories/mappings/${mappingId}`, {
-        method: 'DELETE',
-        headers: { 'X-Admin-API-Key': apiKey },
-      });
-      if (!res.ok) throw new Error('Error al eliminar mapeo');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['category-mappings'] });
-      queryClient.invalidateQueries({ queryKey: ['category-unmapped-sources'] });
     },
   });
 
@@ -337,11 +245,6 @@ export default function CategoriasPage() {
       id: category.id,
       data: { is_active: !category.is_active },
     });
-  };
-
-  const openSourceProductsModal = (sourceName: string) => {
-    setSelectedSourceName(sourceName);
-    setShowSourceProductsModal(true);
   };
 
   return (
@@ -447,100 +350,6 @@ export default function CategoriasPage() {
         </Card>
       )}
 
-      {/* Source Mapping Header */}
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="text-lg font-semibold text-gray-900">Mapeador de categorías origen</h2>
-          <p className="text-sm text-gray-600">
-            Vincula nombres que llegan de mayoristas con tu categoría maestra.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Unmapped Source Categories */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">No asignadas</h3>
-          {!unmappedSources || unmappedSources.length === 0 ? (
-            <p className="text-sm text-gray-500">No hay categorías pendientes de mapear.</p>
-          ) : (
-            <div className="border rounded-lg divide-y">
-              {unmappedSources.map((item) => (
-                <div key={item.source_name} className="p-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{item.source_name}</p>
-                    <p className="text-xs text-gray-500">{item.product_count} productos</p>
-                  </div>
-                  <select
-                    value={mapTargets[item.source_name] || categories?.[0]?.id || ''}
-                    onChange={(e) =>
-                      setMapTargets((prev) => ({ ...prev, [item.source_name]: Number(e.target.value) }))
-                    }
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px]"
-                  >
-                    {(categories || []).map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openSourceProductsModal(item.source_name)}
-                    disabled={mapMutation.isPending}
-                  >
-                    Ver productos
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      mapMutation.mutate({
-                        sourceName: item.source_name,
-                        categoryId: mapTargets[item.source_name] || categories?.[0]?.id || 0,
-                      })
-                    }
-                    disabled={!categories?.length || mapMutation.isPending}
-                  >
-                    Asignar
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Mapped Source Categories */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">Asignadas</h3>
-          {!mappings || mappings.length === 0 ? (
-            <p className="text-sm text-gray-500">No hay mapeos creados.</p>
-          ) : (
-            <div className="border rounded-lg divide-y">
-              {mappings.map((mapping) => (
-                <div key={mapping.id} className="p-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-900">
-                      <span className="font-medium">{mapping.source_name}</span> → {mapping.category_name}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteMapMutation.mutate(mapping.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Catalog filter settings */}
       <Card>
         <CardContent className="p-4">
@@ -571,68 +380,6 @@ export default function CategoriasPage() {
 
         </CardContent>
       </Card>
-
-      <Modal
-        isOpen={showSourceProductsModal}
-        onClose={() => {
-          setShowSourceProductsModal(false);
-          setSelectedSourceName(null);
-        }}
-        title={selectedSourceName ? `Productos de origen: ${selectedSourceName}` : 'Productos por categoria origen'}
-        size="xl"
-      >
-        <ModalContent className="p-0">
-          {isLoadingSourceProducts ? (
-            <div className="p-4 space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-10" />
-              ))}
-            </div>
-          ) : !sourceProducts || sourceProducts.length === 0 ? (
-            <div className="p-6 text-sm text-gray-500">No hay productos para esta categoria origen.</div>
-          ) : (
-            <div className="max-h-[65vh] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Producto</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Slug</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Source</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Estado</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Categoria actual</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourceProducts.map((product) => (
-                    <tr key={product.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 text-gray-900">{product.name}</td>
-                      <td className="px-3 py-2 text-gray-600">{product.slug}</td>
-                      <td className="px-3 py-2 text-gray-600">{product.source_website_name || '-'}</td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-xs border ${product.enabled ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                          {product.enabled ? 'Habilitado' : 'Deshabilitado'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">{product.mapped_category_name || 'Sin mapear'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowSourceProductsModal(false);
-              setSelectedSourceName(null);
-            }}
-          >
-            Cerrar
-          </Button>
-        </ModalFooter>
-      </Modal>
 
       {/* Create/Edit Modal */}
       <Modal

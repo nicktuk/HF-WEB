@@ -1,34 +1,29 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Building2, Send, Tag, Store } from 'lucide-react';
+import { Plus, Search, FileDown, ChevronDown, Percent, Power, PowerOff, Star, FolderInput, Check, X, TrendingUp, Zap, Sparkles, Loader2, Send, Tag, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProductTable } from '@/components/admin/ProductTable';
-import { AddProductModal } from '@/components/admin/ProductForm';
 import { ManualProductForm } from '@/components/admin/ManualProductForm';
 import { BulkMarkupModal } from '@/components/admin/BulkMarkupModal';
 import { BulkWholesaleMarkupModal } from '@/components/admin/BulkWholesaleMarkupModal';
 import { ActivateInactiveModal } from '@/components/admin/ActivateInactiveModal';
-import { Modal, ModalContent, ModalFooter } from '@/components/ui/modal';
-import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
-import { useAdminProducts, useSourceWebsites, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories, usePendingPriceChanges, useApprovePendingPriceChanges, useRejectPendingPriceChanges } from '@/hooks/useProducts';
+import { useApiKey } from '@/hooks/useAuth';
+import { useAdminProducts, useAdminCategories, useChangeCategorySelected, useChangeSubcategorySelected, useAdminSubcategories } from '@/hooks/useProducts';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Category, Subcategory } from '@/types';
 import { adminApi, aiApi, AIJobStatus } from '@/lib/api';
-import { formatDate, formatPrice } from '@/lib/utils';
 
 export default function ProductsPage() {
   const apiKey = useApiKey() || '';
-  const isSuperadmin = useIsSuperadmin();
   const queryClient = useQueryClient();
 
   // Use persistent filters from store
   const {
     search,
     enabledFilter,
-    sourceFilter,
     categoryFilter,
     subcategoryFilter,
     featuredFilter,
@@ -43,7 +38,6 @@ export default function ProductsPage() {
     limit,
     setSearch,
     setEnabledFilter,
-    setSourceFilter,
     setCategoryFilter,
     setSubcategoryFilter,
     setFeaturedFilter,
@@ -58,7 +52,6 @@ export default function ProductsPage() {
     setLimit,
   } = useAdminFilters();
 
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showBulkMarkupModal, setShowBulkMarkupModal] = useState(false);
   const [showWholesaleMarkupModal, setShowWholesaleMarkupModal] = useState(false);
@@ -69,21 +62,13 @@ export default function ProductsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingWholesale, setIsExportingWholesale] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [showPendingPriceModal, setShowPendingPriceModal] = useState(false);
-  const [pendingPriceModalOpened, setPendingPriceModalOpened] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isRemovingBadge, setIsRemovingBadge] = useState(false);
-  const [isMarkingNew, setIsMarkingNew] = useState(false);
-  const [markNewDate, setMarkNewDate] = useState('');
   const [aiJobId, setAiJobId] = useState<string | null>(null);
   const [aiJob, setAiJob] = useState<AIJobStatus | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
   const [isBulkDisabling, setIsBulkDisabling] = useState(false);
   const [isClearingSale, setIsClearingSale] = useState(false);
-  const [showSupplierDisableModal, setShowSupplierDisableModal] = useState(false);
-  const [supplierToDisable, setSupplierToDisable] = useState('');
-  const [supplierDisableResult, setSupplierDisableResult] = useState<{ count: number } | null>(null);
-  const [isDisablingBySupplier, setIsDisablingBySupplier] = useState(false);
 
   const changeCategoryMutation = useChangeCategorySelected(apiKey);
   const changeSubcategoryMutation = useChangeSubcategorySelected(apiKey);
@@ -133,24 +118,6 @@ export default function ProductsPage() {
       showToast('Error al quitar ofertas', 'error');
     } finally {
       setIsClearingSale(false);
-    }
-  };
-
-  const handleMarkNewByDate = async () => {
-    if (!markNewDate) {
-      showToast('Selecciona una fecha', 'error');
-      return;
-    }
-    setIsMarkingNew(true);
-    try {
-      const result = await adminApi.markNewByDate(apiKey, markNewDate);
-      showToast(result.message, 'success');
-      setMarkNewDate('');
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    } catch (error) {
-      showToast('Error al marcar productos', 'error');
-    } finally {
-      setIsMarkingNew(false);
     }
   };
 
@@ -236,24 +203,6 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDisableBySupplier = async () => {
-    if (!supplierToDisable.trim()) return;
-    setIsDisablingBySupplier(true);
-    setSupplierDisableResult(null);
-    try {
-      const res = await adminApi.disableBySupplier(apiKey, supplierToDisable.trim());
-      setSupplierDisableResult({ count: res.count });
-      if (res.count > 0) {
-        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      }
-    } catch {
-      showToast('Error al inactivar por mayorista', 'error');
-      setShowSupplierDisableModal(false);
-    } finally {
-      setIsDisablingBySupplier(false);
-    }
-  };
-
   const handleExportWholesaleSelected = async () => {
     if (!selectedIds.length) return;
     setIsExportingWholesale(true);
@@ -274,11 +223,6 @@ export default function ProductsPage() {
     }
   };
 
-  const { data: pendingPriceChanges } = usePendingPriceChanges(isSuperadmin ? apiKey : '');
-  const approvePendingPrices = useApprovePendingPriceChanges(apiKey);
-  const rejectPendingPrices = useRejectPendingPriceChanges(apiKey);
-
-  const { data: sourceWebsites } = useSourceWebsites(apiKey);
   const { data: adminCategories } = useAdminCategories();
   const categories = adminCategories as Category[] | undefined;
   const isWithoutCategory = categoryFilter === '__none__';
@@ -295,7 +239,6 @@ export default function ProductsPage() {
     page,
     limit,
     enabled: enabledFilter,
-    source_website_id: sourceFilter,
     search: search || undefined,
     category_id: selectedCategoryId,
     category: selectedCategoryName,
@@ -310,15 +253,6 @@ export default function ProductsPage() {
     price_range: priceRangeFilter,
     sort_by: sortByFilter,
   });
-
-  useEffect(() => {
-    if (!isSuperadmin) return;
-    if (pendingPriceModalOpened) return;
-    if (pendingPriceChanges?.items?.length) {
-      setShowPendingPriceModal(true);
-      setPendingPriceModalOpened(true);
-    }
-  }, [pendingPriceChanges, pendingPriceModalOpened, isSuperadmin]);
 
   useEffect(() => {
     if (!data?.items) return;
@@ -340,8 +274,6 @@ export default function ProductsPage() {
   const bulkCategoryObj = categories?.find(c => c.name === bulkCategory);
   const { data: bulkAdminSubcategories } = useAdminSubcategories(bulkCategoryObj?.id);
   const bulkSubcategories = bulkAdminSubcategories as Subcategory[] | undefined;
-  const pendingItems = pendingPriceChanges?.items || [];
-  const isPendingAction = approvePendingPrices.isPending || rejectPendingPrices.isPending;
 
   return (
     <div className="space-y-6">
@@ -414,16 +346,6 @@ export default function ProductsPage() {
               </button>
               <div className="border-t my-1" />
               <button
-                onClick={() => { setSupplierToDisable(''); setSupplierDisableResult(null); setShowSupplierDisableModal(true); }}
-                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 flex items-center gap-2"
-              >
-                <Building2 className="h-4 w-4 text-red-500" />
-                <div>
-                  <p className="font-medium">Inactivar por mayorista</p>
-                  <p className="text-xs text-zinc-500">Desactiva todos los productos de un proveedor</p>
-                </div>
-              </button>
-              <button
                 onClick={() => {
                   if (confirm('¿Quitar la marca "Publicar" de todos los productos?')) {
                     handleRemoveBadge('is_published', []);
@@ -448,28 +370,6 @@ export default function ProductsPage() {
                   <p className="text-xs text-zinc-500">Marca automatica segun ventas</p>
                 </div>
               </button>
-              <div className="px-4 py-3 hover:bg-zinc-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="h-4 w-4 text-amber-500" />
-                  <p className="font-medium text-sm">Marcar "Nuevo" por fecha</p>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={markNewDate}
-                    onChange={(e) => setMarkNewDate(e.target.value)}
-                    className="flex-1 px-2 py-1 text-sm border rounded"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleMarkNewByDate}
-                    disabled={!markNewDate || isMarkingNew}
-                    isLoading={isMarkingNew}
-                  >
-                    Aplicar
-                  </Button>
-                </div>
-              </div>
               <div className="border-t my-1" />
               <button
                 onClick={() => {
@@ -519,30 +419,10 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Dropdown Agregar Producto */}
-          <div className="relative group">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Producto
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-            <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-t-lg"
-              >
-                <p className="font-medium">Desde catalogo</p>
-                <p className="text-xs text-zinc-500">Scrapear de web mayorista</p>
-              </button>
-              <button
-                onClick={() => setShowManualModal(true)}
-                className="block w-full text-left px-4 py-3 hover:bg-zinc-100 rounded-b-lg"
-              >
-                <p className="font-medium">Producto manual</p>
-                <p className="text-xs text-zinc-500">Crear desde cero</p>
-              </button>
-            </div>
-          </div>
+          <Button onClick={() => setShowManualModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Agregar Producto
+          </Button>
         </div>
       </div>
 
@@ -834,25 +714,6 @@ export default function ProductsPage() {
           </select>
         )}
 
-        {/* Source Filter */}
-        {sourceWebsites && sourceWebsites.items.length > 1 && (
-          <select
-            value={sourceFilter || ''}
-            onChange={(e) => {
-              setSourceFilter(e.target.value ? Number(e.target.value) : undefined);
-              setSelectedIds([]);
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">Todas las fuentes</option>
-            {sourceWebsites.items.map((website) => (
-              <option key={website.id} value={website.id}>
-                {website.display_name}
-              </option>
-            ))}
-          </select>
-        )}
-
         {/* Price Range Filter */}
         <select
           value={priceRangeFilter || ''}
@@ -892,7 +753,7 @@ export default function ProductsPage() {
           {data && (
             <>
               Mostrando <strong>{data.items.length}</strong> de <strong>{data.total}</strong> productos
-              {(search || enabledFilter !== undefined || sourceFilter || categoryFilter || subcategoryFilter || featuredFilter || bestSellerFilter || immediateDeliveryFilter || inStockFilter || onSaleFilter || inComercioFilter || priceRangeFilter) && (
+              {(search || enabledFilter !== undefined || categoryFilter || subcategoryFilter || featuredFilter || bestSellerFilter || immediateDeliveryFilter || inStockFilter || onSaleFilter || inComercioFilter || priceRangeFilter) && (
                 <span className="text-primary-600 ml-1">(filtrado)</span>
               )}
             </>
@@ -921,101 +782,6 @@ export default function ProductsPage() {
         onSelectionChange={setSelectedIds}
       />
 
-      {isSuperadmin && <Modal
-        isOpen={showPendingPriceModal}
-        onClose={() => setShowPendingPriceModal(false)}
-        title="Cambios de precio detectados"
-        size="lg"
-      >
-        <ModalContent className="space-y-4">
-          <p className="text-sm text-zinc-600">
-            Se detectaron cambios de precio origen en productos ya existentes. AprobÃƒÂ¡ para actualizar el precio.
-          </p>
-          {pendingItems.length === 0 ? (
-            <div className="text-sm text-zinc-500">No hay cambios pendientes.</div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-zinc-200 overflow-hidden">
-              <table className="min-w-full text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-200">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Producto</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Fuente</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Actual</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Nuevo</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">Detectado</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200">
-                  {pendingItems.map((item) => (
-                    <tr key={item.product_id} className="hover:bg-zinc-50/80">
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-zinc-900 line-clamp-1">
-                          {item.display_name}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-zinc-600">
-                        {item.source_website_name || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatPrice(item.original_price ?? null)}
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium text-zinc-900">
-                        {formatPrice(item.pending_original_price)}
-                      </td>
-                      <td className="px-3 py-2 text-zinc-600">
-                        {formatDate(item.detected_at)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => approvePendingPrices.mutateAsync([item.product_id])}
-                            disabled={isPendingAction}
-                          >
-                            Aprobar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => rejectPendingPrices.mutateAsync([item.product_id])}
-                            disabled={isPendingAction}
-                          >
-                            Descartar
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          {pendingItems.length > 0 ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => rejectPendingPrices.mutateAsync(pendingItems.map((item) => item.product_id))}
-                disabled={isPendingAction}
-              >
-                Descartar todos
-              </Button>
-              <Button
-                onClick={() => approvePendingPrices.mutateAsync(pendingItems.map((item) => item.product_id))}
-                disabled={isPendingAction}
-              >
-                Aprobar todos
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setShowPendingPriceModal(false)}>Cerrar</Button>
-          )}
-        </ModalFooter>
-      </Modal>}
-
       {/* Pagination */}
       {data && data.pages > 1 && (
         <div className="flex justify-center gap-2">
@@ -1038,13 +804,6 @@ export default function ProductsPage() {
           </Button>
         </div>
       )}
-
-      {/* Add Product Modal (Scraping) */}
-      <AddProductModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        apiKey={apiKey}
-      />
 
       {/* Manual Product Modal */}
       {showManualModal && (
@@ -1179,67 +938,6 @@ export default function ProductsPage() {
               >
                 {aiJob?.status === 'completed' ? 'Listo' : 'Cerrar'}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Inactivar por mayorista Modal */}
-      {showSupplierDisableModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-red-500 shrink-0" />
-              <h2 className="text-lg font-semibold text-zinc-900">Inactivar por mayorista</h2>
-            </div>
-            <p className="text-sm text-zinc-600">
-              Ingresá el nombre (o parte del nombre) del mayorista origen. Se inactivarán todos los productos
-              activos cuya web origen coincida con ese nombre.
-            </p>
-
-            {supplierDisableResult ? (
-              <div className={`rounded-lg p-4 text-sm ${supplierDisableResult.count > 0 ? 'bg-red-50 text-red-800' : 'bg-zinc-50 text-zinc-600'}`}>
-                {supplierDisableResult.count > 0
-                  ? `✓ Se inactivaron ${supplierDisableResult.count} producto(s).`
-                  : 'No se encontraron productos activos para ese mayorista.'}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Mayorista</label>
-                  <input
-                    list="supplier-disable-list"
-                    type="text"
-                    value={supplierToDisable}
-                    onChange={(e) => setSupplierToDisable(e.target.value)}
-                    placeholder="Ej: Ingram, Multimax..."
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-                    autoFocus
-                  />
-                  <datalist id="supplier-disable-list">
-                    {(sourceWebsites?.items || []).map((sw: any) => (
-                      <option key={sw.id} value={sw.display_name} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setShowSupplierDisableModal(false)}>
-                {supplierDisableResult ? 'Cerrar' : 'Cancelar'}
-              </Button>
-              {!supplierDisableResult && (
-                <Button
-                  onClick={handleDisableBySupplier}
-                  disabled={!supplierToDisable.trim() || isDisablingBySupplier}
-                  isLoading={isDisablingBySupplier}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <PowerOff className="mr-2 h-4 w-4" />
-                  Inactivar
-                </Button>
-              )}
             </div>
           </div>
         </div>

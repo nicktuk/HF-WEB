@@ -23,19 +23,6 @@ export function formatPrice(price: number | null | undefined, currency = 'ARS'):
 }
 
 /**
- * Format percentage for display
- */
-export function formatPercentage(value: number | null | undefined): string {
-  if (value == null) return '-';
-
-  const numeric = typeof value === 'number' ? value : Number(value);
-  if (Number.isNaN(numeric)) return '-';
-
-  const sign = numeric > 0 ? '+' : '';
-  return `${sign}${numeric.toFixed(1)}%`;
-}
-
-/**
  * Format date for display
  */
 export function formatDate(dateString: string | null | undefined): string {
@@ -85,25 +72,6 @@ export function getWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${phone}?text=${encodedMessage}`;
 }
 
-/**
- * Get competitiveness color
- */
-export function getCompetitivenessColor(competitiveness: string): string {
-  switch (competitiveness) {
-    case 'competitive':
-    case 'below_market':
-      return 'text-green-600';
-    case 'moderate':
-      return 'text-yellow-600';
-    case 'high':
-      return 'text-orange-600';
-    case 'very_high':
-      return 'text-red-600';
-    default:
-      return 'text-gray-500';
-  }
-}
-
 export function slugifyCategory(name: string): string {
   return name
     .toLowerCase()
@@ -111,24 +79,4 @@ export function slugifyCategory(name: string): string {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-}
-
-/**
- * Get competitiveness label
- */
-export function getCompetitivenessLabel(competitiveness: string): string {
-  switch (competitiveness) {
-    case 'competitive':
-      return 'Competitivo';
-    case 'below_market':
-      return 'Por debajo del mercado';
-    case 'moderate':
-      return 'Moderado';
-    case 'high':
-      return 'Alto';
-    case 'very_high':
-      return 'Muy alto';
-    default:
-      return 'Sin datos';
-  }
 }

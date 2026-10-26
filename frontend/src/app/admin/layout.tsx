@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Package,
-  Globe,
   Settings,
   Settings2,
   LogOut,
@@ -14,7 +13,6 @@ import {
   FolderTree,
   ChevronDown,
   ChevronRight,
-  Scale,
   DollarSign,
   MessageCircle,
   LineChart,
@@ -29,7 +27,6 @@ import {
   CreditCard,
   TrendingDown,
   Tag,
-  Plane,
   Users,
   Store,
   MapPin,
@@ -53,7 +50,6 @@ const productosSubmenu: NavItem[] = [
   { name: 'Stock', href: '/admin/stock/resumen', icon: Package },
   { name: 'Stock sin match', href: '/admin/stock', icon: PackageX },
   { name: 'Depósitos', href: '/admin/depositos', icon: FolderTree },
-  { name: 'Comparador', href: '/admin/comparador', icon: Scale },
   { name: 'Descripciones IA', href: '/admin/ai-descripciones', icon: Sparkles },
 ];
 
@@ -67,7 +63,6 @@ const catalogoSubmenu: NavItem[] = [
   { name: 'Categorías', href: '/admin/categorias', icon: Tags },
   { name: 'Subcategorías', href: '/admin/subcategorias', icon: FolderTree },
   { name: 'Etiquetas', href: '/admin/etiquetas', icon: Tag },
-  { name: 'Webs Origen', href: '/admin/source-websites', icon: Globe },
 ];
 
 const equipoSubmenu: NavItem[] = [
@@ -105,21 +100,6 @@ const comerciosSubmenu: NavItem[] = [
   { name: 'Configuración', href: '/admin/comercios/config', icon: Settings2 },
 ];
 
-// ── Importación ──
-const importScorerSubmenu: NavItem[] = [
-  { name: 'Dashboard', href: '/admin/import-scorer', icon: Plane },
-  { name: 'Radar', href: '/admin/import-scorer/radar', icon: LineChart },
-  { name: 'Templates', href: '/admin/import-scorer/templates', icon: Tags },
-  { name: 'Retailers', href: '/admin/import-scorer/retailers', icon: Globe },
-  { name: 'Outlets', href: '/admin/import-scorer/outlets', icon: Package },
-  { name: 'Rubros', href: '/admin/import-scorer/rubros', icon: FolderTree },
-  { name: 'Productos', href: '/admin/import-scorer/productos', icon: PackageX },
-  { name: 'Carritos', href: '/admin/import-scorer/carritos', icon: ShoppingCart },
-  { name: 'Listas de caza', href: '/admin/import-scorer/listas-caza', icon: ClipboardList },
-  { name: 'Analytics', href: '/admin/import-scorer/analytics', icon: LineChart },
-  { name: 'Config', href: '/admin/import-scorer/configuracion', icon: Settings2 },
-];
-
 type SubmenuKey =
   | 'productos'
   | 'catalogo'
@@ -127,8 +107,7 @@ type SubmenuKey =
   | 'configGeneral'
   | 'ventas'
   | 'tiendaWeb'
-  | 'comercios'
-  | 'importScorer';
+  | 'comercios';
 
 type NavEntry =
   | { kind: 'submenu'; key: SubmenuKey; label: string; icon: React.ElementType; items: NavItem[] }
@@ -167,10 +146,6 @@ function buildNavGroups(isSuperadmin: boolean): NavGroup[] {
       title: 'Mayorista (Comercios)',
       entries: [{ kind: 'submenu', key: 'comercios', label: 'Comercios', icon: Store, items: comerciosSubmenu }],
     },
-    {
-      title: 'Importación',
-      entries: [{ kind: 'submenu', key: 'importScorer', label: 'Import Scorer', icon: Plane, items: importScorerSubmenu }],
-    },
   ];
 }
 
@@ -182,7 +157,6 @@ const allSubmenus: Record<SubmenuKey, NavItem[]> = {
   ventas: ventasSubmenu,
   tiendaWeb: tiendaWebSubmenu,
   comercios: comerciosSubmenu,
-  importScorer: importScorerSubmenu,
 };
 
 const closedSubmenus: Record<SubmenuKey, boolean> = {
@@ -193,7 +167,6 @@ const closedSubmenus: Record<SubmenuKey, boolean> = {
   ventas: false,
   tiendaWeb: false,
   comercios: false,
-  importScorer: false,
 };
 
 function useSubmenuState(pathname: string) {
@@ -203,10 +176,7 @@ function useSubmenuState(pathname: string) {
     setOpen((prev) => {
       const next = { ...prev };
       (Object.keys(allSubmenus) as SubmenuKey[]).forEach((key) => {
-        next[key] =
-          key === 'importScorer'
-            ? pathname.startsWith('/admin/import-scorer')
-            : allSubmenus[key].some((i) => pathname.startsWith(i.href));
+        next[key] = allSubmenus[key].some((i) => pathname.startsWith(i.href));
       });
       return next;
     });

@@ -46,17 +46,8 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
 
-    # Scraping
-    SCRAPER_TIMEOUT: int = 30
-    SCRAPER_MAX_RETRIES: int = 3
-
-    # Scheduler (cron expressions)
-    SCRAPE_PRODUCTS_CRON: str = "0 3 * * *"  # 3 AM daily
-    UPDATE_MARKET_PRICES_CRON: str = "0 */12 * * *"  # Every 12 hours
-
     # Cache TTL (seconds)
     CACHE_TTL_PRODUCTS: int = 300  # 5 minutes
-    CACHE_TTL_MARKET_PRICES: int = 43200  # 12 hours
 
     # Rate Limiting
     RATE_LIMIT_PUBLIC: str = "100/minute"
@@ -80,7 +71,6 @@ class Settings(BaseSettings):
     AI_MODEL_OPENAI: str = "gpt-4o-mini"
     AI_WEB_SEARCH_ENABLED: bool = True
     AI_VISION_ENABLED: bool = True
-    AI_SOURCE_REFETCH_ENABLED: bool = True
     BRAVE_SEARCH_API_KEY: str = ""
     AI_BATCH_CONCURRENCY: int = 5
     AI_BATCH_CHUNK_DELAY: float = 0.5    # seconds between chunks
@@ -89,8 +79,9 @@ class Settings(BaseSettings):
     WHATSAPP_NUMBER: str = "5492274402761"
     CATALOG_URL: str = "https://www.hefaproductos.com.ar"
 
-    # Import Scorer
-    IMPORT_SCORER_CRON_SECRET: str = ""
+    # SMTP para mails transaccionales (recupero de contraseña de comercios y
+    # vendedores). El prefijo IS_ viene del ex Import Scorer; se mantiene para
+    # no cambiar las variables de entorno ya configuradas.
     IS_EMAIL_HOST: str = ""
     IS_EMAIL_PORT: int = 587
     IS_EMAIL_USER: str = ""
@@ -116,10 +107,6 @@ class Settings(BaseSettings):
 
     # Canal Comercio — recupero de contraseña
     COMERCIO_ALERT_EMAIL_TO: str = ""
-
-    # Scrapers
-    SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001
-    BESTBUY_API_KEY: str = ""          # developers.bestbuy.com (gratuito)
 
     @property
     def ALLOWED_IMAGE_TYPES(self) -> List[str]:

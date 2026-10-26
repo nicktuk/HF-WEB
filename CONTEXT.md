@@ -8,6 +8,35 @@
 
 ---
 
+## Sesión 2026-10-05
+
+### Se quitó el scraping, las webs de origen y el Import Scorer
+
+**Motivo:** los productos se cargan a mano y el proveedor de cada compra se escribe a mano en Compras (`purchases.supplier`, texto libre); las webs de origen y el scraping no se usaban.
+
+**Backend:**
+- Borrados: `app/scrapers/` (mayoristas, MercadoLibre e Import Scorer), `scrape_job.py`, `market_intelligence.py`, todo lo de webs de origen (modelo, schemas, repo, servicio, endpoints `/admin/source-websites`), `category_mappings` (endpoints `/categories/unmapped-sources`, `/source-products`, `/mappings`), el módulo Import Scorer completo (`/admin/import-scorer/*`) y `scripts/` (los seeds solo cargaban webs de origen, fuentes de precio e Import Scorer).
+- `admin.py`: fuera alta por scraping (`POST /admin/products`), re-scrapear, precios pendientes, acciones por web de origen, scrape jobs, precios de mercado, `/price-comparator`, `/stats/by-source-category`, `/products/disable-by-supplier` y `/products/mark-new-by-date`. La única alta de productos es `POST /admin/products/manual`.
+- Markup masivo (minorista y mayorista): ya no acepta `source_website_id`.
+- Descripciones IA: se quitó la opción de releer la URL del proveedor (`use_source_refetch`).
+- `requirements.txt`: fuera playwright, beautifulsoup4, lxml, apscheduler, pytrends y rapidfuzz. `nixpacks.toml` ya no corre seeds.
+- Las variables `IS_EMAIL_*` se mantienen: las usa el recupero de contraseña de comercios y vendedores.
+
+**Migración `110_quitar_scraping_y_webs_origen.py`:**
+- `products`: se borran `source_website_id`, `source_url`, `source_category`, `pending_original_price`, `pending_price_detected_at`, `last_scraped_at`, `scrape_error_count`, `scrape_last_error`.
+- El slug pasa a ser único global (`ix_products_slug`). Los slugs repetidos entre webs se desambiguan con `-<id>`.
+- Se borran las tablas `source_websites`, `category_mappings`, `price_sources`, `market_prices`, `market_price_stats` y el schema `import_scorer`.
+- El downgrade recrea la estructura (todos los productos quedan en una web "manual") pero no los datos.
+- Nota: la cadena de migraciones no corre desde cero (la 046 falla porque la 045 ya crea `created_at`); es previo a este cambio.
+
+**Frontend:**
+- Borradas las pantallas Webs Origen, Comparador e Import Scorer, el modal de alta por scraping (`ProductForm.tsx`) y `PriceIntelligence.tsx`.
+- El slider de markup de la ficha de producto pasó a `components/admin/MarkupEditor.tsx` (sin la parte de mercado).
+- Productos: el botón "Agregar Producto" abre directo la carga manual; fuera filtro por fuente, modal de precios pendientes, "Inactivar por mayorista" y "Marcar Nuevo por fecha".
+- Dashboard: fuera la tarjeta y la lista de webs de origen y la columna "Fuente" en rangos de precio. Categorías: fuera el mapeador de categorías origen.
+
+---
+
 ## Sesión 2026-09-12
 
 ### Recupero de contraseña — canal Comercios

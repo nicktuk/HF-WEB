@@ -25,9 +25,7 @@ def engine():
     eng = create_engine(TEST_DATABASE_URL)
     with eng.begin() as conn:
         conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-        conn.execute(text("DROP SCHEMA IF EXISTS import_scorer CASCADE"))
         conn.execute(text("CREATE SCHEMA public"))
-        conn.execute(text("CREATE SCHEMA import_scorer"))
         # Los ENUM de los modelos se declaran con create_type=False (los crean
         # las migraciones): acá hay que crearlos a mano antes de las tablas.
         for table in Base.metadata.tables.values():

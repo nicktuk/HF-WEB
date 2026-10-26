@@ -13,7 +13,7 @@ class Product(Base):
     """
     Producto del catÃ¡logo.
 
-    - Se crea a partir de un slug de la web origen
+    - Se carga manualmente desde el admin
     - El admin puede modificar precio (markup) y habilitar/deshabilitar
     - Solo los productos habilitados se muestran en el catÃ¡logo pÃºblico
     """
@@ -21,19 +21,12 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # RelaciÃ³n con web origen
-    source_website_id = Column(Integer, ForeignKey("source_websites.id"), nullable=False)
-    source_website = relationship("SourceWebsite", back_populates="products")
+    # Identificador único del producto (URL pública)
+    slug = Column(String(255), nullable=False)
 
-    # Identificador Ãºnico del producto en la web origen
-    slug = Column(String(255), nullable=False, index=True)
-    source_url = Column(String(1000), nullable=True)
-
-    # Datos scrapeados de la web original
+    # Datos base del producto
     original_name = Column(String(500), nullable=False)
     original_price = Column(Numeric(10, 2), nullable=True, comment="Precio origen (puede ser NULL si no estÃ¡ disponible)")
-    pending_original_price = Column(Numeric(10, 2), nullable=True, comment="Precio origen pendiente de aprobación")
-    pending_price_detected_at = Column(DateTime, nullable=True, comment="Fecha de detección de cambio de precio")
     original_currency = Column(String(3), default="ARS")
     description = Column(Text, nullable=True)
     short_description = Column(String(1000), nullable=True)
@@ -69,7 +62,6 @@ class Product(Base):
     # Categorias
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True, comment="Categoria maestra local")
     category_ref = relationship("Category", foreign_keys=[category_id])
-    source_category = Column(String(100), nullable=True, index=True, comment="Categoria original del mayorista")
 
     # Subcategoria local (texto, asociada a category_id)
     category = Column(String(100), nullable=True, index=True)
@@ -78,19 +70,12 @@ class Product(Base):
     # Video
     video_url = Column(Text, nullable=True, comment="URL del video del producto (subido al servidor)")
 
-    # Metadatos de scraping
-    last_scraped_at = Column(DateTime, nullable=True)
-    scrape_error_count = Column(Integer, default=0)
-    scrape_last_error = Column(Text, nullable=True)
-
     # Relaciones
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
-    market_prices = relationship("MarketPrice", back_populates="product", cascade="all, delete-orphan")
-    market_price_stats = relationship("MarketPriceStats", back_populates="product", uselist=False, cascade="all, delete-orphan")
 
     # Ãndice compuesto para queries frecuentes
     __table_args__ = (
-        Index("ix_products_source_slug", "source_website_id", "slug", unique=True),
+        Index("ix_products_slug", "slug", unique=True),
         Index("ix_products_enabled_order", "enabled", "display_order"),
         Index("ix_products_codigo_interno", "codigo_interno", unique=True),
     )

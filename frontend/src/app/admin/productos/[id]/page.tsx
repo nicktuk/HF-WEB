@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PriceIntelligence } from '@/components/admin/PriceIntelligence';
-import { formatPrice, formatRelativeTime } from '@/lib/utils';
+import { MarkupEditor } from '@/components/admin/MarkupEditor';
+import { formatPrice } from '@/lib/utils';
 import { useApiKey, useIsSuperadmin } from '@/hooks/useAuth';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { uploadImages, uploadVideo, aiApi, resolveImageUrl } from '@/lib/api';
@@ -19,7 +19,6 @@ import {
   useAdminProduct,
   useUpdateProduct,
   useDeleteProduct,
-  useRescrapeProduct,
   useStockPurchases,
   useStockSummary,
   useUpdateStockPurchase,
@@ -54,7 +53,6 @@ export default function ProductEditPage() {
   const updateStockPurchase = useUpdateStockPurchase(apiKey);
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
-  const rescrapeMutation = useRescrapeProduct(apiKey);
   const { data: colorStockData } = useColorStock(apiKey, productId);
   const setColorStockMutation = useSetColorStock(apiKey);
   const { data: deposits } = useDeposits(apiKey);
@@ -480,10 +478,6 @@ export default function ProductEditPage() {
     }
   };
 
-  const handleRescrape = async () => {
-    await rescrapeMutation.mutateAsync(productId);
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -512,7 +506,6 @@ export default function ProductEditPage() {
     );
   }
 
-  const isManualProduct = product.source_website_name === 'Producto Manual';
   const canEnable = markup > 0 || (!!customPrice && parseFloat(customPrice) > 0) || (!!originalPrice && parseFloat(originalPrice) > 0);
   const calcCosto = parseFloat(originalPrice) || 0;
   const calcEnvioNum = parseFloat(calcEnvio) || 0;
@@ -592,16 +585,6 @@ export default function ProductEditPage() {
           <div />
         </div>
         <div className="flex items-center gap-2">
-          {!isManualProduct && (
-            <Button
-              variant="outline"
-              onClick={handleRescrape}
-              isLoading={rescrapeMutation.isPending}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Re-scrapear
-            </Button>
-          )}
           <Button variant="danger" onClick={handleDelete}>
             <Trash2 className="mr-2 h-4 w-4" />
             Eliminar
@@ -1178,40 +1161,21 @@ export default function ProductEditPage() {
                   rows={4}
                 />
               </div>
-
-              {/* Source info (read-only) */}
-              {!isManualProduct && (
-                <div className="pt-4 border-t space-y-2">
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fuente:</span> {product.source_website_name}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Ultimo scraping:</span>{' '}
-                    {formatRelativeTime(product.last_scraped_at)}
-                  </p>
-                  {product.scrape_error_count > 0 && (
-                    <p className="text-sm text-red-600">
-                      {product.scrape_error_count} errores de scraping
-                    </p>
-                  )}
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Right Column - Pricing & Settings */}
         <div className="space-y-6">
-          {/* Price Intelligence */}
+          {/* Markup */}
           {isSuperadmin && (
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold">Configuracion de precio</h2>
               </CardHeader>
               <CardContent>
-                <PriceIntelligence
+                <MarkupEditor
                   product={product}
-                  apiKey={apiKey}
                   onMarkupChange={setMarkup}
                 />
               </CardContent>

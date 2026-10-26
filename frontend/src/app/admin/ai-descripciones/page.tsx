@@ -52,7 +52,6 @@ export default function AIDescripcionesPage() {
   const [provider, setProvider] = useState<Provider>('claude');
   const [useSearch, setUseSearch] = useState(true);
   const [useVision, setUseVision] = useState(true);
-  const [useRefetch, setUseRefetch] = useState(true);
   const [mode, setMode] = useState<Mode>('pending');
   const [action, setAction] = useState<Action>('description');
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -173,7 +172,6 @@ export default function AIDescripcionesPage() {
         force_regenerate: forceRegenerate,
         use_search: useSearch,
         use_vision: useVision,
-        use_source_refetch: useRefetch,
         use_image_search: false,
       };
       if (mode === 'category') req.category_id = categoryId ?? undefined;
@@ -449,7 +447,6 @@ export default function AIDescripcionesPage() {
               <div className="flex flex-wrap gap-4">
                 <Toggle value={useSearch} onChange={setUseSearch} label="Búsqueda web (Brave)" />
                 <Toggle value={useVision} onChange={setUseVision} label="Análisis de imagen" />
-                <Toggle value={useRefetch} onChange={setUseRefetch} label="Re-fetch URL origen" />
               </div>
             </div>
           )}

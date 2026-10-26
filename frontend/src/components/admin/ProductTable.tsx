@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreVertical, Edit, RefreshCw, Trash2, Star, Zap, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Star, Zap, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useUpdateProduct, useDeleteProduct, useRescrapeProduct } from '@/hooks/useProducts';
+import { useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import { resolveImageUrl } from '@/lib/api';
 import type { ProductAdmin } from '@/types';
 
@@ -22,7 +22,6 @@ const GRID_CLASSES = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-col
 export function ProductTable({ products, isLoading, apiKey, selectedIds = [], onSelectionChange }: ProductTableProps) {
   const updateMutation = useUpdateProduct(apiKey);
   const deleteMutation = useDeleteProduct(apiKey);
-  const rescrapeMutation = useRescrapeProduct(apiKey);
 
   const [openMenu, setOpenMenu] = useState<number | null>(null);
 
@@ -77,11 +76,6 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
     if (confirm('¿Estás seguro de eliminar este producto?')) {
       await deleteMutation.mutateAsync(id);
     }
-  };
-
-  const handleRescrape = async (id: number) => {
-    await rescrapeMutation.mutateAsync(id);
-    setOpenMenu(null);
   };
 
   if (isLoading) {
@@ -227,16 +221,8 @@ export function ProductTable({ products, isLoading, apiKey, selectedIds = [], on
                 {openMenu === product.id && (
                   <div className="absolute right-0 bottom-full mb-1 w-48 bg-white rounded-lg shadow-lg border z-20">
                     <button
-                      onClick={() => handleRescrape(product.id)}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
-                      disabled={rescrapeMutation.isPending}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Re-scrapear
-                    </button>
-                    <button
                       onClick={() => handleDelete(product.id)}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg border-t"
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-lg"
                     >
                       <Trash2 className="h-4 w-4" />
                       Eliminar

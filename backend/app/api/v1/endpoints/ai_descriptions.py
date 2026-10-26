@@ -41,7 +41,6 @@ class GenerateRequest(BaseModel):
     force_regenerate: bool = False
     use_search: bool = True
     use_vision: bool = True
-    use_source_refetch: bool = True
     use_image_search: bool = False
 
 
@@ -129,7 +128,6 @@ async def generate_descriptions(
         product_ids=product_ids,
         use_search=req.use_search,
         use_vision=req.use_vision,
-        use_source_refetch=req.use_source_refetch,
         use_image_search=req.use_image_search,
         action=req.action,
         config=ai_config,
@@ -215,7 +213,6 @@ async def generate_single(
     product_id: int,
     use_search: bool = Query(default=True),
     use_vision: bool = Query(default=True),
-    use_source_refetch: bool = Query(default=True),
     use_image_search: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
@@ -227,7 +224,7 @@ async def generate_single(
     ai = get_ai_service()
     try:
         desc = await ai.generate_for_product(
-            product, use_search, use_vision, use_source_refetch,
+            product, use_search, use_vision,
             use_image_search=use_image_search, config=ai_config, db=db,
         )
     except Exception as exc:

@@ -182,7 +182,7 @@ export default function StockUnmatchedPage() {
                         {product.display_name_with_code}
                       </div>
                       <div className="text-xs text-gray-500">
-                        SKU: {product.sku || '-'} · {product.source_website_name || 'Manual'}
+                        SKU: {product.sku || '-'}
                       </div>
                     </div>
                   </button>

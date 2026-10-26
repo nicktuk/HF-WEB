@@ -4,7 +4,6 @@ from app.core.exceptions import (
     AppException,
     NotFoundError,
     ValidationError,
-    ScraperError,
     AuthenticationError,
 )
 
@@ -14,6 +13,5 @@ __all__ = [
     "AppException",
     "NotFoundError",
     "ValidationError",
-    "ScraperError",
     "AuthenticationError",
 ]

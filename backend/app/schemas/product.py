@@ -40,24 +40,6 @@ class ProductImageResponse(BaseModel):
         from_attributes = True
 
 
-class ProductCreate(BaseModel):
-    """Schema for creating a product (by scraping from slug)."""
-    source_website_id: int = Field(..., description="ID of the source website")
-    slug: str = Field(..., min_length=3, max_length=255, description="Product slug from source website")
-    markup_percentage: Decimal = Field(default=Decimal("0"), ge=0)
-    enabled: bool = Field(default=False)
-    category: Optional[str] = Field(None, max_length=100)
-    subcategory: Optional[str] = Field(None, max_length=100)
-
-    @field_validator("slug")
-    @classmethod
-    def validate_slug(cls, v: str) -> str:
-        """Slug must be URL-safe."""
-        if not re.match(r'^[a-z0-9-]+$', v.lower()):
-            raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
-        return v.lower()
-
-
 class ProductUpdate(BaseModel):
     """Schema for updating a product - allows editing all fields."""
     enabled: Optional[bool] = None
@@ -257,7 +239,6 @@ class ProductPublicResponse(BaseModel):
     video_url: Optional[str] = None
     images: List[ProductImageResponse] = []
     color_stock: List[ColorStockItem] = []
-    source_url: Optional[str] = None
     updated_at: Optional[datetime] = None
     activated_at: Optional[datetime] = None
     rating_avg: Optional[float] = None
@@ -275,21 +256,7 @@ class ProductAdminResponse(ProductResponse):
     markup_percentage: Optional[Decimal] = None
     wholesale_markup_percentage: Optional[Decimal] = None
 
-    source_website_id: int
-    source_website_name: Optional[str] = None
-    source_url: Optional[str] = None
-    last_scraped_at: Optional[datetime] = None
-    scrape_error_count: int = 0
-    scrape_last_error: Optional[str] = None
     display_order: int = 0
-    pending_original_price: Optional[Decimal] = None
-    pending_price_detected_at: Optional[datetime] = None
-
-    # Market intelligence
-    market_avg_price: Optional[Decimal] = None
-    market_min_price: Optional[Decimal] = None
-    market_max_price: Optional[Decimal] = None
-    market_sample_count: int = 0
     stock_qty: int = 0
 
     class Config:
@@ -315,14 +282,12 @@ class ProductBulkMarkup(BaseModel):
     """Schema for bulk markup update."""
     markup_percentage: Decimal = Field(..., ge=0, description="Markup percentage to apply")
     only_enabled: bool = Field(default=True, description="Only update enabled products")
-    source_website_id: Optional[int] = Field(None, description="Filter by source website")
 
 
 class ProductBulkWholesaleMarkup(BaseModel):
     """Schema for bulk wholesale markup update."""
     markup_percentage: Decimal = Field(..., ge=0, description="Wholesale markup percentage to apply")
     only_enabled: bool = Field(default=False, description="Only update enabled products")
-    source_website_id: Optional[int] = Field(None, description="Filter by source website")
 
 
 class ProductActivateInactive(BaseModel):
@@ -360,25 +325,8 @@ class ProductSelectedExport(BaseModel):
     product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
 
 
-class PendingPriceChangeItem(BaseModel):
-    product_id: int
-    display_name: str
-    source_website_name: Optional[str] = None
-    original_price: Optional[Decimal] = None
-    pending_original_price: Decimal
-    detected_at: Optional[datetime] = None
-
-
-class PendingPriceChangeResponse(BaseModel):
-    items: List[PendingPriceChangeItem]
-
-
-class PendingPriceAction(BaseModel):
-    product_ids: List[int] = Field(..., min_length=1, max_length=500, description="List of product IDs")
-
-
 class ProductCreateManual(BaseModel):
-    """Schema for creating a product manually (without scraping)."""
+    """Schema for creating a product."""
     name: str = Field(..., min_length=1, max_length=500, description="Product name")
     price: Decimal = Field(..., gt=0, description="Product price")
     description: Optional[str] = Field(None, max_length=5000)
