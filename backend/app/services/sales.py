@@ -94,17 +94,26 @@ class SalesService:
     def _deduct_color_stock(self, product_id: int | None, color: str | None, quantity: int, deposit_id: int | None = None) -> None:
         if not color or quantity <= 0 or product_id is None:
             return
-        query = self.db.query(ProductColorStock).filter(
+        # Se valida contra el stock total del color: si hay stock, se puede vender,
+        # sin importar en qué depósito esté.
+        rows = self.db.query(ProductColorStock).filter(
             ProductColorStock.product_id == product_id,
             ProductColorStock.color == color,
-        )
-        if deposit_id is not None:
-            query = query.filter(ProductColorStock.deposit_id == deposit_id)
-        stock = query.first()
-        available = int(stock.quantity) if stock else 0
+        ).all()
+        available = sum(max(int(r.quantity), 0) for r in rows)
         if available < quantity:
-            raise ValidationError(f"Stock insuficiente del color {color} en el depósito. Disponible: {available}")
-        stock.quantity = available - quantity
+            raise ValidationError(f"Stock insuficiente del color {color}. Disponible: {available}")
+        # Descontar primero del depósito del vendedor y después de los que tienen más stock
+        rows.sort(key=lambda r: (r.deposit_id != deposit_id, -int(r.quantity)))
+        remaining = quantity
+        for row in rows:
+            take = min(max(int(row.quantity), 0), remaining)
+            if take <= 0:
+                continue
+            row.quantity = int(row.quantity) - take
+            remaining -= take
+            if remaining == 0:
+                break
 
     def _restore_color_stock(self, product_id: int | None, color: str | None, quantity: int, deposit_id: int | None = None) -> None:
         if not color or quantity <= 0 or product_id is None:
