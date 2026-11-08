@@ -11,6 +11,7 @@ class CategoryBase(BaseModel):
     display_order: int = 0
     color: str = Field(default="#6b7280", pattern=r'^#[0-9a-fA-F]{6}$')
     show_in_menu: bool = False
+    always_visible: bool = False
     show_in_carousel: bool = False
     carousel_title: Optional[str] = Field(None, max_length=100)
     carousel_subtitle: Optional[str] = Field(None, max_length=200)
@@ -35,6 +36,7 @@ class CategoryUpdate(BaseModel):
     display_order: Optional[int] = None
     color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
     show_in_menu: Optional[bool] = None
+    always_visible: Optional[bool] = None
     show_in_carousel: Optional[bool] = None
     carousel_title: Optional[str] = Field(None, max_length=100)
     carousel_subtitle: Optional[str] = Field(None, max_length=200)

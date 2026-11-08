@@ -233,6 +233,7 @@ export interface Category {
   display_order: number;
   color: string;
   show_in_menu: boolean;
+  always_visible: boolean;
   product_count: number;
   enabled_product_count: number;
   created_at?: string;
@@ -255,6 +256,7 @@ export interface CategoryCreateForm {
   display_order: number;
   color: string;
   show_in_menu: boolean;
+  always_visible?: boolean;
   show_in_carousel?: boolean;
   carousel_title?: string;
   carousel_subtitle?: string;

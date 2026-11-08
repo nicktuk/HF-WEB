@@ -21,6 +21,7 @@ class Category(Base):
     display_order = Column(Integer, default=0, nullable=False)
     color = Column(String(7), default="#6b7280", nullable=False, comment="Color hex para el badge (ej: #3b82f6)")
     show_in_menu = Column(Boolean, default=False, nullable=False, comment="Mostrar como filtro rapido en mobile")
+    always_visible = Column(Boolean, default=False, nullable=False, comment="Siempre visible en la fila fija del menu (como Nuevos ingresos)")
     show_in_carousel = Column(Boolean, default=False, nullable=False)
     carousel_title = Column(String(100), nullable=True)
     carousel_subtitle = Column(String(200), nullable=True)

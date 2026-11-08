@@ -81,6 +81,17 @@ function PublicHeaderInner() {
   const orderedCategories = [...(categories || [])].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
   );
+  const alwaysVisibleCategories = orderedCategories.filter(c => c.always_visible);
+  const menuCategories = orderedCategories.filter(c => c.show_in_menu && !c.always_visible);
+  const selectedIsAlwaysVisible = alwaysVisibleCategories.some(c => c.name === selectedCategory);
+  const toggleAlwaysVisibleCategory = (name: string) => {
+    if (selectedCategory === name) {
+      updateParams({ category: undefined, subcategory: undefined, section_id: undefined });
+    } else {
+      trackPublicEvent('category_click', { category: name });
+      updateParams({ category: name, subcategory: undefined, featured: undefined, immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, section_id: undefined });
+    }
+  };
   const { data: subcategories } = useSubcategories(selectedCategory);
   const { data: catalogSettings } = useQuery({
     queryKey: ['public-catalog-settings'],
@@ -255,6 +266,22 @@ function PublicHeaderInner() {
                 <Tag className="h-3 w-3" />
                 Ofertas
               </button>
+              {alwaysVisibleCategories.map((category) => {
+                const active = selectedCategory === category.name;
+                return (
+                  <button
+                    key={`always-${category.name}`}
+                    onClick={() => toggleAlwaysVisibleCategory(category.name)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 border transition-all"
+                    style={active
+                      ? { backgroundColor: category.color, borderColor: category.color, color: 'white' }
+                      : { borderColor: category.color, color: category.color, backgroundColor: `${category.color}20` }}
+                  >
+                    {category.name}
+                    {active && <X className="h-3 w-3 opacity-70" />}
+                  </button>
+                );
+              })}
               {categoryNavStyle === 'menu' && !selectedCategory && (
                 <button
                   onClick={() => setCategoryMenuOpen(o => !o)}
@@ -272,7 +299,7 @@ function PublicHeaderInner() {
             {categoryNavStyle !== 'menu' && (
               <div className="flex flex-wrap items-center gap-2 pb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 {!selectedCategory
-                  ? orderedCategories.filter(c => c.show_in_menu).map((category) => (
+                  ? menuCategories.map((category) => (
                       <a
                         key={category.name}
                         href={`/categoria/${slugifyCategory(category.name)}`}
@@ -290,6 +317,7 @@ function PublicHeaderInner() {
                       </a>
                     ))
                   : <>
+                      {!selectedIsAlwaysVisible && (
                       <button
                         onClick={() => updateParams({ category: undefined, subcategory: undefined, section_id: undefined })}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-white transition-all hover:opacity-80"
@@ -298,6 +326,7 @@ function PublicHeaderInner() {
                         {selectedCategory}
                         <X className="h-3 w-3 opacity-70" />
                       </button>
+                      )}
                       {subcategories?.map((sub) => (
                         <button
                           key={sub.name}
@@ -378,6 +407,24 @@ function PublicHeaderInner() {
               Ofertas
             </button>
 
+            {/* Categorías siempre visibles */}
+            {alwaysVisibleCategories.map((category) => {
+              const active = selectedCategory === category.name;
+              return (
+                <button
+                  key={`always-${category.name}`}
+                  onClick={() => toggleAlwaysVisibleCategory(category.name)}
+                  className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border transition-all hover:scale-105"
+                  style={active
+                    ? { backgroundColor: category.color, borderColor: category.color, color: 'white' }
+                    : { borderColor: category.color, color: category.color, backgroundColor: `${category.color}20` }}
+                >
+                  {category.name}
+                  {active && <X className="h-3 w-3 opacity-70" />}
+                </button>
+              );
+            })}
+
             {/* Category pills OR menu button */}
             {categoryNavStyle === 'menu' ? (
               !selectedCategory && (
@@ -394,7 +441,7 @@ function PublicHeaderInner() {
                 </button>
               )
             ) : (
-              !selectedCategory && orderedCategories.filter(c => c.show_in_menu).map((category, index) => (
+              !selectedCategory && menuCategories.map((category, index) => (
                 <a
                   key={category.name}
                   href={`/categoria/${slugifyCategory(category.name)}`}
@@ -414,7 +461,7 @@ function PublicHeaderInner() {
             )}
 
             {/* Categoría activa chip + subcategory pills (desktop) */}
-            {selectedCategory && (
+            {selectedCategory && !selectedIsAlwaysVisible && (
               <button
                 onClick={() => updateParams({ category: undefined, subcategory: undefined, section_id: undefined })}
                 className="shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-white transition-all hover:opacity-80"
@@ -465,7 +512,7 @@ function PublicHeaderInner() {
           >
             <div className="container mx-auto px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                {orderedCategories.filter(c => c.show_in_menu).map((category) => (
+                {menuCategories.map((category) => (
                   <a
                     key={category.name}
                     href={`/categoria/${slugifyCategory(category.name)}`}
