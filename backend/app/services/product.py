@@ -1767,6 +1767,7 @@ class ProductService:
                 "name": cat.name,
                 "color": cat.color or "#6b7280",
                 "show_in_menu": cat.show_in_menu or False,
+                "always_visible": cat.always_visible or False,
                 "display_order": cat.display_order,
                 "show_in_carousel": cat.show_in_carousel or False,
                 "carousel_title": cat.carousel_title,

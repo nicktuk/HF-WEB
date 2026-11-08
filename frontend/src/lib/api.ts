@@ -148,6 +148,7 @@ export const publicApi = {
     name: string;
     color: string;
     show_in_menu: boolean;
+    always_visible: boolean;
     display_order: number;
     show_in_carousel: boolean;
     carousel_title: string | null;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical, Package, Eye, Settings2, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Package, Eye, Settings2, ChevronDown, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +88,7 @@ export default function CategoriasPage() {
     display_order: 0,
     color: '#6b7280',
     show_in_menu: false,
+    always_visible: false,
     show_in_carousel: false,
     carousel_title: '',
     carousel_subtitle: '',
@@ -257,6 +258,7 @@ export default function CategoriasPage() {
       display_order: 0,
       color: '#6b7280',
       show_in_menu: false,
+      always_visible: false,
       show_in_carousel: false,
       carousel_title: '',
       carousel_subtitle: '',
@@ -280,6 +282,7 @@ export default function CategoriasPage() {
       display_order: category.display_order,
       color: category.color || '#6b7280',
       show_in_menu: category.show_in_menu || false,
+      always_visible: category.always_visible || false,
       show_in_carousel: category.show_in_carousel || false,
       carousel_title: category.carousel_title || '',
       carousel_subtitle: category.carousel_subtitle || '',
@@ -304,6 +307,7 @@ export default function CategoriasPage() {
       display_order: 0,
       color: '#6b7280',
       show_in_menu: false,
+      always_visible: false,
       show_in_carousel: false,
       carousel_title: '',
       carousel_subtitle: '',
@@ -391,6 +395,12 @@ export default function CategoriasPage() {
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border border-gray-300 text-gray-600">
                             <Eye className="h-3 w-3 mr-1" />
                             Menu
+                          </span>
+                        )}
+                        {category.always_visible && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border border-amber-300 text-amber-700 bg-amber-50">
+                            <Star className="h-3 w-3 mr-1" />
+                            Siempre visible
                           </span>
                         )}
                       </div>
@@ -713,6 +723,19 @@ export default function CategoriasPage() {
                 />
                 <label htmlFor="show_in_menu" className="text-sm text-gray-700">
                   Mostrar en menu mobile (junto a Nuevo y Entrega Inmediata)
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="always_visible"
+                  checked={formData.always_visible || false}
+                  onChange={(e) => setFormData({ ...formData, always_visible: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 rounded border-gray-300"
+                />
+                <label htmlFor="always_visible" className="text-sm text-gray-700">
+                  Siempre visible en el menú (como Nuevos ingresos)
                 </label>
               </div>
             </div>
