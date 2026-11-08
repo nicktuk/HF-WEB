@@ -292,6 +292,10 @@ class ProductAdminResponse(ProductResponse):
     market_sample_count: int = 0
     stock_qty: int = 0
 
+    # Stock por color y depósito (lo usa la pantalla de ventas para ofrecer
+    # solo colores con stock). Sin este campo, pydantic descartaba el dato.
+    color_stock: List[ColorStockItem] = []
+
     class Config:
         from_attributes = True
 
