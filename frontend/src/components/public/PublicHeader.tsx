@@ -116,8 +116,13 @@ function PublicHeaderInner() {
         </div>
       )}
 
+      {/* Header + subheader + panel de categorías en un solo bloque sticky:
+          la barra de píldoras queda siempre justo debajo del header, sin
+          depender de alturas fijas. */}
+      <div className="sticky top-0 z-40">
+
       {/* ─── HEADER ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 header-texture shadow-lg">
+      <header className="relative z-[3] header-texture shadow-lg">
         <div className="container mx-auto px-4">
           <div className={`flex flex-col gap-2 ${isStaging ? 'pt-8 pb-2' : 'py-2'}`}>
 
@@ -212,7 +217,7 @@ function PublicHeaderInner() {
       </header>
 
       {/* ─── SUBHEADER ────────────────────────────────────────────── */}
-      <div className={`sticky z-[39] ${isStaging ? 'top-[128px]' : 'top-[104px]'}`} style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="relative z-[2]" style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="container mx-auto px-4">
 
           {/* ── MOBILE: two rows ─────────────────────────────────────── */}
@@ -496,18 +501,13 @@ function PublicHeaderInner() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-[38]"
+            className="fixed inset-0 z-0"
             onClick={() => setCategoryMenuOpen(false)}
           />
           {/* Panel */}
-          {/* top mobile: header(104/128) + subheader two rows (~80px) = 184/208px */}
-          {/* top desktop (md:): header(104/128) + subheader one row (44px) = 148/172px */}
+          {/* Se ubica justo debajo del bloque sticky (header + subheader) */}
           <div
-            className={`fixed left-0 right-0 z-[39] shadow-xl ${
-              isStaging
-                ? 'top-[208px] md:top-[172px]'
-                : 'top-[184px] md:top-[148px]'
-            }`}
+            className="absolute left-0 right-0 top-full z-[1] shadow-xl max-h-[70vh] overflow-y-auto"
             style={{ backgroundColor: '#1a3050', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
           >
             <div className="container mx-auto px-4 py-4">
@@ -536,6 +536,8 @@ function PublicHeaderInner() {
         </>
       )}
 
+      </div>{/* /sticky header block */}
+
       <HowWeWorkModal isOpen={howWeWorkOpen} onClose={() => setHowWeWorkOpen(false)} />
     </>
   );
@@ -544,7 +546,7 @@ function PublicHeaderInner() {
 export function PublicHeader() {
   return (
     <Suspense fallback={
-      <div className="sticky top-0 z-40 header-texture shadow-lg" style={{ height: '104px' }} />
+      <div className="sticky top-0 z-40 header-texture shadow-lg" style={{ height: '115px' }} />
     }>
       <PublicHeaderInner />
     </Suspense>
