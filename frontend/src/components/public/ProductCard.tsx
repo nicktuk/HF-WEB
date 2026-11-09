@@ -10,7 +10,7 @@ import { resolveImageUrl } from '@/lib/api';
 import { useBadgeLabels, useCatalogSettings } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
 import type { ProductPublic } from '@/types';
-import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { SantaHat } from '@/components/public/navidad/ChristmasArt';
 
 /** 1 de cada 5 tarjetas lleva gorro navideño: por id numérico o, si no, por hash del slug. */
@@ -33,7 +33,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const [pickingColor, setPickingColor] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
-  const xmas = isSeasonalThemeActive();
+  const xmas = useSeasonalTheme();
   const showXmasHat = xmas && hasXmasHat(product);
 
   const t = {

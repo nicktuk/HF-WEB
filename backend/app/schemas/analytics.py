@@ -12,6 +12,7 @@ PublicEventName = Literal[
     "product_click",
     "whatsapp_click",
     "comercio_access_click",
+    "banner_click",
 ]
 
 

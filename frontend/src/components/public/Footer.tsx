@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { trackPublicEvent } from '@/lib/analytics';
-import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { ElfSitting } from '@/components/public/navidad/ChristmasArt';
 import { christmasFont } from '@/components/public/navidad/fonts';
 
@@ -16,7 +16,7 @@ interface FooterProps {
 export function Footer({ snowSkyColor = '#e0f2fe' }: FooterProps = {}) {
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
-  const xmas = isSeasonalThemeActive();
+  const xmas = useSeasonalTheme();
 
   return (
     <>

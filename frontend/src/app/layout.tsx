@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import TrackingScripts from './components/TrackingScripts';
-import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { fetchSeasonalThemeEnabled } from '@/config/seasonalTheme';
+import { SeasonalThemeProvider } from '@/context/SeasonalThemeContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,13 +23,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const seasonalThemeActive = await fetchSeasonalThemeEnabled();
+
   return (
-    <html lang="es" {...(isSeasonalThemeActive() ? { 'data-season': 'navidad' } : {})}>
+    <html lang="es" {...(seasonalThemeActive ? { 'data-season': 'navidad' } : {})}>
       <head>
         <script
           type="application/ld+json"
@@ -82,7 +85,9 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <SeasonalThemeProvider active={seasonalThemeActive}>{children}</SeasonalThemeProvider>
+        </Providers>
         <TrackingScripts />
       </body>
     </html>

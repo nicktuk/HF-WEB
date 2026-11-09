@@ -3,7 +3,7 @@
 import { MessageCircle } from 'lucide-react';
 import { getWhatsAppUrl, cn } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
-import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { SantaHat } from '@/components/public/navidad/ChristmasArt';
 
 interface ContactButtonProps {
@@ -82,7 +82,7 @@ export function ContactButton({
 export function FloatingWhatsAppButton() {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
   const url = getWhatsAppUrl(whatsappNumber, 'Hola! Tengo una consulta');
-  const xmas = isSeasonalThemeActive();
+  const xmas = useSeasonalTheme();
 
   return (
     <a

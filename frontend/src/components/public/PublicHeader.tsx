@@ -13,7 +13,8 @@ import { trackPublicEvent } from '@/lib/analytics';
 import { slugifyCategory } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
-import { isSeasonalThemeActive, seasonalTheme } from '@/config/seasonalTheme';
+import { seasonalTheme } from '@/config/seasonalTheme';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { HeaderSnow, SantaHat, StringLights, XmasStar } from '@/components/public/navidad/ChristmasArt';
 
 /** Barra de anuncio navideña: va antes del bloque sticky, así se va con el scroll. */
@@ -130,7 +131,7 @@ function PublicHeaderInner() {
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
   const { totalItems } = useCart();
-  const xmas = isSeasonalThemeActive();
+  const xmas = useSeasonalTheme();
 
   const navidadPill = (extraClass: string) => (
     <a
@@ -605,9 +606,10 @@ function PublicHeaderInner() {
 }
 
 export function PublicHeader() {
+  const xmas = useSeasonalTheme();
   return (
     <Suspense fallback={
-      isSeasonalThemeActive() ? (
+      xmas ? (
         <>
           <ChristmasAnnouncementBar isStaging={process.env.NEXT_PUBLIC_APP_ENV === 'staging'} />
           {/* 115px del header + 30px de la guirnalda del subheader */}
