@@ -35,6 +35,17 @@
   @keyframes sleigh-gallop { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
   @media (prefers-reduced-motion: reduce) { .sleigh-gallop { animation: none; } }
 
+  /* ─── Popup navideño del trineo ─── */
+  .sleigh-bob { animation: sleigh-bob 1.1s ease-in-out infinite; }
+  @keyframes sleigh-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5%); } }
+  .sleigh-twinkle circle { animation: sleigh-twinkle 1.6s ease-in-out infinite; }
+  .sleigh-twinkle circle:nth-child(2n) { animation-delay: .5s; }
+  .sleigh-twinkle circle:nth-child(3n) { animation-delay: 1s; }
+  @keyframes sleigh-twinkle { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) {
+    .sleigh-bob, .sleigh-twinkle circle { animation: none; }
+  }
+
   /* Attention-grabbing animation for featured category pills */
   .animate-attention-pulse {
     animation: attention-pulse 2s ease-in-out;
