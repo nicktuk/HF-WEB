@@ -11,7 +11,8 @@ export type PublicEventName =
   | 'whatsapp_click'
   | 'comercio_access_click'
   | 'initiate_checkout'
-  | 'purchase';
+  | 'purchase'
+  | 'banner_click';
 
 type PublicEventPayload = {
   category?: string;

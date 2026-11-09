@@ -16,6 +16,9 @@ import { SectionCard } from '@/components/public/SectionCard';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { SessionPopup } from '@/components/public/SessionPopup';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
+import { isSeasonalThemeActive, seasonalTheme } from '@/config/seasonalTheme';
+import { ChristmasBanner } from '@/components/public/navidad/ChristmasBanner';
+import { ElfPeek, FallingSnow } from '@/components/public/navidad/ChristmasArt';
 
 export function HomePageSkeleton() {
   return (
@@ -272,6 +275,7 @@ export function HomePageContent() {
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || showOnSale || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
+  const xmas = isSeasonalThemeActive();
   const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !showOnSale && !searchFromUrl;
   const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory && !sortNewFirst;
 
@@ -381,8 +385,14 @@ export function HomePageContent() {
 
       {/* ─── PRE-GRID GRADIENT ZONE ──────────────────────────────────── */}
       <div
+        className={xmas ? 'relative overflow-hidden' : undefined}
         style={{ background: 'linear-gradient(to bottom, #fde8d4 0%, #e0f2fe 100%)' }}
       >
+          {xmas && <FallingSnow />}
+
+          {/* ─── BANNER NAVIDEÑO (solo temporada activa) ─── */}
+          {xmas && showCarousel && <ChristmasBanner />}
+
           {/* ─── CATEGORY CAROUSEL (full width, outside container) ─── */}
           {showCarousel && (
             <CategoryCarousel
@@ -421,7 +431,13 @@ export function HomePageContent() {
         <h1 className="sr-only">He·Fa Productos — Catálogo de productos para el hogar en Argentina</h1>
 
         {/* ─── MOBILE FILTER BUTTON (md:hidden) ─────────────────────── */}
-        <div className="md:hidden flex items-center justify-between pt-3 pb-3">
+        <div className={`md:hidden flex items-center justify-between pt-3 pb-3${xmas ? ' relative' : ''}`}>
+          {xmas && (
+            <ElfPeek
+              className="pointer-events-none absolute"
+              style={{ width: 70, height: 44, right: 90, top: -26 }}
+            />
+          )}
           <button
             onClick={() => {
               setTempSort(sortParam || '');
@@ -449,7 +465,13 @@ export function HomePageContent() {
         </div>
 
         {/* ─── SORT BAR (desktop only) ──────────────────────────────── */}
-        <div className="hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60">
+        <div className={`hidden md:flex items-center justify-between mb-4 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-white/60${xmas ? ' relative' : ''}`}>
+          {xmas && (
+            <ElfPeek
+              className="pointer-events-none absolute"
+              style={{ width: 92, height: 58, right: 120, top: -50 }}
+            />
+          )}
           <span className="text-sm text-zinc-500">
             {showSectionedView
               ? <><strong className="text-zinc-700">{allSectionViewProducts.length}</strong> productos</>
@@ -685,7 +707,7 @@ export function HomePageContent() {
       <section className="bg-white border-t border-gray-200 py-8">
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <p className="text-sm text-gray-600 leading-relaxed">
-            <strong className="text-gray-800">Enviamos a toda la zona sur del GBA</strong> — Ezeiza, Canning, Monte Grande, Tristán Suárez, Guernica y más. Entregas en <strong>24–48hs</strong>. A todo el país en 3–5 días hábiles.{' '}
+            <strong className="text-gray-800">Enviamos a toda la zona sur del GBA</strong> — Ezeiza, Canning, Monte Grande, Tristán Suárez, Guernica y más. Entregas en <strong>24–48hs</strong>. A todo el país en 3–5 días hábiles.{xmas && ` ${seasonalTheme.deliveryCutoffText}`}{' '}
             <a href="/envios" className="text-primary-600 hover:underline font-medium">
               Ver información de envíos →
             </a>
@@ -693,7 +715,7 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <Footer />
+      <Footer snowSkyColor="#FFFFFF" />
 
       {/* Session Popup */}
       {catalogSettings?.popup_enabled && catalogSettings?.popup_slides?.length > 0 && (

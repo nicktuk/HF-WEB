@@ -14,6 +14,27 @@
 }
 
 @layer utilities {
+  /* ─── Tema Navidad (solo se usa con la temporada activa) ─── */
+  .xmas-twinkle { animation: xmas-twinkle 1.6s ease-in-out infinite; }
+  .xmas-d1 { animation-delay: .25s; } .xmas-d2 { animation-delay: .5s; } .xmas-d3 { animation-delay: 1s; }
+  .xmas-stars circle { animation: xmas-twinkle 1.6s ease-in-out infinite; }
+  .xmas-stars circle:nth-child(2n) { animation-delay: .5s; }
+  .xmas-stars circle:nth-child(3n) { animation-delay: 1s; }
+  @keyframes xmas-twinkle { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .xmas-flake { top: -20px; animation: xmas-fall 12s linear infinite; }
+  @keyframes xmas-fall { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(520px) rotate(200deg); opacity: 0; } }
+  .xmas-bob { animation: xmas-bob 3s ease-in-out infinite; }
+  @keyframes xmas-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .xmas-candy { background: repeating-linear-gradient(135deg, #DC2626 0 5px, #FFFFFF 5px 9px); }
+  @media (prefers-reduced-motion: reduce) {
+    .xmas-twinkle, .xmas-stars circle, .xmas-flake, .xmas-bob { animation: none; }
+    .xmas-flake { display: none; }
+  }
+
+  .sleigh-gallop { animation: sleigh-gallop .45s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+  @keyframes sleigh-gallop { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+  @media (prefers-reduced-motion: reduce) { .sleigh-gallop { animation: none; } }
+
   /* Attention-grabbing animation for featured category pills */
   .animate-attention-pulse {
     animation: attention-pulse 2s ease-in-out;

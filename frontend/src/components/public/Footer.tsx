@@ -4,17 +4,60 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { HowWeWorkModal } from '@/components/public/HowWeWorkModal';
 import { trackPublicEvent } from '@/lib/analytics';
+import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { ElfSitting } from '@/components/public/navidad/ChristmasArt';
+import { christmasFont } from '@/components/public/navidad/fonts';
 
-export function Footer() {
+interface FooterProps {
+  /** Color de fondo de lo que queda justo arriba del footer (cielo del borde nevado navideño). */
+  snowSkyColor?: string;
+}
+
+export function Footer({ snowSkyColor = '#e0f2fe' }: FooterProps = {}) {
   const [howWeWorkOpen, setHowWeWorkOpen] = useState(false);
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'HeFa - Productos';
+  const xmas = isSeasonalThemeActive();
 
   return (
     <>
       {/* ─── FOOTER ──────────────────────────────────────────────────── */}
-      <footer className="mt-0 bg-[#0D1B2A]">
-        {/* Top accent line */}
-        <div className="h-1 bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600" />
+      <footer className={`mt-0 bg-[#0D1B2A]${xmas ? ' relative' : ''}`}>
+        {xmas ? (
+          <>
+            {/* Borde nevado (reemplaza la línea de acento) */}
+            <svg
+              aria-hidden="true"
+              className="block"
+              width="100%"
+              height="60"
+              viewBox="0 0 1280 60"
+              preserveAspectRatio="none"
+              style={{ backgroundColor: snowSkyColor }}
+            >
+              <path d="M0 30 Q80 6 160 26 T320 22 T480 28 T640 18 T800 26 T960 20 T1120 28 T1280 22 V60 H0 Z" fill="#0D1B2A" />
+              <path d="M0 30 Q80 6 160 26 T320 22 T480 28 T640 18 T800 26 T960 20 T1120 28 T1280 22 V38 Q1120 44 960 36 T640 36 T320 38 T0 40 Z" fill="#F8FAFC" />
+            </svg>
+            {/* Duendes sentados sobre la nieve */}
+            <ElfSitting
+              variant="red"
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ width: 120, height: 90, left: '8%', top: -36 }}
+            />
+            <ElfSitting
+              variant="green"
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ width: 110, height: 90, right: '10%', top: -34 }}
+            />
+            <ElfSitting
+              variant="green"
+              className="pointer-events-none absolute sm:hidden"
+              style={{ width: 80, height: 60, right: 24, top: -26 }}
+            />
+          </>
+        ) : (
+          /* Top accent line */
+          <div className="h-1 bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600" />
+        )}
 
         <div className="container mx-auto px-4 py-10">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
@@ -31,6 +74,11 @@ export function Footer() {
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Distribuidora mayorista y minorista de productos para el hogar. Electrodomésticos, bazar, herramientas y más.
               </p>
+              {xmas && (
+                <p className={`${christmasFont.className} mt-3 leading-none`} style={{ fontSize: 20, color: '#FACC15' }}>
+                  ¡Felices fiestas!
+                </p>
+              )}
             </div>
 
             {/* Contact column */}
