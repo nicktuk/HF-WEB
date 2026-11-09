@@ -3,6 +3,8 @@
 import { MessageCircle } from 'lucide-react';
 import { getWhatsAppUrl, cn } from '@/lib/utils';
 import { trackPublicEvent } from '@/lib/analytics';
+import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { SantaHat } from '@/components/public/navidad/ChristmasArt';
 
 interface ContactButtonProps {
   productName: string;
@@ -80,6 +82,7 @@ export function ContactButton({
 export function FloatingWhatsAppButton() {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
   const url = getWhatsAppUrl(whatsappNumber, 'Hola! Tengo una consulta');
+  const xmas = isSeasonalThemeActive();
 
   return (
     <a
@@ -94,6 +97,13 @@ export function FloatingWhatsAppButton() {
       className="fixed bottom-4 right-4 z-40 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors"
       aria-label="Contactar por WhatsApp"
     >
+      {/* El botón ya es `fixed` (posicionado), así que el gorro absoluto se ancla a él. */}
+      {xmas && (
+        <SantaHat
+          className="pointer-events-none absolute"
+          style={{ width: 44, height: 38, left: -6, top: -22, transform: 'rotate(-24deg)' }}
+        />
+      )}
       <MessageCircle className="h-6 w-6" />
     </a>
   );

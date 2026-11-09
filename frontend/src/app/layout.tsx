@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import TrackingScripts from './components/TrackingScripts';
+import { isSeasonalThemeActive } from '@/config/seasonalTheme';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" {...(isSeasonalThemeActive() ? { 'data-season': 'navidad' } : {})}>
       <head>
         <script
           type="application/ld+json"

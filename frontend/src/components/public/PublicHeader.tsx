@@ -13,6 +13,30 @@ import { trackPublicEvent } from '@/lib/analytics';
 import { slugifyCategory } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
+import { isSeasonalThemeActive, seasonalTheme } from '@/config/seasonalTheme';
+import { HeaderSnow, SantaHat, StringLights, XmasStar } from '@/components/public/navidad/ChristmasArt';
+
+/** Barra de anuncio navideña: va antes del bloque sticky, así se va con el scroll. */
+function ChristmasAnnouncementBar({ isStaging }: { isStaging: boolean }) {
+  return (
+    <div className={isStaging ? 'mt-6' : undefined}>
+      <div
+        className="flex h-[34px] items-center justify-center gap-2 overflow-hidden whitespace-nowrap px-4 text-[13px] font-bold text-white"
+        style={{ backgroundColor: '#B3122E' }}
+      >
+        <XmasStar size={15} color="#FDE68A" />
+        <span className="truncate sm:hidden">{seasonalTheme.announcementShort}</span>
+        <span className="hidden truncate sm:inline">{seasonalTheme.announcement}</span>
+        <XmasStar size={15} color="#FDE68A" />
+      </div>
+      <div
+        aria-hidden="true"
+        className="xmas-candy h-[5px]"
+        style={{ background: 'repeating-linear-gradient(135deg, #B3122E 0 9px, #FFFFFF 9px 18px)' }}
+      />
+    </div>
+  );
+}
 
 function PublicHeaderInner() {
   const router = useRouter();
@@ -106,6 +130,19 @@ function PublicHeaderInner() {
 
   const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
   const { totalItems } = useCart();
+  const xmas = isSeasonalThemeActive();
+
+  const navidadPill = (extraClass: string) => (
+    <a
+      href={seasonalTheme.navidadHref}
+      onClick={() => trackPublicEvent('category_click', { category: 'Navidad' })}
+      className={`${extraClass} rounded-full text-xs font-extrabold flex items-center gap-1 text-white bg-gradient-to-r from-red-700 to-red-600`}
+      style={{ border: '1.5px solid #FACC15' }}
+    >
+      <XmasStar size={12} color="#FACC15" />
+      Navidad
+    </a>
+  );
 
   return (
     <>
@@ -119,11 +156,15 @@ function PublicHeaderInner() {
       {/* Header + subheader + panel de categorías en un solo bloque sticky:
           la barra de píldoras queda siempre justo debajo del header, sin
           depender de alturas fijas. */}
+      {/* ─── ANUNCIO NAVIDEÑO (solo temporada activa) ────────────────── */}
+      {xmas && <ChristmasAnnouncementBar isStaging={isStaging} />}
+
       <div className="sticky top-0 z-40">
 
       {/* ─── HEADER ──────────────────────────────────────────────────── */}
       <header className="relative z-[3] header-texture shadow-lg">
-        <div className="container mx-auto px-4">
+        {xmas && <HeaderSnow />}
+        <div className={`container mx-auto px-4${xmas ? ' relative' : ''}`}>
           <div className={`flex flex-col gap-2 ${isStaging ? 'pt-8 pb-2' : 'py-2'}`}>
 
             {/* Fila 1: logo + redes + acciones */}
@@ -131,15 +172,31 @@ function PublicHeaderInner() {
 
               {/* Logo */}
               <a href="/" className="flex items-center gap-3 shrink-0">
-                <div className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 border border-white/20">
+                <div className={`hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 border border-white/20${xmas ? ' relative' : ''}`}>
+                  {xmas && (
+                    <SantaHat
+                      className="pointer-events-none absolute"
+                      style={{ width: 46, height: 40, left: -16, top: -24, transform: 'rotate(-20deg)' }}
+                    />
+                  )}
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
                   </svg>
                 </div>
-                <div className="flex flex-col leading-none">
+                <div className={`flex flex-col leading-none${xmas ? ' relative' : ''}`}>
+                  {xmas && (
+                    <SantaHat
+                      className="pointer-events-none absolute sm:hidden"
+                      style={{ width: 34, height: 30, left: -18, top: -18, transform: 'rotate(-20deg)' }}
+                    />
+                  )}
                   <span className="text-2xl font-black tracking-[0.18em] text-white">HE·FA</span>
-                  <span className="text-[9px] uppercase tracking-[0.22em] text-blue-200/70 font-medium mt-0.5">
+                  <span
+                    className={`text-[9px] uppercase tracking-[0.22em] font-medium mt-0.5${xmas ? '' : ' text-blue-200/70'}`}
+                    style={xmas ? { color: '#FDE68A' } : undefined}
+                  >
                     Productos para el hogar
+                    {xmas && <span className="hidden sm:inline"> · Navidad 2026</span>}
                   </span>
                 </div>
               </a>
@@ -218,6 +275,7 @@ function PublicHeaderInner() {
 
       {/* ─── SUBHEADER ────────────────────────────────────────────── */}
       <div className="relative z-[2]" style={{ backgroundColor: '#162844', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        {xmas && <StringLights />}
         <div className="container mx-auto px-4">
 
           {/* ── MOBILE: two rows ─────────────────────────────────────── */}
@@ -235,6 +293,7 @@ function PublicHeaderInner() {
               >
                 Ver todo
               </button>
+              {xmas && navidadPill('px-3 py-1.5')}
               <button
                 onClick={() => updateParams(showFeatured ? { featured: undefined } : { featured: 'true', immediate_delivery: undefined, on_demand: undefined, on_sale: undefined, category: undefined, subcategory: undefined })}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all ${
@@ -367,6 +426,8 @@ function PublicHeaderInner() {
             >
               Ver todo
             </button>
+
+            {xmas && navidadPill('shrink-0 px-3 py-1')}
 
             {/* Novedades */}
             <button
@@ -546,7 +607,15 @@ function PublicHeaderInner() {
 export function PublicHeader() {
   return (
     <Suspense fallback={
-      <div className="sticky top-0 z-40 header-texture shadow-lg" style={{ height: '115px' }} />
+      isSeasonalThemeActive() ? (
+        <>
+          <ChristmasAnnouncementBar isStaging={process.env.NEXT_PUBLIC_APP_ENV === 'staging'} />
+          {/* 115px del header + 30px de la guirnalda del subheader */}
+          <div className="sticky top-0 z-40 header-texture shadow-lg" style={{ height: '145px' }} />
+        </>
+      ) : (
+        <div className="sticky top-0 z-40 header-texture shadow-lg" style={{ height: '115px' }} />
+      )
     }>
       <PublicHeaderInner />
     </Suspense>

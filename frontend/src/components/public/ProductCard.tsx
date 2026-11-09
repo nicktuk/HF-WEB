@@ -10,6 +10,17 @@ import { resolveImageUrl } from '@/lib/api';
 import { useBadgeLabels, useCatalogSettings } from '@/hooks/useBadgeLabels';
 import { useCart } from '@/context/CartContext';
 import type { ProductPublic } from '@/types';
+import { isSeasonalThemeActive } from '@/config/seasonalTheme';
+import { SantaHat } from '@/components/public/navidad/ChristmasArt';
+
+/** 1 de cada 5 tarjetas lleva gorro navideño: por id numérico o, si no, por hash del slug. */
+function hasXmasHat(product: ProductPublic): boolean {
+  const id = Number(product.id);
+  if (Number.isInteger(id)) return id % 5 === 0;
+  let hash = 0;
+  for (const ch of product.slug ?? '') hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return Math.abs(hash) % 5 === 0;
+}
 
 interface ProductCardProps {
   product: ProductPublic;
@@ -22,6 +33,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const [pickingColor, setPickingColor] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const xmas = isSeasonalThemeActive();
+  const showXmasHat = xmas && hasXmasHat(product);
 
   const t = {
     immediate: labels?.badge_text_immediate_delivery ?? 'Inmediata',
@@ -113,6 +126,22 @@ export function ProductCard({ product }: ProductCardProps) {
             </svg>
             <span className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">Sin imagen</span>
           </div>
+        )}
+
+        {/* Gorro navideño (por encima de la imagen, debajo de los badges) */}
+        {showXmasHat && (
+          <>
+            <SantaHat
+              flip
+              className="pointer-events-none absolute sm:hidden"
+              style={{ width: 44, height: 38, right: -6, top: -4, transform: 'rotate(16deg)' }}
+            />
+            <SantaHat
+              flip
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ width: 58, height: 50, right: -6, top: -4, transform: 'rotate(16deg)' }}
+            />
+          </>
         )}
 
         {/* Status badges — desktop overlay only */}
@@ -270,6 +299,13 @@ export function ProductCard({ product }: ProductCardProps) {
                   <span className="text-[10px] font-medium text-zinc-400 leading-none">efectivo / transf.</span>
                 )}
               </div>
+            )}
+            {xmas && (
+              <span
+                aria-hidden="true"
+                className="xmas-candy mt-0.5 block h-[3px] w-full rounded-sm"
+                style={{ boxShadow: '0 0 0 1px #FECACA' }}
+              />
             )}
             {product.installments_3 && product.installment_price && (
               <p className="text-[11px] font-semibold text-teal-600 mt-0.5 tabular-nums">

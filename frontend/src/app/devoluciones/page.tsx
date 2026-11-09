@@ -166,7 +166,7 @@ export default function DevolucionesPage() {
         </section>
       </main>
 
-      <Footer />
+      <Footer snowSkyColor="#f7f4ef" />
     </div>
   );
 }
