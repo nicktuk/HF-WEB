@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/api';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
+import { SleighPopup } from '@/components/public/sleigh/SleighPopup';
 
 const LS_KEY = 'hefa_browser_open';
 const SS_KEY = 'hefa_popup_seen';
@@ -20,8 +22,7 @@ interface SessionPopupProps {
 
 export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
   const [visible, setVisible] = useState(false);
-  const [idx, setIdx] = useState(0);
-  const isPaused = useRef(false);
+  const xmas = useSeasonalTheme();
 
   useEffect(() => {
     const browserOpen = localStorage.getItem(LS_KEY) === '1';
@@ -39,18 +40,32 @@ export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
 
+  if (!visible) return null;
+
+  const close = () => setVisible(false);
+
+  if (xmas) {
+    return <SleighPopup slides={slides} interval={interval} onClose={close} />;
+  }
+
+  return <ClassicPopup slides={slides} interval={interval} onClose={close} />;
+}
+
+/** Popup de siempre (carrusel de imágenes). Mismo comportamiento y HTML que antes. */
+function ClassicPopup({ slides, interval, onClose }: { slides: PopupSlide[]; interval: number; onClose: () => void }) {
+  const [idx, setIdx] = useState(0);
+  const isPaused = useRef(false);
+
   const prev = useCallback(() => setIdx(i => (i - 1 + slides.length) % slides.length), [slides.length]);
   const next = useCallback(() => setIdx(i => (i + 1) % slides.length), [slides.length]);
 
   useEffect(() => {
-    if (!visible || slides.length <= 1) return;
+    if (slides.length <= 1) return;
     const t = setInterval(() => {
       if (!isPaused.current) next();
     }, interval * 1000);
     return () => clearInterval(t);
-  }, [visible, slides.length, next, interval]);
-
-  if (!visible) return null;
+  }, [slides.length, next, interval]);
 
   const slide = slides[idx];
   const src = resolveImageUrl(slide.image) ?? slide.image;
@@ -58,7 +73,7 @@ export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-      onClick={() => setVisible(false)}
+      onClick={onClose}
     >
       <div
         className="relative max-w-lg md:max-w-2xl w-full rounded-2xl overflow-hidden shadow-2xl"
@@ -68,7 +83,7 @@ export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
       >
         {/* Close */}
         <button
-          onClick={() => setVisible(false)}
+          onClick={onClose}
           className="absolute top-3 right-3 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
           aria-label="Cerrar"
         >
@@ -77,7 +92,7 @@ export function SessionPopup({ slides, interval = 2 }: SessionPopupProps) {
 
         {/* Image — clickable if link exists */}
         {slide.link ? (
-          <a href={slide.link} target="_blank" rel="noopener noreferrer" onClick={() => setVisible(false)}>
+          <a href={slide.link} target="_blank" rel="noopener noreferrer" onClick={onClose}>
             <Image
               key={src}
               src={src}
