@@ -167,6 +167,7 @@ class CatalogSettingsResponse(BaseModel):
     shipping_cost_amba: float = SHIPPING_COST_AMBA_DEFAULT
     shipping_cost_resto_pais: float = SHIPPING_COST_RESTO_PAIS_DEFAULT
     sort_new_first: bool = False
+    seasonal_theme_enabled: bool = False
 
 
 class CatalogSettingsUpdate(BaseModel):
@@ -188,6 +189,7 @@ class CatalogSettingsUpdate(BaseModel):
     shipping_cost_amba: Optional[float] = None
     shipping_cost_resto_pais: Optional[float] = None
     sort_new_first: Optional[bool] = None
+    seasonal_theme_enabled: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +244,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
     shipping_cost_resto_pais = float(shipping_cost_resto_pais_str) if shipping_cost_resto_pais_str is not None else SHIPPING_COST_RESTO_PAIS_DEFAULT
     sort_new_first_str = get_setting(db, "SORT_NEW_FIRST")
     sort_new_first = sort_new_first_str == "true" if sort_new_first_str is not None else False
+    seasonal_theme_enabled = get_setting(db, "SEASONAL_THEME_ENABLED") == "true"
     return CatalogSettingsResponse(
         featured_pill_label=featured_label,
         stock_low_threshold=threshold,
@@ -261,6 +264,7 @@ def get_catalog_settings(db: Session = Depends(get_db)) -> CatalogSettingsRespon
         shipping_cost_amba=shipping_cost_amba,
         shipping_cost_resto_pais=shipping_cost_resto_pais,
         sort_new_first=sort_new_first,
+        seasonal_theme_enabled=seasonal_theme_enabled,
     )
 
 
@@ -312,6 +316,8 @@ def update_catalog_settings(
     if data.sort_new_first is not None:
         set_setting(db, "SORT_NEW_FIRST", "true" if data.sort_new_first else "false")
         cache.invalidate_all_products()
+    if data.seasonal_theme_enabled is not None:
+        set_setting(db, "SEASONAL_THEME_ENABLED", "true" if data.seasonal_theme_enabled else "false")
     return get_catalog_settings(db=db)
 
 
@@ -378,6 +384,7 @@ def get_public_catalog_settings(db: Session = Depends(get_db)):
         "shipping_cost_amba": shipping_cost_amba,
         "shipping_cost_resto_pais": shipping_cost_resto_pais,
         "sort_new_first": get_setting(db, "SORT_NEW_FIRST") == "true",
+        "seasonal_theme_enabled": get_setting(db, "SEASONAL_THEME_ENABLED") == "true",
     }
 
 

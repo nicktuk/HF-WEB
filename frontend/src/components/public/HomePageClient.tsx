@@ -16,7 +16,8 @@ import { SectionCard } from '@/components/public/SectionCard';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { SessionPopup } from '@/components/public/SessionPopup';
 import { useBadgeLabels } from '@/hooks/useBadgeLabels';
-import { isSeasonalThemeActive, seasonalTheme } from '@/config/seasonalTheme';
+import { seasonalTheme } from '@/config/seasonalTheme';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { ChristmasBanner } from '@/components/public/navidad/ChristmasBanner';
 import { ElfPeek, FallingSnow } from '@/components/public/navidad/ChristmasArt';
 
@@ -275,7 +276,7 @@ export function HomePageContent() {
   // Mostrar carrusel y secciones solo cuando no hay ningún filtro activo
   const anyFilterActive = !!(effectiveCategories.length || showFeatured || showImmediate || showOnDemand || showOnSale || selectedSectionId || searchFromUrl);
   const showCarousel = !anyFilterActive;
-  const xmas = isSeasonalThemeActive();
+  const xmas = useSeasonalTheme();
   const showSectionedView = showBySections && !selectedSectionId && !showFeatured && !showImmediate && !showOnDemand && !showOnSale && !searchFromUrl;
   const showGroupedByCategory = !anyFilterActive && !sortParam && !showBySections && groupByCategory && !sortNewFirst;
 
