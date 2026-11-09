@@ -67,26 +67,47 @@ export function NightScene() {
   );
 }
 
+type TeamSpot = { x: number; y: number; s: number };
+
 /**
- * Trineo con riendas, rastro dorado y renos (sin la imagen).
- * `compact` (mobile): un solo reno, el de nariz roja.
+ * Tiro de 4 renos en 2 parejas. La pareja de atrás va más arriba, un poco
+ * más chica y más oscura para dar profundidad; el de nariz roja encabeza
+ * la fila de adelante. En mobile (`compact`) el tiro es más chico y va más
+ * pegado al trineo para no salirse del popup.
  */
+const TEAM: Record<'wide' | 'compact', { back: TeamSpot[]; front: TeamSpot[] }> = {
+  wide: {
+    back: [{ x: 466, y: 240, s: 1.1 }, { x: 554, y: 212, s: 1.1 }],
+    front: [{ x: 450, y: 286, s: 1.25 }, { x: 540, y: 258, s: 1.25 }],
+  },
+  compact: {
+    back: [{ x: 450, y: 250, s: 0.9 }, { x: 528, y: 226, s: 0.9 }],
+    front: [{ x: 432, y: 290, s: 1.0 }, { x: 510, y: 266, s: 1.0 }],
+  },
+};
+
+/** Trineo con riendas, rastro dorado y 4 renos en 2 parejas (sin la imagen). */
 export function SleighTeam({ compact = false }: { compact?: boolean }) {
+  const { back, front } = TEAM[compact ? 'compact' : 'wide'];
+  const reins = (row: TeamSpot[]) =>
+    ['352,300', ...row.map((r) => `${r.x - 10 * r.s},${r.y - 10 * r.s}`)].join(' ');
   return (
     <svg viewBox="0 0 600 400" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
       <path d="M30 330 C0 336 -40 326 -80 340" stroke="#FACC15" strokeWidth="3" fill="none" strokeDasharray="2 9" strokeLinecap="round" />
-      {compact ? (
-        <>
-          <polyline points="352,300 440,276" fill="none" stroke="#FACC15" strokeWidth="2.2" />
-          <g transform="translate(450 286) scale(1.25)"><Reindeer rednose /></g>
-        </>
-      ) : (
-        <>
-          <polyline points="352,300 440,276 540,250" fill="none" stroke="#FACC15" strokeWidth="2.2" />
-          <g transform="translate(450 286) scale(1.25)"><Reindeer /></g>
-          <g transform="translate(540 258) scale(1.25)"><Reindeer rednose /></g>
-        </>
-      )}
+      {/* Pareja de atrás */}
+      <polyline points={reins(back)} fill="none" stroke="#FACC15" strokeWidth="2" opacity="0.75" />
+      <g opacity="0.82">
+        {back.map((r) => (
+          <g key={`b${r.x}`} transform={`translate(${r.x} ${r.y}) scale(${r.s})`}><Reindeer /></g>
+        ))}
+      </g>
+      {/* Pareja de adelante */}
+      <polyline points={reins(front)} fill="none" stroke="#FACC15" strokeWidth="2.2" />
+      {front.map((r, i) => (
+        <g key={`f${r.x}`} transform={`translate(${r.x} ${r.y}) scale(${r.s})`}>
+          <Reindeer rednose={i === front.length - 1} />
+        </g>
+      ))}
       <path d="M40 286 H330 L346 252 L362 252 L348 312 Q342 330 324 330 H52 Q30 330 34 304 Z" fill="#B91C1C" />
       <path d="M44 296 H332" stroke="#FACC15" strokeWidth="4" />
       <path d="M70 330 V346 M300 330 V346" stroke="#FACC15" strokeWidth="4" />
