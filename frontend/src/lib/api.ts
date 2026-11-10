@@ -46,16 +46,25 @@ import type {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 const API_BASE = API_URL.replace('/api/v1', '');
 
+/** Captura la parte `/uploads/...` de una URL absoluta del backend. */
+const BACKEND_UPLOAD_RE = /^https?:\/\/[^/]+(\/uploads\/.*)$/;
+
 /**
- * Normalizes an image URL so that /uploads/ paths always resolve to the current backend,
- * and external URLs (ImgBB, scrapers, etc.) are returned as-is.
+ * Normaliza la URL de una imagen para mostrarla.
+ *
+ * Los archivos subidos al backend (`/uploads/...`) se devuelven como ruta
+ * relativa del propio sitio: next.config.js los reenvía al backend por la red
+ * privada de Railway. Así el optimizador de next/image no los descarga por el
+ * dominio público del backend, donde Railway corta las ráfagas con 429.
+ * Las URLs externas (ImgBB, scrapers, etc.) se devuelven tal cual.
  */
 export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
+  if (url.startsWith('/uploads/')) return url;
   if (url.startsWith('/')) return `${API_BASE}${url}`;
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // Rewrite any backend /uploads/ URL to the current environment's backend
-    return url.replace(/^https?:\/\/[^/]+(?=\/uploads\/)/, API_BASE);
+    const upload = url.match(BACKEND_UPLOAD_RE);
+    if (upload) return upload[1];
   }
   return url;
 }
