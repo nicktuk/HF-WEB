@@ -8,14 +8,21 @@ const SERVER_API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:8000/api/v1';
 
-const SERVER_BASE = SERVER_API_URL.replace('/api/v1', '');
+/**
+ * Base pública del backend para URLs que salen del sitio (og:image). No usa
+ * INTERNAL_API_URL: esa apunta a la red privada de Railway y WhatsApp/Facebook
+ * no podrían descargarla.
+ */
+const PUBLIC_BACKEND_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+).replace('/api/v1', '');
 const SITE_URL = 'https://www.hefaproductos.com.ar';
 
 function resolveOgImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('/')) return `${SERVER_BASE}${url}`;
+  if (url.startsWith('/')) return `${PUBLIC_BACKEND_BASE}${url}`;
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url.replace(/^https?:\/\/[^/]+(?=\/uploads\/)/, SERVER_BASE);
+    return url.replace(/^https?:\/\/[^/]+(?=\/uploads\/)/, PUBLIC_BACKEND_BASE);
   }
   return url;
 }

@@ -1,3 +1,9 @@
+const BACKEND_BASE = (
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:8000/api/v1'
+).replace(/\/api\/v1\/?$/, '')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -51,6 +57,17 @@ const nextConfig = {
     staleTimes: {
       dynamic: 3600,
     },
+  },
+  // Los archivos subidos (/uploads/...) se sirven desde el backend. En Railway,
+  // INTERNAL_API_URL apunta a la red privada, así el optimizador de imágenes no
+  // pasa por el dominio público (que limita con 429). Se lee en el build.
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: `${BACKEND_BASE}/uploads/:path*`,
+      },
+    ]
   },
 }
 
