@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   COLORES,
   ars,
   cantidad,
   descargarCsv,
+  dias,
   etiquetaPeriodo,
   fecha,
   fetchReporte,
@@ -13,7 +15,9 @@ import {
   pct,
   type ClienteRow,
   type ClientesData,
+  type CicloData,
   type Endpoint,
+  type PendienteRow,
   type ProductoRow,
   type ProductosData,
   type ResumenData,
@@ -137,6 +141,28 @@ export function ResumenTab({ apiKey, params }: TabProps) {
               valor={pct(k.pct_clientes_repiten)}
               variacion={<Variacion valor={v.pct_clientes_repiten} puntos />}
             />
+            <KpiCard
+              titulo="Cobranza de lo vendido"
+              valor={pct(k.pct_cobranza)}
+              variacion={<Variacion valor={v.pct_cobranza} puntos />}
+              detalle={`${ars(k.cobrado)} cobrado`}
+            />
+            <KpiCard
+              titulo="Pendiente de cobro"
+              valor={ars(k.pendiente_cobro)}
+              detalle="de las ventas del período"
+            />
+            <KpiCard
+              titulo="Cobrado en el período"
+              valor={ars(k.cobrado_en_periodo)}
+              variacion={<Variacion valor={v.cobrado_en_periodo} />}
+            />
+            <KpiCard
+              titulo="Días entrega → cobro"
+              valor={dias(k.dias_entrega_cobro)}
+              variacion={<Variacion valor={v.dias_entrega_cobro} enDias inverso />}
+              detalle={k.ventas_con_dias_entrega_cobro ? `${cantidad(k.ventas_con_dias_entrega_cobro)} ventas` : 'sin datos'}
+            />
           </div>
           <Panel
             titulo="Facturación"
@@ -197,6 +223,7 @@ export function VentasTab({ apiKey, params, extra, setExtra }: TabProps) {
   const columnas: Columna<Fila>[] = [
     { key: 'periodo', label: 'Período', render: (r) => (d.agrupar === 'semana' ? `Sem. ${fecha(r.periodo)}` : fecha(r.periodo)), sort: (r) => r.periodo, mobile: 'titulo' },
     { key: 'facturacion', label: 'Facturación', render: (r) => ars(r.facturacion), sort: (r) => num(r.facturacion), align: 'right' },
+    { key: 'cobrado', label: 'Cobrado', render: (r) => ars(r.cobrado ?? null), sort: (r) => num(r.cobrado ?? null), align: 'right' },
     { key: 'ventas', label: 'Ventas', render: (r) => cantidad(r.ventas), sort: (r) => r.ventas, align: 'right' },
     { key: 'unidades', label: 'Unidades', render: (r) => cantidad(r.unidades), sort: (r) => r.unidades, align: 'right' },
     ...d.canales.map<Columna<Fila>>((c) => ({
@@ -215,8 +242,9 @@ export function VentasTab({ apiKey, params, extra, setExtra }: TabProps) {
         <Vacio />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <KpiCard titulo="Facturación" valor={ars(d.total.facturacion)} className="col-span-2 sm:col-span-1" />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard titulo="Facturación" valor={ars(d.total.facturacion)} />
+            <KpiCard titulo="Cobrado" valor={ars(d.total.cobrado)} detalle={`${pct(d.total.pct_cobranza)} de lo vendido`} />
             <KpiCard titulo="Ventas" valor={cantidad(d.total.ventas)} />
             <KpiCard titulo="Unidades" valor={cantidad(d.total.unidades)} />
           </div>
@@ -242,11 +270,13 @@ export function VentasTab({ apiKey, params, extra, setExtra }: TabProps) {
 
 const METRICAS = [
   { id: 'facturacion', label: 'Facturación' },
+  { id: 'unidades', label: 'Unidades' },
   { id: 'margen', label: 'Margen' },
 ] as const;
+type Metrica = (typeof METRICAS)[number]['id'];
 
 export function ProductosTab({ apiKey, params, extra, setExtra }: TabProps) {
-  const metrica = (extra.metrica as 'facturacion' | 'margen') || 'facturacion';
+  const metrica: Metrica = METRICAS.some((m) => m.id === extra.metrica) ? (extra.metrica as Metrica) : 'facturacion';
   const q = useReporte<ProductosData>('productos', params, apiKey);
   if (q.isLoading) return <Cargando />;
   if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />;
@@ -308,7 +338,11 @@ export function ProductosTab({ apiKey, params, extra, setExtra }: TabProps) {
               />
             }
           >
-            {top10.length ? <BarrasHorizontales data={top10} /> : <Vacio texto="Ningún producto tiene costo cargado." />}
+            {top10.length ? (
+              <BarrasHorizontales data={top10} formato={metrica === 'unidades' ? 'cantidad' : 'ars'} />
+            ) : (
+              <Vacio texto="Ningún producto tiene costo cargado." />
+            )}
           </Panel>
           <ListaOrdenable
             filas={d.productos}
@@ -417,6 +451,9 @@ export function VendedorasTab({ apiKey, params }: TabProps) {
     { key: 'unidades', label: 'Unidades', render: (r) => cantidad(r.unidades), sort: (r) => r.unidades, align: 'right' },
     { key: 'ticket', label: 'Ticket prom.', render: (r) => ars(r.ticket_promedio), sort: (r) => num(r.ticket_promedio), align: 'right' },
     { key: 'clientes', label: 'Clientes', render: (r) => cantidad(r.clientes_unicos), sort: (r) => r.clientes_unicos, align: 'right' },
+    { key: 'cobranza', label: 'Cobranza', render: (r) => pct(r.pct_cobranza), sort: (r) => num(r.pct_cobranza), align: 'right' },
+    { key: 'pendiente', label: 'Pend. cobro', render: (r) => ars(r.pendiente_cobro), sort: (r) => num(r.pendiente_cobro), align: 'right' },
+    { key: 'dias_ec', label: 'Entrega → cobro', render: (r) => dias(r.dias_entrega_cobro), sort: (r) => num(r.dias_entrega_cobro), align: 'right' },
     {
       key: 'margen',
       label: 'Margen',
@@ -530,6 +567,158 @@ export function ClientesTab({ apiKey, params, extra, setExtra }: TabProps) {
         ordenInicial={{ key: 'facturacion', dir: 'desc' }}
         vacio="No hay clientes con nombre en este período."
       />
+    </div>
+  );
+}
+
+// ─── Cobranza (ciclo de vida) ────────────────────────────────────────────
+
+function TiempoCard({ titulo, stats }: { titulo: string; stats: CicloData['tiempos']['venta_entrega'] }) {
+  return (
+    <KpiCard
+      titulo={titulo}
+      valor={dias(stats.promedio)}
+      detalle={stats.ventas ? `mediana ${dias(stats.mediana)} · ${cantidad(stats.ventas)} ventas` : 'sin ventas con fechas reales'}
+    />
+  );
+}
+
+const PENDIENTES_VISIBLES = 20;
+
+export function CobranzaTab({ apiKey, params }: TabProps) {
+  const q = useReporte<CicloData>('ciclo', params, apiKey);
+  const [verTodas, setVerTodas] = useState(false);
+  if (q.isLoading) return <Cargando />;
+  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />;
+  const d = q.data!;
+  const t = d.tiempos;
+
+  type FilaVend = CicloData['por_vendedora'][number];
+  const colVend: Columna<FilaVend>[] = [
+    { key: 'nombre', label: 'Vendedora', render: (r) => r.nombre, sort: (r) => r.nombre.toLowerCase(), mobile: 'titulo' },
+    { key: 've', label: 'Venta → entrega', render: (r) => dias(r.dias_venta_entrega), sort: (r) => num(r.dias_venta_entrega), align: 'right' },
+    { key: 'vc', label: 'Venta → cobro', render: (r) => dias(r.dias_venta_cobro), sort: (r) => num(r.dias_venta_cobro), align: 'right' },
+    { key: 'ec', label: 'Entrega → cobro', render: (r) => dias(r.dias_entrega_cobro), sort: (r) => num(r.dias_entrega_cobro), align: 'right' },
+    { key: 'pc', label: 'Por cobrar', render: (r) => ars(r.por_cobrar), sort: (r) => num(r.por_cobrar), align: 'right' },
+    { key: 'pe', label: 'Por entregar', render: (r) => ars(r.por_entregar), sort: (r) => num(r.por_entregar), align: 'right' },
+  ];
+
+  const colPend: Columna<PendienteRow>[] = [
+    {
+      key: 'venta',
+      label: 'Venta',
+      render: (r) => (
+        <span className="block min-w-0">
+          <span className="block truncate">#{r.venta_id} · {r.cliente || 'Sin cliente'}</span>
+          <span className="block text-[11px] font-normal text-zinc-400">{r.vendedora}</span>
+        </span>
+      ),
+      sort: (r) => r.venta_id,
+      mobile: 'titulo',
+    },
+    { key: 'fecha', label: 'Vendida', render: (r) => fecha(r.fecha_venta), sort: (r) => r.fecha_venta, align: 'right' },
+    {
+      key: 'entrega',
+      label: 'Entregada',
+      render: (r) =>
+        r.primera_entrega ? (
+          <>
+            {fecha(r.primera_entrega)}
+            {r.primera_entrega_fecha_real === false && <span className="ml-1 text-[10px] text-amber-600" title="Fecha aproximada">~</span>}
+          </>
+        ) : (
+          '—'
+        ),
+      sort: (r) => r.primera_entrega,
+      align: 'right',
+    },
+    { key: 'pc', label: 'Por cobrar', render: (r) => ars(r.por_cobrar), sort: (r) => num(r.por_cobrar), align: 'right' },
+    {
+      key: 'dc',
+      label: 'Días sin cobrar',
+      render: (r) => (r.dias_desde_entrega === null ? '—' : cantidad(r.dias_desde_entrega)),
+      sort: (r) => r.dias_desde_entrega,
+      align: 'right',
+    },
+    { key: 'pe', label: 'Por entregar', render: (r) => ars(r.por_entregar), sort: (r) => num(r.por_entregar), align: 'right' },
+    { key: 'dv', label: 'Días desde venta', render: (r) => cantidad(r.dias_desde_venta), sort: (r) => r.dias_desde_venta, align: 'right' },
+  ];
+
+  const barrasAntiguedad = (a: CicloData['por_cobrar']) =>
+    a.ventas ? (
+      <BarrasHorizontales data={a.antiguedad.map((x) => ({ nombre: x.rango, valor: num(x.monto) ?? 0 }))} />
+    ) : (
+      <p className="py-6 text-center text-sm text-zinc-400">Nada pendiente.</p>
+    );
+
+  return (
+    <div className="space-y-3">
+      <Encabezado endpoint="ciclo" params={params} apiKey={apiKey}>
+        {d.fechas_reales_desde && (
+          <p className="text-xs text-zinc-500">Días con fechas reales desde {fecha(d.fechas_reales_desde)}</p>
+        )}
+      </Encabezado>
+      <Advertencias items={d.advertencias} />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          titulo="Cobranza de lo vendido"
+          valor={pct(d.cobranza.pct_cobranza)}
+          detalle={`${ars(d.cobranza.cobrado)} de ${ars(d.cobranza.facturacion)}`}
+        />
+        <KpiCard titulo="Cobrado en el período" valor={ars(d.caja.total)} detalle={`${cantidad(d.caja.pagos)} cobros`} />
+        <KpiCard titulo="Por cobrar hoy" valor={ars(d.por_cobrar.total)} detalle={`${cantidad(d.por_cobrar.ventas)} ventas entregadas`} />
+        <KpiCard titulo="Por entregar hoy" valor={ars(d.por_entregar.total)} detalle={`${cantidad(d.por_entregar.ventas)} ventas`} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <TiempoCard titulo="Venta → entrega" stats={t.venta_entrega} />
+        <TiempoCard titulo="Venta → cobro" stats={t.venta_cobro} />
+        <TiempoCard titulo="Entrega → cobro" stats={t.entrega_cobro} />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Panel titulo="Demora entrega → cobro (ventas)">
+          {t.entrega_cobro.ventas ? (
+            <BarrasHorizontales
+              formato="cantidad"
+              data={d.distribucion_entrega_cobro.map((x) => ({ nombre: x.rango, valor: x.ventas }))}
+            />
+          ) : (
+            <p className="py-6 text-center text-sm text-zinc-400">Sin ventas entregadas y cobradas con fechas reales.</p>
+          )}
+        </Panel>
+        <Panel titulo="Por cobrar, por antigüedad desde la entrega">{barrasAntiguedad(d.por_cobrar)}</Panel>
+        <Panel titulo="Por entregar, por antigüedad desde la venta">{barrasAntiguedad(d.por_entregar)}</Panel>
+      </div>
+
+      {d.por_vendedora.length > 0 && (
+        <Panel titulo="Por vendedora">
+          <ListaOrdenable filas={d.por_vendedora} columnas={colVend} clave={(r) => r.vendedora_id} ordenInicial={{ key: 'pc', dir: 'desc' }} />
+        </Panel>
+      )}
+
+      <Panel titulo={`Ventas pendientes (${cantidad(d.pendientes.length)})`}>
+        <ListaOrdenable
+          filas={verTodas ? d.pendientes : d.pendientes.slice(0, PENDIENTES_VISIBLES)}
+          columnas={colPend}
+          clave={(r) => r.venta_id}
+          ordenInicial={{ key: 'pc', dir: 'desc' }}
+          vacio="No hay ventas pendientes de cobro ni de entrega."
+        />
+        {d.pendientes.length > PENDIENTES_VISIBLES && (
+          <button
+            type="button"
+            onClick={() => setVerTodas((v) => !v)}
+            className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-[#2c5c88] ring-1 ring-zinc-200 hover:bg-zinc-50"
+          >
+            {verTodas ? 'Ver menos' : `Ver todas (${cantidad(d.pendientes.length)})`}
+          </button>
+        )}
+        <p className="mt-2 text-[11px] text-zinc-400">
+          Se muestran las de mayor monto por cobrar. ~ fecha de entrega aproximada (anterior al registro de fechas).
+        </p>
+      </Panel>
     </div>
   );
 }

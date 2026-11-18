@@ -8,7 +8,17 @@ import { pct } from '@/lib/reportes';
 // ─── Variación ▲▼ ────────────────────────────────────────────────────────
 
 /** `puntos`: la variación viene en puntos porcentuales (para KPIs que ya son %). */
-export function Variacion({ valor, puntos = false, inverso = false }: { valor: string | null | undefined; puntos?: boolean; inverso?: boolean }) {
+export function Variacion({
+  valor,
+  puntos = false,
+  enDias = false,
+  inverso = false,
+}: {
+  valor: string | null | undefined;
+  puntos?: boolean;
+  enDias?: boolean;
+  inverso?: boolean;
+}) {
   if (valor === null || valor === undefined) {
     return <span className="text-xs text-zinc-400">sin base previa</span>;
   }
@@ -17,9 +27,8 @@ export function Variacion({ valor, puntos = false, inverso = false }: { valor: s
   const sube = n > 0;
   const bueno = inverso ? !sube : sube;
   const Icono = sube ? ArrowUp : ArrowDown;
-  const texto = puntos
-    ? `${Math.abs(n).toLocaleString('es-AR', { maximumFractionDigits: 1 })} pp`
-    : pct(Math.abs(n));
+  const abs = Math.abs(n).toLocaleString('es-AR', { maximumFractionDigits: 1 });
+  const texto = puntos ? `${abs} pp` : enDias ? `${abs} d` : pct(Math.abs(n));
   return (
     <span className={cn('inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums', bueno ? 'text-emerald-600' : 'text-rose-600')}>
       <Icono className="h-3 w-3" aria-hidden />

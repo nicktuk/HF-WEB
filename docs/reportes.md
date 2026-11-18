@@ -20,6 +20,11 @@ usan los mismos endpoints y el mismo servicio (`backend/app/services/reportes.py
 | Stock por depósito | El reparto manual del admin (`product_color_stock` si el producto tiene colores con depósito; si no, `product_deposit_stock`). La diferencia con el total figura como depósito **"Sin asignar"**. |
 | Valuación del stock | Stock × costo promedio de lo que queda de cada lote (si no hay lotes, costo actual con aviso). |
 | Días sin venta (stock parado) | Desde la última venta del producto **en cualquier canal**. Si nunca se vendió, desde la primera compra. |
+| Cobranza de lo vendido | % cobrado de las ventas del período. Por ítem: si la venta es en cuotas, la parte proporcional de lo cobrado; si no, el ítem si está pagado. Las ventas recientes todavía no tuvieron tiempo de cobrarse, así que el período actual siempre se ve peor que el anterior. |
+| Cobrado en el período | Plata que entró por **fecha de cobro** (ítems pagados y cuotas pagadas), sin importar cuándo fue la venta. |
+| Fechas de cobro y entrega | `sale_items.paid_at` / `delivered_at` y `sale_installments.paid_at`. Una venta queda entregada/cobrada cuando se entrega/cobra su último producto o cuota. Las fechas son **reales solo desde el corte**: el momento en que se cargó `estado_historial` (se toma de la base) o `REPORTS_FECHAS_REALES_DESDE`. Antes de eso la migración completó valores aproximados. Cada cálculo de días usa solo las fechas que necesita y entra si todas son reales: una venta de agosto cobrada en octubre sí cuenta en venta → cobro. |
+| Cobro antes de la entrega | No debería pasar: si aparece, no entra en el promedio entrega → cobro y se avisa. |
+| Por cobrar / por entregar | Foto a hoy (todas las fechas, con los filtros de canal, vendedora y depósito). Por cobrar = entregado − cobrado; por entregar = total − entregado. Antigüedad desde la primera entrega o desde la venta. |
 | Montos | `Decimal` en todo el cálculo. En JSON viajan como **string decimal exacto** (`"8469400.00"`), nunca float. |
 
 Cada respuesta trae `advertencias` (lista de strings) con los huecos de datos del
@@ -41,6 +46,7 @@ Filtros comunes: `desde`, `hasta` (AAAA-MM-DD), `canal` (`admin` | `vendedor`),
 | `GET /stock-inmovilizado` | `deposito_id`, `dias_min` (default 60). No usa fechas: es una foto del stock actual. |
 | `GET /vendedoras` | — (`base_comisionable` siempre `null` por ahora) |
 | `GET /clientes` | `top` (default 50), `orden`, `solo_una_compra` |
+| `GET /ciclo` | — Tiempos venta → entrega → cobro, cobranza, plata que entró, por cobrar / por entregar por antigüedad, por vendedora y detalle de pendientes (el CSV exporta el detalle). |
 
 Ejemplos (token por query param, como lo usa el asistente):
 
@@ -53,6 +59,7 @@ GET /api/v1/admin/reportes/stock-inmovilizado?dias_min=90&token=<TOKEN>
 GET /api/v1/admin/reportes/vendedoras?desde=2026-10-01&hasta=2026-10-31&canal=admin&token=<TOKEN>
 GET /api/v1/admin/reportes/clientes?desde=2026-01-01&hasta=2026-10-31&solo_una_compra=true&token=<TOKEN>
 GET /api/v1/admin/reportes/resumen?desde=2026-10-01&hasta=2026-10-31&formato=csv&token=<TOKEN>
+GET /api/v1/admin/reportes/ciclo?desde=2026-10-01&hasta=2026-10-31&token=<TOKEN>
 ```
 
 ## Autenticación
@@ -77,6 +84,7 @@ GET /api/v1/admin/reportes/resumen?desde=2026-10-01&hasta=2026-10-31&formato=csv
 | `REPORTS_DATABASE_URL` | No (recomendada) | Conexión con el usuario `reportes_ro`. Vacía = conexión principal en transacción `READ ONLY`. |
 | `REPORTS_RATE_LIMIT_PER_MIN` | No | Default 60. |
 | `REPORTS_STATEMENT_TIMEOUT_MS` | No | Default 15000 (15 s). |
+| `REPORTS_FECHAS_REALES_DESDE` | No | AAAA-MM-DD desde la que las fechas de cobro/entrega son reales. Vacía = se toma de la base. |
 
 Todas las consultas de reportes corren en una transacción `READ ONLY` con
 `statement_timeout` (las dos se aplican con o sin `REPORTS_DATABASE_URL`).
@@ -150,3 +158,7 @@ SELECT
 6. **Error de hidratación de React (#418) en todas las páginas del admin:** el
    estado inicial de `useAuth` lee `sessionStorage`/`localStorage` durante el
    render, así que el HTML del servidor no coincide con el del cliente.
+7. **Fechas de cobro de ventas cargadas entre el 18/09 y el 29/09/2026:** si en ese
+   momento la venta estaba cobrada solo en parte, la migración 108 les puso como
+   fecha de cobro de cada ítem la fecha de la venta (no la real). Es una ventana
+   chica y queda dentro de las fechas "reales" del reporte.

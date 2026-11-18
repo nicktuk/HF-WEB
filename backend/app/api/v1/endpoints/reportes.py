@@ -157,3 +157,15 @@ def get_clientes(
         conn, q.armar(conn), acceso.datos_personales, top, orden, solo_una_compra,
     ))
     return _responder(data, q.formato, "clientes", lambda d: d["clientes"])
+
+
+@router.get("/ciclo")
+def get_ciclo(
+    q: FiltrosComunes = Depends(),
+    acceso: ReportesAcceso = Depends(require_reportes_access),
+    conn=Depends(get_reportes_db),
+):
+    """Ciclo de vida de las ventas: tiempos venta→entrega→cobro, cobranza,
+    plata que entró en el período y lo pendiente de cobrar/entregar."""
+    data = _ejecutar(lambda: svc.ciclo(conn, q.armar(conn)))
+    return _responder(data, q.formato, "ciclo", lambda d: d["pendientes"])
