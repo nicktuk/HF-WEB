@@ -125,6 +125,9 @@ class Settings(BaseSettings):
     REPORTS_DATABASE_URL: str = ""
     REPORTS_RATE_LIMIT_PER_MIN: int = 60
     REPORTS_STATEMENT_TIMEOUT_MS: int = 15000
+    # Desde qué fecha (AAAA-MM-DD) las fechas de cobro/entrega son reales.
+    # Vacío = se toma de la base (momento en que se cargó estado_historial).
+    REPORTS_FECHAS_REALES_DESDE: str = ""
 
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001

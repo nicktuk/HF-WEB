@@ -25,8 +25,9 @@ from __future__ import annotations
 
 import csv
 import io
+import statistics
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Iterable, Optional
 
@@ -151,7 +152,7 @@ _RANGO_UTC = (
 _SOLO_MINORISTA = "s.origen IN ('admin', 'vendedor') AND s.pedido_mayorista_id IS NULL"
 
 
-def _items_cte(f: Filtros) -> tuple[str, dict]:
+def _items_cte(f: Filtros, con_rango: bool = True) -> tuple[str, dict]:
     """CTEs `ventas` e `items`: los ítems de venta minorista del período con
     su costo unitario (opción B) y la fuente del costo."""
     params: dict[str, Any] = {"tz": TZ, "desde": f.desde, "hasta": f.hasta}
@@ -182,14 +183,23 @@ def _items_cte(f: Filtros) -> tuple[str, dict]:
     ventas AS (
         SELECT s.id, s.seller_id, s.origen,
                {_ck('s.customer_name')} AS cliente_key,
-               ((s.created_at AT TIME ZONE 'UTC') AT TIME ZONE :tz) AS fecha_local
+               ((s.created_at AT TIME ZONE 'UTC') AT TIME ZONE :tz) AS fecha_local,
+               s.total_amount, s.paid_amount,
+               EXISTS (SELECT 1 FROM sale_installments si2 WHERE si2.sale_id = s.id) AS con_cuotas
         FROM sales s
-        WHERE {_SOLO_MINORISTA} AND {_RANGO_UTC}{extra_venta}
+        WHERE {_SOLO_MINORISTA}{(" AND " + _RANGO_UTC) if con_rango else ""}{extra_venta}
     ),
     items AS (
         SELECT si.id, si.sale_id, v.seller_id, v.origen, v.cliente_key, v.fecha_local,
                si.product_id, si.quantity, si.total_price,
-               c.costo_unitario, c.fuente
+               c.costo_unitario, c.fuente,
+               -- Cobrado del ítem: si la venta es en cuotas, la parte proporcional
+               -- de lo cobrado de la venta; si no, el ítem entero si está pagado.
+               CASE WHEN v.con_cuotas THEN
+                        CASE WHEN v.total_amount > 0
+                             THEN si.total_price * LEAST(v.paid_amount / v.total_amount, 1) ELSE 0 END
+                    WHEN si.is_paid THEN si.total_price ELSE 0
+               END AS cobrado
         FROM sale_items si
         JOIN ventas v ON v.id = si.sale_id
         LEFT JOIN products p ON p.id = si.product_id
@@ -222,7 +232,8 @@ _AGREGADOS = """
     SUM(quantity * costo_unitario) AS costo,
     COUNT(*) FILTER (WHERE costo_unitario IS NULL) AS items_sin_costo,
     COUNT(*) FILTER (WHERE fuente = 'actual') AS items_costo_actual,
-    COUNT(DISTINCT cliente_key) AS clientes_unicos
+    COUNT(DISTINCT cliente_key) AS clientes_unicos,
+    COALESCE(SUM(cobrado), 0) AS cobrado
 """
 
 
@@ -329,12 +340,13 @@ def _serie(conn, f: Filtros, agrupar: str, por_canal: bool = False) -> list[dict
         SELECT date_trunc(:unidad, fecha_local)::date AS periodo{canal_col},
                COUNT(DISTINCT sale_id) AS ventas,
                COALESCE(SUM(quantity), 0) AS unidades,
-               COALESCE(SUM(total_price), 0) AS facturacion
+               COALESCE(SUM(total_price), 0) AS facturacion,
+               COALESCE(SUM(cobrado), 0) AS cobrado
         FROM items
         GROUP BY 1{', 2' if por_canal else ''}
     """), params).mappings().all()
 
-    vacio = lambda: {"facturacion": CERO, "ventas": 0, "unidades": 0}  # noqa: E731
+    vacio = lambda: {"facturacion": CERO, "cobrado": CERO, "ventas": 0, "unidades": 0}  # noqa: E731
     por_periodo: dict[date, dict] = {}
     for b in _buckets(f, agrupar):
         por_periodo[b] = {"total": vacio(), "por_canal": {c: vacio() for c in CANALES} if por_canal else None}
@@ -342,11 +354,13 @@ def _serie(conn, f: Filtros, agrupar: str, por_canal: bool = False) -> list[dict
         slot = por_periodo.setdefault(r["periodo"], {"total": vacio(), "por_canal": {c: vacio() for c in CANALES} if por_canal else None})
         tot = slot["total"]
         tot["facturacion"] += _dec(r["facturacion"])
+        tot["cobrado"] += _dec(r["cobrado"])
         tot["ventas"] += int(r["ventas"])
         tot["unidades"] += int(r["unidades"])
         if por_canal:
             slot["por_canal"][r["origen"]] = {
                 "facturacion": _money(r["facturacion"]),
+                "cobrado": _money(r["cobrado"]),
                 "ventas": int(r["ventas"]),
                 "unidades": int(r["unidades"]),
             }
@@ -356,13 +370,363 @@ def _serie(conn, f: Filtros, agrupar: str, por_canal: bool = False) -> list[dict
         item = {
             "periodo": periodo.isoformat(),
             "facturacion": _money(slot["total"]["facturacion"]),
+            "cobrado": _money(slot["total"]["cobrado"]),
             "ventas": slot["total"]["ventas"],
             "unidades": slot["total"]["unidades"],
         }
         if por_canal:
-            item["por_canal"] = {c: {**v, "facturacion": _money(v["facturacion"])} for c, v in slot["por_canal"].items()}
+            item["por_canal"] = {
+                c: {**v, "facturacion": _money(v["facturacion"]), "cobrado": _money(v["cobrado"])}
+                for c, v in slot["por_canal"].items()
+            }
         out.append(item)
     return out
+
+
+# ─────────────────────────── cobranza y ciclo de vida ───────────────────────────
+#
+# Fechas de cobro y entrega: sale_items.paid_at / delivered_at y
+# sale_installments.paid_at. Para lo que se cobró o entregó ANTES de que el
+# sistema empezara a registrar esas fechas, la migración completó un valor
+# aproximado (fecha de la venta o de su última edición). El corte se toma de
+# la base: es el momento en que se cargó el historial de estados (todas esas
+# filas de backfill tienen el mismo created_at). Una fecha de cobro/entrega es
+# real si es posterior al corte; la fecha de la venta siempre es real.
+
+RANGOS_DEMORA = (
+    ("Mismo día", 0, 0),
+    ("1–7 días", 1, 7),
+    ("8–30 días", 8, 30),
+    ("Más de 30 días", 31, None),
+)
+RANGOS_ANTIGUEDAD = (
+    ("0–7 días", 0, 7),
+    ("8–30 días", 8, 30),
+    ("31–60 días", 31, 60),
+    ("Más de 60 días", 61, None),
+)
+SIN_FECHA_REAL = "Sin fecha real"
+
+
+def corte_fechas(conn):
+    """Instante (UTC naive) desde el que las fechas de cobro/entrega son reales."""
+    from app.config import settings
+
+    if settings.REPORTS_FECHAS_REALES_DESDE:
+        return date.fromisoformat(settings.REPORTS_FECHAS_REALES_DESDE)
+    return conn.execute(text("SELECT MIN(created_at) FROM estado_historial")).scalar()
+
+
+def _corte_param(corte) -> Any:
+    # Sin corte (base sin historial) todas las fechas se consideran reales.
+    return corte if corte is not None else date(1900, 1, 1)
+
+
+def _corte_local(corte) -> Optional[date]:
+    if corte is None:
+        return None
+    if isinstance(corte, datetime):
+        # UTC naive -> fecha de Buenos Aires (UTC-3, sin horario de verano).
+        return (corte - timedelta(hours=3)).date()
+    return corte
+
+
+def _filas_ciclo(conn, f: Filtros, corte, con_rango: bool = True) -> list[dict]:
+    """Una fila por venta (de las que pasan los filtros) con sus fechas de
+    venta, entrega completa, cobro completo y primera entrega, en hora local,
+    y si cada una es real."""
+    cte, params = _items_cte(f, con_rango=con_rango)
+    params["corte"] = _corte_param(corte)
+    rows = conn.execute(text(f"""
+        WITH {cte},
+        ids AS (SELECT DISTINCT sale_id FROM items),
+        base AS (
+            SELECT s.id, s.seller_id, cs.nombre AS vendedora, btrim(s.customer_name) AS cliente,
+                   s.total_amount, s.paid_amount, s.delivered_amount, s.delivered, s.paid,
+                   ((s.created_at AT TIME ZONE 'UTC') AT TIME ZONE :tz)::date AS f_venta,
+                   CASE WHEN s.delivered THEN
+                       (SELECT MAX(si.delivered_at) FROM sale_items si WHERE si.sale_id = s.id)
+                   END AS entrega_ts,
+                   CASE WHEN s.paid THEN COALESCE(
+                       (SELECT MAX(i.paid_at) FROM sale_installments i WHERE i.sale_id = s.id),
+                       (SELECT MAX(si.paid_at) FROM sale_items si WHERE si.sale_id = s.id)
+                   ) END AS cobro_ts,
+                   (SELECT MIN(si.delivered_at) FROM sale_items si
+                     WHERE si.sale_id = s.id AND si.delivered_at IS NOT NULL) AS primera_entrega_ts
+            FROM sales s
+            JOIN ids ON ids.sale_id = s.id
+            JOIN catalog_sellers cs ON cs.id = s.seller_id
+        ),
+        corte AS (SELECT (CAST(:corte AS timestamp) AT TIME ZONE 'UTC') AS ts)
+        SELECT b.id, b.seller_id, b.vendedora, b.cliente, b.total_amount, b.paid_amount,
+               b.delivered_amount, b.delivered, b.paid, b.f_venta,
+               (b.entrega_ts AT TIME ZONE :tz)::date AS f_entrega,
+               b.entrega_ts >= (SELECT ts FROM corte) AS entrega_real,
+               (b.cobro_ts AT TIME ZONE :tz)::date AS f_cobro,
+               b.cobro_ts >= (SELECT ts FROM corte) AS cobro_real,
+               (b.primera_entrega_ts AT TIME ZONE :tz)::date AS f_primera_entrega,
+               b.primera_entrega_ts >= (SELECT ts FROM corte) AS primera_entrega_real
+        FROM base b
+    """), params).mappings().all()
+    out = []
+    for r in rows:
+        r = dict(r)
+        r["d_venta_entrega"] = (r["f_entrega"] - r["f_venta"]).days if r["f_entrega"] and r["entrega_real"] else None
+        r["d_venta_cobro"] = (r["f_cobro"] - r["f_venta"]).days if r["f_cobro"] and r["cobro_real"] else None
+        r["d_entrega_cobro"] = (
+            (r["f_cobro"] - r["f_entrega"]).days
+            if r["f_cobro"] and r["f_entrega"] and r["cobro_real"] and r["entrega_real"]
+            else None
+        )
+        out.append(r)
+    return out
+
+
+def _stats_dias(valores: list[int]) -> dict:
+    vals = [v for v in valores if v is not None]
+    if not vals:
+        return {"promedio": None, "mediana": None, "ventas": 0}
+    prom = (Decimal(sum(vals)) / len(vals)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    med = Decimal(str(statistics.median(vals))).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    return {"promedio": prom, "mediana": med, "ventas": len(vals)}
+
+
+def _tiempos(filas: list[dict]) -> tuple[dict, int]:
+    """Promedios de días. Las ventas que figuran cobradas antes de entregarse
+    (no debería pasar) no entran en entrega→cobro: se cuentan aparte."""
+    inconsistentes = sum(1 for r in filas if r["d_entrega_cobro"] is not None and r["d_entrega_cobro"] < 0)
+    return {
+        "venta_entrega": _stats_dias([r["d_venta_entrega"] for r in filas]),
+        "venta_cobro": _stats_dias([r["d_venta_cobro"] for r in filas]),
+        "entrega_cobro": _stats_dias([r["d_entrega_cobro"] for r in filas if r["d_entrega_cobro"] is None or r["d_entrega_cobro"] >= 0]),
+    }, inconsistentes
+
+
+def _en_rango(dias: int, desde: int, hasta: Optional[int]) -> bool:
+    return dias >= desde and (hasta is None or dias <= hasta)
+
+
+def caja(conn, f: Filtros, corte) -> dict:
+    """Plata que entró en el período: cobros con fecha de pago dentro del
+    rango, sin importar cuándo fue la venta. Ítems pagados (ventas sin cuotas)
+    y cuotas pagadas (prorrateadas si hay filtro de depósito)."""
+    cte, params = _items_cte(f, con_rango=False)
+    params["unidad"] = _UNIDAD_SQL[f.agrupacion()]
+    params["corte"] = _corte_param(corte)
+    rows = conn.execute(text(f"""
+        WITH {cte},
+        pagos AS (
+            SELECT si.paid_at AS ts, i.total_price AS monto
+            FROM items i
+            JOIN sale_items si ON si.id = i.id
+            JOIN ventas v ON v.id = i.sale_id
+            WHERE NOT v.con_cuotas AND si.is_paid AND si.paid_at IS NOT NULL
+            UNION ALL
+            SELECT inst.paid_at, inst.amount * LEAST(COALESCE(sh.parte, 1), 1)
+            FROM sale_installments inst
+            JOIN (
+                SELECT i.sale_id, SUM(i.total_price) / NULLIF(MAX(v.total_amount), 0) AS parte
+                FROM items i JOIN ventas v ON v.id = i.sale_id
+                WHERE v.con_cuotas
+                GROUP BY i.sale_id
+            ) sh ON sh.sale_id = inst.sale_id
+            WHERE inst.paid AND inst.paid_at IS NOT NULL
+        )
+        SELECT date_trunc(:unidad, ts AT TIME ZONE :tz)::date AS periodo,
+               COALESCE(SUM(monto), 0) AS cobrado,
+               COUNT(*) AS pagos,
+               COUNT(*) FILTER (WHERE ts < (CAST(:corte AS timestamp) AT TIME ZONE 'UTC')) AS pagos_fecha_aprox
+        FROM pagos
+        WHERE ts >= (CAST(:desde AS date)::timestamp AT TIME ZONE :tz)
+          AND ts < ((CAST(:hasta AS date) + 1)::timestamp AT TIME ZONE :tz)
+        GROUP BY 1
+    """), params).mappings().all()
+    por_periodo = {b: CERO for b in _buckets(f, f.agrupacion())}
+    pagos = 0
+    aprox = 0
+    for r in rows:
+        por_periodo[r["periodo"]] = por_periodo.get(r["periodo"], CERO) + _dec(r["cobrado"])
+        pagos += int(r["pagos"])
+        aprox += int(r["pagos_fecha_aprox"])
+    total = sum(por_periodo.values(), CERO)
+    return {
+        "total": _money(total),
+        "pagos": pagos,
+        "pagos_fecha_aproximada": aprox,
+        "serie": [{"periodo": p.isoformat(), "cobrado": _money(v)} for p, v in sorted(por_periodo.items())],
+    }
+
+
+def _pendientes(conn, f: Filtros, corte, hoy: date) -> dict:
+    """Foto a hoy de lo entregado sin cobrar y lo vendido sin entregar (todas
+    las fechas; aplican canal, vendedora y depósito)."""
+    filas = _filas_ciclo(conn, Filtros(f.desde, f.hasta, f.canal, f.deposito_id, f.vendedora_id), corte, con_rango=False)
+    corte_l = _corte_local(corte)
+    det = []
+    cobrar = {n: {"rango": n, "monto": CERO, "ventas": 0} for n, *_ in RANGOS_ANTIGUEDAD}
+    cobrar[SIN_FECHA_REAL] = {"rango": SIN_FECHA_REAL, "monto": CERO, "ventas": 0}
+    entregar = {n: {"rango": n, "monto": CERO, "ventas": 0} for n, *_ in RANGOS_ANTIGUEDAD}
+    for r in filas:
+        total, pagado, entregado = _dec(r["total_amount"]), _dec(r["paid_amount"]), _dec(r["delivered_amount"])
+        por_cobrar = max(entregado - pagado, CERO)
+        por_entregar = max(total - entregado, CERO)
+        if por_cobrar <= 0 and por_entregar <= 0:
+            continue
+        dias_entrega = None
+        if por_cobrar > 0:
+            if r["f_primera_entrega"] and r["primera_entrega_real"]:
+                dias_entrega = (hoy - r["f_primera_entrega"]).days
+                rango = next(n for n, d, h in RANGOS_ANTIGUEDAD if _en_rango(dias_entrega, d, h))
+            else:
+                rango = SIN_FECHA_REAL
+            cobrar[rango]["monto"] += por_cobrar
+            cobrar[rango]["ventas"] += 1
+        dias_venta = (hoy - r["f_venta"]).days
+        if por_entregar > 0:
+            rango = next(n for n, d, h in RANGOS_ANTIGUEDAD if _en_rango(dias_venta, d, h))
+            entregar[rango]["monto"] += por_entregar
+            entregar[rango]["ventas"] += 1
+        det.append({
+            "venta_id": r["id"],
+            "fecha_venta": r["f_venta"].isoformat(),
+            "cliente": r["cliente"] or None,
+            "vendedora_id": r["seller_id"],
+            "vendedora": r["vendedora"],
+            "total": _money(total),
+            "cobrado": _money(pagado),
+            "por_cobrar": _money(por_cobrar),
+            "por_entregar": _money(por_entregar),
+            "primera_entrega": r["f_primera_entrega"].isoformat() if r["f_primera_entrega"] else None,
+            "primera_entrega_fecha_real": bool(r["primera_entrega_real"]) if r["f_primera_entrega"] else None,
+            "dias_desde_entrega": dias_entrega,
+            "dias_desde_venta": dias_venta,
+        })
+    det.sort(key=lambda x: (x["por_cobrar"], x["por_entregar"]), reverse=True)
+
+    def cerrar(d: dict) -> dict:
+        lista = [{**v, "monto": _money(v["monto"])} for v in d.values()]
+        if lista and lista[-1]["rango"] == SIN_FECHA_REAL and not lista[-1]["ventas"]:
+            lista = lista[:-1]
+        return {
+            "total": _money(sum((_dec(v["monto"]) for v in lista), CERO)),
+            "ventas": sum(v["ventas"] for v in lista),
+            "antiguedad": lista,
+        }
+
+    return {"por_cobrar": cerrar(cobrar), "por_entregar": cerrar(entregar), "detalle": det, "corte_local": corte_l}
+
+
+def _por_vendedora_ciclo(filas: list[dict]) -> dict[int, dict]:
+    grupos: dict[int, list[dict]] = {}
+    for r in filas:
+        grupos.setdefault(r["seller_id"], []).append(r)
+    out = {}
+    for sid, rs in grupos.items():
+        t, _ = _tiempos(rs)
+        out[sid] = {"nombre": rs[0]["vendedora"], "ventas": len(rs), **{k: v["promedio"] for k, v in t.items()}}
+    return out
+
+
+def _advertencias_fechas(corte, n_excluidas: int, inconsistentes: int) -> list[str]:
+    adv = []
+    corte_l = _corte_local(corte)
+    if corte_l is not None:
+        adv.append(
+            f"Las fechas de cobro y entrega son reales desde el {corte_l.strftime('%d/%m/%Y')}: "
+            "los cobros/entregas anteriores tienen fecha aproximada y no cuentan en los días promedio."
+        )
+    if n_excluidas:
+        adv.append(
+            f"{_n(n_excluidas, 'venta', 'ventas')} con cobro o entrega anterior al corte: "
+            "quedan fuera de los días promedio (sí cuentan en los montos)."
+        )
+    if inconsistentes:
+        adv.append(
+            f"{_n(inconsistentes, 'venta figura', 'ventas figuran')} cobrada antes de entregarse: "
+            "no entran en el promedio entrega → cobro. Revisar la carga."
+        )
+    return adv
+
+
+def ciclo(conn, f: Filtros) -> dict:
+    corte = corte_fechas(conn)
+    hoy = hoy_local(conn)
+    filas = _filas_ciclo(conn, f, corte)
+    tiempos, inconsistentes = _tiempos(filas)
+    excluidas = sum(
+        1 for r in filas
+        if (r["f_entrega"] and not r["entrega_real"]) or (r["f_cobro"] and not r["cobro_real"])
+    )
+
+    distribucion = []
+    for nombre, d, h in RANGOS_DEMORA:
+        rs = [r for r in filas if r["d_entrega_cobro"] is not None and r["d_entrega_cobro"] >= 0
+              and _en_rango(r["d_entrega_cobro"], d, h)]
+        distribucion.append({
+            "rango": nombre,
+            "ventas": len(rs),
+            "monto": _money(sum((_dec(r["total_amount"]) for r in rs), CERO)),
+        })
+
+    k = _kpis(conn, f)
+    cj = caja(conn, f, corte)
+    pend = _pendientes(conn, f, corte, hoy)
+
+    # Pendientes por vendedora (foto a hoy) + tiempos del período.
+    tiempos_v = _por_vendedora_ciclo(filas)
+    pend_v: dict[int, dict] = {}
+    for d in pend["detalle"]:
+        pv = pend_v.setdefault(d["vendedora_id"], {"nombre": d["vendedora"], "por_cobrar": CERO, "por_entregar": CERO})
+        pv["por_cobrar"] += _dec(d["por_cobrar"])
+        pv["por_entregar"] += _dec(d["por_entregar"])
+    por_vendedora = []
+    for sid in sorted(set(tiempos_v) | set(pend_v)):
+        t = tiempos_v.get(sid, {})
+        pv = pend_v.get(sid, {})
+        por_vendedora.append({
+            "vendedora_id": sid,
+            "nombre": t.get("nombre") or pv.get("nombre"),
+            "ventas_periodo": t.get("ventas", 0),
+            "dias_venta_entrega": t.get("venta_entrega"),
+            "dias_venta_cobro": t.get("venta_cobro"),
+            "dias_entrega_cobro": t.get("entrega_cobro"),
+            "por_cobrar": _money(pv.get("por_cobrar", CERO)),
+            "por_entregar": _money(pv.get("por_entregar", CERO)),
+        })
+    por_vendedora.sort(key=lambda x: x["por_cobrar"], reverse=True)
+
+    adv = [ADVERTENCIA_ALCANCE] + _advertencias_fechas(corte, excluidas, inconsistentes)
+    if cj["pagos_fecha_aproximada"]:
+        adv.append(
+            f"{_n(cj['pagos_fecha_aproximada'], 'cobro', 'cobros')} del período tienen fecha aproximada "
+            "(anteriores al corte): la plata que entró puede no ser exacta."
+        )
+    adv.append(
+        "Por cobrar = entregado y todavía no cobrado; por entregar = vendido y todavía no entregado. "
+        "Son una foto a hoy (todas las fechas), con los filtros de canal, vendedora y depósito."
+    )
+    adv.append(
+        "Una venta queda entregada/cobrada cuando se entrega/cobra su último producto (o su última cuota)."
+    )
+    return {
+        "filtros": f.as_dict(),
+        "fechas_reales_desde": pend["corte_local"].isoformat() if pend["corte_local"] else None,
+        "tiempos": tiempos,
+        "distribucion_entrega_cobro": distribucion,
+        "cobradas_antes_de_entregar": inconsistentes,
+        "cobranza": {
+            "facturacion": k["facturacion"],
+            "cobrado": k["cobrado"],
+            "pct_cobranza": k["pct_cobranza"],
+            "pendiente": k["pendiente_cobro"],
+        },
+        "caja": cj,
+        "por_cobrar": pend["por_cobrar"],
+        "por_entregar": pend["por_entregar"],
+        "por_vendedora": por_vendedora,
+        "pendientes": pend["detalle"],
+        "advertencias": adv,
+    }
 
 
 # ─────────────────────────── /resumen ───────────────────────────
@@ -406,23 +770,40 @@ def _kpis(conn, f: Filtros) -> dict:
         "ventas_sin_cliente": int(fila["ventas_sin_cliente"]),
         "items_sin_costo": int(fila["items_sin_costo"]),
         "items_costo_actual": int(fila["items_costo_actual"]),
+        "cobrado": _money(fila["cobrado"]),
+        "pct_cobranza": _pct(fila["cobrado"], facturacion),
+        "pendiente_cobro": _money(facturacion - _dec(fila["cobrado"])),
     }
+
+
+def _kpis_completos(conn, f: Filtros, corte) -> dict:
+    """KPIs de ventas + plata que entró en el período + días entrega→cobro."""
+    k = _kpis(conn, f)
+    k["cobrado_en_periodo"] = caja(conn, f, corte)["total"]
+    tiempos, _ = _tiempos(_filas_ciclo(conn, f, corte))
+    k["dias_entrega_cobro"] = tiempos["entrega_cobro"]["promedio"]
+    k["ventas_con_dias_entrega_cobro"] = tiempos["entrega_cobro"]["ventas"]
+    return k
 
 
 _KPIS_COMPARABLES = (
     "facturacion", "ventas", "unidades", "ticket_promedio", "margen_bruto",
     "margen_pct", "clientes_unicos", "pct_clientes_repiten",
+    "cobrado", "pct_cobranza", "cobrado_en_periodo", "dias_entrega_cobro",
 )
+# Variación en puntos (porcentajes) o en días, en lugar de %.
+_VARIACION_ABSOLUTA = ("margen_pct", "pct_clientes_repiten", "pct_cobranza", "dias_entrega_cobro")
 
 
 def resumen(conn, f: Filtros) -> dict:
-    actual = _kpis(conn, f)
+    corte = corte_fechas(conn)
+    actual = _kpis_completos(conn, f, corte)
     fa = f.anterior()
-    anterior = _kpis(conn, fa)
+    anterior = _kpis_completos(conn, fa, corte)
     variacion = {}
     for k in _KPIS_COMPARABLES:
-        if k in ("margen_pct", "pct_clientes_repiten"):
-            # Para porcentajes, la diferencia en puntos es más útil que el %.
+        if k in _VARIACION_ABSOLUTA:
+            # Para porcentajes y días, la diferencia absoluta es más útil que el %.
             a, b = actual[k], anterior[k]
             variacion[k] = None if a is None or b is None else (a - b).quantize(Decimal("0.1"))
         else:
@@ -442,6 +823,21 @@ def resumen(conn, f: Filtros) -> dict:
         "Clientes identificados por nombre (sin distinguir mayúsculas ni espacios): "
         "dos clientes con el mismo nombre cuentan como uno."
     )
+    adv.append(
+        "Cobranza = % cobrado de las ventas del período. Las ventas recientes todavía no tuvieron "
+        "tiempo de cobrarse: compararla con el período anterior favorece siempre al anterior."
+    )
+    adv.append("Cobrado en el período = plata que entró por fecha de cobro, sin importar cuándo fue la venta.")
+    corte_l = _corte_local(corte)
+    if corte_l is not None:
+        adv.append(
+            f"Días entrega → cobro: solo con fechas reales (desde el {corte_l.strftime('%d/%m/%Y')})."
+        )
+        if f.desde < corte_l:
+            adv.append(
+                f"El período empieza antes del {corte_l.strftime('%d/%m/%Y')}: los cobros anteriores a esa "
+                "fecha tienen fecha aproximada y el 'cobrado en el período' puede no ser exacto."
+            )
     return {
         "filtros": f.as_dict(),
         "periodo_anterior": {"desde": fa.desde.isoformat(), "hasta": fa.hasta.isoformat()},
@@ -457,7 +853,7 @@ def resumen(conn, f: Filtros) -> dict:
 
 def resumen_filas_csv(data: dict) -> list[dict]:
     filas = []
-    for k in _KPIS_COMPARABLES + ("costo", "facturacion_con_costo", "items_sin_costo", "ventas_sin_cliente"):
+    for k in _KPIS_COMPARABLES + ("costo", "facturacion_con_costo", "pendiente_cobro", "items_sin_costo", "ventas_sin_cliente"):
         filas.append({
             "indicador": k,
             "actual": data["kpis"].get(k),
@@ -473,8 +869,12 @@ def resumen_filas_csv(data: dict) -> list[dict]:
 def ventas(conn, f: Filtros) -> dict:
     agrupar = f.agrupacion()
     serie = _serie(conn, f, agrupar, por_canal=True)
+    fact = sum((_dec(s["facturacion"]) for s in serie), CERO)
+    cobrado = sum((_dec(s["cobrado"]) for s in serie), CERO)
     total = {
-        "facturacion": _money(sum((_dec(s["facturacion"]) for s in serie), CERO)),
+        "facturacion": _money(fact),
+        "cobrado": _money(cobrado),
+        "pct_cobranza": _pct(cobrado, fact),
         "ventas": sum(s["ventas"] for s in serie),
         "unidades": sum(s["unidades"] for s in serie),
     }
@@ -491,9 +891,11 @@ def ventas(conn, f: Filtros) -> dict:
 def ventas_filas_csv(data: dict) -> list[dict]:
     filas = []
     for s in data["serie"]:
-        fila = {"periodo": s["periodo"], "facturacion": s["facturacion"], "ventas": s["ventas"], "unidades": s["unidades"]}
+        fila = {"periodo": s["periodo"], "facturacion": s["facturacion"], "cobrado": s["cobrado"],
+                "ventas": s["ventas"], "unidades": s["unidades"]}
         for c, v in s["por_canal"].items():
             fila[f"facturacion_{c}"] = v["facturacion"]
+            fila[f"cobrado_{c}"] = v["cobrado"]
             fila[f"ventas_{c}"] = v["ventas"]
             fila[f"unidades_{c}"] = v["unidades"]
         filas.append(fila)
@@ -813,6 +1215,7 @@ def vendedoras(conn, f: Filtros) -> dict:
         ORDER BY facturacion DESC
     """), params).mappings().all()
 
+    tiempos_v = _por_vendedora_ciclo(_filas_ciclo(conn, f, corte_fechas(conn)))
     lista = []
     sin_costo = 0
     costo_actual = 0
@@ -834,9 +1237,15 @@ def vendedoras(conn, f: Filtros) -> dict:
             "margen": margen,
             "margen_pct": margen_pct,
             "items_sin_costo": int(r["items_sin_costo"]),
+            "cobrado": _money(r["cobrado"]),
+            "pct_cobranza": _pct(r["cobrado"], fact),
+            "pendiente_cobro": _money(fact - _dec(r["cobrado"])),
+            "dias_entrega_cobro": tiempos_v.get(r["seller_id"], {}).get("entrega_cobro"),
             "base_comisionable": None,
         })
     adv = [ADVERTENCIA_ALCANCE] + _advertencias_costo(sin_costo, costo_actual)
+    adv.append("Cobranza = % cobrado de las ventas del período de cada vendedora.")
+    adv.append("Días entrega → cobro: promedio solo con fechas reales de entrega y cobro.")
     adv.append("base_comisionable: pendiente de definición (siempre null por ahora).")
     return {"filtros": f.as_dict(), "vendedoras": lista, "items_sin_costo": sin_costo, "advertencias": adv}
 
