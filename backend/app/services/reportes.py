@@ -273,16 +273,20 @@ def _margen(fila: dict, parcial: bool) -> tuple[Optional[Decimal], Optional[Deci
     return _money(margen), _pct(margen, base)
 
 
+def _n(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
 def _advertencias_costo(items_sin_costo: int, items_costo_actual: int) -> list[str]:
     adv = [ADVERTENCIA_COSTO]
     if items_costo_actual:
         adv.append(
-            f"{items_costo_actual} ítems sin compras previas a la venta: se valuaron al costo "
+            f"{_n(items_costo_actual, 'ítem', 'ítems')} sin compras previas a la venta: valuados al costo "
             "actual del proveedor (no histórico)."
         )
     if items_sin_costo:
         adv.append(
-            f"{items_sin_costo} ítems sin costo cargado (productos sin compras ni precio de "
+            f"{_n(items_sin_costo, 'ítem', 'ítems')} sin costo cargado (productos sin compras ni precio de "
             "proveedor, o ítems manuales): el margen está incompleto."
         )
     return adv
@@ -431,7 +435,7 @@ def resumen(conn, f: Filtros) -> dict:
     adv = [ADVERTENCIA_ALCANCE] + _advertencias_costo(actual["items_sin_costo"], actual["items_costo_actual"])
     if actual["ventas_sin_cliente"]:
         adv.append(
-            f"{actual['ventas_sin_cliente']} ventas sin nombre de cliente: no cuentan para "
+            f"{_n(actual['ventas_sin_cliente'], 'venta', 'ventas')} sin nombre de cliente: no cuentan para "
             "clientes únicos ni para el % que repite."
         )
     adv.append(
@@ -642,10 +646,10 @@ def productos(
     sin_costo_productos = sum(1 for x in lista if x["margen"] is None)
     adv = [ADVERTENCIA_ALCANCE] + _advertencias_costo(items_sin_costo, items_costo_actual)
     if sin_costo_productos:
-        adv.append(f"{sin_costo_productos} productos sin costo cargado: su margen figura vacío.")
+        adv.append(f"{_n(sin_costo_productos, 'producto', 'productos')} sin costo cargado: su margen figura vacío.")
     if manuales["items"]:
         adv.append(
-            f"{manuales['items']} ítems manuales (sin producto asociado) por "
+            f"{_n(manuales['items'], 'ítem manual', 'ítems manuales')} (sin producto asociado) por "
             f"$ {_money(manuales['facturacion'])}: no tienen SKU ni costo y no aparecen en la lista."
         )
     if f.deposito_id is not None:
@@ -777,12 +781,12 @@ def stock_inmovilizado(conn, deposito_id: Optional[int] = None, dias_min: int = 
         "Stock por depósito según el reparto manual del admin; lo que no está repartido figura como 'Sin asignar'.",
     ]
     if costo_actual:
-        adv.append(f"{costo_actual} productos sin lotes con costo: valuados al costo actual del proveedor.")
+        adv.append(f"{_n(costo_actual, 'producto', 'productos')} sin lotes con costo: valuados al costo actual del proveedor.")
     if sin_costo:
-        adv.append(f"{sin_costo} productos sin costo cargado: no suman a la plata parada.")
+        adv.append(f"{_n(sin_costo, 'producto', 'productos')} sin costo cargado: no suman a la plata parada.")
     if excedidos:
         adv.append(
-            f"{excedidos} productos tienen más unidades repartidas en depósitos que stock total "
+            f"{_n(excedidos, 'producto tiene', 'productos tienen')} más unidades repartidas en depósitos que stock total "
             "en compras: revisar el reparto."
         )
     return {
@@ -947,7 +951,7 @@ def clientes(
         "compras_totales, primera/última compra y frecuencia: historial minorista completo hasta 'hasta'.",
     ]
     if ventas_sin_cliente:
-        adv.append(f"{ventas_sin_cliente} ventas del período sin nombre de cliente: no figuran en la lista.")
+        adv.append(f"{_n(ventas_sin_cliente, 'venta', 'ventas')} del período sin nombre de cliente: no figuran en la lista.")
     if not datos_personales:
         adv.append("Acceso por token: se omiten teléfono y email.")
     return {
