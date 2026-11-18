@@ -1,7 +1,7 @@
 ﻿"""Main API v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, comision_minorista, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected
+from app.api.v1.endpoints import public, admin, source_websites, categories, subcategories, ai_descriptions, app_settings, sections, expenses, mercadopago, comercios_public, comercios_protected, comercios_admin, comision_minorista, catalog_sellers, bot_vendedores, codigos_amba, vendedores_public, vendedores_protected, reportes
 from app.api.v1.endpoints.import_scorer import (
     templates as is_templates,
     retailers as is_retailers,
@@ -213,4 +213,11 @@ api_router.include_router(
     is_radar.router,
     prefix="/admin/import-scorer/radar",
     tags=["import-scorer-radar"],
+)
+
+# Reportes de negocio (admin superadmin o token de solo lectura REPORTS_API_TOKEN)
+api_router.include_router(
+    reportes.router,
+    prefix="/admin/reportes",
+    tags=["reportes"],
 )

@@ -35,6 +35,7 @@ import {
   MapPin,
   UserPlus,
   Percent,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth, useIsAuthenticated, useIsSuperadmin } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ import { cn } from '@/lib/utils';
 // Top-level items
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
 ];
 
 type NavItem = { name: string; href: string; icon: React.ElementType };

@@ -117,6 +117,15 @@ class Settings(BaseSettings):
     # Canal Comercio — recupero de contraseña
     COMERCIO_ALERT_EMAIL_TO: str = ""
 
+    # Reportes (módulo /admin/reportes)
+    # Token de solo lectura para el asistente de IA. Vacío = camino deshabilitado.
+    REPORTS_API_TOKEN: str = ""
+    # Conexión con usuario de solo lectura (reportes_ro). Vacío = conexión
+    # principal con SET TRANSACTION READ ONLY.
+    REPORTS_DATABASE_URL: str = ""
+    REPORTS_RATE_LIMIT_PER_MIN: int = 60
+    REPORTS_STATEMENT_TIMEOUT_MS: int = 15000
+
     # Scrapers
     SCRAPER_PROXY_URL: str = ""        # ej: https://scraperapi:KEY@proxy.scraperapi.com:8001
     BESTBUY_API_KEY: str = ""          # developers.bestbuy.com (gratuito)
