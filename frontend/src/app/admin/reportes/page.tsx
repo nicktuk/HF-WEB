@@ -11,6 +11,7 @@ import { hoyAR, rangoPreset, type Preset } from '@/lib/reportes';
 import { Filtros, type ValoresFiltro } from '@/components/admin/reportes/Filtros';
 import {
   ClientesTab,
+  CobranzaTab,
   ProductosTab,
   ResumenTab,
   StockTab,
@@ -22,6 +23,7 @@ import {
 const TABS = [
   { id: 'resumen', label: 'Resumen', Comp: ResumenTab },
   { id: 'ventas', label: 'Ventas', Comp: VentasTab },
+  { id: 'cobranza', label: 'Cobranza', Comp: CobranzaTab },
   { id: 'productos', label: 'Productos', Comp: ProductosTab },
   { id: 'stock', label: 'Stock parado', Comp: StockTab },
   { id: 'vendedoras', label: 'Vendedoras', Comp: VendedorasTab },
@@ -146,7 +148,7 @@ function ReportesInner() {
         ocultarFechas={tab === 'stock'}
       />
 
-      <nav aria-label="Secciones del reporte" className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-200/60 p-1 sm:flex">
+      <nav aria-label="Secciones del reporte" className="grid grid-cols-4 gap-1 rounded-xl bg-zinc-200/60 p-1 sm:flex">
         {TABS.map((t) => (
           <button
             key={t.id}

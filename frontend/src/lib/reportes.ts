@@ -16,14 +16,15 @@ export const COLORES = {
   grilla: '#eef2f6',
   eje: '#94a3b8',
 };
-export type Endpoint = 'resumen' | 'ventas' | 'productos' | 'stock-inmovilizado' | 'vendedoras' | 'clientes';
+export type Endpoint = 'resumen' | 'ventas' | 'productos' | 'stock-inmovilizado' | 'vendedoras' | 'clientes' | 'ciclo';
 
 export interface PuntoSerie {
   periodo: string;
   facturacion: Monto;
+  cobrado?: Monto;
   ventas: number;
   unidades: number;
-  por_canal?: Record<string, { facturacion: Monto; ventas: number; unidades: number }>;
+  por_canal?: Record<string, { facturacion: Monto; cobrado?: Monto; ventas: number; unidades: number }>;
 }
 
 export interface Kpis {
@@ -41,6 +42,12 @@ export interface Kpis {
   ventas_sin_cliente: number;
   items_sin_costo: number;
   items_costo_actual: number;
+  cobrado: Monto;
+  pct_cobranza: string | null;
+  pendiente_cobro: Monto;
+  cobrado_en_periodo: Monto;
+  dias_entrega_cobro: string | null;
+  ventas_con_dias_entrega_cobro: number;
 }
 
 export interface ResumenData {
@@ -58,7 +65,7 @@ export interface VentasData {
   agrupar: 'dia' | 'semana' | 'mes';
   canales: { id: string; nombre: string }[];
   serie: PuntoSerie[];
-  total: { facturacion: Monto; ventas: number; unidades: number };
+  total: { facturacion: Monto; cobrado: Monto; pct_cobranza: string | null; ventas: number; unidades: number };
   advertencias: string[];
 }
 
@@ -121,6 +128,10 @@ export interface VendedoraRow {
   margen: Monto;
   margen_pct: string | null;
   items_sin_costo: number;
+  cobrado: Monto;
+  pct_cobranza: string | null;
+  pendiente_cobro: Monto;
+  dias_entrega_cobro: string | null;
 }
 
 export interface VendedorasData {
@@ -152,6 +163,58 @@ export interface ClientesData {
     ventas_sin_cliente: number;
   };
   clientes: ClienteRow[];
+  advertencias: string[];
+}
+
+export interface StatsDias {
+  promedio: string | null;
+  mediana: string | null;
+  ventas: number;
+}
+
+export interface Antiguedad {
+  total: Monto;
+  ventas: number;
+  antiguedad: { rango: string; monto: Monto; ventas: number }[];
+}
+
+export interface PendienteRow {
+  venta_id: number;
+  fecha_venta: string;
+  cliente: string | null;
+  vendedora_id: number;
+  vendedora: string;
+  total: Monto;
+  cobrado: Monto;
+  por_cobrar: Monto;
+  por_entregar: Monto;
+  primera_entrega: string | null;
+  primera_entrega_fecha_real: boolean | null;
+  dias_desde_entrega: number | null;
+  dias_desde_venta: number;
+}
+
+export interface CicloData {
+  filtros: { agrupar: 'dia' | 'semana' | 'mes' };
+  fechas_reales_desde: string | null;
+  tiempos: { venta_entrega: StatsDias; venta_cobro: StatsDias; entrega_cobro: StatsDias };
+  distribucion_entrega_cobro: { rango: string; ventas: number; monto: Monto }[];
+  cobradas_antes_de_entregar: number;
+  cobranza: { facturacion: Monto; cobrado: Monto; pct_cobranza: string | null; pendiente: Monto };
+  caja: { total: Monto; pagos: number; pagos_fecha_aproximada: number; serie: { periodo: string; cobrado: Monto }[] };
+  por_cobrar: Antiguedad;
+  por_entregar: Antiguedad;
+  por_vendedora: {
+    vendedora_id: number;
+    nombre: string;
+    ventas_periodo: number;
+    dias_venta_entrega: string | null;
+    dias_venta_cobro: string | null;
+    dias_entrega_cobro: string | null;
+    por_cobrar: Monto;
+    por_entregar: Monto;
+  }[];
+  pendientes: PendienteRow[];
   advertencias: string[];
 }
 
@@ -233,6 +296,11 @@ export function arsCorto(v: Monto | number | undefined): string {
 export function cantidad(v: number | string | null | undefined): string {
   const n = num(v as Monto);
   return n === null ? '—' : entero.format(n);
+}
+
+export function dias(v: string | number | null | undefined): string {
+  const n = num(v as Monto);
+  return n === null ? '—' : `${unDecimal.format(n)} d`;
 }
 
 export function pct(v: string | number | null | undefined): string {

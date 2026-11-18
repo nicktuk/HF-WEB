@@ -252,6 +252,12 @@ def _money(v: Any) -> Optional[Decimal]:
     return _dec(v).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def _ars_txt(v: Any) -> str:
+    """Monto para textos de avisos: $ 1.234.567 (formato es-AR, sin decimales)."""
+    n = _dec(v).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return "$ " + f"{n:,}".replace(",", ".")
+
+
 def _pct(num: Any, den: Any) -> Optional[Decimal]:
     den = _dec(den)
     if den == 0:
@@ -1052,7 +1058,7 @@ def productos(
     if manuales["items"]:
         adv.append(
             f"{_n(manuales['items'], 'ítem manual', 'ítems manuales')} (sin producto asociado) por "
-            f"$ {_money(manuales['facturacion'])}: no tienen SKU ni costo y no aparecen en la lista."
+            f"{_ars_txt(manuales['facturacion'])}: no tienen SKU ni costo y no aparecen en la lista."
         )
     if f.deposito_id is not None:
         adv.append("Stock: solo el del depósito filtrado (según el reparto manual por depósito).")
