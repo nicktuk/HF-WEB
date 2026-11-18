@@ -1,1 +1,15 @@
 nul
+
+# Secretos: nunca commitear archivos de entorno (salvo los ejemplos)
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dumps y exports de base de datos
+*.sql
+*.dump
+*.backup
+*.sql.gz
+*.dump.gz
